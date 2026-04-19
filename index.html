@@ -1,86 +1,131 @@
-
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>狼人殺 法官助手</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-.pg{display:none;padding:1.25rem 1rem;}
+:root{
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#e8e8e5;
+  --text:#1a1a18;--text2:#6b6b66;--text3:#9e9e98;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+  --success:#2d7a3a;--danger:#a32d2d;
+  --radius:14px;--radius-sm:10px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1c1c1a;--bg2:#2a2a27;--bg3:#363633;
+    --text:#f0efe8;--text2:#a8a89e;--text3:#6e6e66;
+    --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{min-height:100vh;background:var(--bg);font-family:-apple-system,'PingFang TC','Noto Sans TC',sans-serif;color:var(--text);}
+.pg{display:none;padding:20px 16px 48px;max-width:520px;margin:0 auto;}
 .pg.on{display:block;}
-h2{font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:.75rem;}
-.sub{font-size:13px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:1rem;}
-.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem;margin-bottom:10px;}
-.row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);}
+h2{font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.sub{font-size:14px;color:var(--text2);line-height:1.65;margin-bottom:16px;}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:4px 16px;margin-bottom:12px;}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
 .row:last-child{border-bottom:none;}
-.av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex-shrink:0;}
+.av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
 .av-wolf{background:#FCEBEB;color:#A32D2D;}
 .av-vil{background:#EAF3DE;color:#3B6D11;}
 .av-seer{background:#E6F1FB;color:#0C447C;}
 .av-witch{background:#FAEEDA;color:#633806;}
 .av-hunter{background:#EEEDFE;color:#3C3489;}
-.av-dead{background:#F1EFE8;color:#5F5E5A;}
-.nm{flex:1;font-size:14px;color:var(--color-text-primary);}
-.dead-nm{text-decoration:line-through;color:var(--color-text-tertiary);}
-.badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:500;}
-.bw{background:#FCEBEB;color:#A32D2D;}
-.bv{background:#EAF3DE;color:#3B6D11;}
-.bs{background:#E6F1FB;color:#0C447C;}
-.bwt{background:#FAEEDA;color:#633806;}
+.av-dead{background:#ededea;color:#888;}
+.nm{flex:1;font-size:16px;color:var(--text);}
+.dead-nm{text-decoration:line-through;color:var(--text3);}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+.bw{background:#FCEBEB;color:#A32D2D;}.bv{background:#EAF3DE;color:#3B6D11;}
+.bs{background:#E6F1FB;color:#0C447C;}.bwt{background:#FAEEDA;color:#633806;}
 .bh{background:#EEEDFE;color:#3C3489;}
-label{font-size:13px;color:var(--color-text-secondary);display:block;margin:10px 0 4px;}
-input[type=text],input[type=number]{width:100%;margin-bottom:4px;}
-button{width:100%;margin-top:8px;}
-.err{font-size:12px;color:var(--color-text-danger);min-height:16px;}
-.info{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px;font-size:14px;color:var(--color-text-primary);line-height:1.8;margin:10px 0;}
-.cover{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:1.5rem;text-align:center;margin:12px 0;}
-.big{font-size:26px;font-weight:500;}
-.btn2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+label{font-size:14px;color:var(--text2);display:block;margin:14px 0 6px;}
+input[type=text],input[type=number]{
+  width:100%;padding:15px 16px;font-size:18px;color:var(--text);
+  background:var(--bg2);border:1.5px solid var(--border2);border-radius:var(--radius-sm);
+  outline:none;-webkit-appearance:none;appearance:none;
+}
+input[type=text]:focus,input[type=number]:focus{border-color:#378ADD;}
+input::placeholder{color:var(--text3);}
+button{
+  width:100%;padding:17px 16px;font-size:17px;font-weight:600;color:var(--text);
+  background:var(--bg2);border:1.5px solid var(--border2);border-radius:var(--radius);
+  cursor:pointer;margin-top:10px;-webkit-user-select:none;user-select:none;
+  transition:opacity 0.1s;
+}
+button:active{opacity:0.7;}
+button:disabled{opacity:0.32;pointer-events:none;}
+button.primary{background:var(--text);color:var(--bg);border-color:var(--text);}
+button.danger-btn{background:#FCEBEB;color:#A32D2D;border-color:#F7C1C1;}
+button.success-btn{background:#EAF3DE;color:#3B6D11;border-color:#C0DD97;}
+.btn2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}
 .btn2 button{margin-top:0;}
-.nbanner{text-align:center;padding:2rem 0 1rem;}
-.nicon{font-size:32px;margin-bottom:8px;}
-.ntitle{font-size:20px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px;}
-.role-reveal{border-radius:var(--border-radius-lg);padding:1.5rem;text-align:center;margin:12px 0;}
-.role-wolf{background:#FCEBEB;border:0.5px solid #F7C1C1;}
-.role-vil{background:#EAF3DE;border:0.5px solid #C0DD97;}
-.role-seer{background:#E6F1FB;border:0.5px solid #B5D4F4;}
-.role-witch{background:#FAEEDA;border:0.5px solid #FAC775;}
-.role-hunter{background:#EEEDFE;border:0.5px solid #CECBF6;}
-.killed-box{background:#FCEBEB;border:0.5px solid #F7C1C1;border-radius:var(--border-radius-md);padding:14px 16px;margin:12px 0;text-align:center;}
-.killed-label{font-size:12px;color:#791F1F;margin-bottom:6px;}
-.killed-num{font-size:24px;font-weight:500;color:#A32D2D;}
-.killed-name{font-size:15px;color:#791F1F;margin-top:4px;}
-.composition-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin:12px 0;}
-.comp-item{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px;text-align:center;}
-.comp-count{font-size:22px;font-weight:500;color:var(--color-text-primary);}
-.comp-label{font-size:12px;color:var(--color-text-secondary);margin-top:2px;}
+.info{background:var(--bg2);border-radius:var(--radius-sm);padding:14px 16px;font-size:15px;color:var(--text);line-height:1.8;margin:12px 0;}
+.nbanner{text-align:center;padding:2.5rem 0 1.5rem;}
+.nicon{font-size:56px;margin-bottom:10px;}
+.ntitle{font-size:26px;font-weight:800;color:var(--text);margin-bottom:8px;}
+.step-badge{display:inline-block;padding:5px 14px;background:var(--bg3);border-radius:20px;font-size:13px;color:var(--text2);margin-bottom:14px;}
+.role-reveal{border-radius:var(--radius);padding:2.5rem 1rem;text-align:center;margin:16px 0;}
+.role-wolf{background:#FCEBEB;border:1px solid #F7C1C1;}
+.role-vil{background:#EAF3DE;border:1px solid #C0DD97;}
+.role-seer{background:#E6F1FB;border:1px solid #B5D4F4;}
+.role-witch{background:#FAEEDA;border:1px solid #FAC775;}
+.role-hunter{background:#EEEDFE;border:1px solid #CECBF6;}
+.killed-box{background:#FCEBEB;border:1px solid #F7C1C1;border-radius:var(--radius-sm);padding:22px 16px;margin:14px 0;text-align:center;}
+.killed-label{font-size:13px;color:#791F1F;margin-bottom:8px;font-weight:500;}
+.killed-num{font-size:36px;font-weight:800;color:#A32D2D;}
+.killed-name{font-size:20px;color:#791F1F;margin-top:6px;font-weight:600;}
+.comp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:8px;margin:14px 0;}
+.comp-item{background:var(--bg2);border-radius:var(--radius-sm);padding:14px 8px;text-align:center;}
+.comp-count{font-size:28px;font-weight:800;}
+.comp-label{font-size:12px;color:var(--text2);margin-top:3px;}
+.tap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px;margin:14px 0;}
+.ptap{border:2px solid var(--border2);border-radius:var(--radius-sm);padding:14px 6px;text-align:center;cursor:pointer;background:var(--bg2);}
+.ptap:active{opacity:0.7;}
+.ptap.sel{border-color:#378ADD;background:#E6F1FB;}
+.ptap .pn{font-size:22px;font-weight:800;color:var(--text);}
+.ptap .pp{font-size:12px;color:var(--text2);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.night-steps{display:flex;flex-direction:column;gap:8px;margin:16px 0;}
+.nstep{display:flex;align-items:center;gap:12px;background:var(--bg2);border-radius:var(--radius-sm);padding:14px 16px;font-size:15px;color:var(--text2);}
+.nstep-icon{font-size:22px;}
 </style>
-
-<h2 class="sr-only">狼人殺法官助手</h2>
+</head>
+<body>
 
 <div id="p-setup" class="pg on">
   <div class="nbanner">
-    <div class="nicon" style="font-size:24px;">🐺</div>
-    <div class="ntitle">狼人殺 法官助手</div>
-    <p class="sub" style="text-align:center;">系統自動分配身分，支援 6～12 人</p>
+    <div class="nicon">🐺</div>
+    <div class="ntitle">狼人殺</div>
+    <p class="sub" style="text-align:center;">法官助手・系統自動分配身分</p>
   </div>
-  <label>玩家人數</label>
-  <input type="number" id="setup-count" min="6" max="12" value="6" oninput="updateComposition()"/>
-  <div id="comp-preview" class="composition-grid" style="margin-top:12px;"></div>
-  <div class="info" id="comp-desc" style="font-size:13px;"></div>
-  <button onclick="confirmSetup()">確認，開始登記 →</button>
+  <label>玩家人數（6～12 人）</label>
+  <input type="number" id="setup-count" min="6" max="12" value="6" inputmode="numeric" oninput="updateComp()"/>
+  <div class="comp-grid" id="comp-preview"></div>
+  <div class="info" id="comp-desc" style="font-size:14px;text-align:center;"></div>
+  <button class="primary" style="margin-top:16px;" onclick="confirmSetup()">開始遊戲 →</button>
 </div>
 
 <div id="p-reg" class="pg">
-  <h2>第 <span id="rn"></span> 位玩家</h2>
-  <p class="sub">請本人拿著手機，其他人請背對或閉眼</p>
+  <div class="step-badge">玩家登記 <span id="rn"></span> / <span id="rtotal"></span></div>
+  <h2>第 <span id="rn2"></span> 位玩家</h2>
+  <p class="sub">請本人拿著手機，其他人背對或閉眼</p>
   <div id="reg-form-wrap">
-    <div class="cover">
-      <p style="font-size:13px;color:var(--color-text-secondary);">輸入你的姓名，系統會告訴你號碼和身分</p>
+    <div class="info" style="text-align:center;padding:24px 16px;">
+      <div style="font-size:36px;margin-bottom:8px;">👤</div>
+      <div style="font-size:14px;color:var(--text2);">輸入你的姓名<br>系統告訴你號碼和身分</div>
     </div>
     <label>你的姓名</label>
-    <input type="text" id="reg-name" placeholder="輸入姓名" oninput="chkReg()"/>
-    <button id="btn-reg" onclick="showRegResult()" disabled>查看我的身分 →</button>
+    <input type="text" id="reg-name" placeholder="輸入姓名" autocomplete="off" oninput="chkReg()"/>
+    <button id="btn-reg" class="primary" onclick="showRegResult()" disabled style="margin-top:14px;">查看我的身分 →</button>
   </div>
   <div id="reg-result" style="display:none;">
     <div id="reg-result-box"></div>
-    <div class="info" style="font-size:13px;">請記住你的號碼和身分，然後把手機交給下一位</div>
-    <button onclick="nextReg()">已記住，交給下一位</button>
+    <div class="info" style="font-size:14px;text-align:center;">記住你的號碼和身分，把手機交給下一位</div>
+    <button class="primary" onclick="nextReg()">已記住，交給下一位 →</button>
   </div>
 </div>
 
@@ -88,46 +133,51 @@ button{width:100%;margin-top:8px;}
   <div class="nbanner">
     <div class="nicon">🌙</div>
     <div class="ntitle">天黑請閉眼</div>
-    <p class="sub" style="text-align:center;">所有玩家請閉眼</p>
+    <p class="sub" style="text-align:center;">所有玩家閉眼，法官操作以下流程</p>
   </div>
-  <button onclick="goWolf()">狼人睜眼 →</button>
+  <div class="night-steps">
+    <div class="nstep"><span class="nstep-icon">🐺</span><span>狼人睜眼，選擇獵殺目標</span></div>
+    <div class="nstep"><span class="nstep-icon">🔮</span><span>預言家睜眼，查驗一人身分</span></div>
+    <div class="nstep"><span class="nstep-icon">🧪</span><span>女巫睜眼，決定用藥</span></div>
+  </div>
+  <button class="primary" style="margin-top:8px;" onclick="goWolf()">開始夜晚流程 →</button>
 </div>
 
 <div id="p-wolf" class="pg">
-  <h2>🐺 狼人睜眼</h2>
-  <p class="sub">狼人請秘密商議，選擇獵殺目標</p>
-  <div class="card" id="wolf-list"></div>
-  <label>獵殺號碼</label>
-  <input type="number" id="wolf-num" min="1" oninput="chkWolf()"/>
-  <div class="err" id="wolf-err"></div>
-  <button id="btn-wolf" onclick="doWolf()" disabled>確認 →</button>
+  <div class="step-badge">🐺 狼人睜眼</div>
+  <h2>選擇獵殺目標</h2>
+  <p class="sub">狼人秘密商議後，點選目標玩家</p>
+  <div class="tap-grid" id="wolf-tap"></div>
+  <div id="wolf-sel" class="info" style="display:none;text-align:center;font-weight:600;"></div>
+  <button id="btn-wolf" class="primary" onclick="doWolf()" disabled style="margin-top:4px;">確認獵殺 →</button>
 </div>
 
 <div id="p-seer" class="pg">
-  <h2>🔮 預言家睜眼</h2>
-  <p class="sub">預言家選擇要查驗的玩家號碼</p>
-  <div class="card" id="seer-list"></div>
-  <label>查驗號碼</label>
-  <input type="number" id="seer-num" min="1" oninput="chkSeer()"/>
-  <div class="err" id="seer-err"></div>
-  <button id="btn-seer" onclick="doSeer()" disabled>確認 →</button>
+  <div class="step-badge">🔮 預言家睜眼</div>
+  <h2>選擇查驗目標</h2>
+  <p class="sub">點選要查驗的玩家</p>
+  <div class="tap-grid" id="seer-tap"></div>
+  <div id="seer-sel" class="info" style="display:none;text-align:center;font-weight:600;"></div>
+  <button id="btn-seer" class="primary" onclick="doSeer()" disabled style="margin-top:4px;">確認查驗 →</button>
 </div>
 
 <div id="p-seer-res" class="pg">
-  <h2>🔮 查驗結果</h2>
-  <div class="cover">
-    <div class="big" id="seer-big"></div>
-    <p id="seer-sub" style="margin-top:8px;font-size:14px;color:var(--color-text-secondary);"></p>
+  <div class="step-badge">🔮 查驗結果</div>
+  <h2>身分揭曉</h2>
+  <div class="info" style="text-align:center;padding:28px 16px;">
+    <div style="font-size:15px;color:var(--text2);margin-bottom:10px;" id="seer-who"></div>
+    <div id="seer-big" style="font-size:36px;font-weight:800;"></div>
   </div>
-  <button onclick="goWitch()">預言家閉眼 →</button>
+  <button onclick="goWitch()" style="margin-top:4px;">預言家閉眼 →</button>
 </div>
 
 <div id="p-witch" class="pg">
-  <h2>🧪 女巫睜眼</h2>
+  <div class="step-badge">🧪 女巫睜眼</div>
+  <h2>女巫行動</h2>
   <div id="witch-killed-box"></div>
   <div id="witch-antidote-section"></div>
-  <div id="witch-poison-section" style="margin-top:14px;"></div>
-  <div id="witch-done-btn" style="display:none;">
+  <div id="witch-poison-section" style="margin-top:16px;"></div>
+  <div id="witch-done-btn" style="display:none;margin-top:10px;">
     <button onclick="endNight()">女巫閉眼 →</button>
   </div>
 </div>
@@ -137,36 +187,37 @@ button{width:100%;margin-top:8px;}
     <div class="nicon">☀️</div>
     <div class="ntitle">天亮了！</div>
   </div>
-  <div class="info" id="dawn-msg" style="font-size:15px;line-height:2;text-align:center;"></div>
-  <button onclick="goDawn()">開始發言討論 →</button>
+  <div class="info" id="dawn-msg" style="font-size:18px;line-height:2.4;text-align:center;padding:24px;"></div>
+  <button class="primary" style="margin-top:16px;" onclick="goDawn()">開始發言討論 →</button>
 </div>
 
 <div id="p-discuss" class="pg">
-  <h2>💬 發言討論</h2>
-  <p class="sub">請存活玩家依序發言</p>
+  <div class="step-badge">💬 發言討論</div>
+  <h2>存活玩家</h2>
+  <p class="sub">請依序發言</p>
   <div class="card" id="disc-list"></div>
-  <button onclick="goVote()">進入投票 →</button>
+  <button class="primary" style="margin-top:8px;" onclick="goVote()">進入投票 →</button>
 </div>
 
 <div id="p-vote" class="pg">
-  <h2>🗳 投票放逐</h2>
-  <p class="sub">多數票決定放逐對象，平票輸入 0</p>
-  <div class="card" id="vote-list"></div>
-  <label>放逐號碼</label>
-  <input type="number" id="vote-num" min="0" oninput="chkVote()"/>
-  <div class="err" id="vote-err"></div>
-  <button id="btn-vote" onclick="doVote()" disabled>確認放逐 →</button>
+  <div class="step-badge">🗳 投票放逐</div>
+  <h2>選擇放逐對象</h2>
+  <p class="sub">點選放逐的玩家，多數票決定</p>
+  <div class="tap-grid" id="vote-tap"></div>
+  <div id="vote-sel" class="info" style="display:none;text-align:center;font-weight:600;"></div>
+  <button id="btn-vote" class="danger-btn" onclick="doVote()" disabled style="margin-top:4px;">確認放逐 →</button>
+  <button onclick="doTie()" style="margin-top:8px;">平票，無人出局</button>
 </div>
 
 <div id="p-hunter" class="pg">
-  <h2>🔫 獵人開槍</h2>
+  <div class="step-badge">🔫 獵人開槍</div>
+  <h2>獵人被放逐</h2>
   <div class="info" id="hunter-info"></div>
-  <p style="font-size:14px;color:var(--color-text-primary);margin-bottom:6px;">獵人被放逐，可以選擇開槍帶走一人（不開槍輸入 0）</p>
-  <div class="card" id="hunter-list"></div>
-  <label>開槍號碼</label>
-  <input type="number" id="hunter-num" min="0" oninput="chkHunter()"/>
-  <div class="err" id="hunter-err"></div>
-  <button id="btn-hunter" onclick="doHunter()" disabled>確認 →</button>
+  <p class="sub">獵人可以開槍帶走一名玩家，或選擇不開槍</p>
+  <div class="tap-grid" id="hunter-tap"></div>
+  <div id="hunter-sel" class="info" style="display:none;text-align:center;font-weight:600;"></div>
+  <button id="btn-hunter" class="danger-btn" onclick="doHunter()" disabled style="margin-top:4px;">開槍 →</button>
+  <button onclick="doHunterSkip()" style="margin-top:8px;">不開槍</button>
 </div>
 
 <div id="p-over" class="pg">
@@ -176,169 +227,133 @@ button{width:100%;margin-top:8px;}
     <p class="sub" style="text-align:center;" id="over-sub"></p>
   </div>
   <div class="card" id="over-reveal"></div>
-  <button onclick="restart()" style="margin-top:12px;">再玩一局</button>
+  <button class="primary" style="margin-top:16px;" onclick="restart()">再玩一局</button>
 </div>
 
 <script>
 const EMOJI={狼人:'🐺',村民:'👨‍🌾',預言家:'🔮',女巫:'🧪',獵人:'🔫'};
-const ROLE_CLS={狼人:'role-wolf',村民:'role-vil',預言家:'role-seer',女巫:'role-witch',獵人:'role-hunter'};
+const RCLS={狼人:'role-wolf',村民:'role-vil',預言家:'role-seer',女巫:'role-witch',獵人:'role-hunter'};
 const BADGE={狼人:'bw',村民:'bv',預言家:'bs',女巫:'bwt',獵人:'bh'};
 const AV={狼人:'av-wolf',村民:'av-vil',預言家:'av-seer',女巫:'av-witch',獵人:'av-hunter'};
+const COL={狼人:'#A32D2D',村民:'#3B6D11',預言家:'#0C447C',女巫:'#633806',獵人:'#3C3489'};
 
-let players=[], regIdx=0, totalPlayers=6, shuffledRoles=[];
-let wolfKill=null, witchHasSave=true, witchHasPoison=true, witchSavedThis=false, witchPoisonTarget=null;
-let pendingVoteOut=null;
+let players=[],regIdx=0,totalPlayers=6,shuffledRoles=[];
+let wolfKill=null,witchHasSave=true,witchHasPoison=true,witchSavedThis=false,witchPoisonTarget=null;
+let selWolf=null,selSeer=null,selVote=null,selHunter=null,selPoison=null;
 
-function getComposition(n){
-  const table={
-    6: {狼人:2,村民:2,預言家:1,女巫:1},
-    7: {狼人:2,村民:3,預言家:1,女巫:1},
-    8: {狼人:2,村民:3,預言家:1,女巫:1,獵人:1},
-    9: {狼人:3,村民:3,預言家:1,女巫:1,獵人:1},
-    10:{狼人:3,村民:4,預言家:1,女巫:1,獵人:1},
-    11:{狼人:3,村民:4,預言家:1,女巫:1,獵人:1},
-    12:{狼人:4,村民:5,預言家:1,女巫:1,獵人:1},
+function getComp(n){
+  const t={
+    6:{狼人:2,村民:2,預言家:1,女巫:1},7:{狼人:2,村民:3,預言家:1,女巫:1},
+    8:{狼人:2,村民:3,預言家:1,女巫:1,獵人:1},9:{狼人:3,村民:3,預言家:1,女巫:1,獵人:1},
+    10:{狼人:3,村民:4,預言家:1,女巫:1,獵人:1},11:{狼人:3,村民:4,預言家:1,女巫:1,獵人:1},
+    12:{狼人:4,村民:5,預言家:1,女巫:1,獵人:1}
   };
-  const v=Math.min(12,Math.max(6,n));
-  return table[v]||table[6];
+  return t[Math.min(12,Math.max(6,n))]||t[6];
 }
-
-function buildRolePool(comp){
-  const pool=[];
-  for(const [role,cnt] of Object.entries(comp)) for(let i=0;i<cnt;i++) pool.push(role);
-  return pool;
-}
-
+function buildPool(c){const p=[];for(const[r,n] of Object.entries(c))for(let i=0;i<n;i++)p.push(r);return p;}
 function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
-function show(id){document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));document.getElementById(id).classList.add('on');}
+function show(id){document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));document.getElementById(id).classList.add('on');window.scrollTo(0,0);}
 function alive(){return players.filter(p=>p.alive);}
 function byNum(n){return players.find(p=>p.num===n);}
 function hasRole(r){return players.some(p=>p.role===r&&p.alive);}
 
-function updateComposition(){
+function updateComp(){
   const n=parseInt(document.getElementById('setup-count').value)||6;
-  const comp=getComposition(n);
-  const total=Object.values(comp).reduce((a,b)=>a+b,0);
-  const roleNames={狼人:'狼人',村民:'村民',預言家:'預言家',女巫:'女巫',獵人:'獵人'};
-  const colorMap={狼人:'#A32D2D',村民:'#3B6D11',預言家:'#0C447C',女巫:'#633806',獵人:'#3C3489'};
-  document.getElementById('comp-preview').innerHTML=
-    Object.entries(comp).map(([r,c])=>
-      `<div class="comp-item">
-        <div class="comp-count" style="color:${colorMap[r]};">${c}</div>
-        <div class="comp-label">${roleNames[r]}</div>
-      </div>`
-    ).join('');
-  const wolves=comp['狼人']||0, gods=Object.entries(comp).filter(([r])=>r!=='狼人'&&r!=='村民').reduce((s,[,c])=>s+c,0), vils=comp['村民']||0;
+  const c=getComp(n);
+  const total=Object.values(c).reduce((a,b)=>a+b,0);
+  document.getElementById('comp-preview').innerHTML=Object.entries(c).map(([r,cnt])=>
+    `<div class="comp-item"><div class="comp-count" style="color:${COL[r]};">${cnt}</div><div class="comp-label">${r}</div></div>`).join('');
+  const wolves=c['狼人']||0,gods=Object.entries(c).filter(([r])=>r!=='狼人'&&r!=='村民').reduce((s,[,v])=>s+v,0),vils=c['村民']||0;
   document.getElementById('comp-desc').textContent=`共 ${total} 人 · 狼人 ${wolves} · 神職 ${gods} · 村民 ${vils}`;
 }
 
 function confirmSetup(){
-  totalPlayers=parseInt(document.getElementById('setup-count').value)||6;
-  totalPlayers=Math.min(12,Math.max(6,totalPlayers));
-  const comp=getComposition(totalPlayers);
-  shuffledRoles=shuffle(buildRolePool(comp));
+  totalPlayers=Math.min(12,Math.max(6,parseInt(document.getElementById('setup-count').value)||6));
+  shuffledRoles=shuffle(buildPool(getComp(totalPlayers)));
   players=[];regIdx=0;wolfKill=null;witchHasSave=true;witchHasPoison=true;witchSavedThis=false;witchPoisonTarget=null;
   setupReg();show('p-reg');
 }
 
 function setupReg(){
   document.getElementById('rn').textContent=regIdx+1;
+  document.getElementById('rn2').textContent=regIdx+1;
+  document.getElementById('rtotal').textContent=totalPlayers;
   document.getElementById('reg-name').value='';
   document.getElementById('btn-reg').disabled=true;
   document.getElementById('reg-form-wrap').style.display='block';
   document.getElementById('reg-result').style.display='none';
 }
-
 function chkReg(){document.getElementById('btn-reg').disabled=!document.getElementById('reg-name').value.trim();}
-
 function showRegResult(){
-  const name=document.getElementById('reg-name').value.trim();
-  if(!name)return;
-  const num=regIdx+1, role=shuffledRoles[regIdx];
-  players.push({num,name,role,alive:true});
-  regIdx++;
+  const name=document.getElementById('reg-name').value.trim();if(!name)return;
+  const num=regIdx+1,role=shuffledRoles[regIdx];
+  players.push({num,name,role,alive:true});regIdx++;
   document.getElementById('reg-form-wrap').style.display='none';
   document.getElementById('reg-result').style.display='block';
   document.getElementById('reg-result-box').innerHTML=
-    `<div class="role-reveal ${ROLE_CLS[role]}">
-      <div style="font-size:32px;margin-bottom:8px;">${EMOJI[role]}</div>
-      <div style="font-size:26px;font-weight:500;color:var(--color-text-primary);">${num} 號</div>
-      <div style="font-size:16px;color:var(--color-text-primary);margin:4px 0;">${name}</div>
-      <span class="badge ${BADGE[role]}" style="font-size:14px;padding:5px 18px;margin-top:8px;display:inline-block;">${role}</span>
+    `<div class="role-reveal ${RCLS[role]}">
+      <div style="font-size:52px;margin-bottom:14px;">${EMOJI[role]}</div>
+      <div style="font-size:42px;font-weight:800;color:#1a1a18;margin-bottom:6px;">${num} 號</div>
+      <div style="font-size:22px;color:#1a1a18;margin-bottom:14px;">${name}</div>
+      <span class="badge ${BADGE[role]}" style="font-size:17px;padding:7px 22px;">${role}</span>
     </div>`;
 }
+function nextReg(){if(regIdx<totalPlayers)setupReg();else show('p-night');}
 
-function nextReg(){
-  if(regIdx<totalPlayers)setupReg();
-  else show('p-night');
+function pRows(list){return list.map(p=>`<div class="row"><div class="av ${p.alive?AV[p.role]:'av-dead'}">${p.num}</div><div class="nm ${p.alive?'':'dead-nm'}">${p.name}</div></div>`).join('');}
+function pRowsBadge(list){return list.map(p=>`<div class="row"><div class="av ${p.alive?AV[p.role]:'av-dead'}">${p.num}</div><div class="nm ${p.alive?'':'dead-nm'}">${p.name}</div><span class="badge ${BADGE[p.role]}">${p.role}</span></div>`).join('');}
+
+function makeTaps(list,prefix){
+  return list.map(p=>`<div class="ptap" id="tp-${prefix}-${p.num}" onclick="selectTap('${prefix}',${p.num})"><div class="pn">${p.num}</div><div class="pp">${p.name}</div></div>`).join('');
 }
 
-function playerRows(list){
-  return list.map(p=>`<div class="row">
-    <div class="av ${p.alive?AV[p.role]:'av-dead'}">${p.num}</div>
-    <div class="nm ${p.alive?'':'dead-nm'}">${p.name}</div>
-  </div>`).join('');
+function selectTap(prefix,num){
+  document.querySelectorAll(`[id^="tp-${prefix}-"]`).forEach(el=>el.classList.toggle('sel',el.id===`tp-${prefix}-${num}`));
+  const p=byNum(num);const label=`已選擇：${num} 號 ${p?p.name:''}`;
+  if(prefix==='wolf'){selWolf=num;const el=document.getElementById('wolf-sel');el.style.display='block';el.textContent=label;document.getElementById('btn-wolf').disabled=false;}
+  else if(prefix==='seer'){selSeer=num;const el=document.getElementById('seer-sel');el.style.display='block';el.textContent=label;document.getElementById('btn-seer').disabled=false;}
+  else if(prefix==='vote'){selVote=num;const el=document.getElementById('vote-sel');el.style.display='block';el.textContent=label;document.getElementById('btn-vote').disabled=false;}
+  else if(prefix==='hunter'){selHunter=num;const el=document.getElementById('hunter-sel');el.style.display='block';el.textContent=label;document.getElementById('btn-hunter').disabled=false;}
+  else if(prefix==='poison'){selPoison=num;const el=document.getElementById('poison-sel');el.style.display='block';el.textContent=label;document.getElementById('btn-use-poison').disabled=false;}
 }
 
 function goWolf(){
-  document.getElementById('wolf-list').innerHTML=playerRows(alive());
-  document.getElementById('wolf-num').value='';
-  document.getElementById('wolf-err').textContent='';
+  selWolf=null;
+  document.getElementById('wolf-tap').innerHTML=makeTaps(alive(),'wolf');
+  document.getElementById('wolf-sel').style.display='none';
   document.getElementById('btn-wolf').disabled=true;
   show('p-wolf');
 }
-
-function chkInput(inputId,errId,btnId,allowZero){
-  const v=parseInt(document.getElementById(inputId).value);
-  const e=document.getElementById(errId);
-  if(isNaN(v)){e.textContent='';document.getElementById(btnId).disabled=true;return false;}
-  if(allowZero&&v===0){e.textContent='';document.getElementById(btnId).disabled=false;return true;}
-  const ok=alive().some(p=>p.num===v);
-  e.textContent=ok?'':'號碼不存在或已死亡';
-  document.getElementById(btnId).disabled=!ok;
-  return ok;
-}
-
-function chkWolf(){chkInput('wolf-num','wolf-err','btn-wolf',false);}
-function chkSeer(){chkInput('seer-num','seer-err','btn-seer',false);}
-function chkVote(){chkInput('vote-num','vote-err','btn-vote',true);}
-function chkHunter(){chkInput('hunter-num','hunter-err','btn-hunter',true);}
-
 function doWolf(){
-  wolfKill=parseInt(document.getElementById('wolf-num').value);
+  if(selWolf===null)return;
+  wolfKill=selWolf;
   if(!hasRole('預言家')){goWitch();return;}
-  document.getElementById('seer-list').innerHTML=playerRows(alive());
-  document.getElementById('seer-num').value='';
-  document.getElementById('seer-err').textContent='';
+  selSeer=null;
+  document.getElementById('seer-tap').innerHTML=makeTaps(alive(),'seer');
+  document.getElementById('seer-sel').style.display='none';
   document.getElementById('btn-seer').disabled=true;
   show('p-seer');
 }
-
 function doSeer(){
-  const v=parseInt(document.getElementById('seer-num').value);
-  const t=byNum(v);
-  const good=t.role!=='狼人';
-  document.getElementById('seer-big').textContent=good?'好人 ✓':'狼人 ✗';
-  document.getElementById('seer-big').style.color=good?'var(--color-text-success)':'var(--color-text-danger)';
-  document.getElementById('seer-sub').textContent=v+' 號 '+t.name;
+  if(selSeer===null)return;
+  const t=byNum(selSeer),good=t.role!=='狼人';
+  document.getElementById('seer-who').textContent=`${selSeer} 號 ${t.name}`;
+  const big=document.getElementById('seer-big');
+  big.textContent=good?'好人 ✓':'狼人 ✗';
+  big.style.color=good?'#2d7a3a':'#a32d2d';
   show('p-seer-res');
 }
 
 function goWitch(){
   if(!hasRole('女巫')){endNight();return;}
-  witchSavedThis=false;
-  witchPoisonTarget=null;
+  witchSavedThis=false;witchPoisonTarget=null;selPoison=null;
   const killed=wolfKill!==null?byNum(wolfKill):null;
   const witch=players.find(p=>p.role==='女巫');
   const selfKilled=witch&&wolfKill!==null&&witch.num===wolfKill;
 
   document.getElementById('witch-killed-box').innerHTML=killed
-    ?`<div class="killed-box">
-        <div class="killed-label">今晚被狼人殺死的玩家</div>
-        <div class="killed-num">${killed.num} 號</div>
-        <div class="killed-name">${killed.name}</div>
-      </div>`
-    :'<div class="info">今晚無人被狼人殺死</div>';
+    ?`<div class="killed-box"><div class="killed-label">今晚被狼人殺死的玩家</div><div class="killed-num">${killed.num} 號</div><div class="killed-name">${killed.name}</div></div>`
+    :'<div class="info" style="text-align:center;">今晚無人被狼人殺死</div>';
 
   const as=document.getElementById('witch-antidote-section');
   const ps=document.getElementById('witch-poison-section');
@@ -346,62 +361,43 @@ function goWitch(){
   ps.innerHTML='';db.style.display='none';
 
   if(killed&&!selfKilled&&witchHasSave){
-    as.innerHTML=`<p style="font-size:14px;color:var(--color-text-primary);margin-bottom:6px;">要使用解藥救 <strong>${killed.num} 號 ${killed.name}</strong> 嗎？（解藥只能用一次）</p>
-      <div class="btn2"><button onclick="witchUseSave(true)">使用解藥</button><button onclick="witchUseSave(false)">不救</button></div>`;
+    as.innerHTML=`<p style="font-size:16px;color:var(--text);font-weight:600;margin-bottom:6px;">要使用解藥救 <span style="color:#A32D2D;">${killed.num} 號 ${killed.name}</span> 嗎？</p>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:10px;">解藥只能用一次</p>
+      <div class="btn2"><button class="success-btn" onclick="witchUseSave(true)">使用解藥</button><button onclick="witchUseSave(false)">不救</button></div>`;
   } else {
-    let msg=!witchHasSave?'（解藥已用完）':selfKilled?'（女巫自己被殺，不能自救）':!killed?'（今晚無人被殺）':'';
-    as.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);">${msg}</p>`;
-    showPoisonSection();
+    const msg=!witchHasSave?'解藥已用完':selfKilled?'女巫自己被殺，不能自救':!killed?'今晚無人被殺':'';
+    as.innerHTML=`<div class="info" style="text-align:center;color:var(--text2);">${msg}</div>`;
+    showPoisonSec();
   }
   show('p-witch');
 }
-
 function witchUseSave(yes){
-  const killed=byNum(wolfKill);
-  const as=document.getElementById('witch-antidote-section');
+  const killed=byNum(wolfKill);const as=document.getElementById('witch-antidote-section');
   if(yes&&witchHasSave&&killed){
     witchHasSave=false;witchSavedThis=true;
-    as.innerHTML=`<p style="font-size:13px;color:var(--color-text-success);">✓ 解藥已使用，${killed.num} 號 ${killed.name} 得救</p>`;
+    as.innerHTML=`<div class="info" style="color:#2d7a3a;text-align:center;font-weight:600;">✓ 解藥已使用，${killed.num} 號 ${killed.name} 得救</div>`;
   } else {
-    as.innerHTML=`<p style="font-size:13px;color:var(--color-text-secondary);">不救</p>`;
+    as.innerHTML=`<div class="info" style="color:var(--text2);text-align:center;">不救</div>`;
   }
-  showPoisonSection();
+  showPoisonSec();
 }
-
-function showPoisonSection(){
-  const ps=document.getElementById('witch-poison-section');
-  const db=document.getElementById('witch-done-btn');
-  if(!witchHasPoison){
-    ps.innerHTML='<p style="font-size:13px;color:var(--color-text-secondary);">（毒藥已用完）</p>';
-    db.style.display='block';
-    return;
-  }
-  const aliveList=alive();
-  ps.innerHTML=`<p style="font-size:14px;color:var(--color-text-primary);margin-bottom:6px;">要使用毒藥嗎？（毒藥只能用一次）</p>
-    <div class="card">${playerRows(aliveList)}</div>
-    <label>毒殺號碼（不毒請留空）</label>
-    <input type="number" id="witch-pnum" min="1" placeholder="留空 = 不使用"/>
-    <div class="btn2" style="margin-top:8px;">
-      <button onclick="witchUsePoison(true)">使用毒藥</button>
-      <button onclick="witchUsePoison(false)">不使用</button>
-    </div>`;
+function showPoisonSec(){
+  const ps=document.getElementById('witch-poison-section');const db=document.getElementById('witch-done-btn');
+  if(!witchHasPoison){ps.innerHTML='<div class="info" style="color:var(--text2);text-align:center;">毒藥已用完</div>';db.style.display='block';return;}
+  ps.innerHTML=`<p style="font-size:16px;color:var(--text);font-weight:600;margin-bottom:4px;">要使用毒藥嗎？</p>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:10px;">毒藥只能用一次，點選目標後確認</p>
+    <div class="tap-grid">${alive().map(p=>`<div class="ptap" id="tp-poison-${p.num}" onclick="selectTap('poison',${p.num})"><div class="pn">${p.num}</div><div class="pp">${p.name}</div></div>`).join('')}</div>
+    <div id="poison-sel" class="info" style="display:none;text-align:center;font-weight:600;"></div>
+    <div class="btn2" style="margin-top:10px;"><button class="danger-btn" id="btn-use-poison" onclick="witchUsePoison(true)" disabled>使用毒藥</button><button onclick="witchUsePoison(false)">不使用</button></div>`;
 }
-
 function witchUsePoison(yes){
-  const ps=document.getElementById('witch-poison-section');
-  const db=document.getElementById('witch-done-btn');
+  const ps=document.getElementById('witch-poison-section');const db=document.getElementById('witch-done-btn');
   if(yes){
-    const v=parseInt((document.getElementById('witch-pnum')||{}).value||'0');
-    const t=v?byNum(v):null;
-    if(t&&t.alive){
-      witchPoisonTarget=v;witchHasPoison=false;
-      ps.innerHTML=`<p style="font-size:13px;color:var(--color-text-success);">✓ 毒藥已使用，${t.num} 號 ${t.name} 將被毒殺</p>`;
-    } else {
-      ps.innerHTML='<p style="font-size:13px;color:var(--color-text-danger);">請先輸入有效號碼再點使用</p>';
-      showPoisonSection();return;
-    }
+    const t=selPoison?byNum(selPoison):null;
+    if(t&&t.alive){witchPoisonTarget=selPoison;witchHasPoison=false;selPoison=null;ps.innerHTML=`<div class="info" style="color:#2d7a3a;text-align:center;font-weight:600;">✓ 毒藥已使用，${t.num} 號 ${t.name} 將被毒殺</div>`;}
+    else{ps.innerHTML='<div class="info" style="color:#a32d2d;text-align:center;">請先點選目標</div>';showPoisonSec();return;}
   } else {
-    ps.innerHTML='<p style="font-size:13px;color:var(--color-text-secondary);">不使用毒藥</p>';
+    ps.innerHTML='<div class="info" style="color:var(--text2);text-align:center;">不使用毒藥</div>';
   }
   db.style.display='block';
 }
@@ -410,49 +406,40 @@ function endNight(){
   const deads=[];
   if(wolfKill!==null&&!witchSavedThis){const p=byNum(wolfKill);if(p&&p.alive){p.alive=false;deads.push(p.num);}}
   if(witchPoisonTarget){const p=byNum(witchPoisonTarget);if(p&&p.alive){p.alive=false;deads.push(p.num);}}
-  const msg=deads.length===0
-    ?'平安夜！今晚沒有人死亡。'
-    :'今晚死亡：<br>'+[...new Set(deads)].map(n=>{const p=byNum(n);return`<span style="color:var(--color-text-danger);">${n} 號 ${p?p.name:''}</span>`;}).join('　');
+  const u=[...new Set(deads)];
+  const msg=u.length===0?'平安夜！<br>今晚沒有人死亡。':'今晚死亡：<br>'+u.map(n=>{const p=byNum(n);return`<span style="color:#a32d2d;font-weight:700;">${n} 號 ${p?p.name:''}</span>`;}).join('　');
   document.getElementById('dawn-msg').innerHTML=msg;
-  wolfKill=null;witchPoisonTarget=null;
-  show('p-dawn');
+  wolfKill=null;witchPoisonTarget=null;show('p-dawn');
 }
 
-function goDawn(){document.getElementById('disc-list').innerHTML=playerRows(alive());show('p-discuss');}
+function goDawn(){document.getElementById('disc-list').innerHTML=pRows(alive());show('p-discuss');}
 
 function goVote(){
-  document.getElementById('vote-list').innerHTML=playerRows(alive());
-  document.getElementById('vote-num').value='';
-  document.getElementById('vote-err').textContent='';
+  selVote=null;
+  document.getElementById('vote-tap').innerHTML=makeTaps(alive(),'vote');
+  document.getElementById('vote-sel').style.display='none';
   document.getElementById('btn-vote').disabled=true;
   show('p-vote');
 }
-
 function doVote(){
-  const v=parseInt(document.getElementById('vote-num').value);
-  if(v!==0){
-    const p=byNum(v);
-    if(p){
-      p.alive=false;
-      if(p.role==='獵人'){
-        pendingVoteOut=v;
-        document.getElementById('hunter-info').innerHTML=`<strong>${p.num} 號 ${p.name}</strong>（獵人）被投票放逐`;
-        document.getElementById('hunter-list').innerHTML=playerRows(alive());
-        document.getElementById('hunter-num').value='';
-        document.getElementById('hunter-err').textContent='';
-        document.getElementById('btn-hunter').disabled=true;
-        show('p-hunter');return;
-      }
+  if(selVote===null)return;
+  const p=byNum(selVote);
+  if(p){
+    p.alive=false;
+    if(p.role==='獵人'){
+      document.getElementById('hunter-info').innerHTML=`<strong>${p.num} 號 ${p.name}</strong>（獵人）被投票放逐`;
+      selHunter=null;
+      document.getElementById('hunter-tap').innerHTML=makeTaps(alive(),'hunter');
+      document.getElementById('hunter-sel').style.display='none';
+      document.getElementById('btn-hunter').disabled=true;
+      show('p-hunter');return;
     }
   }
   checkWin();
 }
-
-function doHunter(){
-  const v=parseInt(document.getElementById('hunter-num').value);
-  if(v!==0){const p=byNum(v);if(p&&p.alive)p.alive=false;}
-  checkWin();
-}
+function doTie(){checkWin();}
+function doHunter(){if(selHunter===null)return;const p=byNum(selHunter);if(p&&p.alive)p.alive=false;checkWin();}
+function doHunterSkip(){checkWin();}
 
 function checkWin(){
   const a=alive(),aw=a.filter(p=>p.role==='狼人'),ag=a.filter(p=>p.role!=='狼人');
@@ -465,18 +452,14 @@ function endGame(title,sub,icon){
   document.getElementById('over-title').textContent=title;
   document.getElementById('over-sub').textContent=sub;
   document.getElementById('over-icon').textContent=icon;
-  document.getElementById('over-reveal').innerHTML=
-    '<div style="font-size:13px;color:var(--color-text-secondary);margin-bottom:8px;">身分揭曉</div>'+
-    players.map(p=>`<div class="row">
-      <div class="av ${p.alive?AV[p.role]:'av-dead'}">${p.num}</div>
-      <div class="nm ${p.alive?'':'dead-nm'}">${p.name}</div>
-      <span class="badge ${BADGE[p.role]}">${p.role}</span>
-    </div>`).join('');
+  document.getElementById('over-reveal').innerHTML='<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">身分揭曉</div>'+pRowsBadge(players);
   show('p-over');
 }
 
-function restart(){show('p-setup');updateComposition();}
+function restart(){show('p-setup');updateComp();}
 
-updateComposition();
-document.getElementById('setup-count').addEventListener('input',updateComposition);
+updateComp();
+document.getElementById('setup-count').addEventListener('input',updateComp);
 </script>
+</body>
+</html>
