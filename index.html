@@ -174,6 +174,28 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 /* ── DIVIDER ── */
 .divider{height:1px;background:var(--border);margin:18px 0;}
 .section-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;margin:20px 0 10px;}
+
+/* ── PLAYER ROSTER (judge tab bottom panel) ── */
+.roster-panel{background:var(--bg2);border-top:1px solid var(--border);padding:10px 16px 14px;width:100%;}
+.roster-title{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px;}
+.rp{border-radius:var(--r-sm);padding:7px 5px;text-align:center;border:1px solid var(--border);background:var(--bg);transition:opacity 0.2s;}
+.rp.rp-dead{opacity:0.4;background:var(--bg2);}
+.rp .rp-num{font-size:16px;font-weight:800;color:var(--text);}
+.rp.rp-dead .rp-num{text-decoration:line-through;color:var(--text3);}
+.rp .rp-name{font-size:10px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px;}
+.rp .rp-role{font-size:9px;font-weight:700;margin-top:3px;padding:1px 5px;border-radius:8px;display:inline-block;}
+.rp-wolf .rp-role{background:rgba(184,56,40,0.1);color:#922418;}
+.rp-villager .rp-role{background:rgba(58,122,42,0.1);color:#2a601c;}
+.rp-seer .rp-role{background:rgba(42,101,168,0.1);color:#1a4e88;}
+.rp-witch .rp-role{background:rgba(168,94,16,0.1);color:#864a08;}
+.rp-hunter .rp-role{background:rgba(95,62,150,0.1);color:#4a2e80;}
+.rp-guard .rp-role{background:rgba(30,136,122,0.1);color:#0e6a5e;}
+.rp-unknown .rp-role{background:var(--bg3);color:var(--text3);}
+#jg-p-main{display:none;flex-direction:column;min-height:calc(100vh - 52px);padding:0;}
+#jg-p-main.on{display:flex;}
+#jg-main-scroll{flex:1;overflow-y:auto;padding:14px 16px 16px;max-width:540px;margin:0 auto;width:100%;}
+#jg-roster-wrap{flex-shrink:0;position:sticky;bottom:0;z-index:50;max-width:540px;margin:0 auto;width:100%;}
 </style>
 </head>
 <body>
@@ -225,7 +247,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
   </div>
 
   <div class="section-title">勝利條件</div>
-  <div class="info-danger" style="margin-bottom:8px;">🐺 狼人勝利：存活狼人數 ≥ 存活好人數（神職 + 平民）</div>
+  <div class="info-danger" style="margin-bottom:8px;">🐺 狼人勝利：存活狼人數 ≥ 存活好人數（神職＋平民），或所有神職死亡，或所有平民死亡</div>
   <div class="info-success">✓ 好人勝利：所有狼人被淘汰</div>
 
   <div class="section-title">人數配置</div>
@@ -234,7 +256,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
       <tr style="border-bottom:1px solid var(--border);"><th style="padding:10px 14px;text-align:left;color:var(--text2);font-weight:600;">人數</th><th style="padding:10px 8px;text-align:center;color:var(--wolf);">狼</th><th style="padding:10px 8px;text-align:center;color:var(--vil);">民</th><th style="padding:10px 8px;text-align:center;color:var(--seer);">預</th><th style="padding:10px 8px;text-align:center;color:var(--witch);">巫</th><th style="padding:10px 8px;text-align:center;color:var(--hunter);">獵</th><th style="padding:10px 8px;text-align:center;color:var(--guard);">守</th></tr>
       <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 14px;color:var(--text);">6</td><td style="text-align:center;padding:10px 8px;">2</td><td style="text-align:center;padding:10px 8px;">2</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;color:var(--text3);">—</td><td style="text-align:center;padding:10px 8px;color:var(--text3);">—</td></tr>
       <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 14px;color:var(--text);">7</td><td style="text-align:center;padding:10px 8px;">2</td><td style="text-align:center;padding:10px 8px;">3</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;color:var(--text3);">—</td><td style="text-align:center;padding:10px 8px;color:var(--text3);">—</td></tr>
-      <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 14px;color:var(--text);">8</td><td style="text-align:center;padding:10px 8px;">2</td><td style="text-align:center;padding:10px 8px;">2</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td></tr>
+      <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 14px;color:var(--text);">8</td><td style="text-align:center;padding:10px 8px;">2</td><td style="text-align:center;padding:10px 8px;">3</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;color:var(--text3);">—</td></tr>
       <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 14px;color:var(--text);">9</td><td style="text-align:center;padding:10px 8px;">3</td><td style="text-align:center;padding:10px 8px;">3</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;color:var(--text3);">—</td></tr>
       <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 14px;color:var(--text);">10</td><td style="text-align:center;padding:10px 8px;">3</td><td style="text-align:center;padding:10px 8px;">3</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td></tr>
       <tr style="border-bottom:1px solid var(--border);"><td style="padding:10px 14px;color:var(--text);">11</td><td style="text-align:center;padding:10px 8px;">3</td><td style="text-align:center;padding:10px 8px;">4</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td><td style="text-align:center;padding:10px 8px;">1</td></tr>
@@ -417,11 +439,19 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 
 <!-- 法官主持中 -->
 <div id="jg-p-main" class="pg">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-    <div style="flex:1;"><div id="jg-phase-badge" class="step-badge"></div></div>
-    <button style="width:auto;padding:8px 14px;font-size:13px;margin-top:0;" onclick="jgBack()">← 上一步</button>
+  <div id="jg-main-scroll">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <div style="flex:1;"><div id="jg-phase-badge" class="step-badge"></div></div>
+      <button style="width:auto;padding:8px 14px;font-size:13px;margin-top:0;" onclick="jgBack()">← 上一步</button>
+    </div>
+    <div id="jg-content"></div>
   </div>
-  <div id="jg-content"></div>
+  <div id="jg-roster-wrap">
+    <div class="roster-panel">
+      <div class="roster-title">玩家狀態</div>
+      <div class="roster-grid" id="jg-roster"></div>
+    </div>
+  </div>
 </div>
 
 </div><!-- /t-judge -->
@@ -441,7 +471,7 @@ function getComp(n){
   const t={
     6:{wolf:2,villager:2,seer:1,witch:1},
     7:{wolf:2,villager:3,seer:1,witch:1},
-    8:{wolf:2,villager:2,seer:1,witch:1,hunter:1,guard:1},
+    8:{wolf:2,villager:3,seer:1,witch:1,hunter:1},
     9:{wolf:3,villager:3,seer:1,witch:1,hunter:1},
     10:{wolf:3,villager:3,seer:1,witch:1,hunter:1,guard:1},
     11:{wolf:3,villager:4,seer:1,witch:1,hunter:1,guard:1},
@@ -722,12 +752,13 @@ function jgStart(){
   jgTotal=n; jgComp=getComp(n); jgRoleCounts={...jgComp};
   jgPlayers=[]; jgNight=1;
   jgWitchSaveUsed=false; jgWitchPoisonUsed=false;
-  jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null};
+  jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,hunterNightShot:null};
   jgStepHistory=[];
   // Pre-fill all players as unknown role (null = unconfirmed, will become villager if never woke)
   for(let i=1;i<=n;i++) jgPlayers.push({num:i, name:`${i}號`, role:null, alive:true});
   document.querySelectorAll('#t-judge .pg').forEach(p=>p.classList.remove('on'));
   document.getElementById('jg-p-main').classList.add('on');
+  jgRenderRoster();
   jgGoStep('deal');
 }
 
@@ -767,13 +798,37 @@ function jgLabel(p){ return p?`${p.num} 號 ${p.name}`:'（未找到）'; }
 function jgShowPg(html, badge){
   document.getElementById('jg-phase-badge').innerHTML=badge||'';
   document.getElementById('jg-content').innerHTML=html;
+  jgRenderRoster();
+  document.getElementById('jg-main-scroll').scrollTo(0,0);
   window.scrollTo(0,0);
+}
+
+// Render the always-visible roster at bottom
+function jgRenderRoster(){
+  const el=document.getElementById('jg-roster');
+  if(!el) return;
+  el.innerHTML=jgPlayers.map(p=>{
+    const role=p.role||'villager';
+    const rname=p.role?RNAME[p.role]:'?';
+    return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
+      <div class="rp-num">${p.num}</div>
+      <div class="rp-name">${p.name===`${p.num}號`?'—':p.name}</div>
+      <div class="rp-role">${rname}</div>
+    </div>`;
+  }).join('');
 }
 
 function jgBack(){
   if(jgStepHistory.length>1){
     jgStepHistory.pop();
-    jgGoStep(jgStepHistory.pop());
+    const prev=jgStepHistory.pop();
+    // Skip night-start when going back (it would re-reset jgRecord & confuse night count)
+    // Instead go back to the step before it
+    if(prev==='night-start'&&jgStepHistory.length>0){
+      jgGoStep(jgStepHistory.pop());
+    } else {
+      jgGoStep(prev);
+    }
   }
 }
 
@@ -802,14 +857,13 @@ function jgGoStep(step){
   if(step==='deal'){
     jgShowPg(`
       <h2 style="margin-bottom:8px;">第 1 步・發牌</h2>
-      <div class="speech">依玩家順序，將牌<em>背面朝上</em>逐一分發給每位玩家。<br>確保每人只看到自己的牌。</div>
+      <div class="speech">依玩家順序，將牌逐一分發給每位玩家，確保每人只看到自己的牌。</div>
       <button class="primary" onclick="jgGoStep('confirm321')">下一步 →</button>
     `,'📋 發牌');
   }
   else if(step==='confirm321'){
     jgShowPg(`
-      <h2 style="margin-bottom:8px;">第 2 步・確認身分</h2>
-      <div class="speech">「請大家看好自己的牌，不要給別人看到。<br>我數 <em>3、2、1</em>，一起翻開看。」</div>
+      <h2 style="margin-bottom:8px;">第 2 步・請確認角色身分</h2>
       <div class="info-warn">⏱ 給玩家約 15 秒記住自己的身分</div>
       <div id="jg-timer" class="timer-ring"><div class="timer-num" id="jg-timer-num">15</div><div class="timer-sub">秒後天黑</div></div>
       <button id="jg-btn-timer" onclick="jgStartTimer()" class="gold">開始倒數</button>
@@ -817,197 +871,371 @@ function jgGoStep(step){
     `,'👀 確認身分');
   }
   else if(step==='night-start'){
-    jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null};
+    jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false};
     const firstNight=jgIsFirstNight();
-    const guardStep=hasGuard?'guard-wake':'wolf-wake';
     jgShowPg(`
       <h2 style="margin-bottom:8px;">第 ${jgNight} 夜開始</h2>
       <div class="speech">「<em>天黑請閉眼。</em>」<br>確認所有玩家閉上眼睛</div>
-      ${firstNight?'<div class="info-warn" style="margin-top:4px;">第一夜：依序睜眼時輸入姓名，法官自行記錄身分</div>':''}
-      <button class="primary" style="margin-top:14px;" onclick="jgGoStep('${guardStep}')">所有人已閉眼 →</button>
+      ${firstNight?'<div class="info-warn" style="margin-top:4px;">第一夜：依序睜眼時輸入姓名，沒睜眼的自動設為平民</div>':''}
+      <button class="primary" style="margin-top:14px;" onclick="jgGoStep('wolf-wake')">所有人已閉眼 →</button>
     `,'🌙 天黑');
   }
   else if(step==='guard-wake'){
     const isFirst=jgIsFirstNight();
+    const guardP=jgPlayers.find(p=>p.role==='guard');
+    let guardIdHtml='';
+    if(isFirst){
+      const gv=guardP?guardP.num:'', gn=guardP&&guardP.name!==guardP.num+'號'?guardP.name:'';
+      guardIdHtml='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">'
+        +'<div style="flex:0 0 80px;"><label style="margin-top:0;">守衛號碼</label>'
+        +'<input type="number" id="jg-guard-who" placeholder="" value="'+gv+'"/></div>'
+        +'<div style="flex:1;"><label style="margin-top:0;">姓名（可選填）</label>'
+        +'<input type="text" id="jg-guard-name" placeholder="" value="'+gn+'"/></div>'
+        +'</div><div class="divider"></div>';
+    }
+    const grecVal=jgRecord.guardTarget||'';
     jgShowPg(`
       <h2>守衛睜眼</h2>
       <div class="speech">「<em>守衛請睜眼。</em>請選擇今晚要守護的對象。」</div>
-      ${isFirst?`
-        <div class="info-warn">第一夜・紀錄守衛姓名</div>
-        <label>守衛是哪位玩家？（號碼）</label>
-        <input type="number" id="jg-guard-who" placeholder="例：2"/>
-        <label>守衛的姓名（可選填）</label>
-        <input type="text" id="jg-guard-name" placeholder="例：小明（留空保留號碼）"/>
-      `:''}
-      <div class="info" style="margin-top:8px;">存活玩家：<br>${jgAliveList()}</div>
-      <label>守衛今晚守護的對象</label>
-      <input type="text" id="jg-guard-rec" placeholder="輸入號碼"/>
+      ${guardIdHtml}
+      <label>守衛今晚守護的對象（號碼，留空 = 空守）</label>
+      <input type="text" id="jg-guard-rec" placeholder="" value="${grecVal}"/>
       <div class="speech" style="margin-top:12px;">「<em>守衛請閉眼。</em>」</div>
-      <button class="primary" onclick="jgSaveGuard()">已紀錄，下一步 →</button>
+      <button class="primary" onclick="jgSaveGuard()">已紀錄，天亮 →</button>
     `,'🛡️ 守衛');
   }
   else if(step==='wolf-wake'){
     const isFirst=jgIsFirstNight();
     const wolfCount=jgComp.wolf||2;
+    const knownWolves=jgPlayers.filter(p=>p.role==='wolf');
+    let wolfIdHtml='';
+    if(isFirst){
+      for(let i=0;i<wolfCount;i++){
+        const kw=knownWolves[i];
+        wolfIdHtml+='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">'
+          +'<div style="flex:0 0 80px;"><label style="margin-top:0;">狼人 '+(i+1)+' 號碼</label>'
+          +'<input type="number" id="jg-wolf-who-'+i+'" placeholder="" value="'+(kw?kw.num:'')+'"/></div>'
+          +'<div style="flex:1;"><label style="margin-top:0;">姓名（可選填）</label>'
+          +'<input type="text" id="jg-wolf-name-'+i+'" placeholder="" value="'+(kw&&kw.name!==kw.num+'號'?kw.name:'')+'"/></div>'
+          +'</div>';
+      }
+      wolfIdHtml+='<div class="divider"></div>';
+    }
+    const killVal=jgRecord.wolfKill||'';
     jgShowPg(`
       <h2>狼人睜眼</h2>
-      <div class="speech">「<em>狼人請睜眼，請互相確認隊友，選擇今晚要殺的對象。</em>」</div>
-      ${isFirst?`
-        <div class="info-warn">第一夜・紀錄狼人姓名（共 ${wolfCount} 人）</div>
-        ${Array.from({length:wolfCount},(_,i)=>`
-          <label>狼人 ${i+1} 的號碼</label>
-          <input type="number" id="jg-wolf-who-${i}" placeholder="例：${i+3}"/>
-          <label>狼人 ${i+1} 的姓名（可選填）</label>
-          <input type="text" id="jg-wolf-name-${i}" placeholder="留空保留號碼"/>
-        `).join('')}
-      `:''}
-      <div class="info" style="margin-top:8px;">存活玩家：<br>${jgAliveList()}</div>
-      <label>狼人獵殺的對象（號碼）</label>
-      <input type="text" id="jg-wolf-rec" placeholder="例：3"/>
+      <div class="speech">「<em>狼人請睜眼，請選擇今晚要殺的對象。</em>」</div>
+      ${wolfIdHtml}
+      <label>今晚獵殺的對象（號碼）</label>
+      <input type="text" id="jg-wolf-rec" placeholder="" value="${killVal}"/>
       <div class="speech" style="margin-top:12px;">「<em>狼人請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
     `,'🐺 狼人');
   }
   else if(step==='seer-wake'){
     const isFirst=jgIsFirstNight();
+    const seerP=jgPlayers.find(p=>p.role==='seer');
+    const seerAlive=seerP&&seerP.alive;
+    const hasSeerRole=(jgNight===1&&jgComp.seer>0)||seerP;
+    if(!hasSeerRole){ jgGoStep('witch-wake'); return; }
+    let seerIdHtml='';
+    if(isFirst){
+      const sv=seerP?seerP.num:'', sn=seerP&&seerP.name!==seerP.num+'號'?seerP.name:'';
+      seerIdHtml='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">'
+        +'<div style="flex:0 0 80px;"><label style="margin-top:0;">預言家號碼</label>'
+        +'<input type="number" id="jg-seer-who" placeholder="" value="'+sv+'"/></div>'
+        +'<div style="flex:1;"><label style="margin-top:0;">姓名（可選填）</label>'
+        +'<input type="text" id="jg-seer-name" placeholder="" value="'+sn+'"/></div>'
+        +'</div><div class="divider"></div>';
+    }
+    const targetVal=jgRecord.seerChecked||'';
+    if(!seerAlive&&seerP){
+      // Dead seer: just run the script, no input
+      jgShowPg(`
+        <h2>預言家睜眼</h2>
+        <div class="info-warn">預言家已出局，仍需走完流程</div>
+        <div class="speech">「<em>預言家請睜眼，今晚要查驗的對象是？</em>」</div>
+        <div class="speech">「<em>預言家請閉眼。</em>」</div>
+        <button class="primary" onclick="jgSaveSeer()">下一步 →</button>
+      `,'🔮 預言家');
+      return;
+    }
     jgShowPg(`
       <h2>預言家睜眼</h2>
-      <div class="speech">「<em>預言家請睜眼，今晚要查驗的對象是？</em>」<br>（預言家手指指向目標）</div>
-      ${isFirst?`
-        <div class="info-warn">第一夜・紀錄預言家姓名</div>
-        <label>預言家是哪位玩家？（號碼）</label>
-        <input type="number" id="jg-seer-who" placeholder="例：4"/>
-        <label>預言家的姓名（可選填）</label>
-        <input type="text" id="jg-seer-name" placeholder="留空保留號碼"/>
-      `:''}
-      <div class="info" style="margin-top:8px;">存活玩家：<br>${jgAliveList()}</div>
+      <div class="speech">「<em>預言家請睜眼，今晚要查驗的對象是？</em>」</div>
+      ${seerIdHtml}
       <label>預言家查驗的對象（號碼）</label>
-      <input type="text" id="jg-seer-target-input" placeholder="例：5" oninput="jgUpdateSeerResult()"/>
+      <input type="text" id="jg-seer-target-input" placeholder="" oninput="jgUpdateSeerResult()" value="${targetVal}"/>
       <div id="jg-seer-result-box"></div>
-      <div class="speech" style="margin-top:12px;" id="jg-seer-speech"></div>
       <div class="speech">「<em>預言家請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveSeer()">已查驗，下一步 →</button>
     `,'🔮 預言家');
+    if(jgRecord.seerChecked) setTimeout(jgUpdateSeerResult,50);
   }
   else if(step==='witch-wake'){
     const isFirst=jgIsFirstNight();
     const killed=jgRecord.wolfKill;
     const guardSaved=jgRecord.guardTarget&&killed&&(jgRecord.guardTarget.toString()===killed.toString());
     const canShowKilled=jgNight===1||!jgWitchSaveUsed;
+    const witchP=jgPlayers.find(p=>p.role==='witch');
+    const witchAlive=witchP&&witchP.alive;
+    const hasWitchRole=(jgNight===1&&jgComp.witch>0)||witchP;
+    if(!hasWitchRole){ jgGoStep('hunter-wake'); return; }
 
+    // If witch is dead, only show judge script (no drug UI)
+    if(!witchAlive&&witchP){
+      jgShowPg(`
+        <h2>女巫睜眼</h2>
+        <div class="info-warn">女巫已出局，仍需走完流程避免洩露身分</div>
+        <div class="speech">「<em>女巫請睜眼。</em>」</div>
+        <div class="speech" style="margin-top:8px;">「<em>你要使用解藥嗎？</em>」</div>
+        <div class="speech" style="margin-top:8px;">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」</div>
+        <div class="speech" style="margin-top:12px;">「<em>女巫請閉眼。</em>」</div>
+        <button class="primary" onclick="jgSaveWitch()">下一步 →</button>
+      `,'🧪 女巫');
+      return;
+    }
+
+    const selfKilled=witchP&&killed&&(witchP.num.toString()===killed.toString());
+
+    // Killed display
     let killedHtml='';
     if(guardSaved){
-      killedHtml='<div class="info-success">🛡️ 守衛守護了今晚被殺的人<br>告訴女巫：今晚無人被殺</div>';
+      killedHtml='<div class="info-success">🛡️ 守衛守護，今晚無人被狼殺<br>告訴女巫：今晚沒有人死</div>';
     } else if(canShowKilled&&killed){
       const kp=jgFind(killed);
-      killedHtml=`<div class="killed-box"><div class="killed-label">今晚被狼人殺死</div><div class="killed-num">${killed}</div><div class="killed-name">${kp&&kp.name!==`${kp.num}號`?kp.name:''}</div></div>
-        <div class="speech">「指向被殺玩家：<em>今晚 ${killed}號 ${kp&&kp.name!==`${kp.num}號`?kp.name:''} 被殺了。</em>」</div>`;
+      const kname=kp&&kp.name!==kp.num+'號'?kp.name:'';
+      killedHtml='<div class="killed-box"><div class="killed-label">今晚被狼人殺死</div>'
+        +'<div class="killed-num">'+killed+'號</div>'
+        +'<div class="killed-name">'+kname+'</div></div>'
+        +'<div class="speech">「指向 '+killed+'號'+(kname?' '+kname:'')+'：<em>今晚他被殺了，你要使用解藥嗎？</em>」</div>';
     } else if(!canShowKilled){
       killedHtml='<div class="info-warn">解藥已用完・本輪不告知死亡者</div>';
     } else {
       killedHtml='<div class="info">今晚無人被殺</div>';
     }
 
-    const selfKilled = (()=>{
-      const wp=jgPlayers.find(p=>p.role==='witch');
-      return wp&&killed&&(wp.num.toString()===killed.toString()||wp.name===killed);
-    })();
+    // Save section — always show speech, two-button UI
+    let saveHtml='';
+    saveHtml+='<div class="speech" style="margin-top:8px;">「<em>你要使用解藥嗎？</em>」</div>';
+    if(selfKilled){
+      saveHtml+='<div class="btn2" style="margin-top:6px;"><button disabled style="opacity:0.3;">救人</button><button disabled style="opacity:0.3;">不救</button></div>'
+        +'<div class="info-warn" style="margin-top:6px;">女巫自己被殺，不能自救（搖頭）</div>';
+    } else if(!jgWitchSaveUsed&&!guardSaved&&canShowKilled&&killed){
+      const saved=jgRecord.witchSave;
+      saveHtml+='<div class="btn2" style="margin-top:6px;">'
+        +'<button class="'+(saved?'primary':'success')+'" id="jg-btn-save-yes" onclick="jgWitchSaveBtn(true)">救人</button>'
+        +'<button class="ghost" id="jg-btn-save-no" onclick="jgWitchSaveBtn(false)">不救</button>'
+        +'</div>'
+        +'<div id="jg-witch-save-status">'+(saved?'<div class="info-success" style="font-size:12px;margin-top:4px;">✓ 選擇救人（可按「不救」取消）</div>':'')+'</div>';
+    } else if(canShowKilled){
+      // Only show note when we can show the killed info (otherwise killedHtml already explains)
+      saveHtml+='<div class="info" style="color:var(--text2);font-size:13px;">'
+        +(!killed?'今晚無人被殺':'今晚無法使用解藥')+'</div>';
+    }
 
-    const saveHtml=(!jgWitchSaveUsed&&!guardSaved&&canShowKilled&&killed&&!selfKilled)?
-      `<div class="speech" style="margin-top:10px;">「<em>你要使用解藥嗎？要救請比讚。</em>」</div>
-       <label>女巫是否使用解藥</label>
-       <select id="jg-witch-save-sel"><option value="no">不救</option><option value="yes">使用解藥救人</option></select>`
-      :`<div class="info" style="color:var(--text2);">${jgWitchSaveUsed?'解藥已用完':selfKilled?'女巫自己被殺，不能自救':'今晚無法使用解藥'}</div>`;
+    // Poison section — always show speech
+    let poisonHtml='';
+    const savedThisRound=jgRecord.witchSave;
+    poisonHtml='<div class="speech" style="margin-top:10px;">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」</div>';
+    if(jgWitchPoisonUsed){
+      poisonHtml+='<div class="info" style="color:var(--text2);font-size:13px;">毒藥已用完</div>';
+    } else if(savedThisRound){
+      poisonHtml+='<div class="info" style="color:var(--text2);font-size:13px;">已使用解藥，本晚不能同時使用毒藥</div>';
+    } else {
+      const pv=jgRecord.witchPoison||'';
+      poisonHtml+='<div id="jg-witch-poison-wrap">'
+        +'<label>毒殺的對象（號碼，留空=不毒）</label>'
+        +'<input type="text" id="jg-witch-poison-rec" placeholder="" value="'+pv+'"/>'
+        +'</div>';
+    }
 
-    const poisonHtml=!jgWitchPoisonUsed?
-      `<div class="speech" style="margin-top:10px;">「<em>你要使用毒藥嗎？要毒請比讚後指向目標。</em>」<br>（解藥與毒藥不能同晚使用）</div>
-       <div class="info">存活玩家：<br>${jgAliveList()}</div>
-       <label>女巫毒殺的對象（號碼，留空=不毒）</label>
-       <input type="text" id="jg-witch-poison-rec" placeholder="留空=不使用"/>`
-      :`<div class="info" style="color:var(--text2);">毒藥已用完</div>`;
+    // First-night identity
+    let witchIdHtml='';
+    if(isFirst){
+      const wv=witchP?witchP.num:'', wn=witchP&&witchP.name!==witchP.num+'號'?witchP.name:'';
+      witchIdHtml='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">'
+        +'<div style="flex:0 0 80px;"><label style="margin-top:0;">女巫號碼</label>'
+        +'<input type="number" id="jg-witch-who" placeholder="" value="'+wv+'" oninput="jgWitchWhoChange()"/>'
+        +'<div id="jg-witch-who-warn"></div></div>'
+        +'<div style="flex:1;"><label style="margin-top:0;">姓名（可選填）</label>'
+        +'<input type="text" id="jg-witch-name" placeholder="" value="'+wn+'"/></div>'
+        +'</div><div class="divider"></div>';
+    }
 
     jgShowPg(`
       <h2>女巫睜眼</h2>
       <div class="speech">「<em>女巫請睜眼。</em>」</div>
-      ${isFirst?`
-        <div class="info-warn">第一夜・紀錄女巫姓名</div>
-        <label>女巫是哪位玩家？（號碼）</label>
-        <input type="number" id="jg-witch-who" placeholder="例：6"/>
-        <label>女巫的姓名（可選填）</label>
-        <input type="text" id="jg-witch-name" placeholder="留空保留號碼"/>
-      `:''}
+      ${witchIdHtml}
       ${killedHtml}
-      ${saveHtml}
+      <div id="jg-witch-save-wrap">${saveHtml}</div>
       ${poisonHtml}
       <div class="speech" style="margin-top:12px;">「<em>女巫請閉眼。</em>」</div>
-      <button class="primary" onclick="jgSaveWitch()">已紀錄，天亮 →</button>
+      <button class="primary" onclick="jgSaveWitch()">已紀錄，下一步 →</button>
     `,'🧪 女巫');
   }
   else if(step==='hunter-wake'){
-    // Hunter in night (already out via vote or killed) — must still run script
-    // (hunter only activates on vote-out, handled in vote step)
+    const isFirst=jgIsFirstNight();
+    const hunterP=jgPlayers.find(p=>p.role==='hunter');
+    const hunterExists=(jgNight===1&&jgComp.hunter>0)||hunterP;
+    if(!hunterExists){ jgGoStep(hasGuard?'guard-wake':'dawn'); return; }
+    const gsKill=jgRecord.guardTarget&&jgRecord.wolfKill&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
+    const wsKill=jgRecord.witchSave;
+    const hnum=hunterP?hunterP.num:null;
+    const byWolf=hnum&&jgRecord.wolfKill&&(hnum.toString()===jgRecord.wolfKill.toString())&&!gsKill&&!wsKill;
+    const byPoison=hnum&&jgRecord.witchPoison&&(hnum.toString()===jgRecord.witchPoison.toString());
+    const hunterDies=byWolf||byPoison;
+    let hunterIdHtml='';
+    if(isFirst){
+      const hv=hunterP?hunterP.num:'', hn=hunterP&&hunterP.name!==hunterP.num+'號'?hunterP.name:'';
+      hunterIdHtml='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">'
+        +'<div style="flex:0 0 80px;"><label style="margin-top:0;">獵人號碼</label>'
+        +'<input type="number" id="jg-hunter-who" placeholder="" value="'+hv+'"/></div>'
+        +'<div style="flex:1;"><label style="margin-top:0;">姓名（可選填）</label>'
+        +'<input type="text" id="jg-hunter-name" placeholder="" value="'+hn+'"/></div>'
+        +'</div><div class="divider"></div>';
+    }
+    // If hunter is already dead (from previous night or vote), still run script
+    const hunterAlreadyDead=hunterP&&!hunterP.alive&&!byWolf&&!byPoison;
+    let statusHtml='', shotHtml='';
+    if(hunterAlreadyDead){
+      statusHtml='<div class="info-warn">獵人已出局，仍需走完流程避免洩露身分</div>'
+        +'<div class="info-success" style="text-align:center;font-size:22px;padding:16px;">你的技能使用狀況是 👍</div>';
+    } else if(byPoison){
+      // Poisoned: skill disabled, show 👎
+      statusHtml='<div class="info-danger" style="text-align:center;font-size:22px;padding:16px;">你的技能使用狀況是 👎</div>';
+    } else if(byWolf){
+      // Wolf-killed: skill activates, show 👎 + shoot input
+      const sv=jgRecord.hunterNightShot||'';
+      statusHtml='<div class="info-danger" style="text-align:center;font-size:22px;padding:16px;">你的技能使用狀況是 👎<br><span style="font-size:13px;">啟動角色技能</span></div>';
+      shotHtml='<div class="speech">啟動角色技能，請選擇你要帶走的號碼（留空可不帶）</div>'
+        +'<label>帶走的玩家號碼（留空=不帶）</label>'
+        +'<input type="text" id="jg-hunter-night-shot" placeholder="" value="'+sv+'"/>';
+    } else {
+      // Safe: 👍
+      statusHtml='<div class="info-success" style="text-align:center;font-size:22px;padding:16px;">你的技能使用狀況是 👍</div>';
+    }
+    jgShowPg(`
+      <h2>獵人睜眼</h2>
+      <div class="speech">「<em>獵人請睜眼。</em>」</div>
+      ${hunterIdHtml}
+      ${statusHtml}
+      ${shotHtml}
+      <div class="speech" style="margin-top:12px;">「<em>獵人請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveHunterNight()">已紀錄，下一步 →</button>
+    `,'🔫 獵人');
   }
   else if(step==='dawn'){
     // First night: seal remaining unassigned players as villagers
-    if(jgNight===1) jgSealVillagers();
+    if(jgNight===1){ jgSealVillagers(); jgRenderRoster(); }
 
-    const guardSaved=jgRecord.guardTarget&&jgRecord.wolfKill&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
+    const guardSaved=jgRecord.guardTarget&&jgRecord.wolfKill&&
+      (jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
     const witchSaved=jgRecord.witchSave;
     let deads=[];
-    if(jgRecord.wolfKill&&!guardSaved&&!witchSaved){deads.push(jgRecord.wolfKill);}
-    if(jgRecord.witchPoison){deads.push(jgRecord.witchPoison);}
+    // Wolf kill (blocked by guard or witch save?)
+    if(jgRecord.wolfKill&&!guardSaved&&!witchSaved) deads.push(jgRecord.wolfKill);
+    // Witch poison (guard cannot block this)
+    if(jgRecord.witchPoison) deads.push(jgRecord.witchPoison);
     deads=[...new Set(deads)];
 
-    // apply deaths
-    deads.forEach(d=>{
-      const p=jgFind(d);
-      if(p) p.alive=false;
-    });
+    // Hunter night shot (only valid if hunter was wolf-killed, not poisoned)
+    if(jgRecord.hunterNightShot){
+      const hunterP=jgPlayers.find(p=>p.role==='hunter');
+      const hunterWolfKilled=hunterP&&jgRecord.wolfKill&&
+        (hunterP.num.toString()===jgRecord.wolfKill.toString())&&!guardSaved&&!witchSaved;
+      if(hunterWolfKilled) deads.push(jgRecord.hunterNightShot);
+    }
+    deads=[...new Set(deads)];
 
-    const deadNames=deads.map(d=>{const p=jgFind(d);return p?`${p.num}號 ${p.name}`:d;});
-    let dawnMsg=deadNames.length===0?'今晚是<em>平安夜</em>！':'今晚 <mark>'+deadNames.join('、')+'</mark> 死了。';
+    // Apply deaths
+    deads.forEach(d=>{ const p=jgFind(d); if(p) p.alive=false; });
+    jgRecord.hunterNightShot=null;
 
+    const deadNames=deads.map(d=>{ const p=jgFind(d); return p?`${p.num}號 ${p.name}`:d; });
+    let dawnMsg=deadNames.length===0
+      ?'今晚是<em>平安夜</em>！'
+      :'今晚 <mark>'+deadNames.join('、')+'</mark> 死了。';
+
+    jgRenderRoster();
+    // Check win AFTER applying deaths
+    const dawnWin=jgCheckWin();
+    if(dawnWin){ jgShowWin(dawnWin); return; }
+
+    let lwHtml='';
+    if(deads.length>0){
+      lwHtml='<div class="divider"></div>'
+        +'<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">發表遺言（依序進行）</div>';
+      deads.forEach(d=>{
+        const p=jgFind(d);
+        if(p) lwHtml+='<div class="info" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:10px 14px;">'
+          +'<span style="font-size:18px;">💬</span>'
+          +'<span style="flex:1;">'+p.num+'號 '+p.name+'</span>'
+          +'</div>';
+      });
+    }
     jgShowPg(`
       <h2>天亮了！</h2>
       <div class="speech" style="font-size:16px;">「<em>天亮請睜眼。</em>」<br>${dawnMsg}</div>
-      <button class="primary" onclick="jgGoStep('discuss')" style="margin-top:12px;">開始發言 →</button>
+      ${lwHtml}
+      <button class="primary" onclick="jgGoStep('discuss')" style="margin-top:12px;">${deads.length>0?'遺言發表完，':''}開始發言 →</button>
     `,'☀️ 天亮');
   }
   else if(step==='discuss'){
+    const unknowns=jgPlayers.filter(p=>p.alive&&p.role==='villager'&&p.name===p.num+'號');
+    let vilHtml='';
+    if(unknowns.length>0){
+      vilHtml='<div class="info-warn" style="margin-bottom:8px;">可選填平民姓名（方便後續紀錄）</div>';
+      unknowns.forEach(p=>{
+        vilHtml+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'
+          +'<div style="width:36px;height:36px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">'+p.num+'</div>'
+          +'<input type="text" id="jg-vil-name-'+p.num+'" placeholder="" style="flex:1;"/>'
+          +'</div>';
+      });
+      vilHtml+='<button onclick="jgSaveVilNames()" style="margin-bottom:12px;">儲存姓名</button>';
+    }
     jgShowPg(`
       <h2>發言討論</h2>
       <div class="speech">「<em>請抽取發言順序，依序發言。</em>」</div>
-      <div class="card" style="margin-top:12px;">${jgAliveRows()}</div>
+      ${vilHtml}
       <button class="primary" onclick="jgGoStep('vote')" style="margin-top:8px;">發言結束，進入投票 →</button>
     `,'💬 發言');
   }
   else if(step==='vote'){
     jgShowPg(`
       <h2>投票放逐</h2>
-      <div class="speech">「<em>請大家 3、2、1 一起指出最像狼人的玩家。</em>」<br>多數票者出局，平票則無人出局。</div>
-      <div class="card" style="margin-top:10px;">${jgAliveRows()}</div>
-      <label>放逐的玩家（號碼，留空=平票）</label>
-      <input type="text" id="jg-vote-rec" placeholder="留空=平票無人出局"/>
-      <button class="danger" onclick="jgSaveVote()" style="margin-top:10px;">確認放逐 →</button>
-      <button class="ghost" onclick="jgGoStep('next-night')" style="margin-top:8px;">平票，無人出局 →</button>
+      <div class="speech">「<em>請大家 3、2、1 一起指出最像狼人的玩家。</em>」<br>多數票者出局。若平票，平票玩家 PK 發言後再投一票。</div>
+      <label>最終出局的玩家（號碼，無人出局留空）</label>
+      <input type="text" id="jg-vote-rec" placeholder=""/>
+      <button class="danger" onclick="jgSaveVote()" style="margin-top:10px;">確認 →</button>
     `,'🗳 投票');
   }
   else if(step==='hunter-shot'){
     jgShowPg(`
       <h2>獵人開槍</h2>
-      <div class="info-warn">獵人被放逐！可以開槍帶走一名玩家</div>
-      <div class="speech">「<em>獵人你被放逐了，你可以選擇開槍帶走一名玩家。</em>」</div>
-      <div class="card">${jgAliveRows()}</div>
-      <label>獵人開槍目標（號碼，留空=不開槍）</label>
-      <input type="text" id="jg-hunter-shot-rec" placeholder="留空=不開槍"/>
+      <div class="info-danger" style="text-align:center;font-size:22px;padding:16px;">你的技能使用狀況是 👎<br><span style="font-size:13px;">啟動角色技能</span></div>
+      <div class="speech">啟動角色技能，請選擇你要帶走的號碼（留空可不帶）</div>
+      <label>帶走的玩家號碼（留空=不帶）</label>
+      <input type="text" id="jg-hunter-shot-rec" placeholder=""/>
       <button class="danger" onclick="jgSaveHunter()" style="margin-top:10px;">確認 →</button>
     `,'🔫 獵人');
+  }
+  else if(step==='vote-last-words'){
+    const p=jgRecord._voteOutNum?jgByNum(jgRecord._voteOutNum):null;
+    const name=p?p.num+'號 '+p.name:'被放逐玩家';
+    jgShowPg(`
+      <h2>遺言</h2>
+      <div class="info" style="display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 14px;">
+        <span style="font-size:18px;">💬</span><span>${name} 發表遺言</span>
+      </div>
+      <button class="primary" onclick="jgGoStep('next-night')">遺言結束，天黑 →</button>
+    `,'💬 遺言');
   }
   else if(step==='next-night'){
     const res=jgCheckWin();
     if(res){jgShowWin(res);return;}
     jgNight++;
-    jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null};
+    jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false};
     jgGoStep('night-start');
   }
 }
@@ -1024,24 +1252,54 @@ function jgStartTimer(){
   },1000);
 }
 
+function jgSaveHunterNight(){
+  const isFirst=jgNight===1;
+  if(isFirst){
+    const whoNum=parseInt((document.getElementById('jg-hunter-who')||{}).value||'0');
+    const name=(document.getElementById('jg-hunter-name')||{}).value?.trim()||'';
+    if(whoNum){
+      jgPlayers.forEach(p=>{ if(p.role==='hunter') p.role=null; });
+      const p=jgByNum(whoNum);
+      if(p){p.role='hunter';if(name)p.name=name;}
+    }
+  }
+  const shotVal=(document.getElementById('jg-hunter-night-shot')||{}).value?.trim()||'';
+  if(shotVal) jgRecord.hunterNightShot=shotVal;
+  jgRenderRoster();
+  const hg=jgNight===1?(jgComp.guard>0):jgHasRole('guard');
+  jgGoStep(hg?'guard-wake':'dawn');
+}
+
+function jgSaveVilNames(){
+  jgPlayers.filter(p=>p.role==='villager').forEach(p=>{
+    const el=document.getElementById('jg-vil-name-'+p.num);
+    if(el&&el.value.trim()) p.name=el.value.trim();
+  });
+  jgRenderRoster();
+}
+
 function jgSaveGuard(){
   const isFirst=jgNight===1;
   if(isFirst){
     const whoNum=parseInt((document.getElementById('jg-guard-who')||{}).value||'0');
     const name=(document.getElementById('jg-guard-name')||{}).value?.trim()||'';
     if(whoNum){
+      jgPlayers.forEach(p=>{ if(p.role==='guard') p.role=null; });
       const p=jgByNum(whoNum);
       if(p){p.role='guard';if(name)p.name=name;}
     }
   }
-  jgRecord.guardTarget=(document.getElementById('jg-guard-rec')||{}).value?.trim()||null;
-  jgGoStep('wolf-wake');
+  const tv=(document.getElementById('jg-guard-rec')||{}).value?.trim()||'';
+  jgRecord.guardTarget=tv||null;
+  jgRenderRoster();
+  jgGoStep('dawn');
 }
 
 function jgSaveWolf(){
   const isFirst=jgNight===1;
   if(isFirst){
     const wolfCount=jgComp.wolf||2;
+    jgPlayers.forEach(p=>{ if(p.role==='wolf') p.role=null; });
     for(let i=0;i<wolfCount;i++){
       const whoNum=parseInt((document.getElementById(`jg-wolf-who-${i}`)||{}).value||'0');
       const name=(document.getElementById(`jg-wolf-name-${i}`)||{}).value?.trim()||'';
@@ -1050,26 +1308,22 @@ function jgSaveWolf(){
         if(p){p.role='wolf';if(name)p.name=name;}
       }
     }
+    jgRenderRoster();
   }
   jgRecord.wolfKill=(document.getElementById('jg-wolf-rec')||{}).value?.trim()||null;
-  const nextStep=(jgNight===1?jgComp.seer>0:jgHasRole('seer'))?'seer-wake':'witch-wake';
-  jgGoStep(nextStep);
+  // Seer always wakes every night (even if dead, to mask identity)
+  jgGoStep('seer-wake');
 }
 
 function jgUpdateSeerResult(){
   const val=(document.getElementById('jg-seer-target-input')||{}).value?.trim()||'';
   const box=document.getElementById('jg-seer-result-box');
-  const speech=document.getElementById('jg-seer-speech');
-  if(!val){if(box)box.innerHTML='';if(speech)speech.innerHTML='';return;}
+  if(!val){if(box)box.innerHTML='';return;}
   const found=jgFind(val);
-  if(found&&found.role){
-    const isWolf=found.role==='wolf';
-    if(box) box.innerHTML=`<div class="${isWolf?'info-danger':'info-success'}">${found.num}號 ${found.name} → ${isWolf?'狼人 👎':'好人 👍'}</div>`;
-    if(speech) speech.innerHTML=`「比${isWolf?'倒':''}讚告訴預言家：這個是<em>${isWolf?'狼人':'好人'}</em>。」`;
-  } else {
-    if(box) box.innerHTML=`<div class="info-warn">找不到此玩家，或身分未知（第一夜查驗前需先紀錄身分）</div>`;
-    if(speech) speech.innerHTML='';
-  }
+  if(!found){if(box)box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
+  const isWolf=found.role==='wolf';
+  const dn=found.name&&found.name!==found.num+'號'?found.name:'';
+  if(box) box.innerHTML='<div class="'+(isWolf?'info-danger':'info-success')+'" style="font-size:20px;font-weight:800;text-align:center;padding:18px;">'+found.num+'號'+(dn?' '+dn:'')+' → '+(isWolf?'狼人 👎':'好人 👍')+'</div>';
 }
 
 function jgSaveSeer(){
@@ -1078,12 +1332,89 @@ function jgSaveSeer(){
     const whoNum=parseInt((document.getElementById('jg-seer-who')||{}).value||'0');
     const name=(document.getElementById('jg-seer-name')||{}).value?.trim()||'';
     if(whoNum){
+      jgPlayers.forEach(p=>{ if(p.role==='seer') p.role=null; });
       const p=jgByNum(whoNum);
       if(p){p.role='seer';if(name)p.name=name;}
     }
+    jgRenderRoster();
   }
   jgRecord.seerChecked=(document.getElementById('jg-seer-target-input')||{}).value?.trim()||null;
   jgGoStep('witch-wake');
+}
+
+// Called when witch save dropdown changes — lock poison if saved
+function jgWitchSaveChange(){
+  const sel=document.getElementById('jg-witch-save-sel');
+  const pw=document.getElementById('jg-witch-poison-wrap');
+  const ps=document.getElementById('jg-poison-speech');
+  if(!sel||!pw) return;
+  if(sel.value==='yes'){
+    pw.innerHTML=`<div class="speech" style="margin-top:10px;"><em>「你要使用毒藥嗎？你要毒誰呢？」</em><br>（一邊說一邊搖頭——救了就不能毒）</div>
+      <div class="info" style="color:var(--text2);font-size:13px;">已使用解藥，本晚不能同時使用毒藥</div>`;
+  } else {
+    pw.innerHTML=`<div class="speech" style="margin-top:10px;" id="jg-poison-speech">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」<br>（比讚=不毒，比倒讚=要毒）</div>
+      <label>毒殺的對象（號碼，留空=不毒）</label>
+      <input type="text" id="jg-witch-poison-rec" placeholder="留空=不使用"/>`;
+  }
+}
+
+function jgWitchSaveBtn(save){
+  if(save){
+    jgRecord.witchSave=true;
+    const yes=document.getElementById('jg-btn-save-yes');
+    const no=document.getElementById('jg-btn-save-no');
+    if(yes){yes.className='primary';yes.disabled=false;}
+    if(no){no.className='ghost';no.disabled=false;no.style.opacity='';}
+    const st=document.getElementById('jg-witch-save-status');
+    if(st) st.innerHTML='<div class="info-success" style="font-size:12px;margin-top:4px;">✓ 選擇救人（可按「不救」取消）</div>';
+    const pw=document.getElementById('jg-witch-poison-wrap');
+    if(pw) pw.innerHTML='<div class="info" style="color:var(--text2);font-size:13px;">已使用解藥，本晚不能同時使用毒藥</div>';
+  } else {
+    jgRecord.witchSave=null;
+    const yes=document.getElementById('jg-btn-save-yes');
+    if(yes){yes.className='success';yes.disabled=false;}
+    const no=document.getElementById('jg-btn-save-no');
+    if(no){no.className='ghost';no.disabled=false;no.style.opacity='';}
+    const st=document.getElementById('jg-witch-save-status');
+    if(st) st.innerHTML='';
+    // Restore poison input
+    const pw=document.getElementById('jg-witch-poison-wrap');
+    if(pw&&!jgWitchPoisonUsed) pw.innerHTML='<label>毒殺的對象（號碼，留空=不毒）</label>'
+      +'<input type="text" id="jg-witch-poison-rec" placeholder="" value="'+(jgRecord.witchPoison||'')+'"/>';
+  }
+}
+
+function jgWitchWhoChange(){
+  const whoEl=document.getElementById('jg-witch-who');
+  const warn=document.getElementById('jg-witch-who-warn');
+  if(!whoEl||!warn) return;
+  const whoNum=parseInt(whoEl.value||'0');
+  if(!whoNum){warn.innerHTML='';return;}
+  const conflict=jgPlayers.find(p=>p.num===whoNum&&p.role&&p.role!=='witch');
+  if(conflict){
+    const RMAP={wolf:'狼人',seer:'預言家',hunter:'獵人',guard:'守衛',villager:'平民'};
+    warn.innerHTML='<div class="info-danger" style="font-size:12px;margin-top:4px;">⚠️ '+whoNum+'號 已是'+(RMAP[conflict.role]||conflict.role)+'，確定要調整嗎？</div>';
+    // Don't return — still update save wrap below
+  } else {
+    warn.innerHTML='';
+  }
+  const killed=jgRecord.wolfKill;
+  if(!killed) return;
+  const guardSaved=jgRecord.guardTarget&&(jgRecord.guardTarget.toString()===killed.toString());
+  const wrap=document.getElementById('jg-witch-save-wrap');
+  if(!wrap||jgWitchSaveUsed) return;
+  const isSelf=whoNum.toString()===killed.toString();
+  if(isSelf){
+    wrap.innerHTML='<div class="speech" style="margin-top:8px;">「<em>你要使用解藥嗎？</em>」</div>'
+      +'<div class="btn2" style="margin-top:6px;"><button disabled style="opacity:0.3;">救人</button><button disabled style="opacity:0.3;">不救</button></div>'
+      +'<div class="info-warn" style="margin-top:6px;">女巫自己被殺，不能自救（搖頭）</div>';
+  } else if(!guardSaved){
+    wrap.innerHTML='<div class="speech" style="margin-top:8px;">「<em>你要使用解藥嗎？</em>」</div>'
+      +'<div class="btn2" style="margin-top:6px;">'
+      +'<button class="success" id="jg-btn-save-yes" onclick="jgWitchSaveBtn(true)">救人</button>'
+      +'<button class="ghost" id="jg-btn-save-no" onclick="jgWitchSaveBtn(false)">不救</button>'
+      +'</div><div id="jg-witch-save-status"></div>';
+  }
 }
 
 function jgSaveWitch(){
@@ -1092,15 +1423,38 @@ function jgSaveWitch(){
     const whoNum=parseInt((document.getElementById('jg-witch-who')||{}).value||'0');
     const name=(document.getElementById('jg-witch-name')||{}).value?.trim()||'';
     if(whoNum){
+      jgPlayers.forEach(p=>{ if(p.role==='witch') p.role=null; });
       const p=jgByNum(whoNum);
       if(p){p.role='witch';if(name)p.name=name;}
     }
+    jgRenderRoster();
   }
-  const saveSel=document.getElementById('jg-witch-save-sel');
-  const poisonInput=document.getElementById('jg-witch-poison-rec');
-  if(saveSel&&saveSel.value==='yes'){jgRecord.witchSave=true;jgWitchSaveUsed=true;}
-  if(poisonInput&&poisonInput.value.trim()){jgRecord.witchPoison=poisonInput.value.trim();jgWitchPoisonUsed=true;}
-  jgGoStep('dawn');
+  const usedSave=!!jgRecord.witchSave;
+  if(usedSave) jgWitchSaveUsed=true;
+  if(!usedSave){
+    const pi=document.getElementById('jg-witch-poison-rec');
+    if(pi&&pi.value.trim()){jgRecord.witchPoison=pi.value.trim();jgWitchPoisonUsed=true;}
+  }
+  jgGoStep('hunter-wake');
+}
+
+function jgLastWordsBtn(btn){
+  const num=parseInt(btn.getAttribute('data-num'));
+  const p=jgByNum(num);
+  const name=p?p.num+'號 '+p.name:'死亡玩家';
+  jgShowPg(`
+    <h2>遺言</h2>
+    <div class="speech">「<em>${name} 可以發表遺言。</em>」</div>
+    <button class="primary" onclick="jgGoStep('discuss')">遺言結束，開始發言 →</button>
+  `,'💬 遺言');
+}
+
+function jgSaveVilNames(){
+  jgPlayers.filter(p=>p.role==='villager').forEach(p=>{
+    const el=document.getElementById('jg-vil-name-'+p.num);
+    if(el&&el.value.trim()) p.name=el.value.trim();
+  });
+  jgRenderRoster();
 }
 
 function jgSaveVote(){
@@ -1109,7 +1463,12 @@ function jgSaveVote(){
   const found=jgFind(val);
   if(found){
     found.alive=false;
+    jgRenderRoster();
+    const winCheck=jgCheckWin();
+    if(winCheck){jgShowWin(winCheck);return;} // Game over — no last words
+    jgRecord._voteOutNum=found.num;
     if(found.role==='hunter'){jgGoStep('hunter-shot');return;}
+    jgGoStep('vote-last-words');return;
   }
   jgGoStep('next-night');
 }
@@ -1124,6 +1483,12 @@ function jgCheckWin(){
   const a=jgAlive(), aw=a.filter(p=>p.role==='wolf'), ag=a.filter(p=>p.role!=='wolf');
   if(aw.length===0) return{winner:'good',msg:'所有狼人已被淘汰',icon:'🎉'};
   if(aw.length>=ag.length) return{winner:'wolf',msg:'狼人人數已達多數',icon:'🐺'};
+  // Wolf wins if all villagers dead or all gods dead
+  const gods=['seer','witch','hunter','guard'];
+  const aGod=ag.filter(p=>gods.includes(p.role));
+  const aVil=ag.filter(p=>p.role==='villager');
+  if(aVil.length===0&&aGod.length>0) return{winner:'wolf',msg:'所有平民已被淘汰',icon:'🐺'};
+  if(aGod.length===0&&aVil.length>0) return{winner:'wolf',msg:'所有神職已被淘汰',icon:'🐺'};
   return null;
 }
 
