@@ -472,7 +472,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 // SHARED DATA
 // ═══════════════════════════════════
 const EMOJI={wolf:'🐺',villager:'🧑‍🌾',seer:'🔮',witch:'🧪',hunter:'🔫',guard:'🛡️'};
-const RNAME={wolf:'狼人',wolfking:'狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',villager:'平民',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',sheriff:'警長'};
+const RNAME={wolf:'狼人',wolfking:'狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',villager:'平民',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',sheriff:'警長'};
 const RCLS={wolf:'rv-wolf',villager:'rv-villager',seer:'rv-seer',witch:'rv-witch',hunter:'rv-hunter',guard:'rv-guard'};
 const BADGE={wolf:'bw',villager:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2'};
 const AV={wolf:'av-wolf',villager:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard'};
@@ -735,7 +735,7 @@ function aiDoTie(){aiCheckWin();}
 function aiDoHunter(){if(aiSel.hunter===null)return;const p=aiByNum(aiSel.hunter);if(p&&p.alive)p.alive=false;aiCheckWin();}
 function aiSkipHunter(){aiCheckWin();}
 function aiCheckWin(){
-  const a=aiAlive(),aw=a.filter(p=>p.role==='wolf'),ag=a.filter(p=>p.role!=='wolf');
+  const a=aiAlive(),aw=a.filter(p=>WOLF_ROLES.includes(p.role)),ag=a.filter(p=>!WOLF_ROLES.includes(p.role));
   if(aw.length===0)aiEndGame('好人勝利！','所有狼人已被消滅','🎉');
   else if(aw.length>=ag.length)aiEndGame('狼人勝利！','狼人已達多數','🐺');
   else{aiWolfKill=null;aiShowPg('ai-p-night');}
@@ -759,7 +759,9 @@ let jgTotal=6, jgComp={};
 let jgPlayers=[];
 let jgNight=1, jgWitchSaveUsed=false, jgWitchPoisonUsed=false;
 let jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null};
-let jgLastGuardTarget=null; // persists across nights
+let jgLastGuardTarget=null;
+let jgLastWolfBeautyCharm=null;
+let jgMagicianSwapped=[]; // persists across nights
 let jgStepHistory=[];
 let jgCurrentStep='';
 // Track which role slots remain to assign (for seer result lookup)
@@ -786,6 +788,8 @@ function jgStart(){
   jgWitchSaveUsed=false; jgWitchPoisonUsed=false;
   jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,hunterNightShot:null};
   jgLastGuardTarget=null;
+  jgLastWolfBeautyCharm=null;
+  jgMagicianSwapped=[];
   jgStepHistory=[];
   // Pre-fill all players as unknown role (null = unconfirmed, will become villager if never woke)
   for(let i=1;i<=n;i++) jgPlayers.push({num:i, name:`${i}號`, role:null, alive:true});
@@ -909,11 +913,14 @@ function jgGoStep(step){
     `,'👀 確認身分');
   }
   else if(step==='night-start'){
+    const isSealNight=!!(jgRecord&&jgRecord.bloodmoonSealNight); // save before reset
     jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false};
+    if(isSealNight) jgRecord.bloodmoonSealNight=true; // carry into new record for wolf-wake to check
     const firstNight=jgIsFirstNight();
     jgShowPg(`
       <h2 style="margin-bottom:8px;">第 ${jgNight} 夜開始</h2>
       <div class="speech">「<em>天黑請閉眼。</em>」<br>確認所有玩家閉上眼睛</div>
+      ${isSealNight?'<div class="info-danger" style="margin-top:4px;">⚠️ 血月封印：本夜神職技能全封，只有狼人殺人</div>':''}
       ${firstNight?'<div class="info-warn" style="margin-top:4px;">第一夜：依序睜眼時輸入姓名，沒睜眼的自動設為平民</div>':''}
       <button class="primary" style="margin-top:14px;" onclick="jgGoStep('wolf-wake')">所有人已閉眼 →</button>
     `,'🌙 天黑');
@@ -952,7 +959,7 @@ function jgGoStep(step){
       const wolfRoles=Object.entries(jgComp).filter(([k])=>WOLF_ROLES.includes(k)&&k!=='gargoyle');
       let wiIdx=0;
       wolfRoles.forEach(([roleId,cnt])=>{
-        const RNAME_L={wolf:'狼人',wolfking:'狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士'};
+        const RNAME_L={wolf:'狼人',wolfking:'狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者'};
         for(let i=0;i<cnt;i++){
           const kw=jgPlayers.filter(p=>p.role===roleId)[i];
           wolfIdHtml+='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">'
@@ -965,15 +972,26 @@ function jgGoStep(step){
         }
       });
       // Gargoyle wakes separately - just note it
-      if((jgComp.gargoyle||0)>0){
-        wolfIdHtml+='<div class="info-warn" style="font-size:12px;margin-bottom:8px;">注意：石像鬼單獨睜眼，請在發牌時告知其特殊規則</div>';
+
+      // Gargoyle joins wolf pack on first night to establish identity
+      if(isFirst&&(jgComp.gargoyle>0)){
+        const ggP=jgPlayers.find(p=>p.role==='gargoyle');
+        wolfIdHtml+='<div class="divider" style="margin:12px 0 8px;"></div>';
+        wolfIdHtml+='<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">'
+          +'<div style="flex:0 0 80px;"><label style="margin-top:0;">石像鬼號碼</label>'
+          +'<input type="number" id="jg-gargoyle-who-wolf" placeholder="" value="'+(ggP?ggP.num:'')+'"/></div>'
+          +'<div style="flex:1;"><label style="margin-top:0;">姓名（可選填）</label>'
+          +'<input type="text" id="jg-gargoyle-name-wolf" placeholder="" value="'+(ggP&&ggP.name!==ggP.num+'號'?ggP.name:'')+'"/></div>'
+          +'</div>';
       }
       wolfIdHtml+='<div class="divider"></div>';
     }
     const killVal=jgRecord.wolfKill||'';
+    const hasGargoyle=(jgNight===1&&jgComp.gargoyle>0)||jgHasRoleAny(['gargoyle']);
+    const wolfTitle=isFirst&&hasGargoyle?'狼人＆石像鬼睜眼':'狼人睜眼';
     jgShowPg(`
-      <h2>狼人睜眼</h2>
-      <div class="speech">「<em>狼人請睜眼，請選擇今晚要殺的對象。</em>」</div>
+      <h2>${wolfTitle}</h2>
+      <div class="speech">「<em>${isFirst&&hasGargoyle?'狼人與石像鬼請睜眼，互相確認，請狼人選擇今晚要殺的對象。':'狼人請睜眼，請選擇今晚要殺的對象。'}</em>」</div>
       ${wolfIdHtml}
       <label>今晚獵殺的對象（號碼）</label>
       <input type="text" id="jg-wolf-rec" placeholder="" value="${killVal}"/>
@@ -999,11 +1017,11 @@ function jgGoStep(step){
     jgShowPg(`
       <h2>狼美人睜眼</h2>
       ${!wbAlive&&wbP?'<div class="info-warn">狼美人已出局，仍需走完流程</div>':''}
-      <div class="speech">「<em>狼美人請睜眼，今晚要魅惑的對象是？</em>」</div>
+      <div class="speech">「<em>狼美人請睜眼${wbAlive?'，今晚要魅惑的對象是？':'。'}</em>」</div>
       ${idHtml}
-      <label>魅惑的對象（號碼，留空=不魅惑）</label>
+      ${wbAlive?`<label>魅惑的對象（號碼，留空=不魅惑）</label>
       <input type="text" id="jg-wolfbeauty-charm" placeholder="" value="${curCharm}"/>
-      <div class="info" style="font-size:12px;margin-top:6px;">若狼美人被票出或獵人射殺，魅惑對象同死</div>
+      <div class="info" style="font-size:12px;margin-top:6px;">出局（被票、獵人射殺）或夜間被毒→魅惑對象殉情<br>不能連續兩晚魅惑同一人・不能自刀</div>`:''}
       <div class="speech" style="margin-top:10px;">「<em>狼美人請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolfBeautyNight()">已紀錄，下一步 →</button>
     `,'💋 狼美人');
@@ -1071,6 +1089,7 @@ function jgGoStep(step){
     }
     const gv=jgRecord.gargoyleCheck||'';
     const dead=ggP&&!ggP.alive;
+    const ggFirstNight=jgNight===1;
     jgShowPg(`
       <h2>石像鬼睜眼</h2>
       ${dead?'<div class="info-warn">石像鬼已出局，仍需走完流程</div>':''}
@@ -1164,7 +1183,16 @@ function jgGoStep(step){
         +'<div class="speech">「指向 '+killed+'號'+(kname?' '+kname:'')+'：<em>今晚他被殺了，你要使用解藥嗎？</em>」</div>'
         +(selfKilled?'<div class="info-warn" style="margin-top:6px;">女巫自己被殺，不能自救（搖頭）</div>':'');
     } else if(!canShowKilled){
-      killedHtml='<div class="info-warn">解藥已用完・本輪不告知死亡者</div>';
+      // 解藥用完：仍告知死亡者（法官照常說），只是無法救人
+      const kp2=killed?jgFind(killed):null;
+      const kname2=kp2&&kp2.name!==kp2.num+'號'?kp2.name:'';
+      killedHtml=killed
+        ?'<div class="killed-box"><div class="killed-label">今晚被狼人殺死</div>'
+          +'<div class="killed-num">'+killed+'號</div>'
+          +'<div class="killed-name">'+kname2+'</div></div>'
+          +'<div class="speech">「指向 '+killed+'號'+(kname2?' '+kname2:'')+'：<em>今晚他被殺了，你要使用解藥嗎？</em>」</div>'
+          +'<div class="info-warn" style="font-size:13px;margin-top:4px;">解藥已用完，無法使用</div>'
+        :'<div class="info">今晚無人被殺</div>';
     } else {
       killedHtml='<div class="info">今晚無人被殺</div>';
     }
@@ -1228,7 +1256,7 @@ function jgGoStep(step){
     const isFirst=jgIsFirstNight();
     const hunterP=jgPlayers.find(p=>p.role==='hunter');
     const hunterExists=(jgNight===1&&jgComp.hunter>0)||hunterP;
-    if(!hunterExists){ jgGoStep(hasGuard?'guard-wake':'dawn'); return; }
+    if(!hunterExists){ jgGoStep(jgNextGodStep('hunter-wake')); return; }
     const gsKill=jgRecord.guardTarget&&jgRecord.wolfKill&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
     const wsKill=jgRecord.witchSave;
     const hnum=hunterP?hunterP.num:null;
@@ -1271,6 +1299,115 @@ function jgGoStep(step){
       <button class="primary" onclick="jgSaveHunterNight()">已紀錄，下一步 →</button>
     `,'🔫 獵人');
   }
+  else if(step==='dreamcatcher-wake'){
+    const isFirst=jgIsFirstNight();
+    const dcP=jgPlayers.find(p=>p.role==='dreamcatcher');
+    const dcAlive=dcP&&dcP.alive;
+    let idHtml=jgGodIdHtml('dreamcatcher',dcP);
+    const cur=jgRecord.dreamcatcherTarget||'';
+    const dead=dcP&&!dcP.alive;
+    jgShowPg(`
+      <h2>攝夢人睜眼</h2>
+      ${dead?'<div class="info-warn">攝夢人已出局，仍需走完流程</div>':''}
+      <div class="speech">「<em>攝夢人請睜眼，今晚要守護的夢遊者是？</em>」</div>
+      ${idHtml}
+      <label>夢遊者號碼（今晚守護，留空=不守）</label>
+      <input type="text" id="jg-dc-target" placeholder="" value="${cur}" oninput="jgDreamcatcherCheck()"/>
+      <div id="jg-dc-warn"></div>
+      <div class="info" style="font-size:12px;margin-top:6px;">若攝夢人死亡，夢遊者同死。連續兩晚同一人→該人死亡。</div>
+      <div class="speech" style="margin-top:10px;">「<em>攝夢人請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveDreamcatcher()">已紀錄，下一步 →</button>
+    `,'🌙 攝夢人');
+  }
+  else if(step==='knight-wake'){
+    const isFirst=jgIsFirstNight();
+    const knP=jgPlayers.find(p=>p.role==='knight');
+    let idHtml=jgGodIdHtml('knight',knP);
+    const dead=knP&&!knP.alive;
+    jgShowPg(`
+      <h2>騎士睜眼</h2>
+      ${dead?'<div class="info-warn">騎士已出局，仍需走完流程</div>':''}
+      <div class="speech">「<em>騎士請睜眼。</em>」</div>
+      ${idHtml}
+      <div class="info" style="font-size:13px;">騎士技能在白天使用（投票前翻牌決鬥）。今晚無動作。</div>
+      <div class="speech" style="margin-top:10px;">「<em>騎士請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveSimpleGod('knight','knight-wake')">下一步 →</button>
+    `,'⚔️ 騎士');
+  }
+  else if(step==='magician-wake'){
+    const isFirst=jgIsFirstNight();
+    const mgP=jgPlayers.find(p=>p.role==='magician');
+    let idHtml=jgGodIdHtml('magician',mgP);
+    const dead=mgP&&!mgP.alive;
+    const usedSwaps=jgMagicianSwapped||[];
+    const usedStr=usedSwaps.length>0?'已交換過的號碼：'+usedSwaps.join('、'):'（尚未有人被交換過）';
+    jgShowPg(`
+      <h2>魔術師睜眼</h2>
+      ${dead?'<div class="info-warn">魔術師已出局，仍需走完流程</div>':''}
+      <div class="speech">「<em>魔術師請睜眼，今晚要交換哪兩個號碼？</em>」</div>
+      ${idHtml}
+      <div class="info" style="font-size:12px;">${usedStr}</div>
+      <div style="display:flex;gap:10px;align-items:flex-end;margin-top:8px;">
+        <div style="flex:1;"><label style="margin-top:0;">號碼 A</label>
+          <input type="text" id="jg-mg-a" placeholder="" value="${jgRecord.magicianA||''}"/></div>
+        <div style="padding-bottom:12px;font-weight:700;color:var(--text2);">⇄</div>
+        <div style="flex:1;"><label style="margin-top:0;">號碼 B</label>
+          <input type="text" id="jg-mg-b" placeholder="" value="${jgRecord.magicianB||''}"/></div>
+      </div>
+      <div id="jg-mg-warn"></div>
+      <div class="info" style="font-size:12px;margin-top:6px;">今晚有效，每個號碼整局只能被交換一次。留空=不交換。</div>
+      <div class="speech" style="margin-top:10px;">「<em>魔術師請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveMagician()">已紀錄，下一步 →</button>
+    `,'🎩 魔術師');
+  }
+  else if(step==='demonhunter-wake'){
+    const isFirst=jgIsFirstNight();
+    const dhP=jgPlayers.find(p=>p.role==='demonhunter');
+    let idHtml=jgGodIdHtml('demonhunter',dhP);
+    const dead=dhP&&!dhP.alive;
+    const cur=jgRecord.demonhunterTarget||'';
+    jgShowPg(`
+      <h2>獵魔人睜眼</h2>
+      ${dead?'<div class="info-warn">獵魔人已出局，仍需走完流程</div>':''}
+      <div class="speech">「<em>獵魔人請睜眼。</em>」</div>
+      ${idHtml}
+      ${jgNight<2?'<div class="info">第一晚無法狩獵，只需確認身分。</div>'
+        :'<label>今晚狩獵目標（號碼，留空=不狩獵）</label>'
+         +'<input type="text" id="jg-dh-target" placeholder="" value="'+cur+'"/>'
+         +'<div class="info" style="font-size:12px;margin-top:4px;">若對方是狼→狼死；若對方是好人→獵魔人自己死。免疫女巫毒藥。</div>'}
+      <div class="speech" style="margin-top:10px;">「<em>獵魔人請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveDemonhunter()">已紀錄，下一步 →</button>
+    `,'🗡️ 獵魔人');
+  }
+  else if(step==='gravkeeper-wake'){
+    const isFirst=jgIsFirstNight();
+    const gkP=jgPlayers.find(p=>p.role==='gravkeeper');
+    let idHtml=jgGodIdHtml('gravkeeper',gkP);
+    const dead=gkP&&!gkP.alive;
+    // Find last daytime vote-out player
+    const lastVoteOut=jgRecord._lastVoteOutPlayer;
+    let revealHtml='';
+    if(jgNight<2){
+      revealHtml='<div class="info">第一晚無訊息，守墓人靜默。</div>';
+    } else if(lastVoteOut){
+      const lp=jgByNum(lastVoteOut);
+      const isWolf2=lp&&WOLF_ROLES.includes(lp.role);
+      const lname=lp?(lp.name&&lp.name!==lp.num+'號'?lp.num+'號 '+lp.name:lp.num+'號'):'未知';
+      revealHtml='<div class="info-'+(isWolf2?'danger':'success')+'" style="font-size:16px;font-weight:800;text-align:center;padding:14px;">'
+        +lname+' → '+(isWolf2?'狼人 👎':'好人 👍')+'</div>';
+    } else {
+      revealHtml='<div class="info">前一白天無人被票出，守墓人無訊息。</div>';
+    }
+    jgShowPg(`
+      <h2>守墓人睜眼</h2>
+      ${dead?'<div class="info-warn">守墓人已出局，仍需走完流程</div>':''}
+      <div class="speech">「<em>守墓人請睜眼。</em>」</div>
+      ${idHtml}
+      ${revealHtml}
+      <div class="speech" style="margin-top:10px;">「<em>守墓人請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveSimpleGod('gravkeeper','gravkeeper-wake')">下一步 →</button>
+    `,'⚰️ 守墓人');
+  }
   else if(step==='dawn'){
     // First night: seal remaining unassigned players as villagers
     if(jgNight===1){ jgSealVillagers(); jgRenderRoster(); }
@@ -1280,7 +1417,10 @@ function jgGoStep(step){
     const witchSaved=jgRecord.witchSave;
     let deads=[];
     // Wolf kill (blocked by guard or witch save?)
-    if(jgRecord.wolfKill&&!guardSaved&&!witchSaved) deads.push(jgRecord.wolfKill);
+    // Evilknight is immune to wolf kill
+    const _ekNum=jgPlayers.find(p=>p.role==='evilknight')?.num;
+    const _wolfKillIsEK=_ekNum&&jgRecord.wolfKill&&(jgRecord.wolfKill.toString()===_ekNum.toString());
+    if(jgRecord.wolfKill&&!guardSaved&&!witchSaved&&!_wolfKillIsEK) deads.push(jgRecord.wolfKill);
     // Witch poison (guard cannot block this)
     if(jgRecord.witchPoison) deads.push(jgRecord.witchPoison);
     deads=[...new Set(deads)];
@@ -1294,9 +1434,18 @@ function jgGoStep(step){
     }
     deads=[...new Set(deads)];
 
-    // Apply deaths
+    // Evilknight is immune to wolf kill and poison — remove from deads if present
+    const ekP=jgPlayers.find(p=>p.role==='evilknight');
+    if(ekP){
+      deads=deads.filter(d=>d.toString()!==ekP.num.toString());
+    }
+    // Apply wolf-side deaths first (wolf kill, witch poison that kills good people)
+    // Then check if wolf already won BEFORE applying good-side deaths (evilknight revenge etc.)
     deads.forEach(d=>{ const p=jgFind(d); if(p){p.alive=false;p._diedThisDawn=true;} });
     jgPlayers.forEach(p=>{ if(p._diedThisDawn&&!deads.some(d=>jgFind(d)===p)) delete p._diedThisDawn; });
+    // Check wolf win BEFORE revenge deaths — wolves attacked first
+    const wolfFirstWin=jgCheckWin();
+    if(wolfFirstWin&&wolfFirstWin.winner==='wolf'){ jgRenderRoster(); jgShowWin(wolfFirstWin); return; }
     jgRecord.hunterNightShot=null;
 
     const pname=p=>p&&p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p?p.num+'號':'';
@@ -1305,11 +1454,63 @@ function jgGoStep(step){
       ?'昨晚是平安夜。'
       :'昨晚 '+deadNames.join('、')+' 死了。';
 
+    // Evilknight revenge: seer or witch dies at dawn
+    if(jgRecord.evilknightRevengeSeer){
+      const sp=jgPlayers.find(p=>p.role==='seer'&&p.alive);
+      if(sp){sp.alive=false;if(!deads.includes(sp.num))deads.push(sp.num);}
+      jgRecord.evilknightRevengeSeer=false;
+    }
+    if(jgRecord.evilknightRevengeWitch){
+      const wp=jgPlayers.find(p=>p.role==='witch'&&p.alive);
+      if(wp){wp.alive=false;if(!deads.includes(wp.num))deads.push(wp.num);}
+      jgRecord.evilknightRevengeWitch=false;
+    }
+    // Recompute dawnMsg after all revenge deaths
+    const deadNames2=deads.map(d=>{ const p=jgFind(d); return p?(p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p.num+'號'):d; });
+    dawnMsg=deadNames2.length===0?'昨晚是平安夜。':'昨晚 '+deadNames2.join('、')+' 死了。';
     jgRenderRoster();
-    // Check win AFTER applying deaths
     const dawnWin=jgCheckWin();
     if(dawnWin){ jgShowWin(dawnWin); return; }
 
+    // Demonhunter hunt at night
+    if(jgNight>=2&&jgRecord.demonhunterTarget){
+      const dhP=jgPlayers.find(p=>p.role==='demonhunter'&&p.alive);
+      const target=jgFind(jgRecord.demonhunterTarget);
+      if(dhP&&target&&target.alive){
+        if(WOLF_ROLES.includes(target.role)){
+          // Target is wolf: wolf dies
+          target.alive=false;
+          if(!deads.includes(target.num)) deads.push(target.num);
+        } else {
+          // Target is good: demonhunter dies
+          dhP.alive=false;
+          if(!deads.includes(dhP.num)) deads.push(dhP.num);
+        }
+      }
+      jgRecord.demonhunterTarget=null;
+    }
+    // Dreamcatcher consecutive kill
+    if(jgRecord.dreamcatcherKillTarget){
+      const dct=jgFind(jgRecord.dreamcatcherKillTarget);
+      if(dct&&dct.alive){dct.alive=false;if(!deads.includes(dct.num))deads.push(dct.num);}
+      jgRecord.dreamcatcherKillTarget=null;
+    }
+    // Dreamcatcher: if dreamcatcher dies this dawn, their target also dies
+    if(jgRecord.dreamcatcherTarget){
+      const dcP2=jgPlayers.find(p=>p.role==='dreamcatcher');
+      if(dcP2&&!dcP2.alive){
+        const dct2=jgFind(jgRecord.dreamcatcherTarget);
+        if(dct2&&dct2.alive){dct2.alive=false;if(!deads.includes(dct2.num))deads.push(dct2.num);}
+      }
+    }
+    // Wolfbeauty dies from poison at night → charm kill at dawn
+    if(jgRecord.witchPoison&&jgRecord.wolfbeautyCharm){
+      const wbP2=jgPlayers.find(p=>p.role==='wolfbeauty');
+      if(wbP2&&wbP2.num.toString()===jgRecord.witchPoison.toString()){
+        const ct=jgFind(jgRecord.wolfbeautyCharm);
+        if(ct&&ct.alive){ct.alive=false;if(!deads.includes(ct.num))deads.push(ct.num);}
+      }
+    }
     // Check if wolf-killed hunter can activate skill at dawn
     // Wolf king dawn activation (same as hunter when wolf-killed)
     const dawnWolfKingShoot=(()=>{
@@ -1393,6 +1594,7 @@ function jgGoStep(step){
       <div class="speech">「<em>請抽取發言順序，依序發言。</em>」</div>
       ${vilHtml}
       ${(()=>{const ww=jgPlayers.find(p=>p.role==='whitewolf'&&p.alive);return ww?'<button class="danger" onclick="jgGoStep(\'whitewolf-selfblow\')" style="margin-top:4px;">'+ww.num+'號 白狼王宣告自爆 →</button>':''})()}
+      ${(()=>{const bm=jgPlayers.find(p=>p.role==='bloodmoon'&&p.alive);return bm?'<button class="danger" onclick="jgGoStep(\'bloodmoon-selfblow\')" style="margin-top:4px;">'+bm.num+'號 血月使者宣告自爆 →</button>':''})()}
       <button class="primary" onclick="jgGoStep('vote')" style="margin-top:8px;">發言結束，進入投票 →</button>
     `,'💬 發言');
   }
@@ -1433,12 +1635,35 @@ function jgGoStep(step){
     const wbp=jgPlayers.find(p=>p.role==='wolfbeauty');
     const victim=jgRecord._wolfbeautyKillCharm?jgFind(jgRecord._wolfbeautyKillCharm):null;
     const wbname=wbp&&wbp.name!==wbp.num+'號'?wbp.num+'號 '+wbp.name:wbp?wbp.num+'號':'狼美人';
-    const vname=victim?(victim.name!==victim.num+'號'?victim.num+'號 '+victim.name:victim.num+'號'):'（無魅惑目標）';
+    const vname=victim?(victim.name!==victim.num+'號'?victim.num+'號 '+victim.name:victim.num+'號'):'無';
     jgShowPg(`
       <h2>狼美人連帶死亡</h2>
-      <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${wbname} 出局，魅惑對象 ${vname} 同死</div>
-      <button class="danger" onclick="jgSaveWolfBeautyCharmKill()" style="margin-top:10px;">確認連帶死亡 →</button>
+      <div class="speech" style="font-size:16px;font-weight:800;">「<em>${wbname}、${vname} 淘汰。</em>」</div>
+      <div class="info" style="font-size:12px;margin-top:6px;">注意：若因騎士決鬥出局，技能不應發動</div>
+      <button class="danger" onclick="jgSaveWolfBeautyCharmKill()" style="margin-top:10px;">確認 →</button>
     `,'💋 狼美人');
+  }
+  else if(step==='bloodmoon-last-night'){
+    const bmp=jgPlayers.find(p=>p.role==='bloodmoon');
+    const bmname=bmp&&bmp.name!==bmp.num+'號'?bmp.num+'號 '+bmp.name:bmp?bmp.num+'號':'血月使者';
+    jgShowPg(`
+      <h2>血月使者・最後一擊</h2>
+      <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${bmname} 為最後一個被放逐的狼人，暫時存活！</div>
+      <div class="speech">「<em>血月使者暫時存活，今晚進入黑夜，可以再擊殺一名玩家。若達成屠邊條件，狼人勝利。</em>」</div>
+      <label>血月今晚擊殺的目標（號碼）</label>
+      <input type="text" id="jg-bloodmoon-last-kill" placeholder=""/>
+      <button class="danger" onclick="jgSaveBloodMoonLastNight()" style="margin-top:10px;">確認擊殺 →</button>
+    `,'🌑 血月使者');
+  }
+  else if(step==='bloodmoon-selfblow'){
+    const bmp=jgPlayers.find(p=>p.role==='bloodmoon');
+    const bmname=bmp&&bmp.name!==bmp.num+'號'?bmp.num+'號 '+bmp.name:bmp?bmp.num+'號':'血月使者';
+    jgShowPg(`
+      <h2>血月使者自爆</h2>
+      <div class="speech" style="font-size:16px;font-weight:800;">「<em>${bmname} 淘汰，天黑請閉眼。</em>」</div>
+      <div class="info-warn" style="font-size:13px;margin-top:8px;">本夜神職技能全部封印（法官不叫神職睜眼）</div>
+      <button class="danger" onclick="jgSaveBloodMoonBlow()" style="margin-top:10px;">確認，天黑 →</button>
+    `,'🌑 血月使者');
   }
   else if(step==='hunter-shot'){
     const hvp=jgPlayers.find(p=>p.role==='hunter');
@@ -1498,8 +1723,7 @@ function jgSaveHunterNight(){
   const shotVal=(document.getElementById('jg-hunter-night-shot')||{}).value?.trim()||'';
   if(shotVal) jgRecord.hunterNightShot=shotVal;
   jgRenderRoster();
-  const hg=jgNight===1?(jgComp.guard>0):jgHasRole('guard');
-  jgGoStep(hg?'guard-wake':'dawn');
+  jgGoStep(jgNextGodStep('hunter-wake'));
 }
 
 function jgSaveDawnHunterShot(){
@@ -1514,6 +1738,98 @@ function jgSaveDawnHunterShot(){
   // Now show last words for all dead including hunter
   const dawnDeads=jgPlayers.filter(p=>!p.alive&&p._diedThisDawn);
   jgGoStep('discuss');
+}
+
+// Helper: generate first-night identity input HTML for a god role
+function jgGodIdHtml(roleId,existingP){
+  if(jgNight!==1) return '';
+  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人'};
+  const rn=RZHMAP[roleId]||roleId;
+  const ev=existingP?existingP.num:'', en=existingP&&existingP.name!==existingP.num+'號'?existingP.name:'';
+  return '<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">'
+    +'<div style="flex:0 0 80px;"><label style="margin-top:0;">'+rn+'號碼</label>'
+    +'<input type="number" id="jg-god-who-'+roleId+'" placeholder="" value="'+ev+'"/></div>'
+    +'<div style="flex:1;"><label style="margin-top:0;">姓名（可選填）</label>'
+    +'<input type="text" id="jg-god-name-'+roleId+'" placeholder="" value="'+en+'"/></div>'
+    +'</div><div class="divider"></div>';
+}
+
+function jgSaveGodId(roleId){
+  if(jgNight!==1) return;
+  const whoNum=parseInt((document.getElementById('jg-god-who-'+roleId)||{}).value||'0');
+  const name=(document.getElementById('jg-god-name-'+roleId)||{}).value?.trim()||'';
+  if(whoNum){
+    jgPlayers.forEach(p=>{ if(p.role===roleId) p.role=null; });
+    const p=jgByNum(whoNum); if(p){p.role=roleId;if(name)p.name=name;}
+  }
+  jgRenderRoster();
+}
+
+// Generic: save identity and go to next god step
+function jgSaveSimpleGod(roleId, currentStep){
+  jgSaveGodId(roleId);
+  jgGoStep(jgNextGodStep(currentStep));
+}
+
+// Dreamcatcher consecutive check
+function jgDreamcatcherCheck(){
+  const val=(document.getElementById('jg-dc-target')||{}).value?.trim()||'';
+  const warn=document.getElementById('jg-dc-warn');
+  if(!warn) return;
+  if(val&&jgRecord._lastDCTarget&&val===jgRecord._lastDCTarget.toString()){
+    warn.innerHTML='<div class="info-danger" style="font-size:12px;margin-top:4px;">⚠️ 連續兩晚攝夢同一人，該玩家將死亡！</div>';
+  } else {
+    warn.innerHTML='';
+  }
+}
+
+function jgSaveDreamcatcher(){
+  jgSaveGodId('dreamcatcher');
+  const val=(document.getElementById('jg-dc-target')||{}).value?.trim()||null;
+  // Consecutive: mark target for death
+  if(val&&jgRecord._lastDCTarget&&val===jgRecord._lastDCTarget.toString()){
+    jgRecord.dreamcatcherKillTarget=val;
+  } else {
+    jgRecord.dreamcatcherKillTarget=null;
+  }
+  jgRecord._lastDCTarget=val;
+  jgRecord.dreamcatcherTarget=val;
+  jgGoStep(jgNextGodStep('dreamcatcher-wake'));
+}
+
+// Magician swap check
+function jgSaveMagician(){
+  jgSaveGodId('magician');
+  const a=(document.getElementById('jg-mg-a')||{}).value?.trim()||'';
+  const b=(document.getElementById('jg-mg-b')||{}).value?.trim()||'';
+  jgRecord.magicianA=a||null;
+  jgRecord.magicianB=b||null;
+  if(a&&b){
+    // Validate: each number can only be swapped once total
+    const blocked=jgMagicianSwapped.filter(n=>n===a||n===b);
+    if(blocked.length>0){
+      alert('⚠️ 號碼 '+blocked.join('、')+' 已被交換過，無法再次使用！');
+      return;
+    }
+    jgMagicianSwapped.push(a,b);
+    // Apply swap effect: actions targeting A this night go to B and vice versa
+    // We note this in jgRecord for dawn processing
+    jgRecord.magicianSwapA=a;
+    jgRecord.magicianSwapB=b;
+  } else {
+    jgRecord.magicianSwapA=null;
+    jgRecord.magicianSwapB=null;
+  }
+  jgGoStep(jgNextGodStep('magician-wake'));
+}
+
+function jgSaveDemonhunter(){
+  jgSaveGodId('demonhunter');
+  if(jgNight>=2){
+    const val=(document.getElementById('jg-dh-target')||{}).value?.trim()||null;
+    jgRecord.demonhunterTarget=val;
+  }
+  jgGoStep(jgNextGodStep('demonhunter-wake'));
 }
 
 function jgSaveVilNames(){
@@ -1556,7 +1872,7 @@ function jgSaveGuard(){
   jgLastGuardTarget=tv||null;
   jgRecord.guardTarget=tv||null;
   jgRenderRoster();
-  jgGoStep('dawn');
+  jgGoStep(jgNextGodStep('guard-wake'));
 }
 
 
@@ -1571,7 +1887,12 @@ function jgSaveWolfBeautyNight(){
     }
     jgRenderRoster();
   }
-  jgRecord.wolfbeautyCharm=(document.getElementById('jg-wolfbeauty-charm')||{}).value?.trim()||null;
+  const newCharm=(document.getElementById('jg-wolfbeauty-charm')||{}).value?.trim()||null;
+  if(newCharm&&jgLastWolfBeautyCharm&&newCharm===jgLastWolfBeautyCharm.toString()){
+    alert('⚠️ 狼美人不能連續兩晚魅惑同一人！');return;
+  }
+  jgLastWolfBeautyCharm=newCharm||null;
+  jgRecord.wolfbeautyCharm=newCharm;
   jgGoStep(jgNextAfterSubWolf('wolfbeauty-wake'));
 }
 
@@ -1642,10 +1963,25 @@ function jgSaveWolf(){
       }
       i++;
     }
+    // Save gargoyle identity if entered during first night wolf wake
+    const ggWhoEl=document.getElementById('jg-gargoyle-who-wolf');
+    if(ggWhoEl){
+      const ggNum=parseInt(ggWhoEl.value||'0');
+      const ggName=(document.getElementById('jg-gargoyle-name-wolf')||{}).value?.trim()||'';
+      if(ggNum){
+        jgPlayers.forEach(p=>{ if(p.role==='gargoyle') p.role=null; });
+        const ggP2=jgByNum(ggNum); if(ggP2){ggP2.role='gargoyle';if(ggName)ggP2.name=ggName;}
+      }
+    }
     jgRenderRoster();
   }
   jgRecord.wolfKill=(document.getElementById('jg-wolf-rec')||{}).value?.trim()||null;
-  // Route to sub-wolf steps or seer
+  // Bloodmoon seal: skip all god steps this night
+  if(jgRecord.bloodmoonSealNight){
+    jgRecord.bloodmoonSealNight=false; // clear after use
+    jgGoStep('dawn');
+    return;
+  }
   jgGoStep(jgNextWolfStep());
 }
 
@@ -1655,7 +1991,7 @@ function jgUpdateSeerResult(){
   if(!val){if(box)box.innerHTML='';return;}
   const found=jgFind(val);
   if(!found){if(box)box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
-  const isWolf=found.role==='wolf';
+  const isWolf=WOLF_ROLES.includes(found.role);
   const dn=found.name&&found.name!==found.num+'號'?found.name:'';
   if(box) box.innerHTML='<div class="'+(isWolf?'info-danger':'info-success')+'" style="font-size:20px;font-weight:800;text-align:center;padding:18px;">'+found.num+'號'+(dn?' '+dn:'')+' → '+(isWolf?'狼人 👎':'好人 👍')+'</div>';
 }
@@ -1673,6 +2009,10 @@ function jgSaveSeer(){
     jgRenderRoster();
   }
   jgRecord.seerChecked=(document.getElementById('jg-seer-target-input')||{}).value?.trim()||null;
+  if(jgRecord.seerChecked){
+    const t=jgFind(jgRecord.seerChecked);
+    jgRecord.evilknightRevengeSeer=!!(t&&t.role==='evilknight'&&t.alive);
+  }
   jgGoStep('witch-wake');
 }
 
@@ -1697,12 +2037,8 @@ function jgNextWolfStep(){
   // Sub-wolves wake WITH the pack (wolfking does NOT wake separately)
   if(jgNight===1){
     if(jgComp.wolfbeauty>0) return 'wolfbeauty-wake';
-    if(jgComp.whitewolf>0) return 'whitewolf-wake';
-    if(jgComp.evilknight>0) return 'evilknight-wake';
   } else {
     if(jgHasRoleAny(['wolfbeauty'])) return 'wolfbeauty-wake';
-    if(jgHasRoleAny(['whitewolf'])) return 'whitewolf-wake';
-    if(jgHasRoleAny(['evilknight'])) return 'evilknight-wake';
   }
   return 'seer-wake';
 }
@@ -1711,8 +2047,6 @@ function jgHasRoleAny(roles){ return roles.some(r=>jgPlayers.some(p=>p.role===r)
 function jgNextAfterSubWolf(currentStep){
   const chain=[
     ['wolfbeauty-wake','wolfbeauty'],
-    ['whitewolf-wake','whitewolf'],
-    ['evilknight-wake','evilknight'],
   ];
   let found=false;
   for(const [step,role] of chain){
@@ -1726,10 +2060,28 @@ function jgNextAfterSubWolf(currentStep){
 }
 
 // After witch: gargoyle (if exists) before hunter
-function jgNextAfterWitch(){
-  const hasGarg=jgNight===1?(jgComp.gargoyle>0):jgHasRoleAny(['gargoyle']);
-  return hasGarg?'gargoyle-wake':'hunter-wake';
+// God night chain: gargoyle → hunter → guard → dreamcatcher → knight → magician → demonhunter → gravkeeper → dawn
+const GOD_CHAIN=[
+  {step:'gargoyle-wake',    role:'gargoyle',     check:(n,c)=>n===1?(c.gargoyle>0):jgHasRoleAny(['gargoyle'])},
+  {step:'hunter-wake',      role:'hunter',       check:(n,c)=>n===1?(c.hunter>0):jgHasRoleAny(['hunter'])},
+  {step:'guard-wake',       role:'guard',        check:(n,c)=>n===1?(c.guard>0):jgHasRoleAny(['guard'])},
+  {step:'dreamcatcher-wake',role:'dreamcatcher', check:(n,c)=>n===1?(c.dreamcatcher>0):jgHasRoleAny(['dreamcatcher'])},
+  {step:'knight-wake',      role:'knight',       check:(n,c)=>n===1?(c.knight>0):jgHasRoleAny(['knight'])},
+  {step:'magician-wake',    role:'magician',     check:(n,c)=>n===1?(c.magician>0):jgHasRoleAny(['magician'])},
+  {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter'])},
+  {step:'gravkeeper-wake',  role:'gravkeeper',   check:(n,c)=>n===1?(c.gravkeeper>0):jgHasRoleAny(['gravkeeper'])},
+];
+
+function jgNextGodStep(afterStep){
+  let found=!afterStep; // if no afterStep, start from beginning
+  for(const g of GOD_CHAIN){
+    if(found && g.check(jgNight,jgComp)) return g.step;
+    if(g.step===afterStep) found=true;
+  }
+  return 'dawn';
 }
+
+function jgNextAfterWitch(){ return jgNextGodStep(null); }
 
 function jgWitchSaveBtn(save){
   if(save){
@@ -1778,12 +2130,10 @@ function jgWitchWhoChange(){
   if(!wrap||jgWitchSaveUsed) return;
   const isSelf=whoNum.toString()===killed.toString();
   if(isSelf){
-    wrap.innerHTML='<div class="speech" style="margin-top:8px;">「<em>你要使用解藥嗎？</em>」</div>'
-      +'<div class="btn2" style="margin-top:6px;"><button disabled style="opacity:0.3;">救人</button><button disabled style="opacity:0.3;">不救</button></div>'
+    wrap.innerHTML='<div class="btn2" style="margin-top:6px;"><button disabled style="opacity:0.3;">救人</button><button disabled style="opacity:0.3;">不救</button></div>'
       +'<div class="info-warn" style="margin-top:6px;">女巫自己被殺，不能自救（搖頭）</div>';
   } else if(!guardSaved){
-    wrap.innerHTML='<div class="speech" style="margin-top:8px;">「<em>你要使用解藥嗎？</em>」</div>'
-      +'<div class="btn2" style="margin-top:6px;">'
+    wrap.innerHTML='<div class="btn2" style="margin-top:6px;">'
       +'<button class="success" id="jg-btn-save-yes" onclick="jgWitchSaveBtn(true)">救人</button>'
       +'<button class="ghost" id="jg-btn-save-no" onclick="jgWitchSaveBtn(false)">不救</button>'
       +'</div><div id="jg-witch-save-status"></div>';
@@ -1806,7 +2156,12 @@ function jgSaveWitch(){
   if(usedSave) jgWitchSaveUsed=true;
   if(!usedSave){
     const pi=document.getElementById('jg-witch-poison-rec');
-    if(pi&&pi.value.trim()){jgRecord.witchPoison=pi.value.trim();jgWitchPoisonUsed=true;}
+    if(pi&&pi.value.trim()){
+      jgRecord.witchPoison=pi.value.trim();
+      jgWitchPoisonUsed=true;
+      const pt=jgFind(pi.value.trim());
+      jgRecord.evilknightRevengeWitch=!!(pt&&pt.role==='evilknight'&&pt.alive);
+    }
   }
   jgGoStep(jgNextAfterWitch());
 }
@@ -1844,10 +2199,20 @@ function jgSaveVote(){
     const winCheck=jgCheckWin();
     if(winCheck){jgShowWin(winCheck);return;}
     jgRecord._voteOutNum=found.num;
+    jgRecord._lastVoteOutPlayer=found.num; // for gravkeeper
     if(found.role==='hunter'){jgGoStep('hunter-shot');return;}
     if(found.role==='wolfking'){jgGoStep('wolfking-shot');return;}
     if(found.role==='wolfbeauty'&&jgRecord.wolfbeautyCharm){jgGoStep('wolfbeauty-charm-kill');return;}
     if(found.role==='whitewolf'){jgGoStep('whitewolf-selfblow');return;}
+    if(found.role==='bloodmoon'){
+      // If bloodmoon is the last wolf, they survive and go to night for one more kill
+      const aliveWolves=jgAlive().filter(p=>WOLF_ROLES.includes(p.role));
+      if(aliveWolves.length===0){
+        // bloodmoon was last wolf, mark seal for this special night
+        jgRecord.bloodmoonSealNight=true;
+        jgGoStep('bloodmoon-last-night');return;
+      }
+    }
     jgGoStep('vote-last-words');return;
   }
   jgGoStep('next-night');
@@ -1859,6 +2224,26 @@ function jgSaveWolfKingShot(){
   jgGoStep('vote-last-words');
 }
 
+function jgSaveBloodMoonLastNight(){
+  const val=(document.getElementById('jg-bloodmoon-last-kill')||{}).value?.trim()||'';
+  const bm=jgPlayers.find(p=>p.role==='bloodmoon');
+  if(bm) bm.alive=false;
+  if(val){ const p=jgFind(val); if(p&&p.alive){p.alive=false;} }
+  jgRenderRoster();
+  const win=jgCheckWin(); if(win){jgShowWin(win);return;}
+  // Continue as normal night (no seal — bloodmoon already handled their kill)
+  jgGoStep('next-night');
+}
+
+function jgSaveBloodMoonBlow(){
+  const bm=jgPlayers.find(p=>p.role==='bloodmoon');
+  if(bm&&bm.alive){bm.alive=false;}
+  jgRecord.bloodmoonSealNight=true;
+  jgRenderRoster();
+  const win=jgCheckWin(); if(win){jgShowWin(win);return;}
+  jgGoStep('next-night');
+}
+
 function jgSaveWhiteWolfBlow(){
   const val=(document.getElementById('jg-whitewolf-blow-rec')||{}).value?.trim()||'';
   const ww=jgPlayers.find(p=>p.role==='whitewolf');
@@ -1866,7 +2251,8 @@ function jgSaveWhiteWolfBlow(){
   if(val){ const p=jgFind(val); if(p&&p.alive){p.alive=false;} }
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}
-  jgGoStep('vote-last-words');
+  // 白狼王自爆：直接天黑，無遺言
+  jgGoStep('next-night');
 }
 
 function jgSaveWolfBeautyCharmKill(){
@@ -1884,12 +2270,14 @@ function jgSaveHunter(){
 }
 
 function jgCheckWin(){
-  const a=jgAlive(), aw=a.filter(p=>p.role==='wolf'), ag=a.filter(p=>p.role!=='wolf');
+  const a=jgAlive();
+  const aw=a.filter(p=>WOLF_ROLES.includes(p.role)); // all wolf-team alive
+  const ag=a.filter(p=>!WOLF_ROLES.includes(p.role)); // all good-team alive
   if(aw.length===0) return{winner:'good',msg:'所有狼人已被淘汰',icon:'🎉'};
   if(aw.length>=ag.length) return{winner:'wolf',msg:'狼人人數已達多數',icon:'🐺'};
   // Wolf wins if all villagers dead or all gods dead
-  const gods=['seer','witch','hunter','guard'];
-  const aGod=ag.filter(p=>gods.includes(p.role));
+  const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper'];
+  const aGod=ag.filter(p=>allGods.includes(p.role));
   const aVil=ag.filter(p=>p.role==='villager');
   if(aVil.length===0&&aGod.length>0) return{winner:'wolf',msg:'所有平民已被淘汰',icon:'🐺'};
   if(aGod.length===0&&aVil.length>0) return{winner:'wolf',msg:'所有神職已被淘汰',icon:'🐺'};
@@ -1905,13 +2293,13 @@ function jgShowWin(res){
   document.getElementById('jg-content').innerHTML=`
     <div class="nbanner"><div class="nicon">${res.icon}</div><div class="ntitle">${isGood?'好人勝利！':'狼人勝利！'}</div><p class="sub" style="text-align:center;">${res.msg}</p></div>
     <div class="${isGood?'info-success':'info-danger'}" style="margin-bottom:14px;">
-      存活狼人：${jgAlive().filter(p=>p.role==='wolf').length} 人　|　存活好人：${jgAlive().filter(p=>p.role!=='wolf').length} 人
+      存活狼人：${jgAlive().filter(p=>WOLF_ROLES.includes(p.role)).length} 人　|　存活好人：${jgAlive().filter(p=>!WOLF_ROLES.includes(p.role)).length} 人
     </div>
     <div class="section-title">全體身分</div>
     <div class="card">${allRows}</div>
     <div class="section-title" style="margin-top:16px;">勝負判定依據</div>
     <div class="win-bar">
-      <div class="win-side win-wolf"><div class="win-count">${jgAlive().filter(p=>p.role==='wolf').length}</div><div class="win-label">存活狼人</div></div>
+      <div class="win-side win-wolf"><div class="win-count">${jgAlive().filter(p=>WOLF_ROLES.includes(p.role)).length}</div><div class="win-label">存活狼人</div></div>
       <div class="win-side win-good"><div class="win-count">${jgAlive().filter(p=>p.role!=='wolf').length}</div><div class="win-label">存活好人</div></div>
     </div>
     <button class="primary" onclick="jgReset()" style="margin-top:14px;">再玩一局</button>
@@ -1932,9 +2320,10 @@ const ALL_ROLES = {
   wolf:     {icon:'🐺', name:'狼人',   team:'wolf', teamLabel:'狼人陣營', desc:'每晚與同伴商議選擇獵殺對象。白天偽裝好人，引導投票淘汰好人。<br><strong>目標：</strong>狼人數 ≥ 好人數。'},
   wolfking: {icon:'👑', name:'狼王',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>帶人能力：</strong>死亡時可開槍帶走一名玩家。<br><strong>限制：</strong>被女巫毒殺時無法發動。'},
   whitewolf:{icon:'🤍', name:'白狼王', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>自爆帶人：</strong>白天可宣告自爆，直接帶走場上一名玩家。'},
-  wolfbeauty:{icon:'💋',name:'狼美人', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>魅惑連結：</strong>每晚魅惑一名玩家。若狼美人被投票或獵人射殺，被魅惑玩家同死。<br><strong>限制：</strong>不可自爆、不可自刀。'},
-  evilknight:{icon:'🖤',name:'惡靈騎士',team:'wolf',teamLabel:'狼人陣營', desc:'<strong>被動防禦：</strong>夜間免疫狼人殺與女巫毒。<br><strong>反傷：</strong>被預言家查驗或被毒殺，次日查驗/毒殺者死亡。<br><strong>限制：</strong>不可自爆。'},
-  gargoyle: {icon:'🗿', name:'石像鬼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>查驗牌面：</strong>每晚查驗一名玩家的具體角色。<br><strong>限制：</strong>隊友全滅前不能殺人，隊友全滅後可查驗後殺人。不可自爆，可自刀。'},
+  wolfbeauty:{icon:'💋',name:'狼美人', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>魅惑連結：</strong>每晚魅惑一名玩家（不能連續兩晚魅惑同一人，不能自刀）。<br><strong>殉情：</strong>狼美人出局（被票、獵人射殺）或夜間被毒，魅惑對象殉情。<br><strong>限制：</strong>被騎士決鬥出局時技能無法發動。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與騎士搭配出現</span>'},
+  evilknight:{icon:'🖤',name:'惡靈騎士',team:'wolf',teamLabel:'狼人陣營', desc:'<strong>被動防禦：</strong>夜間免疫狼殺與女巫毒（但預言家查驗仍顯示狼人）。<br><strong>反傷：</strong>被預言家查驗→次日預言家死亡；被女巫毒殺→次日女巫死亡。<br><strong>限制：</strong>不可自爆。'},
+  bloodmoon: {icon:'🌑', name:'血月使者', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>主動技：</strong>白天自爆後直接進入黑夜，不能指刀，當晚所有神牌技能封印。<br><strong>被動技：</strong>若為最後一個被放逐的狼人，可暫時存活進入黑夜，夜晚再擊殺一名玩家，達屠邊則狼人勝利。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與獵魔人搭配出現</span>'},
+    gargoyle: {icon:'🗿', name:'石像鬼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>查驗牌面：</strong>每晚查驗一名玩家的具體角色。<br><strong>限制：</strong>隊友全滅前不能殺人，隊友全滅後可查驗後殺人。不可自爆，可自刀。'},
   // Good - villager
   villager: {icon:'🧑‍🌾',name:'平民',  team:'good', teamLabel:'好人陣營', desc:'沒有特殊技能，靠發言與推理找出狼人。白天投票是唯一武器。'},
   // Good - gods
@@ -1951,7 +2340,7 @@ const ALL_ROLES = {
   sheriff:  {icon:'🏅', name:'警長',   team:'special', teamLabel:'附加身分', desc:'<strong>投票 1.5 票。</strong>可決定發言順序，擁有歸票位。死亡時可傳警長牌或撕毀。'},
 };
 
-const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle'];
+const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon'];
 const VIL_ROLES  = ['villager'];
 const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper'];
 const SPECIAL_ROLES = ['sheriff'];
