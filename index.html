@@ -304,8 +304,22 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
   <input type="checkbox" id="jg-dual-mode" style="display:none;"/>
   <label id="jg-count-label" style="margin-top:12px;">玩家人數（6～12）</label>
   <input type="number" id="jg-count" min="6" max="12" value="6" inputmode="numeric" oninput="jgUpdateComp()"/>
+  <div id="jg-board-preset-row" style="margin-top:14px;">
+    <label for="jg-board-preset">選擇板子</label>
+    <select id="jg-board-preset" onchange="jgSetBoardPreset(this.value)">
+      <option value="custom">自訂角色（排列組合尚未逐一測試過，遇到狀況請用下方「問題回報」回報）</option>
+      <option value="mechwolf_medium">機械狼配通靈師</option>
+      <option value="dreamcatcher_nightmare">攝夢人配夢魘</option>
+      <option value="blackmarket_wolfbrothers">黑市商人配狼兄狼弟</option>
+      <option value="wolfbeauty_knight">狼美人配騎士</option>
+      <option value="gargoyle_gravkeeper">石像鬼配守墓人</option>
+      <option value="bloodmoon_demonhunter">血月使者配獵魔人</option>
+      <option value="magician_wolfking">魔術師配狼王</option>
+    </select>
+  </div>
   <div class="info" id="jg-comp-desc" style="text-align:center;font-size:13px;margin-bottom:4px;"></div>
   <div id="jg-role-picker"></div>
+  <div id="jg-preset-picker" style="display:none;"></div>
   <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:16px;padding:14px 16px;border-radius:12px;border:2px solid var(--accent,#2e7d32);background:rgba(46,125,50,0.08);cursor:pointer;transition:background .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
     <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
     <span style="font-weight:800;font-size:16px;">🎖️ 上警局（開放警長競選）</span>
@@ -796,6 +810,13 @@ function jgSetMode(isDual){
   if(bS) bS.classList.toggle('primary',!isDual);
   if(bD) bD.classList.toggle('primary',isDual);
   const desc=document.getElementById('jg-dual-mode-desc'); if(desc) desc.style.display=isDual?'':'none';
+  // 板子預設只開放單身分板；切到雙身分就強制退回「自訂角色」並隱藏板子選單
+  const boardRow=document.getElementById('jg-board-preset-row');
+  if(boardRow) boardRow.style.display=isDual?'none':'';
+  if(isDual){
+    jgBoardPreset='custom';
+    const bp=document.getElementById('jg-board-preset'); if(bp) bp.value='custom';
+  }
   const countInput=document.getElementById('jg-count');
   const label=document.getElementById('jg-count-label');
   const min=isDual?4:6, max=isDual?7:12;
@@ -815,7 +836,10 @@ function jgUpdateComp(){
   const isDual=jgSetupDualMode;
   const min=isDual?4:6, max=isDual?7:12;
   const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count')?.value)||min));
-  if(!jgRolePick._init){ jgRolePick=Object.assign({}, isDual?(DEFAULT_COMP_DUAL[n]||DEFAULT_COMP_DUAL[4]):(DEFAULT_COMP[n]||DEFAULT_COMP[6])); jgRolePick._init=true; }
+  if(!jgRolePick._init){
+    if(!isDual&&jgBoardPreset!=='custom'){ jgApplyPresetDefaults(n); }
+    else { jgRolePick=Object.assign({}, isDual?(DEFAULT_COMP_DUAL[n]||DEFAULT_COMP_DUAL[4]):(DEFAULT_COMP[n]||DEFAULT_COMP[6])); jgRolePick._init=true; }
+  }
   const comp=getPickComp(jgRolePick);
   const total=Object.values(comp).reduce((a,b)=>a+b,0);
   const wolves=Object.entries(comp).filter(([k])=>WOLF_ROLES.includes(k)).reduce((s,[,v])=>s+v,0);
@@ -829,7 +853,18 @@ function jgUpdateComp(){
       ? '共 '+total+' 個角色'+(total!==target?' ⚠️ 需選滿 '+target+' 個角色':'')
       : '共 '+total+' 人 · 狼人 '+wolves+' · 神職 '+gods+' · 平民 '+vils+(hybrids>0?' · 混血兒 '+hybrids:'')+(total!==target?' ⚠️ 需選滿 '+target+' 人':'');
   }
-  renderRolePicker('jg-role-picker', jgRolePick, target, null);
+  const usePreset=!isDual&&jgBoardPreset!=='custom';
+  const pickerEl=document.getElementById('jg-role-picker');
+  const presetEl=document.getElementById('jg-preset-picker');
+  if(usePreset){
+    if(pickerEl) pickerEl.style.display='none';
+    if(presetEl) presetEl.style.display='';
+    renderPresetPicker();
+  } else {
+    if(pickerEl) pickerEl.style.display='';
+    if(presetEl) presetEl.style.display='none';
+    renderRolePicker('jg-role-picker', jgRolePick, target, null);
+  }
 }
 
 // ── 玩家名單設定：讓法官在開局前先指定每個號碼是誰 ──
@@ -1446,6 +1481,20 @@ function jgSoloIdFearCheck(whoId, val){
   const note=document.getElementById(prefix+'-feared-note');
   if(wrap) wrap.style.display=feared?'none':'';
   if(note) note.style.display=feared?'':'none';
+}
+
+// Night-1 witch id picker: reuses the fear check above, and additionally live-hides the
+// self-save buttons (and clears any save already toggled) the moment the judge picks a
+// witch number that matches tonight's wolf-kill target —女巫不能自救.
+function jgWitchIdCheck(whoId, val){
+  jgSoloIdFearCheck(whoId, val);
+  const killed=jgRecord&&jgRecord.wolfKill;
+  const selfKilled=!!(val && killed && val.toString()===killed.toString());
+  const saveWrap=document.getElementById('jg-witch-save-wrap');
+  const note=document.getElementById('jg-witch-selfkill-note');
+  if(saveWrap) saveWrap.style.display=selfKilled?'none':'';
+  if(note) note.style.display=selfKilled?'':'none';
+  if(selfKilled&&jgRecord) jgRecord.witchSave=null;
 }
 
 function jgFind(val){
@@ -2197,7 +2246,7 @@ function jgRenderStep(step){
     const seerAlive=seerP&&seerP.alive;
     const hasSeerRole=(jgNight===1&&jgComp.seer>0)||seerP;
     const lyEligible=jgLuckyOne&&jgLuckyOne.gift==='seer'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&(()=>{const lp=jgByNum(jgLuckyOne.num);return lp&&lp.alive;})();
-    if(!hasSeerRole&&!lyEligible){ jgGoStep('witch-wake'); return; }
+    if(!hasSeerRole&&!lyEligible){ jgGoStep(jgNextGodStep(null)); return; }
     const lyHtml=lyEligible?(
       '<div class="divider" style="margin:14px 0;"></div>'
       +'<div class="info-success" style="font-size:12px;margin-bottom:6px;">🍀 '+jgLuckyOne.num+'號 幸運兒（獲得預言家查驗技能，整局限一次）也可查驗一名玩家</div>'
@@ -2282,7 +2331,7 @@ function jgRenderStep(step){
     const witchAlive=witchP&&witchP.alive;
     const hasWitchRole=(jgNight===1&&jgComp.witch>0)||witchP;
     const lyEligible=jgLuckyOne&&jgLuckyOne.gift==='witch'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&(()=>{const lp=jgByNum(jgLuckyOne.num);return lp&&lp.alive;})();
-    if(!hasWitchRole&&!lyEligible){ jgGoStep('hunter-wake'); return; }
+    if(!hasWitchRole&&!lyEligible){ jgGoStep('seer-wake'); return; }
     const lyHtml=lyEligible?(
       '<div class="divider" style="margin:14px 0;"></div>'
       +'<div class="info-success" style="font-size:12px;margin-bottom:6px;">🍀 '+jgLuckyOne.num+'號 幸運兒（獲得女巫毒藥技能，整局限一次，不能救人）</div>'
@@ -2302,7 +2351,7 @@ function jgRenderStep(step){
     }
 
     const needId=isFirst&&!witchP&&!jgMechAssignDone;
-    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">女巫號碼</label>${jgNumSelectHtml('jg-witch-who','','jgSoloIdFearCheck')}</div><div class="divider"></div>`:'';
+    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">女巫號碼</label>${jgNumSelectHtml('jg-witch-who','','jgWitchIdCheck')}</div><div class="divider"></div>`:'';
 
     if(jgDualIdentityMode&&!witchP){
       jgShowPg(`
@@ -2410,6 +2459,7 @@ function jgRenderStep(step){
       ${idHtml}
       ${killedHtml}
       <div id="jg-witch-feared-note" class="info-warn" style="display:none;">（法官搖頭）你被恐懼了，無法使用技能</div>
+      <div id="jg-witch-selfkill-note" class="info-warn" style="display:none;">女巫自己被殺，不能自救（搖頭）</div>
       <div id="jg-witch-action">
       <div id="jg-witch-save-wrap">${saveHtml}</div>
       ${poisonHtml}
@@ -2459,7 +2509,7 @@ function jgRenderStep(step){
         <div class="speech">「<em>攝夢人請睜眼，今晚夢遊的對象是？</em>」</div>
         <div class="info" style="font-size:12px;">（雙身分板：此身分目前無人持有，可能藏在尚未翻開的第二張牌中）</div>
         <div class="speech" style="margin-top:10px;">「<em>攝夢人請閉眼。</em>」</div>
-        <button class="primary" onclick="jgGoStep(jgNextGodStep('dreamcatcher-wake'))">下一步 →</button>
+        <button class="primary" onclick="jgGoStep(jgAfterDreamcatcherStep())">下一步 →</button>
       `,'🌙 攝夢人');
       return;
     }
@@ -2777,6 +2827,30 @@ function jgRenderStep(step){
         if(ct&&ct.alive){ct.alive=false;if(!deads.includes(ct.num))deads.push(ct.num);}
       }
     }
+    // 上面幾個天亮連動死亡（獵魔人夜擊、攝夢人連續兩晚夢同一人致死、攝夢人陣亡連動夢遊對象死亡、
+    // 狼美人中毒殉情）都是直接設定 alive=false、把號碼塞進 deads，而不是走 jgApplyDeath；
+    // 這些號碼在上面組 dawnMsg／trulyDiedNums 的時候都還沒發生，所以要在這裡補回死亡清單，
+    // 天亮公告才會把這些號碼跟原本的死訊一起唸出來，而不是悄悄死掉、玩家看不到。
+    let lateDeadAdded=false;
+    deads.forEach(d=>{
+      const numStr=d.toString();
+      const alreadyCounted=trulyDiedNums.some(n=>n.toString()===numStr)||swappedNums.some(n=>n.toString()===numStr);
+      if(!alreadyCounted){
+        const p=jgFind(d);
+        if(p&&!p.alive){ trulyDiedNums.push(p.num); lateDeadAdded=true; }
+      }
+    });
+    if(lateDeadAdded){
+      const deadNames3=trulyDiedNums.map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
+      const swapNames3=swappedNums.map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
+      const dawnMsgParts3=[...deadNames3.map(nm=>nm+'死亡'), ...swapNames3.map(nm=>nm+'死亡，請使用第二身分')];
+      dawnMsg=dawnMsgParts3.length===0?'昨晚是平安夜。':'昨晚 '+dawnMsgParts3.join('、')+'。';
+      jgLastNightPeaceful=(deadNames3.length===0&&swapNames3.length===0);
+      jgRenderRoster();
+      const lateWin=jgCheckWin();
+      if(lateWin){ jgShowWin(lateWin); return; }
+    }
+
     // Check if wolf-killed hunter can activate skill at dawn
     // Wolf king dawn activation (same as hunter when wolf-killed)
     const dawnWolfKingShoot=(()=>{
@@ -2962,6 +3036,7 @@ function jgRenderStep(step){
   }
   else if(step==='vote'){
     jgVoteTally={};
+    jgAbstainVoters={};
     jgShowPg(`
       <h2>投票放逐</h2>
       <div class="speech">「<em>準備投票選出要放逐的玩家，3、2、1</em>」<br>多數票者出局。若平票，平票玩家 PK 發言後再投一票。</div>
@@ -3266,7 +3341,7 @@ function jgSaveDreamcatcher(){
   }
   jgLastDreamcatcherTarget=val||null;
   jgRecord.dreamcatcherTarget=val;
-  jgGoStep(jgNextGodStep('dreamcatcher-wake'));
+  jgGoStep(jgAfterDreamcatcherStep());
 }
 
 // Magician swap check
@@ -4051,12 +4126,12 @@ function jgSaveSeer(){
     const t=jgFind(jgRecord.seerChecked);
     if(t&&t.role==='evilknight'&&t.alive&&!jgEvilKnightRevengeUsed){
       jgRecord.evilknightRevengeSeer=true;
-      jgEvilKnightRevengeUsed=true; // 整局限一次，且預言家先於女巫發動，這裡先標記可確保「先發動者為主」
+      jgEvilKnightRevengeUsed=true; // 整局限一次，且女巫先於預言家發動，這裡先標記可確保「先發動者為主」
     }
   }
   jgRecord.luckyoneCheck=(document.getElementById('jg-luckyone-seer-target')||{}).value?.trim()||null;
   if(jgRecord.luckyoneCheck&&jgLuckyOne&&jgLuckyOne.gift==='seer'){ jgLuckyOne.used=true; }
-  jgGoStep('witch-wake');
+  jgGoStep(jgNextGodStep(null));
 }
 
 // Called when witch save dropdown changes — lock poison if saved
@@ -4075,14 +4150,14 @@ function jgWitchSaveChange(){
   }
 }
 
-// Returns first pending sub-wolf step, or 'seer-wake'
+// Returns first pending sub-wolf step, or 'witch-wake'
 function jgNextWolfStep(){
   if(jgNight===1){
     if(jgComp.wolfbeauty>0) return 'wolfbeauty-wake';
   } else {
     if(jgHasRoleAny(['wolfbeauty'])) return 'wolfbeauty-wake';
   }
-  return 'seer-wake';
+  return 'witch-wake';
 }
 function jgHasRoleAny(roles){ return roles.some(r=>jgPlayers.some(p=>p.role===r)); }
 
@@ -4108,8 +4183,15 @@ function jgAfterMagicianStep(){
   if(hasGuard) return 'guard-wake';
   return jgAfterGuardStep();
 }
-// Where to go once the guard step is done (or skipped because there's no guard)
+// Where to go once the guard step is done (or skipped because there's no guard).
+// 攝夢人現在排在守衛之後、狼之前睜眼（見使用者需求：夢魘→守衛→攝夢人→狼→女巫→預言家）。
 function jgAfterGuardStep(){
+  const hasDreamcatcher = jgNight===1 ? (jgComp.dreamcatcher>0) : jgHasRoleAny(['dreamcatcher']);
+  if(hasDreamcatcher) return 'dreamcatcher-wake';
+  return jgAfterDreamcatcherStep();
+}
+// Where to go once the dreamcatcher step is done (or skipped because there's no dreamcatcher)
+function jgAfterDreamcatcherStep(){
   if(jgNight===1 && jgComp.hybrid>0 && !jgHybridChosen){
     return 'hybrid-wake';
   }
@@ -4214,19 +4296,19 @@ function jgNextAfterSubWolf(currentStep){
     }
     if(step===currentStep) found=true;
   }
-  return 'seer-wake';
+  return 'witch-wake';
 }
 
-// After witch: 通靈師 first (so it can reveal a role the 機械狼 has already learned this
-// game), then gargoyle → hunter → blackmarket → dreamcatcher → knight → magician →
-// demonhunter → gravkeeper → dawn.
-// (守衛已移到夜晚最開始睜眼；機械狼已移到狼人睜眼之前——見 jgNightStartNext / jgAfterGuardStep / jgAfterWolfBrotherStep)
+// Full night order is: 夢魘 → 魔術師 → 守衛 → 攝夢人 → 混血兒(僅第1夜) → 狼兄狼弟 → 機械狼 → 狼(+狼美人)
+// → 女巫 → 預言家 → 通靈師 → 石像鬼 → 獵人 → 黑市商人 → 騎士 → 獵魔人 → 守墓人 → 天亮。
+// (守衛已移到夜晚最開始睜眼；攝夢人已移到守衛之後、狼之前——見 jgAfterGuardStep / jgAfterDreamcatcherStep；
+//  機械狼已移到狼人睜眼之前——見 jgAfterWolfBrotherStep；女巫已移到預言家之前——見 jgNextAfterSubWolf / jgSaveWitch / jgSaveSeer)
+// GOD_CHAIN 只涵蓋「女巫→預言家」之後、天亮之前的神職鏈：通靈師 → 石像鬼 → 獵人 → 黑市商人 → 騎士 → 獵魔人 → 守墓人。
 const GOD_CHAIN=[
   {step:'medium-wake',      role:'medium',       check:(n,c)=>n===1?(c.medium>0):jgHasRoleAny(['medium'])},
   {step:'gargoyle-wake',    role:'gargoyle',     check:(n,c)=>n===1?(c.gargoyle>0):jgHasRoleAny(['gargoyle'])},
   {step:'hunter-wake',      role:'hunter',       check:(n,c)=>(n===1?(c.hunter>0):jgHasRoleAny(['hunter']))||jgMechWolfHunterActive()},
   {step:'blackmarket-wake', role:'blackmarket',  check:(n,c)=>!jgBlackMarketUsed&&(n===1?(c.blackmarket>0):jgHasRoleAny(['blackmarket']))},
-  {step:'dreamcatcher-wake',role:'dreamcatcher', check:(n,c)=>n===1?(c.dreamcatcher>0):jgHasRoleAny(['dreamcatcher'])},
   {step:'knight-wake',      role:'knight',       check:(n,c)=>n===1?(c.knight>0):jgHasRoleAny(['knight'])},
   {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter'])},
   {step:'gravkeeper-wake',  role:'gravkeeper',   check:(n,c)=>n===1?(c.gravkeeper>0):jgHasRoleAny(['gravkeeper'])},
@@ -4240,8 +4322,6 @@ function jgNextGodStep(afterStep){
   }
   return 'dawn';
 }
-
-function jgNextAfterWitch(){ return jgNextGodStep(null); }
 
 function jgWitchSaveBtn(save){
   if(save){
@@ -4315,6 +4395,10 @@ function jgSaveWitch(){
   const witchPfinal=jgPlayers.find(p=>p.role==='witch');
   const witchFearedFinal=jgFeared(witchPfinal);
   if(witchFearedFinal){ jgRecord.witchSave=null; jgRecord.witchPoison=null; }
+  // 女巫不能自救：這是最終防線，確保即使第一晚剛剛才選定女巫號碼（此時畫面上的救人/不救按鈕
+  // 可能還來不及知道「被殺的就是女巫本人」而誤顯示），存檔當下一定會把自救結果強制清空。
+  const selfKilledFinal=!!(witchPfinal&&jgRecord.wolfKill&&witchPfinal.num.toString()===jgRecord.wolfKill.toString());
+  if(selfKilledFinal){ jgRecord.witchSave=null; }
   const usedSave=!witchFearedFinal&&!!jgRecord.witchSave;
   if(usedSave) jgWitchSaveUsed=true;
   if(!usedSave&&!witchFearedFinal){
@@ -4333,7 +4417,7 @@ function jgSaveWitch(){
   jgRecord.luckyonePoison=(document.getElementById('jg-luckyone-poison')||{}).value?.trim()||null;
   if(jgRecord.luckyonePoison&&jgLuckyOne&&jgLuckyOne.gift==='witch'){ jgLuckyOne.used=true; }
   if(jgTryEarlyEnd()) return;
-  jgGoStep(jgNextAfterWitch());
+  jgGoStep('seer-wake');
 }
 
 function jgLastWordsBtn(btn){
@@ -4349,6 +4433,7 @@ function jgLastWordsBtn(btn){
 
 // ── 投票計票：點選每個號碼下方投給他的人 ──
 let jgVoteTally={}; // target num -> {voterNum: true}
+let jgAbstainVoters={}; // voter num -> true（本輪棄票，不投給任何人）
 
 function jgRenderVoteTally(){
   const box=document.getElementById('jg-vote-tally');
@@ -4368,6 +4453,16 @@ function jgRenderVoteTally(){
       }).join('')
       +'</div></div>';
   });
+  html+='<div style="margin-top:4px;">'
+    +'<div style="font-weight:700;font-size:13px;margin-bottom:4px;">🙅 棄票（不投給任何人）</div>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
+    +alive.map(voter=>{
+      const sel=!!jgAbstainVoters[voter];
+      return '<button type="button" onclick="jgToggleAbstain('+voter+')" style="width:34px;height:34px;border-radius:50%;padding:0;font-size:12px;margin:0;'
+        +(sel?'background:var(--text3,#888);color:#fff;border-color:transparent;':'')
+        +'">'+voter+'</button>';
+    }).join('')
+    +'</div></div>';
   box.innerHTML=html;
   jgUpdateVoteTallySummary();
 }
@@ -4381,8 +4476,22 @@ function jgToggleVote(target,voter){
     });
     if(!jgVoteTally[target]) jgVoteTally[target]={};
     jgVoteTally[target][voter]=true;
+    delete jgAbstainVoters[voter]; // 投給人了，就不算棄票
   } else {
     if(jgVoteTally[target]) delete jgVoteTally[target][voter];
+  }
+  jgRenderVoteTally();
+}
+
+// 棄票跟投票互斥：點棄票就把這個人原本投給任何人的票清掉，再點一次取消棄票
+function jgToggleAbstain(voter){
+  if(jgAbstainVoters[voter]){
+    delete jgAbstainVoters[voter];
+  } else {
+    jgAbstainVoters[voter]=true;
+    Object.keys(jgVoteTally).forEach(t=>{
+      if(jgVoteTally[t]) delete jgVoteTally[t][voter];
+    });
   }
   jgRenderVoteTally();
 }
@@ -4393,11 +4502,15 @@ function jgUpdateVoteTallySummary(){
   const counts=Object.entries(jgVoteTally)
     .map(([t,marks])=>[parseInt(t),Object.values(marks).filter(Boolean).length])
     .filter(([,c])=>c>0);
-  if(counts.length===0){ box.innerHTML=''; return; }
+  const abstainCount=Object.values(jgAbstainVoters).filter(Boolean).length;
+  if(counts.length===0){
+    box.innerHTML=abstainCount>0?'<div style="font-size:13px;color:var(--text2);">棄票 '+abstainCount+' 人</div>':'';
+    return;
+  }
   counts.sort((a,b)=>b[1]-a[1]);
   const maxCount=counts[0][1];
   const top=counts.filter(([,c])=>c===maxCount).map(([t])=>t);
-  const summaryText=counts.map(([t,c])=>t+'號 '+c+'票').join('　');
+  const summaryText=counts.map(([t,c])=>t+'號 '+c+'票').join('　')+(abstainCount>0?'　棄票 '+abstainCount+' 人':'');
   let extra='';
   if(top.length===1){
     extra='<div class="info-success" style="margin-top:6px;font-size:13px;">最高票：'+top[0]+'號，已自動帶入下方欄位</div>';
@@ -4414,12 +4527,17 @@ function jgSaveVote(){
   const counts=Object.entries(jgVoteTally)
     .map(([t,marks])=>({target:parseInt(t), voters:Object.keys(marks).filter(v=>marks[v]).map(Number).sort((a,b)=>a-b)}))
     .filter(e=>e.voters.length>0);
+  const abstainNums=Object.keys(jgAbstainVoters).filter(v=>jgAbstainVoters[v]).map(Number).sort((a,b)=>a-b);
+  let voteLines;
   if(counts.length>0){
     counts.sort((a,b)=>b.voters.length-a.voters.length||a.target-b.target);
-    jgDayLog[jgNight]=counts.map(e=>'票'+e.target+'：'+e.voters.join(','));
+    voteLines=counts.map(e=>'票'+e.target+'：'+e.voters.join(','));
   } else {
-    jgDayLog[jgNight]=['票'+(val||'x')];
+    voteLines=['票'+(val||'x')];
   }
+  if(abstainNums.length>0) voteLines.push('棄票：'+abstainNums.join(','));
+  jgDayLog[jgNight]=voteLines;
+  jgAbstainVoters={};
   if(!val){jgGoStep('next-night');return;}
   const found=jgFind(val);
   if(found){
@@ -4740,8 +4858,25 @@ const VIL_ROLES  = ['villager','hybrid'];
 const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
 const SPECIAL_ROLES = ['sheriff','luckyone'];
 
+// 單身分限定的「板子」預設：每個板子固定包含一組常見搭配的特殊角色（狼隊或神職），
+// 選定板子後，法官還能依人數自由調整基本角色：
+// 狼隊【狼人、狼王、平民】不限一個；神職／混血兒【混血兒、預言家、女巫、獵人、守衛】各自最多一個。
+const JG_BOARD_PRESETS = {
+  mechwolf_medium:         {label:'機械狼配通靈師',   fixed:{mechanicalwolf:1, medium:1}},
+  dreamcatcher_nightmare:  {label:'攝夢人配夢魘',     fixed:{dreamcatcher:1, nightmare:1}},
+  blackmarket_wolfbrothers:{label:'黑市商人配狼兄狼弟', fixed:{blackmarket:1, wolfbrother_e:1, wolfbrother_y:1}},
+  wolfbeauty_knight:       {label:'狼美人配騎士',     fixed:{wolfbeauty:1, knight:1}},
+  gargoyle_gravkeeper:     {label:'石像鬼配守墓人',   fixed:{gargoyle:1, gravkeeper:1}},
+  bloodmoon_demonhunter:   {label:'血月使者配獵魔人', fixed:{bloodmoon:1, demonhunter:1}},
+  magician_wolfking:       {label:'魔術師配狼王',     fixed:{magician:1, wolfking:1}},
+};
+// 板子的基本角色只開放這兩組：狼隊（不限一個）、神職＋混血兒（各自最多一個）
+const JG_PRESET_WOLF_BASE=['wolf','wolfking'];
+const JG_PRESET_GOD_BASE=['hybrid','seer','witch','hunter','guard'];
+
 // Role picker state: {roleId: count}
 let jgRolePick = {wolf:2, villager:2, seer:1, witch:1};
+let jgBoardPreset='custom'; // 'custom' = 自訂角色（原本的完整選角畫面）；其餘 = JG_BOARD_PRESETS 的 key
 
 function renderRulesCards(){
   function makeCard(id){
@@ -4910,6 +5045,103 @@ function getPickComp(state){
   return comp;
 }
 
+// ── 板子選擇（單身分限定）──
+// 切換板子（含切回「自訂角色」）時呼叫；重新套用該板子的預設配置。
+function jgSetBoardPreset(val){
+  jgBoardPreset=val;
+  const n=Math.min(12,Math.max(6,parseInt(document.getElementById('jg-count')?.value)||6));
+  if(val==='custom'){
+    jgRolePick=Object.assign({}, DEFAULT_COMP[n]||DEFAULT_COMP[6]);
+    jgRolePick._init=true;
+  } else {
+    jgApplyPresetDefaults(n);
+  }
+  jgUpdateComp();
+}
+
+// 套用板子的預設配置：固定角色（各 1，見 JG_BOARD_PRESETS）+ 基本狼人 1 隻（讓狼隊至少有人可以刀人；
+// 若板子本身已包含狼王，法官仍可自行把狼人調到 0，只留狼王）+ 其餘人數全部先填平民，
+// 之後法官可依人數把平民換成神職／混血兒，或調整狼人／狼王數量。
+function jgApplyPresetDefaults(n){
+  const preset=JG_BOARD_PRESETS[jgBoardPreset];
+  if(!preset) return;
+  const rp={};
+  Object.entries(preset.fixed).forEach(([k,v])=>{ rp[k]=v; });
+  if(!rp.wolf) rp.wolf=1;
+  const fixedTotal=Object.values(rp).reduce((a,b)=>a+b,0);
+  rp.villager=Math.max(0, n-fixedTotal);
+  rp._init=true;
+  jgRolePick=rp;
+}
+
+// 板子模式的精簡選角畫面：固定角色顯示為鎖定提示（不可在此移除），
+// 狼隊【狼人、狼王、平民】可自由調整數量；神職／混血兒【混血兒、預言家、女巫、獵人、守衛】各自最多一個。
+function renderPresetPicker(){
+  const el=document.getElementById('jg-preset-picker');
+  if(!el) return;
+  const preset=JG_BOARD_PRESETS[jgBoardPreset];
+  if(!preset) return;
+  const state=jgRolePick;
+  const fixedKeys=Object.keys(preset.fixed);
+  const fixedLabel=fixedKeys.map(k=>(ALL_ROLES[k]?ALL_ROLES[k].icon+' '+ALL_ROLES[k].name:k)+' ×'+preset.fixed[k]).join('、');
+  const wolfCount=state.wolf||0;
+  const wolfkingCount=state.wolfking||0;
+  const vilCount=state.villager||0;
+
+  let html='<div class="info" style="font-size:12px;margin-bottom:8px;">本板固定包含：'+fixedLabel+'</div>';
+
+  html+='<div style="font-size:11px;font-weight:700;color:var(--wolf);margin:6px 0 4px;letter-spacing:0.5px;">狼人陣營</div>';
+  html+='<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;">';
+  html+='<div style="display:flex;align-items:center;gap:8px;">'
+    +'<button onclick="jgPresetAdjWolf(-1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">−</button>'
+    +'<div style="font-size:18px;font-weight:800;min-width:24px;text-align:center;">'+wolfCount+'</div>'
+    +'<button onclick="jgPresetAdjWolf(1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">＋</button>'
+    +'<span style="font-size:13px;color:var(--text2);">狼人</span></div>';
+  if(!fixedKeys.includes('wolfking')){
+    html+='<div class="rpick'+(wolfkingCount>0?' sel':'')+'" style="min-width:64px;" onclick="jgPresetToggleWolfking()">'
+      +'<span class="rp-ico">👑</span><div class="rp-nm">狼王</div>'
+      +(wolfkingCount>0?'<span class="rp-cnt">✓</span>':'')+'</div>';
+  }
+  html+='</div>';
+
+  html+='<div style="font-size:11px;font-weight:700;color:var(--vil);margin:6px 0 4px;letter-spacing:0.5px;">平民</div>';
+  html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
+    +'<button onclick="jgPresetAdjVillager(-1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">−</button>'
+    +'<div style="font-size:22px;font-weight:800;min-width:30px;text-align:center;">'+vilCount+'</div>'
+    +'<button onclick="jgPresetAdjVillager(1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">＋</button>'
+    +'<span style="font-size:13px;color:var(--text2);">平民</span></div>';
+
+  html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職／混血兒（各自最多一個，點選加入／移除）</div>';
+  html+='<div class="rpick-grid">';
+  JG_PRESET_GOD_BASE.forEach(id=>{
+    if(fixedKeys.includes(id)) return; // 這個板子已經把這個角色當固定角色了，不重複顯示
+    const r=ALL_ROLES[id]; const cnt=state[id]||0;
+    html+='<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
+      +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
+      +(cnt>0?'<span class="rp-cnt">✓</span>':'')+'</div>';
+  });
+  html+='</div>';
+
+  el.innerHTML=html;
+}
+
+function jgPresetAdjWolf(delta){
+  jgRolePick.wolf=Math.max(0,(jgRolePick.wolf||0)+delta);
+  jgUpdateComp();
+}
+function jgPresetToggleWolfking(){
+  jgRolePick.wolfking=(jgRolePick.wolfking||0)>0?0:1;
+  jgUpdateComp();
+}
+function jgPresetAdjVillager(delta){
+  jgRolePick.villager=Math.max(0,(jgRolePick.villager||0)+delta);
+  jgUpdateComp();
+}
+function jgPresetToggleGod(id){
+  jgRolePick[id]=(jgRolePick[id]||0)>0?0:1;
+  jgUpdateComp();
+}
+
 // ═══════════════════════════════════
 // 專有名詞 (Glossary)
 // ═══════════════════════════════════
@@ -4974,7 +5206,11 @@ document.getElementById('jg-count').addEventListener('input',()=>{
   const isDual=jgSetupDualMode;
   const min=isDual?4:6, max=isDual?7:12;
   const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count').value)||min));
-  jgRolePick=Object.assign({}, isDual?(DEFAULT_COMP_DUAL[n]||DEFAULT_COMP_DUAL[4]):(DEFAULT_COMP[n]||DEFAULT_COMP[6]));
+  if(!isDual&&jgBoardPreset!=='custom'){
+    jgApplyPresetDefaults(n);
+  } else {
+    jgRolePick=Object.assign({}, isDual?(DEFAULT_COMP_DUAL[n]||DEFAULT_COMP_DUAL[4]):(DEFAULT_COMP[n]||DEFAULT_COMP[6]));
+  }
   jgUpdateComp();
 });
 renderRulesCards();
