@@ -5286,7 +5286,7 @@ function jgShowWin(res){
       <div class="win-side win-good"><div class="win-count">${jgAlive().filter(p=>!WOLF_ROLES.includes(p.role)).length}</div><div class="win-label">存活好人</div></div>
     </div>
     <button onclick="jgShowExportModal()" style="margin-top:14px;">📋 匯出文字紀錄</button>
-    <button onclick="pdSubmitGameRecord()" style="margin-top:8px;">🔗 送出到遊玩數據</button>
+    <button onclick="pdSubmitGameRecord()" style="margin-top:8px;">🔒 送出到遊玩數據</button>
     <button class="primary" onclick="jgReset()" style="margin-top:8px;">再玩一局</button>
   `;
   document.getElementById('jg-phase-badge').innerHTML='🏁 遊戲結束';
@@ -6259,6 +6259,9 @@ const PD_FORM_ENTRIES = {
   players:'entry.1989136022', log:'entry.451885810'
 };
 const PD_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1q4qLbQLS4GBajy4Zh66spegaXlpC4Uo9TrkcAYLmyQQ/gviz/tq?tqx=out:csv&gid=0';
+// 送出前需要輸入的密碼，避免別人不小心點到「送出到遊玩數據」洗掉資料。
+// 想改密碼就直接改這一行的文字就好（提醒：這只是防呆用，不是真的加密，網頁原始碼打開看得到，不要用太重要的密碼）。
+const PD_SUBMIT_PASSWORD = '12071211';
 const PD_NOT_CONFIGURED = u => !u || u.includes('PASTE_');
 
 // 簡易 CSV 解析（處理欄位內含逗號／換行／引號的情況，Google 試算表匯出的格式）
@@ -6317,6 +6320,9 @@ function pdSubmitGameRecord(){
     alert('雲端試算表還沒設定好喔～可以先用上面「📋 匯出文字紀錄」複製這場的內容，之後貼給整理資料的人。');
     return;
   }
+  const pw=prompt('請輸入密碼以確認送出這場紀錄：');
+  if(pw===null) return; // 按取消，什麼都不做
+  if(pw!==PD_SUBMIT_PASSWORD){ alert('❌ 密碼不對，這場沒有送出。'); return; }
   const d=new Date();
   const mmdd=String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
   const id=mmdd+'_'+jgGameCount;
