@@ -308,13 +308,14 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
     <label for="jg-board-preset">選擇板子</label>
     <select id="jg-board-preset" onchange="jgSetBoardPreset(this.value)">
       <option value="custom">自訂角色（排列組合尚未逐一測試過，遇到狀況請用下方「問題回報」回報）</option>
-      <option value="mechwolf_medium">機械狼配通靈師</option>
-      <option value="dreamcatcher_nightmare">攝夢人配夢魘</option>
-      <option value="blackmarket_wolfbrothers">黑市商人配狼兄狼弟</option>
-      <option value="wolfbeauty_knight">狼美人配騎士</option>
-      <option value="gargoyle_gravkeeper">石像鬼配守墓人</option>
-      <option value="bloodmoon_demonhunter">血月使者配獵魔人</option>
-      <option value="magician_wolfking">魔術師配狼王</option>
+      <option value="mechwolf_medium">機械狼+通靈師</option>
+      <option value="dreamcatcher_nightmare">攝夢人+夢魘</option>
+      <option value="blackmarket_wolfbrothers">黑市商人+狼兄狼弟</option>
+      <option value="wolfbeauty_knight">狼美人+騎士</option>
+      <option value="gargoyle_gravkeeper">石像鬼+守墓人</option>
+      <option value="bloodmoon_demonhunter">血月使者+獵魔人</option>
+      <option value="magician_wolfking">魔術師+狼王</option>
+      <option value="hybrid_wolfking_bloodmoon">混血兒+狼王+血月</option>
     </select>
   </div>
   <div class="info" id="jg-comp-desc" style="text-align:center;font-size:13px;margin-bottom:4px;"></div>
@@ -435,7 +436,7 @@ function switchTab(id){
 // ═══════════════════════════════════
 let jgTotal=6, jgComp={};
 // Preset name pool for quick player-roster setup (judge can still type a custom name for anyone)
-const JG_NAME_PRESET=['陳冠竹','巫嘉軒','鄭文奇','李法順','李想成','陳冠彣','陳玉堂','黃家珮','黃柏寰','何冠岳','謝子凡','王悅謙','孫揚和','蘇祐樂','許逸凡','林芸竹','吳柏霖','陳詩涵','劉謙叡','龔則乾','洪梓睿','黃禹勛','蘇奕安','郭展吟','許綺文','林均豪'];
+const JG_NAME_PRESET=['陳冠竹','巫嘉軒','鄭文奇','李法順','李想成','陳冠彣','陳玉堂','黃家珮','黃柏寰','何冠岳','謝子凡','王悅謙','孫揚和','蘇祐樂','許逸凡','林芸竹','吳柏霖','陳詩涵','劉謙叡','龔則乾','洪梓睿','黃禹勛','蘇奕安','郭展吟','許綺文','林均豪','凡友人'];
 let jgPlayerNames={}; // num -> name, set via the roster setup page before jgStart()
 
 // ── 文字紀錄匯出 ──
@@ -488,7 +489,7 @@ function jgExportGameLog(){
       const dparts=[...(dd.died||[]).map(x=>x+'死亡'), ...(dd.swapped||[]).map(x=>x+'死亡，請使用第二身分')];
       out+='>'+(dparts.length===0?'平安夜':dparts.join('、'))+'\n';
       if(n===1&&jgSheriffEnabled){
-        if(jgSheriffSelfDestruct) out+='>警長競選：候選人中有狼人自爆，吞掉警徽，本局無警長\n';
+        if(jgSheriffSelfDestruct) out+='>警長競選：'+(jgSheriffSelfDestructNum||'x')+'號 自爆吞警徽，本局無警長\n';
         else if(jgSheriff) out+='>警長競選：'+jgSheriff+'號 當選警長\n';
         else if(jgSheriffElectionDone) out+='>警長競選：平票或全數退水，本局無警長\n';
       }
@@ -519,6 +520,19 @@ function jgShowExportModal(){
     +'</div></div>';
 }
 
+// 把白天發生、還沒有票數列可以附加的事件（自爆、決鬥……）直接推進當天的文字紀錄陣列。
+function jgPushDayLog(line){
+  if(!jgDayLog[jgNight]) jgDayLog[jgNight]=[];
+  jgDayLog[jgNight].push(line);
+}
+// 白天「票X」那一行事後被開槍帶人補上帶走的對象（狼王／獵人被票出局後開槍），
+// 跟夜晚的「刀」那行道理一樣，只是白天是接在對應的票數列後面。
+function jgAmendDayVoteLine(shooterNum, abbr, val){
+  if(!jgDayLog[jgNight]||!shooterNum) return;
+  const idx=jgDayLog[jgNight].findIndex(l=>l.startsWith('票'+shooterNum+'：')||l.startsWith('票'+shooterNum+':'));
+  if(idx>=0) jgDayLog[jgNight][idx]+='（'+shooterNum+abbr+'帶'+val+'）';
+  else jgPushDayLog(shooterNum+abbr+'帶'+val);
+}
 function jgCopyExportText(){
   const ta=document.querySelector('#jg-export-modal textarea');
   if(!ta) return;
@@ -597,14 +611,20 @@ function jgIsWolfPackMember(p){
 
 function jgIsHunterCapable(p){
   if(!p) return false;
-  if(p.role==='hunter') return true;
-  if(p.role==='mechanicalwolf'&&jgMechWolfHunterActive()) return true;
-  if(jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&jgLuckyOne.num===p.num) return true;
-  return false;
+  return !!jgHunterCapableTag(p.role, p.num);
+}
+// 跟 jgIsHunterCapable 判斷邏輯相同，但吃「死前記住的原始身分」而非玩家目前的 role
+// （雙身分模式換牌後 role 會變，開槍資格要看死前那張牌），並回傳具體是哪一種資格
+// （真獵人／機械狼學到獵人／幸運兒得到獵槍），方便連鎖開槍畫面顯示正確的角色名稱。
+function jgHunterCapableTag(role, num){
+  if(role==='hunter') return 'hunter';
+  if(role==='mechanicalwolf'&&jgMechWolfHunterActive()) return 'mechanicalwolf';
+  if(jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&jgLuckyOne.num===num) return 'luckyone';
+  return null;
 }
 // Builds one player's independent 讚/倒讚 status block — shared by the real hunter's own
-// step and the mechanical wolf's own step (see 'hunter-wake' / 'mechhunter-wake'), since
-// both use the exact same wolf-kill/guard/poison rules to decide the gesture.
+// step ('hunter-wake') and the mechanical wolf's own step ('mechanicalwolf-wake', when it has
+// learned 獵人), since both use the exact same wolf-kill/guard/poison rules to decide the gesture.
 function jgBuildHunterStatusHtml(p){
   if(!p) return '';
   const gsKill=jgRecord.guardTarget&&jgRecord.wolfKill&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
@@ -629,11 +649,9 @@ function jgBuildHunterStatusHtml(p){
   }
   return '<div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
 }
-// Where to go after the real hunter's own step: if the mechanical wolf separately holds
-// an active learned-hunter ability, it gets its own independent step next.
+// 機械狼「已學得獵人」的技能使用狀況（比讚／比倒讚）已經併在機械狼自己的睜眼畫面裡處理
+// （見 mechanicalwolf-wake 的 learnHtml），獵人自己的步驟結束後直接往下走即可。
 function jgAfterHunterStep(){
-  const mechHunterP=jgMechWolfHunterActive()?jgPlayers.find(p=>p.role==='mechanicalwolf'):null;
-  if(mechHunterP) return 'mechhunter-wake';
   return jgNextGodStep('hunter-wake');
 }
 
@@ -666,13 +684,18 @@ function jgFormatNightLog(){
     const abbr=ROLE_ABBR[jgCheckDisplayRole(t.role||'villager')]||'';
     return abbr?'('+abbr+')':'';
   };
-  // 該身分的持有者出局後，就不再繼續記錄該角色的行動
-  // 魔術師是全場最早睜眼的角色（換號在其他人行動前就已生效），因此換號紀錄放在最前面
-  const mgP0=jgPlayers.find(p=>p.role==='magician');
-  if(mgP0&&mgP0.alive) lines.push('換 '+((jgRecord.magicianA&&jgRecord.magicianB)?(jgRecord.magicianA+'-'+jgRecord.magicianB):'x'));
+  // 該身分的持有者出局後，就不再繼續記錄該角色的行動。
+  // 文字紀錄的順序固定依照實際睜眼順序排列（見 jgNightStartNext 一路到 jgNextGodStep 的睜眼流程註解）：
+  // 夢魘(恐) → 魔術師(換) → 守衛(守) → 攝夢人(夢) → 狼兄狼弟覺醒刀 → 機械狼 → 狼刀 → 女巫(救/毒)
+  // → 預言家(驗) → 通靈師(通驗) → 黑市商人(易，含幸運兒後續行動) → 獵魔人(狩)。
+  // 換流用 jgSwapDisplay：法官喊的號碼(raw)跟魔術師換流後實際生效的號碼不同時，寫成「raw→actual」。
   const nmP=jgPlayers.find(p=>p.role==='nightmare');
   if(nmP&&nmP.alive) lines.push('恐 '+(jgRecord.nightmareTarget||'x'));
-  if(guardP&&guardP.alive) lines.push('守 '+(jgRecord.guardTarget||'x'));
+  const mgP0=jgPlayers.find(p=>p.role==='magician');
+  if(mgP0&&mgP0.alive) lines.push('換 '+((jgRecord.magicianA&&jgRecord.magicianB)?(jgRecord.magicianA+'-'+jgRecord.magicianB):'x'));
+  if(guardP&&guardP.alive) lines.push('守 '+jgSwapDisplay(jgRecord.guardTargetRaw, jgRecord.guardTarget));
+  const dcP=jgPlayers.find(p=>p.role==='dreamcatcher');
+  if(dcP&&dcP.alive) lines.push('夢 '+(jgRecord.dreamcatcherTarget||'x')+(jgRecord.dreamcatcherKillTarget?'(連續兩晚致死)':''));
   const wbyP=jgPlayers.find(p=>p.role==='wolfbrother_y');
   if(wbyP&&wbyP.alive&&jgWolfBrotherAwakened&&jgWolfBrotherAwakenedNight===jgNight){
     lines.push('覺醒刀 '+(jgRecord.wolfBrotherAwakenKill||'x'));
@@ -692,24 +715,20 @@ function jgFormatNightLog(){
       if(!jgMechWolfBonusKillUsed||jgRecord.mechWolfBonusKillTarget) lines.push('機刀 '+(jgRecord.mechWolfBonusKillTarget||'x'));
     }
   }
+  if(hasWolf) lines.push('刀 '+jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill));
+  if(witchP&&witchP.alive){
+    if(jgRecord._witchCanShowKilled) lines.push('救 '+(jgRecord.witchSave?jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill):'x'));
+    else lines.push('毒 '+jgSwapDisplay(jgRecord.witchPoisonRaw, jgRecord.witchPoison));
+  }
   if(seerP&&seerP.alive){
     const v=jgRecord.seerChecked;
-    lines.push('驗 '+(v||'x')+seerCheckResult(v));
+    lines.push('驗 '+jgSwapDisplay(jgRecord.seerCheckedRaw, v)+seerCheckResult(v));
   }
   const mdP=jgPlayers.find(p=>p.role==='medium');
   if(mdP&&mdP.alive){
     const v=jgRecord.mediumCheck;
     lines.push('通驗 '+(v||'x')+mediumCheckResult(v));
   }
-  if(hasWolf) lines.push('刀 '+(jgRecord.wolfKill||'x'));
-  if(witchP&&witchP.alive){
-    if(jgRecord._witchCanShowKilled) lines.push('救 '+(jgRecord.witchSave?(jgRecord.wolfKill||'x'):'x'));
-    else lines.push('毒 '+(jgRecord.witchPoison||'x'));
-  }
-  const dcP=jgPlayers.find(p=>p.role==='dreamcatcher');
-  if(dcP&&dcP.alive) lines.push('夢 '+(jgRecord.dreamcatcherTarget||'x')+(jgRecord.dreamcatcherKillTarget?'(連續兩晚致死)':''));
-  const dhP=jgPlayers.find(p=>p.role==='demonhunter');
-  if(dhP&&dhP.alive&&jgNight>=2) lines.push('狩 '+(jgRecord.demonhunterTarget||'x'));
   const bmP2=jgPlayers.find(p=>p.role==='blackmarket');
   if(bmP2&&bmP2.alive&&jgRecord.blackmarketTarget!==undefined){
     const skillAbbr={seer:'驗',witch:'毒',hunter:'獵'}[jgRecord.blackmarketSkill]||'';
@@ -726,6 +745,8 @@ function jgFormatNightLog(){
       }
     }
   }
+  const dhP=jgPlayers.find(p=>p.role==='demonhunter');
+  if(dhP&&dhP.alive&&jgNight>=2) lines.push('狩 '+(jgRecord.demonhunterTarget||'x'));
   return lines;
 }
 // jgPlayers: {num, name, role, alive}
@@ -770,6 +791,7 @@ let jgSheriffSpeakDir=null;   // 政見發表方向 '順'|'逆'
 let jgSheriffVoteTally={};    // 警長投票：{candidateNum:{voterNum:true}}
 let jgSheriffPkRound=false;   // 是否正處於平票 PK 重新發言／投票的回合（PK 回合中不可退水）
 let jgSheriffSelfDestruct=false; // 競選過程中是否有狼人自爆（本局不再有警長）
+let jgSheriffSelfDestructNum=null; // 自爆吞警徽的玩家號碼，供文字紀錄使用
 let jgEvilKnightRevengeUsed=false; // 惡靈騎士反傷整局限一次，成功反傷一次後永久失效
 let jgLastVoteOutPlayer=null; // 前一個白天投票處死的玩家號碼（守墓人用，獨立變數不受每夜 jgRecord 重置影響）
 // ── 雙身分模式：每位玩家 2 張牌，一次只有一張生效；第一張陣亡才換上第二張 ──
@@ -964,9 +986,10 @@ function jgCancelRosterSetup(){
 
 // Renders a <select> of all seat numbers (showing preset/自訂 name if known) for choosing
 // who holds a role, instead of typing a bare number blind.
-function jgNumSelectHtml(id, curVal, onChangeFn, extraAttr, excludeNums){
+function jgNumSelectHtml(id, curVal, onChangeFn, extraAttr, excludeNums, excludeTitle){
   const cur=curVal?curVal.toString():'';
   const excl=excludeNums?excludeNums.map(n=>n.toString()):[];
+  const exclTitle=excludeTitle||'此號碼不能自刀，不可選取';
   let html='<input type="hidden" id="'+id+'" value="'+cur+'"'+(extraAttr?' '+extraAttr:'')+'>'
     +'<div class="numgrid" id="'+id+'-grid" style="display:flex;flex-wrap:wrap;gap:6px;">';
   for(let i=1;i<=jgTotal;i++){
@@ -976,7 +999,7 @@ function jgNumSelectHtml(id, curVal, onChangeFn, extraAttr, excludeNums){
     const dead=!!(pl&&!pl.alive);
     const excluded=!dead&&excl.includes(i.toString());
     html+='<button type="button" data-num="'+i+'"'+((dead||excluded)?' disabled':'')+' onclick="jgNumGridPick(\''+id+'\','+i+(onChangeFn?",'"+onChangeFn+"'":'')+')" '
-      +(excluded?'title="此號碼不能自刀，不可選取" ':'')
+      +(excluded?'title="'+exclTitle+'" ':'')
       +'style="width:auto;min-width:38px;height:38px;padding:0 8px;margin:0;border-radius:10px;font-size:13px;font-weight:700;'
       +(dead?'background:var(--bg4);color:var(--text3);text-decoration:line-through;':(excluded?'background:var(--bg4);color:var(--text3);opacity:.5;':(sel?'background:var(--success,#2e7d32);color:#fff;border-color:transparent;':'')))+'">'+label+'</button>';
   }
@@ -987,6 +1010,13 @@ function jgNumSelectHtml(id, curVal, onChangeFn, extraAttr, excludeNums){
 // 「不能自刀」的狼隊角色（惡靈騎士、狼美人）：狼人刀人時這些號碼不能被點選
 function jgNoSelfCutNums(){
   return jgPlayers.filter(p=>p.alive&&(p.role==='evilknight'||p.role==='wolfbeauty')).map(p=>p.num);
+}
+// 依本局實際在場的角色，組出提示文字用的角色名稱（只列出真的存在的，不寫死兩個都列）
+function jgNoSelfCutRoleLabel(){
+  const labels=[];
+  if(jgPlayers.some(p=>p.alive&&p.role==='evilknight')) labels.push('惡靈騎士');
+  if(jgPlayers.some(p=>p.alive&&p.role==='wolfbeauty')) labels.push('狼美人');
+  return labels.join('／');
 }
 
 // Single-select tap grid: clicking a number toggles it on (green) and clears any other
@@ -1012,7 +1042,14 @@ function jgStart(){
   const isDualStart=jgSetupDualMode;
   const minStart=isDualStart?4:6, maxStart=isDualStart?7:12;
   const n=Math.min(maxStart,Math.max(minStart,parseInt(document.getElementById('jg-count').value)||minStart));
-  jgTotal=n; jgComp=getPickComp(jgRolePick); jgRoleCounts={...jgComp};
+  const compCheck=getPickComp(jgRolePick);
+  const compTotal=Object.values(compCheck).reduce((a,b)=>a+b,0);
+  const targetTotal=isDualStart?n*2:n;
+  if(compTotal!==targetTotal){
+    alert('⚠️ 目前選了 '+compTotal+' 個角色，但玩家人數是 '+n+' 人（需選滿 '+targetTotal+' 個角色）才能開始，請調整角色數量。');
+    return;
+  }
+  jgTotal=n; jgComp=compCheck; jgRoleCounts={...jgComp};
   jgDualIdentityMode=isDualStart;
   jgDualAssign={};
   jgDualAssignDone=false;
@@ -1052,6 +1089,7 @@ function jgStart(){
   jgSheriffVoteTally={};
   jgSheriffPkRound=false;
   jgSheriffSelfDestruct=false;
+  jgSheriffSelfDestructNum=null;
   jgEvilKnightRevengeUsed=false;
   jgLastVoteOutPlayer=null;
   jgLastNightPeaceful=false;
@@ -1104,39 +1142,43 @@ function jgAfterDawn(){
   return 'discuss';
 }
 function jgSetDiscussStart(n){
-  jgDayMeta[jgNight]=Object.assign({}, jgDayMeta[jgNight], {start:n});
+  jgDayMeta[jgNight]=Object.assign({}, jgDayMeta[jgNight], {start:n, dir:jgSheriffLRAutoDir(n)});
   jgRenderStep(jgCurrentStep);
 }
-function jgSetDiscussDir(dir){
-  jgDayMeta[jgNight]=Object.assign({}, jgDayMeta[jgNight], {dir:dir});
-  jgRenderStep(jgCurrentStep);
+// 警長選警左／警右的簡化版 picker：只列出警長左右兩邊的號碼給法官選，
+// 兩個號碼中選較小的 → 自動判定逆時針；選較大的 → 自動判定順時針，畫面精簡不用另外選方向。
+function jgSheriffLRNums(){
+  if(!jgSheriff) return null;
+  const total=jgTotal;
+  const leftNum=jgSheriff-1<1?total:jgSheriff-1;
+  const rightNum=jgSheriff+1>total?1:jgSheriff+1;
+  return {leftNum,rightNum};
+}
+function jgSheriffLRAutoDir(n){
+  const lr=jgSheriffLRNums();
+  if(!lr) return '順';
+  const smaller=Math.min(lr.leftNum,lr.rightNum);
+  return n===smaller?'逆':'順';
+}
+function jgSheriffLRButtonsHtml(curStart, onClickFnName){
+  const lr=jgSheriffLRNums();
+  if(!lr) return '';
+  return [lr.leftNum,lr.rightNum].map(n=>{
+    const sel=curStart===n;
+    return '<button type="button" onclick="'+onClickFnName+'('+n+')" style="width:56px;height:56px;border-radius:50%;padding:0;font-size:18px;font-weight:700;'
+      +(sel?'background:var(--success,#2e7d32);color:#fff;border-color:transparent;':'')+'">'+n+'</button>';
+  }).join('');
 }
 // 天亮結算畫面裡「警長決定警左警右」用的輕量版picker：只更新自己這個 <div>，
 // 絕對不能整個重新 render 'dawn' 這個 step，否則死亡結算（jgApplyDeath 等）會被重跑一次。
 function jgDawnSheriffDirPickerHtml(){
   const dm=jgDayMeta[jgNight]||{};
-  const curStart=dm.start||null, curDir=dm.dir||'順';
-  const aliveNums=jgAlive().map(p=>p.num).sort((a,b)=>a-b);
-  const pickHtml=aliveNums.map(n=>{
-    const sel=curStart===n;
-    return '<button type="button" onclick="jgSetDawnSheriffStart('+n+')" style="width:40px;height:40px;border-radius:50%;padding:0;font-size:13px;font-weight:700;'
-      +(sel?'background:var(--success,#2e7d32);color:#fff;border-color:transparent;':'')+'">'+n+'</button>';
-  }).join('');
-  return '<label>本輪從哪號開始？</label>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">'+pickHtml+'</div>'
-    +'<label style="margin-top:10px;">方向</label>'
-    +'<div class="btn2">'
-    +'<button type="button" class="'+(curDir==='順'?'primary':'')+'" onclick="jgSetDawnSheriffDir(\'順\')">順時針</button>'
-    +'<button type="button" class="'+(curDir==='逆'?'primary':'')+'" onclick="jgSetDawnSheriffDir(\'逆\')">逆時針</button>'
-    +'</div>';
+  const curStart=dm.start||null;
+  return '<label>警長選警左還是警右？（點選對應號碼，方向自動判定）</label>'
+    +'<div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;">'+jgSheriffLRButtonsHtml(curStart,'jgSetDawnSheriffStart')+'</div>';
 }
 function jgSetDawnSheriffStart(n){
-  jgDayMeta[jgNight]=Object.assign({}, jgDayMeta[jgNight], {start:n});
-  const box=document.getElementById('jg-dawn-sheriff-dir-picker');
-  if(box) box.innerHTML=jgDawnSheriffDirPickerHtml();
-}
-function jgSetDawnSheriffDir(dir){
-  jgDayMeta[jgNight]=Object.assign({}, jgDayMeta[jgNight], {dir:dir});
+  jgDayMeta[jgNight]=Object.assign({}, jgDayMeta[jgNight], {start:n, dir:jgSheriffLRAutoDir(n)});
   const box=document.getElementById('jg-dawn-sheriff-dir-picker');
   if(box) box.innerHTML=jgDawnSheriffDirPickerHtml();
 }
@@ -1194,6 +1236,7 @@ function jgSheriffSelfDestructPrompt(){
   jgSheriffCandidatesAsked=true;
   jgSheriffCampaignHappened=true;
   jgSheriffSelfDestruct=true;
+  jgSheriffSelfDestructNum=p.num;
   jgRenderRoster();
   const win=jgCheckWin();
   if(win){ jgShowWin(win); return; }
@@ -1410,6 +1453,14 @@ function jgMagicSwapNum(val){
   if(s===a.toString()) return b.toString();
   if(s===b.toString()) return a.toString();
   return val;
+}
+// 文字紀錄顯示用：如果因為魔術師換流，法官原本喊的號碼(raw)跟實際生效的號碼(actual)不同，
+// 紀錄要同時寫出「raw→actual」，讓事後回顧看得出來是誰真正被影響；沒有換流就只顯示原本號碼。
+function jgSwapDisplay(raw, actual){
+  const r=raw||actual||'';
+  if(!r) return 'x';
+  if(actual&&raw&&actual.toString()!==raw.toString()) return raw+'→'+actual;
+  return r.toString();
 }
 
 // Night 1: as wolf-team identities are tapped in, live-check whether any of them matches
@@ -1731,7 +1782,7 @@ function jgCaptureState(){
     jgVoteTally, jgLastWinResult, jgRoleCounts, jgMechAssign, jgMechAssignDone,
     jgDualIdentityMode, jgDualAssign, jgDualAssignDone, jgHybridChosen, jgHybridTarget,
     jgSheriffEnabled, jgSheriff, jgSheriffElectionDone, jgSheriffCandidatesAsked, jgSheriffCampaignHappened, jgSheriffCandidates, jgSheriffWithdrawn,
-    jgSheriffSpeakStart, jgSheriffSpeakDir, jgSheriffVoteTally, jgSheriffPkRound, jgSheriffSelfDestruct,
+    jgSheriffSpeakStart, jgSheriffSpeakDir, jgSheriffVoteTally, jgSheriffPkRound, jgSheriffSelfDestruct, jgSheriffSelfDestructNum,
     jgEvilKnightRevengeUsed, jgLastVoteOutPlayer
   }));
 }
@@ -1787,6 +1838,7 @@ function jgRestoreState(snap){
   jgSheriffVoteTally=snap.jgSheriffVoteTally;
   jgSheriffPkRound=snap.jgSheriffPkRound;
   jgSheriffSelfDestruct=snap.jgSheriffSelfDestruct;
+  jgSheriffSelfDestructNum=snap.jgSheriffSelfDestructNum;
   jgEvilKnightRevengeUsed=snap.jgEvilKnightRevengeUsed;
   jgLastVoteOutPlayer=snap.jgLastVoteOutPlayer;
 }
@@ -2065,7 +2117,7 @@ function jgRenderStep(step){
       <div id="jg-wolf-blocked-msg" style="${jgRecord.nightmareBlocksWolf?'':'display:none;'}"><div class="info-danger">⚠️ 夢魘恐懼到狼隊友，狼人今晚不得殺人</div></div>
       ${wbNote}
       <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}"><label>今晚獵殺的對象（號碼）</label>
-      <div class="info" style="font-size:11px;margin-bottom:4px;">灰色號碼為不能自刀的隊友（惡靈騎士／狼美人），無法選取</div>
+      ${jgNoSelfCutNums().length>0?'<div class="info" style="font-size:11px;margin-bottom:4px;">灰色號碼為不能自刀的隊友（'+jgNoSelfCutRoleLabel()+'），無法選取</div>':''}
       ${jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgNoSelfCutNums())}</div>
       <div class="speech" style="margin-top:12px;">「<em>狼人請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
@@ -2084,24 +2136,41 @@ function jgRenderStep(step){
 
     // Part 1: learn (if not learned yet) or use skill (if learned & usable tonight)
     let learnHtml='';
-    if(dead||feared){
+    if(feared){
       learnHtml='';
     } else if(!jgMechWolfLearned){
-      const lv=jgRecord.mechwolfLearnTarget||'';
-      learnHtml='<div class="speech">「<em>今晚要學習的對象是？</em>」</div>'
-        +'<label>學習對象號碼（整局限一次，留空=本晚不學習）</label>'
-        +jgNumSelectHtml('jg-mechwolf-learn', lv, 'jgMechWolfLearnCheck')
-        +'<div id="jg-mechwolf-learn-result"></div>';
+      if(dead){
+        learnHtml='';
+      } else {
+        const lv=jgRecord.mechwolfLearnTarget||'';
+        learnHtml='<div class="speech">「<em>今晚要學習的對象是？</em>」</div>'
+          +'<label>學習對象號碼（整局限一次，留空=本晚不學習）</label>'
+          +jgNumSelectHtml('jg-mechwolf-learn', lv, 'jgMechWolfLearnCheck')
+          +'<div id="jg-mechwolf-learn-result"></div>';
+      }
     } else if(canUseSkill){
-      learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>'+jgMechWolfSkillUseHtml();
+      // 已學得「獵人」：技能使用狀況（比讚／比倒讚）併在這裡直接顯示，不用再另外開一個
+      // 獨立的機械狼睜眼畫面——即使機械狼已死，也要照樣走一次這句台詞，避免其他玩家從
+      // 流程有沒有跑這一段猜出誰還活著。
+      if(jgMechWolfLearned==='hunter'){
+        learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>'+jgBuildHunterStatusHtml(mwP);
+      } else if(dead){
+        learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div><div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
+      } else {
+        learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>'+jgMechWolfSkillUseHtml();
+      }
     } else {
       learnHtml='<div class="info" style="font-size:12px;">已學得「'+jgFullRoleName(jgMechWolfLearned)+'」，次晚起可使用技能。</div>';
     }
 
-    // Part 2: kill gesture (night 2+ only)
+    // Part 2: kill gesture (night 2+ only) — 即使機械狼已死，這句台詞照樣要問，
+    // 只是死亡沒有實際帶刀選項，固定比倒讚略過即可。
     let killGestureHtml='';
-    if(jgNight>=2&&!dead&&!feared){
-      if(!otherWolvesAlive){
+    if(jgNight>=2&&!feared){
+      if(dead){
+        killGestureHtml='<div class="divider"></div>'
+          +'<div class="speech">「<em>今晚的帶刀手勢是？（👎 倒讚）</em>」</div>';
+      } else if(!otherWolvesAlive){
         const kv=jgRecord.mechWolfKillTarget||jgRecord.wolfKill||'';
         killGestureHtml='<div class="divider"></div>'
           +'<div class="speech">「<em>今晚的帶刀手勢是？（👍 讚）</em>」（其他狼隊友已全滅，機械狼可以殺人）</div>'
@@ -2485,20 +2554,23 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveHunterNight()">已紀錄，下一步 →</button>
     `,'🔫 獵人');
   }
-  // 機械狼「學到」獵人，必然代表場上本來就存在一位真獵人（學習是複製某位在場玩家的真實身分）。
-  // 兩者是不同的人，各自的死活／中毒／被守狀況都要獨立判斷、獨立比讚或倒讚——因此獨立成自己的
-  // 一個畫面，不與真獵人的睜眼流程混在一起。
-  else if(step==='mechhunter-wake'){
-    const mechHunterP=jgMechWolfHunterActive()?jgPlayers.find(p=>p.role==='mechanicalwolf'):null;
-    if(!mechHunterP){ jgGoStep(jgNextGodStep('hunter-wake')); return; }
-    const statusHtml=jgBuildHunterStatusHtml(mechHunterP);
+  // 被夜槍／王槍／獵人開槍帶走的對象，如果本身也具備獵人開槍資格（真獵人／已學得獵人的
+  // 機械狼／得到獵槍技能的幸運兒），依需求它自己也要能在同一時間點連鎖啟動一次技能、
+  // 選擇要帶走的對象——不管觸發連鎖的是哪一種身分，都共用這一個畫面，只是標題/圖示不同。
+  else if(step==='mechhunter-chain-shot'){
+    const chainNum=jgRecord._mechHunterChainNum;
+    const chainRole=jgRecord._mechHunterChainRole||'hunter';
+    const CHAIN_LABEL={hunter:{title:'獵人',icon:'🔫'},mechanicalwolf:{title:'機械狼（已學得獵人）',icon:'🤖🔫'},luckyone:{title:'幸運兒（獵人技能）',icon:'🍀🔫'}};
+    const cl=CHAIN_LABEL[chainRole]||CHAIN_LABEL.hunter;
+    const chainP=chainNum?jgByNum(chainNum):null;
+    const chainName=chainP&&chainP.name&&chainP.name!==chainP.num+'號'?chainP.num+'號 '+chainP.name:(chainNum?chainNum+'號':'');
     jgShowPg(`
-      <h2>機械狼（已學得獵人）睜眼</h2>
-      <div class="speech">「<em>機械狼請睜眼。</em>」</div>
-      ${statusHtml}
-      <div class="speech" style="margin-top:12px;">「<em>機械狼請閉眼。</em>」</div>
-      <button class="primary" onclick="jgGoStep(jgNextGodStep('hunter-wake'))">已紀錄，下一步 →</button>
-    `,'🤖🔫 機械狼');
+      <h2>${cl.title}啟動技能</h2>
+      <div class="info-warn" style="font-size:14px;">${chainName} 被開槍帶走，本身也具備獵人技能，可一併啟動！</div>
+      <div class="speech">「<em>啟動角色技能，請選擇你要帶走的號碼（留空可不帶）。</em>」</div>
+      ${jgNumSelectHtml('jg-mechhunter-chain-shot','')}
+      <button class="primary" onclick="jgSaveMechHunterChainShot()" style="margin-top:10px;">確認 →</button>
+    `,cl.icon+' '+cl.title);
   }
   else if(step==='dreamcatcher-wake'){
     const isFirst=jgIsFirstNight();
@@ -2572,9 +2644,9 @@ function jgRenderStep(step){
       <div id="jg-god-magician-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
       ${dead?'':`<div id="jg-god-magician-action" style="${feared?'display:none;':''}"><div class="info" style="font-size:12px;">${usedStr}</div>
       <div style="margin-top:8px;"><label style="margin-top:0;">號碼 A</label>
-        ${jgNumSelectHtml('jg-mg-a', jgRecord.magicianA||'')}</div>
+        ${jgNumSelectHtml('jg-mg-a', jgRecord.magicianA||'', null, null, usedSwaps, '此號碼已交換過，整局不可再被交換')}</div>
       <div style="margin-top:8px;"><label style="margin-top:0;">號碼 B</label>
-        ${jgNumSelectHtml('jg-mg-b', jgRecord.magicianB||'')}</div>
+        ${jgNumSelectHtml('jg-mg-b', jgRecord.magicianB||'', null, null, usedSwaps, '此號碼已交換過，整局不可再被交換')}</div>
       <div id="jg-mg-warn"></div>
       <div class="info" style="font-size:12px;margin-top:6px;">今晚有效，每個號碼整局只能被交換一次。留空=不交換。</div></div>`}
       <div class="speech" style="margin-top:10px;">「<em>魔術師請閉眼。</em>」</div>
@@ -2995,26 +3067,15 @@ function jgRenderStep(step){
         `,'💬 發言');
         return;
       }
-      // 有警長在場：每次發言前都由警長宣布警左／警右，法官手動選取本輪起始號碼與順逆，
-      // 不使用隨機轉盤（轉盤只在沒有警長、平安夜或需要方向時才使用）。
-      const curStart=dm.start||null, curDir=dm.dir||'順';
-      const aliveNums=jgAlive().map(p=>p.num).sort((a,b)=>a-b);
-      const pickHtml=aliveNums.map(n=>{
-        const sel=curStart===n;
-        return '<button type="button" onclick="jgSetDiscussStart('+n+')" style="width:40px;height:40px;border-radius:50%;padding:0;font-size:13px;font-weight:700;'
-          +(sel?'background:var(--success,#2e7d32);color:#fff;border-color:transparent;':'')+'">'+n+'</button>';
-      }).join('');
+      // 有警長在場：每次發言前都由警長宣布警左／警右，法官只需點選警長左右兩邊的號碼，
+      // 方向自動判定（不使用隨機轉盤——轉盤只在沒有警長、平安夜或需要方向時才使用）。
+      const curStart=dm.start||null;
       jgShowPg(`
         <h2>發言討論</h2>
         ${jgNight===1?jgFirstDayCompCheckHtml():''}
-        <div class="info" style="font-size:13px;">🎖️ ${jgSheriff}號 警長在場，請警長宣布「警左」或「警右」開始發言，法官依宣布結果手動選取本輪起始號碼與方向。</div>
-        <label>本輪從哪號開始？</label>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">${pickHtml}</div>
-        <label style="margin-top:10px;">方向</label>
-        <div class="btn2">
-          <button type="button" id="jg-discuss-dir-cw" class="${curDir==='順'?'primary':''}" onclick="jgSetDiscussDir('順')">順時針</button>
-          <button type="button" id="jg-discuss-dir-ccw" class="${curDir==='逆'?'primary':''}" onclick="jgSetDiscussDir('逆')">逆時針</button>
-        </div>
+        <div class="info" style="font-size:13px;">🎖️ ${jgSheriff}號 警長在場，請警長宣布「警左」或「警右」開始發言。</div>
+        <label>警長選警左還是警右？（點選對應號碼，方向自動判定）</label>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;">${jgSheriffLRButtonsHtml(curStart,'jgSetDiscussStart')}</div>
         ${jgDiscussExtraButtonsHtml()}
         <button class="primary" onclick="jgGoStep('vote')" style="margin-top:8px;">發言結束，進入投票 →</button>
       `,'💬 發言');
@@ -3200,6 +3261,7 @@ function jgSaveHunterNight(){
 function jgSaveDawnHunterShot(){
   const rawVal=(document.getElementById('jg-hunter-dawn-shot')||{}).value?.trim()||'';
   const val=rawVal?jgMagicSwapNum(rawVal):'';
+  let chainTarget=null;
   if(val){
     // 守衛（或機械狼學到守衛）當晚若守到這個號碼，同一個盾可以擋下夜槍，帶不走
     const guardBlocked=!!((jgRecord.guardTarget&&jgRecord.guardTarget.toString()===val.toString())
@@ -3216,6 +3278,10 @@ function jgSaveDawnHunterShot(){
       const trulyDied=jgApplyDeath(p);
       jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      // 被夜槍／王槍帶走的對象，如果本身也具備獵人開槍資格（真獵人／已學得獵人的機械狼／
+      // 得到獵槍技能的幸運兒），也要能連鎖啟動自己的技能帶人
+      const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
+      if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; }
     }
     // Amend this night's export-log kill line with the shooter's follow-up kill
     const shooter=jgPlayers.find(pl=>pl.role==='wolfking'&&jgRecord.wolfKill&&pl.num.toString()===jgRecord.wolfKill.toString())
@@ -3226,7 +3292,7 @@ function jgSaveDawnHunterShot(){
     if(shooter&&jgNightLog[jgNight]){
       const abbr=shooter.role==='wolfking'?'王':'獵';
       const idx=jgNightLog[jgNight].findIndex(l=>l.startsWith('刀'));
-      if(idx>=0) jgNightLog[jgNight][idx]+='（'+shooter.num+abbr+'帶'+val+(guardBlocked?'，被守衛擋下':isEvilKnightImmune?'，惡靈騎士免疫':'')+'）';
+      if(idx>=0) jgNightLog[jgNight][idx]+='（'+shooter.num+abbr+'帶'+jgSwapDisplay(rawVal,val)+(guardBlocked?'，被守衛擋下':isEvilKnightImmune?'，惡靈騎士免疫':'')+'）';
     }
     jgRenderRoster();
     const win=jgCheckWin();
@@ -3234,10 +3300,67 @@ function jgSaveDawnHunterShot(){
   }
   // Now show last words for all dead including hunter
   const dawnDeads=jgPlayers.filter(p=>!p.alive&&p._diedThisDawn);
+  if(chainTarget){
+    jgRecord._mechHunterChainNum=chainTarget;
+    jgRecord._mechHunterChainNextStep=jgAfterDawn();
+    jgRecord._mechHunterChainOrigin='night';
+    jgGoStep('mechhunter-chain-shot');
+    return;
+  }
   jgGoStep(jgAfterDawn());
 }
 
-// Helper: generate first-night identity input HTML for a god role
+// 具獵人開槍資格的身分（真獵人／已學得獵人的機械狼／得到獵槍技能的幸運兒）被別人的槍
+// 帶走時的連鎖開槍：跟一般夜槍/王槍同一套擋槍規則（守衛可擋、惡靈騎士免疫），
+// 成功帶走的話一樣要補進文字紀錄。
+function jgSaveMechHunterChainShot(){
+  const rawVal=(document.getElementById('jg-mechhunter-chain-shot')||{}).value?.trim()||'';
+  const val=rawVal?jgMagicSwapNum(rawVal):'';
+  const chainNum=jgRecord._mechHunterChainNum;
+  const nextStep=jgRecord._mechHunterChainNextStep||'dawn';
+  const chainOrigin=jgRecord._mechHunterChainOrigin||'night';
+  const chainRole=jgRecord._mechHunterChainRole||'hunter';
+  jgRecord._mechHunterChainNum=null;
+  jgRecord._mechHunterChainNextStep=null;
+  jgRecord._mechHunterChainOrigin=null;
+  jgRecord._mechHunterChainRole=null;
+  const abbr={hunter:'獵',mechanicalwolf:'機獵',luckyone:'幸獵'}[chainRole]||'獵';
+  if(val){
+    const guardBlocked=!!((jgRecord.guardTarget&&jgRecord.guardTarget.toString()===val.toString())
+      || (jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===val.toString()));
+    const p=jgFind(val);
+    const isEvilKnightImmune=!!(p&&p.role==='evilknight');
+    if(guardBlocked){
+      alert('🛡️ '+val+'號當晚被守衛守護，槍被擋下，不會被帶走！');
+    } else if(isEvilKnightImmune){
+      alert('🖤 '+val+'號是惡靈騎士，夜間（含夜槍）免疫，不會倒牌！');
+    } else if(p&&p.alive){
+      const wasRole=p.role;
+      const trulyDied=jgApplyDeath(p);
+      jgCascadeWolfBeautyDeath(wasRole, trulyDied);
+      jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+    }
+    if(chainRole==='luckyone'&&jgLuckyOne&&jgLuckyOne.gift==='hunter'&&jgLuckyOne.num===chainNum){
+      jgLuckyOne.used=true;
+    }
+    if(chainNum){
+      if(chainOrigin==='night'){
+        if(jgNightLog[jgNight]){
+          const idx=jgNightLog[jgNight].findIndex(l=>l.startsWith('刀'));
+          if(idx>=0) jgNightLog[jgNight][idx]+='（'+chainNum+abbr+'帶'+jgSwapDisplay(rawVal,val)+(guardBlocked?'，被守衛擋下':isEvilKnightImmune?'，惡靈騎士免疫':'')+'）';
+        }
+      } else {
+        jgAmendDayVoteLine(chainNum,abbr,jgSwapDisplay(rawVal,val));
+      }
+    }
+    jgRenderRoster();
+    const win=jgCheckWin();
+    if(win){jgShowWin(win);return;}
+  }
+  jgGoStep(nextStep);
+}
+
+
 // Lets the judge pick the player from a select (showing their name if the roster was set
 // up in advance) instead of typing a bare number and re-typing the name each time.
 // If the identity was already recorded up front (機械狼／黑市商人板 mech-assign page),
@@ -3427,6 +3550,7 @@ function jgSaveGuard(){
     return;
   }
   jgLastGuardTarget=tv||null;
+  jgRecord.guardTargetRaw=tv||null;
   jgRecord.guardTarget=tv?jgMagicSwapNum(tv):null;
   jgRenderRoster();
   jgGoStep(jgAfterGuardStep());
@@ -3955,7 +4079,9 @@ function jgMechWolfSkillUseHtml(){
       +jgNumSelectHtml('jg-mechwolf-bonuskill', kv);
   }
   if(learned==='hunter'){
-    return '<div class="info" style="font-size:12px;">已學得「獵人」，技能使用狀況（比讚／比倒讚）將於稍後的「獵人睜眼」流程中告知，此處無需操作。</div>';
+    // 這個分支理論上不會被呼叫到了——機械狼睜眼畫面現在會直接用 jgBuildHunterStatusHtml
+    // 顯示比讚／倒讚手勢，不再繞來這裡；留著只是保底防呆。
+    return '<div class="info" style="font-size:12px;">已學得「獵人」，技能使用狀況（比讚／比倒讚）將直接顯示於本畫面。</div>';
   }
   return '<div class="info" style="font-size:12px;">已學得「'+jgFullRoleName(learned)+'」，此技能請法官依角色規則自行主持（若無主動夜間技能可略過）</div>';
 }
@@ -4023,9 +4149,26 @@ function jgSaveBlackMarket(){
 
 function jgSaveLuckyoneHunterShot(){
   const val=(document.getElementById('jg-luckyone-shot-rec')||{}).value?.trim()||'';
-  if(val){const p=jgFind(val);if(p&&p.alive)p.alive=false;}
+  let chainTarget=null;
+  if(val){
+    const p=jgFind(val);
+    if(p&&p.alive){
+      const wasRole=p.role;
+      p.alive=false;
+      jgAmendDayVoteLine(jgRecord._voteOutNum,'幸獵',val);
+      const chainTag=jgHunterCapableTag(wasRole,p.num);
+      if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; }
+    }
+  }
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}
+  if(chainTarget){
+    jgRecord._mechHunterChainNum=chainTarget;
+    jgRecord._mechHunterChainNextStep='next-night';
+    jgRecord._mechHunterChainOrigin='day';
+    jgGoStep('mechhunter-chain-shot');
+    return;
+  }
   jgGoStep('next-night');
 }
 
@@ -4082,7 +4225,9 @@ function jgSaveWolf(){
     }
     jgRenderRoster();
   }
-  jgRecord.wolfKill=jgMagicSwapNum((document.getElementById('jg-wolf-rec')||{}).value?.trim()||null);
+  { const wolfKillRawVal=(document.getElementById('jg-wolf-rec')||{}).value?.trim()||null;
+    jgRecord.wolfKillRaw=wolfKillRawVal;
+    jgRecord.wolfKill=jgMagicSwapNum(wolfKillRawVal); }
   if(jgRecord.nightmareBlocksWolf) jgRecord.wolfKill=null;
   // Bloodmoon seal: skip all god steps this night
   if(jgRecord.bloodmoonSealNight){
@@ -4121,7 +4266,9 @@ function jgSaveSeer(){
     jgRenderRoster();
   }
   const seerPfinal=jgPlayers.find(p=>p.role==='seer');
-  jgRecord.seerChecked=jgFeared(seerPfinal)?null:jgMagicSwapNum((document.getElementById('jg-seer-target-input')||{}).value?.trim()||null);
+  { const seerRawVal=(document.getElementById('jg-seer-target-input')||{}).value?.trim()||null;
+    jgRecord.seerCheckedRaw=jgFeared(seerPfinal)?null:seerRawVal;
+    jgRecord.seerChecked=jgFeared(seerPfinal)?null:jgMagicSwapNum(seerRawVal); }
   if(jgRecord.seerChecked){
     const t=jgFind(jgRecord.seerChecked);
     if(t&&t.role==='evilknight'&&t.alive&&!jgEvilKnightRevengeUsed){
@@ -4404,7 +4551,9 @@ function jgSaveWitch(){
   if(!usedSave&&!witchFearedFinal){
     const pi=document.getElementById('jg-witch-poison-rec');
     if(pi&&pi.value.trim()){
-      const poisonTarget=jgMagicSwapNum(pi.value.trim());
+      const poisonRawVal=pi.value.trim();
+      const poisonTarget=jgMagicSwapNum(poisonRawVal);
+      jgRecord.witchPoisonRaw=poisonRawVal;
       jgRecord.witchPoison=poisonTarget;
       jgWitchPoisonUsed=true;
       const pt=jgFind(poisonTarget);
@@ -4536,7 +4685,9 @@ function jgSaveVote(){
     voteLines=['票'+(val||'x')];
   }
   if(abstainNums.length>0) voteLines.push('棄票：'+abstainNums.join(','));
-  jgDayLog[jgNight]=voteLines;
+  // 用附加而非整個覆寫：同一天稍早若已經有人自爆／騎士決鬥而記錄過文字（見 jgPushDayLog），
+  // 這裡不能整個蓋掉，要接在後面，維持事件發生的先後順序。
+  jgDayLog[jgNight]=(jgDayLog[jgNight]||[]).concat(voteLines);
   jgAbstainVoters={};
   if(!val){jgGoStep('next-night');return;}
   const found=jgFind(val);
@@ -4582,6 +4733,7 @@ function jgSaveVote(){
 
 function jgSaveWolfKingShot(){
   const val=(document.getElementById('jg-wolfking-shot-rec')||{}).value?.trim()||'';
+  let chainTarget=null;
   if(val){
     const p=jgFind(val);
     if(p&&p.alive){
@@ -4589,11 +4741,22 @@ function jgSaveWolfKingShot(){
       const trulyDied=jgApplyDeath(p);
       jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      jgAmendDayVoteLine(jgRecord._voteOutNum,'王',val);
+      { const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
+        if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; } }
       jgRenderRoster();
       const w=jgCheckWin();if(w){jgShowWin(w);return;}
     }
   }
-  jgGoStep(jgRecord._voteOutTrulyDied===false?'next-night':'vote-last-words');
+  const nextStep=jgRecord._voteOutTrulyDied===false?'next-night':'vote-last-words';
+  if(chainTarget){
+    jgRecord._mechHunterChainNum=chainTarget;
+    jgRecord._mechHunterChainNextStep=nextStep;
+    jgRecord._mechHunterChainOrigin='day';
+    jgGoStep('mechhunter-chain-shot');
+    return;
+  }
+  jgGoStep(nextStep);
 }
 
 function jgSaveBloodMoonLastNight(){
@@ -4609,7 +4772,7 @@ function jgSaveBloodMoonLastNight(){
 
 function jgSaveBloodMoonBlow(){
   const bm=jgPlayers.find(p=>p.role==='bloodmoon');
-  if(bm&&bm.alive){jgApplyDeath(bm);}
+  if(bm&&bm.alive){jgApplyDeath(bm);jgPushDayLog('自爆'+bm.num);}
   jgRecord.bloodmoonSealNight=true;
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}
@@ -4620,7 +4783,9 @@ function jgSaveWhiteWolfBlow(){
   const val=(document.getElementById('jg-whitewolf-blow-rec')||{}).value?.trim()||'';
   const ww=jgPlayers.find(p=>p.role==='whitewolf');
   if(ww&&ww.alive){jgApplyDeath(ww);}
-  if(val){ const p=jgFind(val); if(p&&p.alive){jgApplyDeath(p);} }
+  let broughtAlive=false;
+  if(val){ const p=jgFind(val); if(p&&p.alive){jgApplyDeath(p);broughtAlive=true;} }
+  if(ww) jgPushDayLog('自爆'+ww.num+(broughtAlive?'帶'+val:''));
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}
   // 白狼王自爆：直接天黑，無遺言
@@ -4637,6 +4802,7 @@ function jgSaveWolfSelfBlow(){
     return;
   }
   jgApplyDeath(p);
+  jgPushDayLog('自爆'+p.num);
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}
   // 自爆：不能開槍帶人，跳過投票，直接進入夜晚
@@ -4655,12 +4821,15 @@ function jgSaveKnightDuel(){
   const isWolf=WOLF_ROLES.includes(target.role);
   if(isWolf){
     jgApplyDeath(target);
+    jgPushDayLog('決鬥'+(knP?knP.num:'x')+'→'+target.num+'（狼）'+target.num+'出局');
     jgRenderRoster();
     alert('⚔️ '+target.num+'號是狼人，'+target.num+'號淘汰');
     const win=jgCheckWin(); if(win){jgShowWin(win);return;}
     jgGoStep('next-night');
   } else {
+    const knNum=knP?knP.num:null;
     if(knP) jgApplyDeath(knP);
+    jgPushDayLog('決鬥'+(knNum||'x')+'→'+target.num+'（好人）'+(knNum||'x')+'出局');
     jgRenderRoster();
     alert('⚔️ '+target.num+'號是好人，騎士以死謝罪');
     const win=jgCheckWin(); if(win){jgShowWin(win);return;}
@@ -4678,6 +4847,7 @@ function jgSaveWolfBeautyCharmKill(){
 
 function jgSaveHunter(){
   const val=(document.getElementById('jg-hunter-shot-rec')||{}).value?.trim()||'';
+  let chainTarget=null;
   if(val){
     const p=jgFind(val);
     if(p&&p.alive){
@@ -4685,7 +4855,17 @@ function jgSaveHunter(){
       const trulyDied=jgApplyDeath(p);
       jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      jgAmendDayVoteLine(jgRecord._voteOutNum,'獵',val);
+      { const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
+        if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; } }
     }
+  }
+  if(chainTarget){
+    jgRecord._mechHunterChainNum=chainTarget;
+    jgRecord._mechHunterChainNextStep='next-night';
+    jgRecord._mechHunterChainOrigin='day';
+    jgGoStep('mechhunter-chain-shot');
+    return;
   }
   jgGoStep('next-night');
 }
@@ -4862,13 +5042,14 @@ const SPECIAL_ROLES = ['sheriff','luckyone'];
 // 選定板子後，法官還能依人數自由調整基本角色：
 // 狼隊【狼人、狼王、平民】不限一個；神職／混血兒【混血兒、預言家、女巫、獵人、守衛】各自最多一個。
 const JG_BOARD_PRESETS = {
-  mechwolf_medium:         {label:'機械狼配通靈師',   fixed:{mechanicalwolf:1, medium:1}},
-  dreamcatcher_nightmare:  {label:'攝夢人配夢魘',     fixed:{dreamcatcher:1, nightmare:1}},
-  blackmarket_wolfbrothers:{label:'黑市商人配狼兄狼弟', fixed:{blackmarket:1, wolfbrother_e:1, wolfbrother_y:1}},
-  wolfbeauty_knight:       {label:'狼美人配騎士',     fixed:{wolfbeauty:1, knight:1}},
-  gargoyle_gravkeeper:     {label:'石像鬼配守墓人',   fixed:{gargoyle:1, gravkeeper:1}},
-  bloodmoon_demonhunter:   {label:'血月使者配獵魔人', fixed:{bloodmoon:1, demonhunter:1}},
-  magician_wolfking:       {label:'魔術師配狼王',     fixed:{magician:1, wolfking:1}},
+  mechwolf_medium:         {label:'機械狼+通靈師',   fixed:{mechanicalwolf:1, medium:1}},
+  dreamcatcher_nightmare:  {label:'攝夢人+夢魘',     fixed:{dreamcatcher:1, nightmare:1}},
+  blackmarket_wolfbrothers:{label:'黑市商人+狼兄狼弟', fixed:{blackmarket:1, wolfbrother_e:1, wolfbrother_y:1}},
+  wolfbeauty_knight:       {label:'狼美人+騎士',     fixed:{wolfbeauty:1, knight:1}},
+  gargoyle_gravkeeper:     {label:'石像鬼+守墓人',   fixed:{gargoyle:1, gravkeeper:1}},
+  bloodmoon_demonhunter:   {label:'血月使者+獵魔人', fixed:{bloodmoon:1, demonhunter:1}},
+  magician_wolfking:       {label:'魔術師+狼王',     fixed:{magician:1, wolfking:1}},
+  hybrid_wolfking_bloodmoon:{label:'混血兒+狼王+血月', fixed:{hybrid:1, wolfking:1, bloodmoon:1}},
 };
 // 板子的基本角色只開放這兩組：狼隊（不限一個）、神職＋混血兒（各自最多一個）
 const JG_PRESET_WOLF_BASE=['wolf','wolfking'];
@@ -5020,7 +5201,6 @@ function rpickTap(cid, id){
     // wolf: cycle 0→1→2→3→0 (狼兄/狼弟 are a fixed pair, capped at 0/1)
     const max=(id==='wolfbrother_e'||id==='wolfbrother_y')?1:3;
     state[id]=((state[id]||0)+1)%(max+1);
-    if(id==='wolf'&&state[id]===0&&!jgSetupDualMode) state[id]=1; // single身分模式：狼人至少 1；雙身分模式可全部取消
   }
   refreshPicker(cid);
   jgUpdateComp();
