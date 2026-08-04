@@ -211,6 +211,8 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rcol-body strong{color:var(--text);font-weight:600;}
 .rcol-body ul{padding-left:16px;margin:4px 0;}
 .rcol-body li{margin-bottom:4px;}
+.role-link{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+.board-role{font-weight:700;color:var(--text);}
 /* ── ROLE PICKER ── */
 .rpick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px;margin:10px 0;}
 .rpick{border:2px solid var(--border2);border-radius:var(--r-sm);padding:10px 6px 8px;text-align:center;cursor:pointer;background:var(--bg3);transition:border-color 0.15s,background 0.15s;-webkit-user-select:none;user-select:none;position:relative;}
@@ -309,9 +311,9 @@ select{
 <!-- ════════════════ NAV ════════════════ -->
 <nav class="nav">
   <button class="nav-btn" onclick="switchTab('t-rules')"><span class="nv-icon">📖</span>角色與規則</button>
+  <button class="nav-btn" onclick="switchTab('t-glossary')"><span class="nv-icon">📚</span>專有名詞</button>
   <button class="nav-btn active" onclick="switchTab('t-judge')"><span class="nv-icon">📋</span>法官の助手</button>
   <button class="nav-btn" onclick="switchTab('t-data')"><span class="nv-icon">📊</span>遊玩數據</button>
-  <button class="nav-btn" onclick="switchTab('t-glossary')"><span class="nv-icon">📚</span>專有名詞</button>
   <button class="nav-btn" onclick="switchTab('t-report')"><span class="nv-icon">🐛</span>問題回報</button>
 </nav>
 
@@ -323,6 +325,113 @@ select{
     <div class="nicon">🐺</div>
     <h1>狼人殺</h1>
     <p class="sub" style="text-align:center;margin-top:8px;">角色介紹與遊戲規則</p>
+  </div>
+
+  <!-- 板子介紹 -->
+  <div class="section-title">🎴 板子介紹</div>
+
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🤖</span>
+      <span class="rcol-name">機械狼＋通靈師</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">機械狼</span>：不與其他狼人相認、全程不可自爆，靠夜晚「學習」一名玩家的身份技能，次晚起就能使用該技能；等其餘狼隊友全滅後，機械狼會獨自帶刀殺人。<br><span class="role-link" onclick="jumpToRole('mechanicalwolf')">→ 查看機械狼完整規則</span>
+      <br><br>
+      <span class="board-role">通靈師</span>：每晚查驗一名玩家的具體角色（不只是好壞），若查到機械狼，還會顯示牠目前學到的身份，是抓機械狼的關鍵神職。<br><span class="role-link" onclick="jumpToRole('medium')">→ 查看通靈師完整規則</span>
+    </div>
+  </div>
+
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🌙</span>
+      <span class="rcol-name">攝夢人＋夢魘</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">夢魘</span>：在狼人行動前搶先發動技能，恐懼一名玩家使其當晚技能失效（若恐懼到隊友，狼人當晚就無法殺人）。<br><span class="role-link" onclick="jumpToRole('nightmare')">→ 查看夢魘完整規則</span>
+      <br><br>
+      <span class="board-role">攝夢人</span>：每晚指定一名「夢遊者」使其免疫傷害；但攝夢人一旦死亡，夢遊者會一起陪葬，連續兩晚攝夢同一人對方也會死亡，是這個板子中攻守都很吃技巧的一組神狼對抗。<br><span class="role-link" onclick="jumpToRole('dreamcatcher')">→ 查看攝夢人完整規則</span>
+    </div>
+  </div>
+
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">💰</span>
+      <span class="rcol-name">黑市商人＋狼兄狼弟</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">狼兄／狼弟</span>：首夜互相確認身份；狼兄陣亡前，狼弟形同「隱狼」——不參與狼人殺人、查驗也顯示好人，直到狼兄陣亡的下一晚才會覺醒並被迫殺一人復仇，之後才正式加入狼窩。<br><span class="role-link" onclick="jumpToRole('wolfbrother_e')">→ 查看狼兄完整規則</span>　<span class="role-link" onclick="jumpToRole('wolfbrother_y')">→ 查看狼弟完整規則</span>
+      <br><br>
+      <span class="board-role">黑市商人</span>：整局限一次，可選一人進行交易，若對方是好人就成為「幸運兒」獲得查驗／毒藥／獵槍其中一項技能；但若誤與尚未覺醒的狼弟交易，交易會失敗且黑市商人隔天死亡，是這個板子最容易踩雷的地方。<br><span class="role-link" onclick="jumpToRole('blackmarket')">→ 查看黑市商人完整規則</span>
+    </div>
+  </div>
+
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">💋</span>
+      <span class="rcol-name">狼美人＋騎士</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">狼美人</span>：每晚必須魅惑一名玩家（不能連續兩晚選同一人），一旦狼美人出局或被毒，魅惑對象就會殉情陪葬。<br><span class="role-link" onclick="jumpToRole('wolfbeauty')">→ 查看狼美人完整規則</span>
+      <br><br>
+      <span class="board-role">騎士</span>：白天發言時可隨時翻牌宣告決鬥：對方是狼直接淘汰進入黑夜，對方是好人則騎士自己以死謝罪；但若決鬥對象剛好是狼美人／狼王／白狼王，技能不會被觸發（不會殉情、不能開槍帶人）。<br><span class="role-link" onclick="jumpToRole('knight')">→ 查看騎士完整規則</span>
+    </div>
+  </div>
+
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🗿</span>
+      <span class="rcol-name">石像鬼＋守墓人</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">石像鬼</span>：每晚查驗一名玩家的具體角色；不與狼隊見面，隊友全滅前不能殺人，隊友全滅後可在查驗之外額外選擇今晚的帶刀對象殺人，不可自爆但可自刀。<br><span class="role-link" onclick="jumpToRole('gargoyle')">→ 查看石像鬼完整規則</span>
+      <br><br>
+      <span class="board-role">守墓人</span>：從第二晚起，可以得知前一個白天被投票處死的玩家陣營（好人或狼人），能幫好人陣營在投票後持續累積情報。<br><span class="role-link" onclick="jumpToRole('gravkeeper')">→ 查看守墓人完整規則</span>
+    </div>
+  </div>
+
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🌑</span>
+      <span class="rcol-name">血月使者＋獵魔人</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">血月使者</span>：白天隨時可自爆直接進入黑夜，並封印當晚所有神牌技能；若是最後一個被放逐的狼人，還能暫時存活到夜晚再殺一人，達成屠邊就直接獲勝。<br><span class="role-link" onclick="jumpToRole('bloodmoon')">→ 查看血月使者完整規則</span>
+      <br><br>
+      <span class="board-role">獵魔人</span>：從第二晚起可以狩獵一名玩家：對方是狼人則狼死，對方是好人則獵魔人自己死，且免疫女巫毒藥，是專門用來對抗血月的神職。<br><span class="role-link" onclick="jumpToRole('demonhunter')">→ 查看獵魔人完整規則</span>
+    </div>
+  </div>
+
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🎩</span>
+      <span class="rcol-name">魔術師＋狼王</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">魔術師</span>：每晚最早行動，可以交換兩個號碼牌，當晚所有以號碼為目標的技能（狼刀、查驗、毒藥、守護等）都會被「換流」到對方身上，是很容易翻盤或誤傷隊友的關鍵神職。<br><span class="role-link" onclick="jumpToRole('magician')">→ 查看魔術師完整規則</span>
+      <br><br>
+      <span class="board-role">狼王</span>：被狼刀（夜槍）或被票出局（白天槍）淘汰時可以開槍帶走一名玩家，就算被守衛與女巫同時作用「奶穿」也照樣能帶人；但被女巫毒殺、或選擇自爆時，就不能發動這個技能。<br><span class="role-link" onclick="jumpToRole('wolfking')">→ 查看狼王完整規則</span>
+    </div>
+  </div>
+
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🧬</span>
+      <span class="rcol-name">混血兒＋狼王＋血月</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">混血兒</span>：第一晚選擇一位玩家作為支持對象後就沒有其他夜間動作，勝負跟著支持對象的陣營走，但自己不知道對方是好是壞，全靠發言判斷；查驗永遠顯示好人，人數與屠邊判定上也算平民。<br><span class="role-link" onclick="jumpToRole('hybrid')">→ 查看混血兒完整規則</span>
+      <br><br>
+      <span class="board-role">狼王／血月使者</span>：這個板子把混血兒和兩個狼隊技能（狼王的開槍帶人、血月使者的自爆封技與屠邊絕殺）放在一起，讓好人陣營在推理和投票上都要更小心。<br><span class="role-link" onclick="jumpToRole('wolfking')">→ 查看狼王完整規則</span>　<span class="role-link" onclick="jumpToRole('bloodmoon')">→ 查看血月使者完整規則</span>
+    </div>
   </div>
 
   <div class="section-title">勝利條件</div>
@@ -363,6 +472,21 @@ select{
         <li>狼人可以在競選環節的任何時間點自爆；狼人自爆會直接吞掉警徽，本局不再有警長。</li>
       </ul>
       <strong>PK 平票後還能退水嗎？</strong> 原則上不行——進入投票環節、出現平票之後，參與 PK 的候選人不能再退水。
+    </div>
+  </div>
+
+  <!-- 投票放逐規則 -->
+  <div class="section-title" style="margin-top:20px;">🗳️ 投票放逐規則</div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🗳️</span>
+      <span class="rcol-name">計票方式與平票 PK</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <strong>怎麼投票：</strong>法官點選每個號碼下方「投給他的人」（可複選／取消，方便邊投邊改）；沒有投給任何人、也沒特別標記棄票的玩家，確認投票結果時會自動算棄票。<br><br>
+      <strong>結果判定：</strong>多數票者出局。<br>
+      <strong>平票怎麼辦？</strong>若最高票出現平票，自動進入 PK：僅平票玩家可以再次發言、也僅平票玩家可以被投票，其餘玩家重新投票一次，票投給任一位 PK 候選人。
     </div>
   </div>
 </div>
@@ -510,7 +634,7 @@ select{
   <div class="nbanner">
     <div class="nicon">🐛</div>
     <h1>問題回報</h1>
-    <p class="sub" style="text-align:center;margin-top:8px;">發現 bug 或有建議？填一下表單就好</p>
+    <p class="sub" style="text-align:center;margin-top:8px;">發現 bug 或有建議嗎？填表單告訴我</p>
   </div>
 
   <button class="primary" style="margin-top:4px;" onclick="jgOpenReportLink(REPORT_FORM_URL)">📝 填寫問題回報表單</button>
@@ -548,7 +672,7 @@ function switchTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   document.querySelectorAll('.nav-btn').forEach((b,i)=>{
-    b.classList.toggle('active',['t-rules','t-judge','t-data','t-glossary','t-report'][i]===id);
+    b.classList.toggle('active',['t-rules','t-glossary','t-judge','t-data','t-report'][i]===id);
   });
   if(id==='t-report') jgLoadReportForm();
   window.scrollTo(0,0);
@@ -810,8 +934,8 @@ function jgFormatNightLog(){
   };
   // 該身分的持有者出局後，就不再繼續記錄該角色的行動。
   // 文字紀錄的順序固定依照實際睜眼順序排列（見 jgNightStartNext 一路到 jgNextGodStep 的睜眼流程註解）：
-  // 夢魘(恐) → 魔術師(換) → 守衛(守) → 攝夢人(夢) → 狼兄狼弟覺醒刀 → 機械狼 → 狼刀 → 女巫(救/毒)
-  // → 預言家(驗) → 通靈師(通驗) → 黑市商人(易，含幸運兒後續行動) → 獵魔人(狩)。
+  // 夢魘(恐) → 魔術師(換) → 守衛(守) → 攝夢人(夢) → 狼兄狼弟覺醒刀 → 機械狼 → 狼刀 → 黑市商人(易)
+  // → 女巫(救/毒) → 預言家(驗) → 通靈師(通驗，含幸運兒後續行動) → 獵魔人(狩)。
   // 換流用 jgSwapDisplay：法官喊的號碼(raw)跟魔術師換流後實際生效的號碼不同時，寫成「raw→actual」。
   const nmP=jgPlayers.find(p=>p.role==='nightmare');
   if(nmP&&nmP.alive) lines.push('恐 '+(jgRecord.nightmareTarget||'x'));
@@ -840,6 +964,22 @@ function jgFormatNightLog(){
     }
   }
   if(hasWolf) lines.push('刀 '+jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill));
+  const bmP2=jgPlayers.find(p=>p.role==='blackmarket');
+  if(bmP2&&bmP2.alive&&jgRecord.blackmarketTarget!==undefined){
+    const skillAbbr={seer:'驗',witch:'毒',hunter:'獵'}[jgRecord.blackmarketSkill]||'';
+    lines.push('易 '+(jgRecord.blackmarketTarget||'x')+(jgRecord.blackmarketTarget&&skillAbbr?'('+skillAbbr+')':''));
+  }
+  // 幸運兒（黑市商人交易產生）依所獲技能記錄行動——現在有自己獨立的睜眼步驟，緊接在黑市商人之後
+  if(jgLuckyOne&&jgNight>=jgLuckyOne.startNight){
+    const lp=jgByNum(jgLuckyOne.num);
+    if(lp&&lp.alive){
+      if(jgLuckyOne.gift==='seer'&&jgRecord.luckyoneCheck!==undefined){
+        lines.push('幸驗 '+(jgRecord.luckyoneCheck||'x')+seerCheckResult(jgRecord.luckyoneCheck));
+      } else if(jgLuckyOne.gift==='witch'&&jgRecord.luckyonePoison!==undefined){
+        lines.push('幸毒 '+(jgRecord.luckyonePoison||'x'));
+      }
+    }
+  }
   if(witchP&&witchP.alive){
     if(jgRecord._witchCanShowKilled) lines.push('救 '+(jgRecord.witchSave?jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill):'x'));
     else lines.push('毒 '+jgSwapDisplay(jgRecord.witchPoisonRaw, jgRecord.witchPoison));
@@ -852,22 +992,6 @@ function jgFormatNightLog(){
   if(mdP&&mdP.alive){
     const v=jgRecord.mediumCheck;
     lines.push('通驗 '+(v||'x')+mediumCheckResult(v));
-  }
-  const bmP2=jgPlayers.find(p=>p.role==='blackmarket');
-  if(bmP2&&bmP2.alive&&jgRecord.blackmarketTarget!==undefined){
-    const skillAbbr={seer:'驗',witch:'毒',hunter:'獵'}[jgRecord.blackmarketSkill]||'';
-    lines.push('易 '+(jgRecord.blackmarketTarget||'x')+(jgRecord.blackmarketTarget&&skillAbbr?'('+skillAbbr+')':''));
-  }
-  // 幸運兒（黑市商人交易產生）依所獲技能記錄行動
-  if(jgLuckyOne&&jgNight>=jgLuckyOne.startNight){
-    const lp=jgByNum(jgLuckyOne.num);
-    if(lp&&lp.alive){
-      if(jgLuckyOne.gift==='seer'&&jgRecord.luckyoneCheck!==undefined){
-        lines.push('幸驗 '+(jgRecord.luckyoneCheck||'x')+seerCheckResult(jgRecord.luckyoneCheck));
-      } else if(jgLuckyOne.gift==='witch'&&jgRecord.luckyonePoison!==undefined){
-        lines.push('幸毒 '+(jgRecord.luckyonePoison||'x'));
-      }
-    }
   }
   const dhP=jgPlayers.find(p=>p.role==='demonhunter');
   if(dhP&&dhP.alive&&jgNight>=2) lines.push('狩 '+(jgRecord.demonhunterTarget||'x'));
@@ -2233,13 +2357,13 @@ function jgRenderStep(step){
     const yv=yP?yP.num:'';
     jgShowPg(`
       <h2>狼兄狼弟相認</h2>
-      <div class="speech">「<em>狼兄、狼弟請睜眼，互相確認身份。</em>」</div>
+      <div class="speech">「<em>狼兄、狼弟請睜眼，互相確認身份，狼弟請比小拇指。</em>」</div>
       <div style="margin-bottom:8px;"><label style="margin-top:0;">狼兄號碼</label>
       ${jgNumSelectHtml('jg-wbe-who', ev)}</div>
       <div style="margin-bottom:8px;"><label style="margin-top:0;">狼弟號碼</label>
       ${jgNumSelectHtml('jg-wby-who', yv)}</div>
       <div class="info" style="font-size:12px;">狼弟平時不進狼窩，不參與狼人商討殺人；狼兄陣亡前，預言家查驗狼弟顯示為好人。</div>
-      <div class="speech" style="margin-top:10px;">「<em>狼弟請閉眼。</em>」狼兄留下，稍後與其餘狼人一同睜眼殺人。</div>
+      <div class="speech" style="margin-top:10px;">「<em>狼兄狼弟請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolfBrotherIntro()">已紀錄，下一步 →</button>
     `,'👬 狼兄狼弟');
   }
@@ -2269,7 +2393,7 @@ function jgRenderStep(step){
         <h2>狼弟睜眼</h2>
         <div class="info-danger" style="font-size:14px;font-weight:700;padding:12px 14px;">狼兄已陣亡，${yLabel} 覺醒</div>
         <div class="speech">「<em>狼弟請睜眼，你的技能使用狀況是 👍</em>」</div>
-        <div class="speech">「<em>你的狼兄已經死亡，你將獨自殺害一名玩家，不可空刀。</em>」</div>
+        <div class="info" style="font-size:13px;">狼兄已死亡，狼弟有一刀復仇刀，不可空刀</div>
         <label>覺醒刀擊殺的對象（號碼，必填）</label>
         ${jgNumSelectHtml('jg-wby-awaken-rec', av)}
         <div class="speech" style="margin-top:10px;">「<em>狼弟請閉眼。</em>」</div>
@@ -2551,40 +2675,18 @@ function jgRenderStep(step){
     const seerP=jgPlayers.find(p=>p.role==='seer');
     const seerAlive=seerP&&seerP.alive;
     const hasSeerRole=(jgNight===1&&jgComp.seer>0)||seerP;
-    const lyEligible=jgLuckyOne&&jgLuckyOne.gift==='seer'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&(()=>{const lp=jgByNum(jgLuckyOne.num);return lp&&lp.alive;})();
-    if(!hasSeerRole&&!lyEligible){ jgGoStep(jgNextGodStep(null)); return; }
-    const lyHtml=lyEligible?(
-      '<div class="divider" style="margin:14px 0;"></div>'
-      +'<div class="info-success" style="font-size:12px;margin-bottom:6px;">🍀 '+jgLuckyOne.num+'號 幸運兒（獲得預言家查驗技能，整局限一次）也可查驗一名玩家</div>'
-      +'<label>幸運兒查驗對象（號碼，留空=不查）</label>'
-      +jgNumSelectHtml('jg-luckyone-seer-target', jgRecord.luckyoneCheck||'', 'jgUpdateLuckyoneSeerResult')
-      +'<div id="jg-luckyone-seer-result"></div>'
-    ):'';
-    // No real seer on this board at all — reduced step purely for the luckyone's one-time check
-    if(!hasSeerRole){
-      jgShowPg(`
-        <h2>幸運兒（預言家技能）</h2>
-        <div class="speech">「<em>幸運兒請睜眼，你要查驗嗎？</em>」</div>
-        ${lyHtml}
-        <div class="speech" style="margin-top:10px;">「<em>幸運兒請閉眼。</em>」</div>
-        <button class="primary" onclick="jgSaveSeer()">已查驗，下一步 →</button>
-      `,'🍀 幸運兒');
-      if(jgRecord.luckyoneCheck) setTimeout(jgUpdateLuckyoneSeerResult,50);
-      return;
-    }
+    if(!hasSeerRole){ jgGoStep(jgNextGodStep(null)); return; }
     const idHtml=jgIdFieldHtml('預言家', seerP, 'jg-seer-who', 'jg-seer-name');
     const targetVal=jgRecord.seerChecked||'';
     if(!seerAlive&&seerP){
-      // Dead seer: just run the script, no input — but the luckyone (if eligible) can still check
+      // Dead seer: just run the script, no input
       jgShowPg(`
         <h2>預言家睜眼</h2>
         <div class="speech">「<em>預言家請睜眼，今晚要查驗的對象是？</em>」</div>
         <div class="info-warn">預言家已出局，仍需走完流程</div>
-        ${lyHtml}
         <div class="speech">「<em>預言家請閉眼。</em>」</div>
         <button class="primary" onclick="jgSaveSeer()">下一步 →</button>
       `,'🔮 預言家');
-      if(jgRecord.luckyoneCheck) setTimeout(jgUpdateLuckyoneSeerResult,50);
       return;
     }
     if(jgDualIdentityMode&&!seerP){
@@ -2592,11 +2694,9 @@ function jgRenderStep(step){
         <h2>預言家睜眼</h2>
         <div class="speech">「<em>預言家請睜眼，今晚要查驗的對象是？</em>」</div>
         <div class="info" style="font-size:12px;">（雙身分板：此身分目前無人持有，可能藏在尚未翻開的第二張牌中）</div>
-        ${lyHtml}
         <div class="speech">「<em>預言家請閉眼。</em>」</div>
         <button class="primary" onclick="jgSaveSeer()">下一步 →</button>
       `,'🔮 預言家');
-      if(lyEligible&&jgRecord.luckyoneCheck) setTimeout(jgUpdateLuckyoneSeerResult,50);
       return;
     }
     if(jgFeared(seerP)){
@@ -2604,11 +2704,9 @@ function jgRenderStep(step){
         <h2>預言家睜眼</h2>
         <div class="speech">「<em>預言家請睜眼，今晚要查驗的對象是？</em>」</div>
         <div class="info-warn">（法官搖頭）你被恐懼了，無法使用技能</div>
-        ${lyHtml}
         <div class="speech">「<em>預言家請閉眼。</em>」</div>
         <button class="primary" onclick="jgSaveSeer()">下一步 →</button>
       `,'🔮 預言家');
-      if(jgRecord.luckyoneCheck) setTimeout(jgUpdateLuckyoneSeerResult,50);
       return;
     }
     jgShowPg(`
@@ -2621,12 +2719,10 @@ function jgRenderStep(step){
       ${jgNumSelectHtml('jg-seer-target-input', targetVal, 'jgUpdateSeerResult')}
       <div id="jg-seer-result-box"></div>
       </div>
-      ${lyHtml}
       <div class="speech" style="margin-top:10px;">「<em>預言家請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveSeer()">已查驗，下一步 →</button>
     `,'🔮 預言家');
     if(jgRecord.seerChecked) setTimeout(jgUpdateSeerResult,50);
-    if(lyEligible&&jgRecord.luckyoneCheck) setTimeout(jgUpdateLuckyoneSeerResult,50);
   }
   else if(step==='witch-wake'){
     const isFirst=jgIsFirstNight();
@@ -2636,25 +2732,7 @@ function jgRenderStep(step){
     const witchP=jgPlayers.find(p=>p.role==='witch');
     const witchAlive=witchP&&witchP.alive;
     const hasWitchRole=(jgNight===1&&jgComp.witch>0)||witchP;
-    const lyEligible=jgLuckyOne&&jgLuckyOne.gift==='witch'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&(()=>{const lp=jgByNum(jgLuckyOne.num);return lp&&lp.alive;})();
-    if(!hasWitchRole&&!lyEligible){ jgGoStep('seer-wake'); return; }
-    const lyHtml=lyEligible?(
-      '<div class="divider" style="margin:14px 0;"></div>'
-      +'<div class="info-success" style="font-size:12px;margin-bottom:6px;">🍀 '+jgLuckyOne.num+'號 幸運兒（獲得女巫毒藥技能，整局限一次，不能救人）</div>'
-      +'<label>幸運兒毒殺對象（留空=不毒）</label>'
-      +jgNumSelectHtml('jg-luckyone-poison', jgRecord.luckyonePoison||'')
-    ):'';
-    // No real witch on this board at all — reduced step purely for the luckyone's one-time poison
-    if(!hasWitchRole){
-      jgShowPg(`
-        <h2>幸運兒（女巫毒藥）</h2>
-        <div class="speech">「<em>幸運兒請睜眼，你要使用毒藥嗎？你要毒誰呢？</em>」</div>
-        ${lyHtml}
-        <div class="speech" style="margin-top:10px;">「<em>幸運兒請閉眼。</em>」</div>
-        <button class="primary" onclick="jgSaveWitch()">已紀錄，下一步 →</button>
-      `,'🍀 幸運兒');
-      return;
-    }
+    if(!hasWitchRole){ jgGoStep('seer-wake'); return; }
 
     const needId=isFirst&&!witchP&&!jgMechAssignDone;
     const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">女巫號碼</label>${jgNumSelectHtml('jg-witch-who','','jgWitchIdCheck')}</div><div class="divider"></div>`:'';
@@ -2666,14 +2744,13 @@ function jgRenderStep(step){
         <div class="info" style="font-size:12px;">（雙身分板：此身分目前無人持有，可能藏在尚未翻開的第二張牌中）</div>
         <div class="speech" style="margin-top:8px;">「<em>你要使用解藥嗎？</em>」</div>
         <div class="speech" style="margin-top:8px;">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」</div>
-        ${lyHtml}
         <div class="speech" style="margin-top:12px;">「<em>女巫請閉眼。</em>」</div>
         <button class="primary" onclick="jgSaveWitch()">下一步 →</button>
       `,'🧪 女巫');
       return;
     }
 
-    // If witch is dead, only show judge script (no drug UI) — but the luckyone (if eligible) can still poison
+    // If witch is dead, only show judge script (no drug UI)
     if(!witchAlive&&witchP){
       jgShowPg(`
         <h2>女巫睜眼</h2>
@@ -2681,7 +2758,6 @@ function jgRenderStep(step){
         <div class="info-warn">女巫已出局，仍需走完流程避免洩露身分</div>
         <div class="speech" style="margin-top:8px;">「<em>你要使用解藥嗎？</em>」</div>
         <div class="speech" style="margin-top:8px;">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」</div>
-        ${lyHtml}
         <div class="speech" style="margin-top:12px;">「<em>女巫請閉眼。</em>」</div>
         <button class="primary" onclick="jgSaveWitch()">下一步 →</button>
       `,'🧪 女巫');
@@ -2695,7 +2771,6 @@ function jgRenderStep(step){
         <div class="info-warn">${canShowKilled?'（法官搖頭）你被恐懼了，無法使用技能':'（法官搖頭）解藥用完'}</div>
         <div class="speech" style="margin-top:8px;">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」</div>
         <div class="info-warn">（法官搖頭）你被恐懼了，無法使用技能</div>
-        ${lyHtml}
         <div class="speech" style="margin-top:12px;">「<em>女巫請閉眼。</em>」</div>
         <button class="primary" onclick="jgSaveWitch()">下一步 →</button>
       `,'🧪 女巫');
@@ -2770,7 +2845,6 @@ function jgRenderStep(step){
       <div id="jg-witch-save-wrap">${saveHtml}</div>
       ${poisonHtml}
       </div>
-      ${lyHtml}
       <div class="speech" style="margin-top:12px;">「<em>女巫請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWitch()">已紀錄，下一步 →</button>
     `,'🧪 女巫');
@@ -2945,7 +3019,7 @@ function jgRenderStep(step){
   else if(step==='blackmarket-wake'){
     const bmP=jgPlayers.find(p=>p.role==='blackmarket');
     if(jgBlackMarketUsed){
-      jgGoStep(jgNextGodStep('blackmarket-wake'));
+      jgGoStep(jgLuckyOneWakePending()?'luckyone-wake':'witch-wake');
       return;
     }
     const idHtml=jgGodIdHtml('blackmarket',bmP);
@@ -2968,6 +3042,42 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveBlackMarket()">已紀錄，下一步 →</button>
     `,'💰 黑市商人');
   }
+  // ── 幸運兒睜眼（獨立步驟，不跟真預言家／真女巫共用畫面，避免彼此知道對方是誰）──
+  else if(step==='luckyone-wake'){
+    const ly=jgLuckyOne;
+    if(!ly||(ly.gift!=='seer'&&ly.gift!=='witch')){ jgGoStep('witch-wake'); return; }
+    const lp=jgByNum(ly.num);
+    const dead=lp&&!lp.alive;
+    const feared=jgFeared(lp);
+    const skillDone=!!ly.used;
+    const canAct=!dead&&!feared&&!skillDone;
+    if(ly.gift==='seer'){
+      const gv=jgRecord.luckyoneCheck||'';
+      jgShowPg(`
+        <h2>幸運兒睜眼</h2>
+        <div class="speech">「<em>幸運兒請睜眼，你要查驗嗎？</em>」</div>
+        ${dead?'<div class="info-warn">幸運兒已出局，仍需走完流程</div>':''}
+        <div id="jg-luckyone-feared-note" class="info-warn" style="${feared&&!dead?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+        ${skillDone&&!dead&&!feared?'<div class="info" style="font-size:12px;color:var(--text2);">查驗技能已使用過（整局限一次）</div>':''}
+        ${canAct?`<div id="jg-luckyone-action"><label>查驗對象號碼（留空=不查）</label>${jgNumSelectHtml('jg-luckyone-seer-target', gv, 'jgUpdateLuckyoneSeerResult')}<div id="jg-luckyone-seer-result"></div></div>`:''}
+        <div class="speech" style="margin-top:10px;">「<em>幸運兒請閉眼。</em>」</div>
+        <button class="primary" onclick="jgSaveLuckyoneNight()">已紀錄，下一步 →</button>
+      `,'🍀 幸運兒');
+      if(gv&&canAct) setTimeout(jgUpdateLuckyoneSeerResult,50);
+    } else {
+      const pv=jgRecord.luckyonePoison||'';
+      jgShowPg(`
+        <h2>幸運兒睜眼</h2>
+        <div class="speech">「<em>幸運兒請睜眼，你要使用毒藥嗎？你要毒誰呢？</em>」</div>
+        ${dead?'<div class="info-warn">幸運兒已出局，仍需走完流程</div>':''}
+        <div id="jg-luckyone-feared-note2" class="info-warn" style="${feared&&!dead?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+        ${skillDone&&!dead&&!feared?'<div class="info" style="font-size:12px;color:var(--text2);">毒藥已使用過（整局限一次）</div>':''}
+        ${canAct?`<label>毒殺對象（留空=不毒）</label>${jgNumSelectHtml('jg-luckyone-poison', pv)}`:''}
+        <div class="speech" style="margin-top:10px;">「<em>幸運兒請閉眼。</em>」</div>
+        <button class="primary" onclick="jgSaveLuckyoneNight()">已紀錄，下一步 →</button>
+      `,'🍀 幸運兒');
+    }
+  }
   // ── 幸運兒走一圈（無論交易成功與否，法官都做同樣的動作與台詞，避免洩露交易結果） ──
   else if(step==='luckyone-walk'){
     const success=!!jgRecord.blackmarketSuccess;
@@ -2975,12 +3085,11 @@ function jgRenderStep(step){
     const giftLabel=ly?({seer:'預言家查驗',witch:'女巫毒藥',hunter:'獵人獵槍'}[ly.gift]||''):'';
     jgShowPg(`
       <h2>幸運兒</h2>
-      <div class="speech">「<em>法官起身，繞場走一圈，輕拍某位玩家的肩膀。</em>」</div>
-      <div class="info-warn" style="font-size:12px;">${success?'（法官僅自行知悉：真的輕拍 '+ly.num+' 號的肩膀）':'（法官僅自行知悉：交易失敗，本次為掩護動作，走一圈但不要真的碰任何人）'}</div>
-      <div class="speech" style="margin-top:10px;">「<em>被拍到肩膀的人，等一下聽到『幸運兒請睜眼』時要睜眼。幸運兒請睜眼。</em>」</div>
+      <div class="info" style="font-size:13px;">${success?'法官起身，繞場走一圈，輕拍 '+ly.num+' 號玩家的肩膀':'法官起身，繞場走一圈，不用拍肩膀'}</div>
+      <div class="speech" style="margin-top:10px;">「<em>被拍到肩膀的人，等一下聽到『幸運兒請睜眼』時要睜眼。</em>」<br>「<em>幸運兒請睜眼。</em>」</div>
       ${success?'<button onclick="jgShowBigCard(\''+ly.num+'號\',\''+giftLabel+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示技能給幸運兒看</button>':'<div class="info" style="font-size:12px;">（此為掩護動作，沒有人是幸運兒，直接進行下一步）</div>'}
       <div class="speech" style="margin-top:10px;">「<em>幸運兒請閉眼。</em>」</div>
-      <button class="primary" onclick="jgGoStep(jgNextGodStep('blackmarket-wake'))">下一步 →</button>
+      <button class="primary" onclick="jgGoStep('witch-wake')">下一步 →</button>
     `,'🍀 幸運兒');
   }
   else if(step==='dawn'){
@@ -3346,9 +3455,8 @@ function jgRenderStep(step){
       <h2>${pk?'投票放逐・PK':'投票放逐'}</h2>
       <div class="speech">「<em>${pk?'平票玩家 '+pkCandLabel+' 號，請再次發言 PK。PK 結束後，其餘玩家重新投票。':'準備投票選出要放逐的玩家，3、2、1'}</em>」</div>
       ${pk?'<div class="info-warn" style="font-size:12px;">PK 回合：只有 '+pkCandLabel+' 號以外的玩家可以投票，票投給 '+pkCandLabel+' 號其中一人</div>'
-        :'<div style="font-size:12px;color:var(--text2);">多數票者出局。若平票，將自動進入 PK：僅平票玩家可被投票，其餘玩家重新投票。</div>'}
+        :''}
       ${jgSheriff&&jgFind(jgSheriff)&&jgFind(jgSheriff).alive?'<div style="font-size:12px;color:var(--text2);margin-top:4px;">🎖️ '+jgSheriff+'號 警長投票算 1.5 票</div>':''}
-      <div style="font-size:12px;color:var(--text2);margin:6px 0;">點選每個號碼下方投給他的人（可複選／取消）；沒有投給任何人、也沒點棄票的玩家，確認時會自動算棄票</div>
       <div id="jg-vote-tally"></div>
       <div id="jg-vote-tally-summary" style="margin-top:6px;"></div>
       <button class="danger" onclick="jgSaveVote()" style="margin-top:10px;">確認投票結果 →</button>
@@ -3488,6 +3596,7 @@ function jgRenderStep(step){
 function jgSaveHunterNight(){
   const isFirst=jgNight===1;
   if(isFirst){
+    if(!jgRequireFirstId('jg-hunter-who','獵人')) return;
     const whoNum=parseInt((document.getElementById('jg-hunter-who')||{}).value||'0');
     const name=(document.getElementById('jg-hunter-name')||{}).value?.trim()||'';
     if(whoNum){
@@ -3630,8 +3739,24 @@ function jgGodIdHtml(roleId,existingP){
   return jgIdFieldHtml(rn, existingP, 'jg-god-who-'+roleId, 'jg-god-name-'+roleId);
 }
 
+// 第一晚指定身分號碼時的共用檢查：畫面上有顯示「請選擇號碼」欄位、但法官沒有點選就要按下一步時，
+// 跳出提醒並擋下，不能讓流程在身分還沒記錄的情況下繼續往後跑。
+function jgRequireFirstId(elId, label){
+  if(jgNight!==1) return true;
+  const el=document.getElementById(elId);
+  if(!el) return true; // 這個欄位沒有顯示（例如身分已經在開局前記錄過），不需要檢查
+  const v=parseInt(el.value||'0');
+  if(!v){
+    alert('請先選擇「'+label+'」的號碼，再繼續下一步！');
+    return false;
+  }
+  return true;
+}
+
 function jgSaveGodId(roleId){
   if(jgNight!==1) return true;
+  const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒'};
+  if(!jgRequireFirstId('jg-god-who-'+roleId, RZHMAP2[roleId]||roleId)) return false;
   const whoNum=parseInt((document.getElementById('jg-god-who-'+roleId)||{}).value||'0');
   const name=(document.getElementById('jg-god-name-'+roleId)||{}).value?.trim()||'';
   if(whoNum){
@@ -3778,6 +3903,7 @@ function jgGuardCheckRepeat(){
 function jgSaveGuard(){
   const isFirst=jgNight===1;
   if(isFirst){
+    if(!jgRequireFirstId('jg-guard-who','守衛')) return;
     const whoNum=parseInt((document.getElementById('jg-guard-who')||{}).value||'0');
     const name=(document.getElementById('jg-guard-name')||{}).value?.trim()||'';
     if(whoNum){
@@ -3816,6 +3942,8 @@ function jgSaveHybrid(){
 }
 
 function jgSaveWolfBrotherIntro(){
+  if(!jgRequireFirstId('jg-wbe-who','狼兄')) return;
+  if(!jgRequireFirstId('jg-wby-who','狼弟')) return;
   const eNum=parseInt((document.getElementById('jg-wbe-who')||{}).value||'0');
   const eName=(document.getElementById('jg-wbe-name')||{}).value?.trim()||'';
   const yNum=parseInt((document.getElementById('jg-wby-who')||{}).value||'0');
@@ -3852,6 +3980,7 @@ function jgSaveWolfBrotherAwaken(){
 function jgSaveWolfBeautyNight(){
   const isFirst=jgNight===1;
   if(isFirst){
+    if(!jgRequireFirstId('jg-wolfbeauty-who','狼美人')) return;
     const whoNum=parseInt((document.getElementById('jg-wolfbeauty-who')||{}).value||'0');
     const name=(document.getElementById('jg-wolfbeauty-name')||{}).value?.trim()||'';
     if(whoNum){
@@ -3891,6 +4020,8 @@ function jgSaveSubWolf(stepId){
   if(isFirst&&roleId){
     const sfx=roleId.replace('wolf','').replace('knight','');
     const prefix=roleId==='whitewolf'?'whitewolf':roleId==='evilknight'?'evilknight':roleId;
+    const roleLabel={whitewolf:'白狼王',evilknight:'惡靈騎士'}[roleId]||roleId;
+    if(!jgRequireFirstId('jg-'+prefix+'-who', roleLabel)) return;
     const whoNum=parseInt((document.getElementById('jg-'+prefix+'-who')||{}).value||'0');
     const name=(document.getElementById('jg-'+prefix+'-name')||{}).value?.trim()||'';
     if(whoNum){
@@ -3917,6 +4048,7 @@ function jgGargoyleCheck(){
 function jgSaveGargoyleNight(){
   const isFirst=jgNight===1;
   if(isFirst){
+    if(!jgRequireFirstId('jg-gargoyle-who','石像鬼')) return;
     const whoNum=parseInt((document.getElementById('jg-gargoyle-who')||{}).value||'0');
     const name=(document.getElementById('jg-gargoyle-name')||{}).value?.trim()||'';
     if(whoNum){
@@ -3942,6 +4074,7 @@ function jgSaveGargoyleNight(){
 function jgSaveMechanicalWolf(){
   const isFirst=jgNight===1;
   if(isFirst&&!jgMechAssignDone){
+    if(!jgRequireFirstId('jg-mechwolf-who','機械狼')) return;
     const whoNum=parseInt((document.getElementById('jg-mechwolf-who')||{}).value||'0');
     const name=(document.getElementById('jg-mechwolf-name')||{}).value?.trim()||'';
     if(whoNum){
@@ -4389,7 +4522,28 @@ function jgSaveBlackMarket(){
     }
   }
   if(tv){ jgGoStep('luckyone-walk'); return; }
-  jgGoStep(jgNextGodStep('blackmarket-wake'));
+  jgGoStep('witch-wake');
+}
+
+function jgSaveLuckyoneNight(){
+  const ly=jgLuckyOne;
+  if(ly&&(ly.gift==='seer'||ly.gift==='witch')){
+    const lp=jgByNum(ly.num);
+    const dead=lp&&!lp.alive;
+    const feared=jgFeared(lp);
+    if(!dead&&!feared&&!ly.used){
+      if(ly.gift==='seer'){
+        const v=(document.getElementById('jg-luckyone-seer-target')||{}).value?.trim()||'';
+        jgRecord.luckyoneCheck=v||null;
+        if(v) ly.used=true;
+      } else {
+        const v=(document.getElementById('jg-luckyone-poison')||{}).value?.trim()||'';
+        jgRecord.luckyonePoison=v||null;
+        if(v) ly.used=true;
+      }
+    }
+  }
+  jgGoStep('witch-wake');
 }
 
 function jgSaveLuckyoneHunterShot(){
@@ -4440,6 +4594,17 @@ function jgSaveWolf(){
   const isFirst=jgNight===1;
   const wolfIdFieldsPresent=!!document.getElementById('jg-wolf-who-0');
   if(isFirst&&!jgMechAssignDone&&wolfIdFieldsPresent){
+    // 先檢查每個狼隊身分欄位是否都已選號碼，沒選完不能繼續下一步
+    let i0=0;
+    while(true){
+      const whoEl=document.getElementById('jg-wolf-who-'+i0);
+      if(!whoEl) break;
+      const roleId0=whoEl.getAttribute('data-role')||'wolf';
+      const RNAME_CHK={wolf:'狼人',wolfking:'狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者'};
+      if(!jgRequireFirstId('jg-wolf-who-'+i0, RNAME_CHK[roleId0]||'狼人')) return;
+      i0++;
+    }
+    if(!jgRequireFirstId('jg-gargoyle-who-wolf','石像鬼')) return;
     // Clear only the wolf-team roles assigned via this step (gargoyle/mechanicalwolf/nightmare/wolfbrother are identified in their own separate steps)
     WOLF_ROLES.filter(r=>r!=='gargoyle'&&r!=='mechanicalwolf'&&r!=='nightmare'&&r!=='wolfbrother_e'&&r!=='wolfbrother_y').forEach(r=>jgPlayers.forEach(p=>{ if(p.role===r) p.role=null; }));
     // Iterate through all wolf-type inputs (they have data-role set in the HTML)
@@ -4500,6 +4665,7 @@ function jgUpdateSeerResult(){
 function jgSaveSeer(){
   const isFirst=jgNight===1;
   if(isFirst){
+    if(!jgRequireFirstId('jg-seer-who','預言家')) return;
     const whoNum=parseInt((document.getElementById('jg-seer-who')||{}).value||'0');
     const name=(document.getElementById('jg-seer-name')||{}).value?.trim()||'';
     if(whoNum){
@@ -4521,8 +4687,6 @@ function jgSaveSeer(){
       jgEvilKnightRevengeUsed=true; // 整局限一次，且女巫先於預言家發動，這裡先標記可確保「先發動者為主」
     }
   }
-  jgRecord.luckyoneCheck=(document.getElementById('jg-luckyone-seer-target')||{}).value?.trim()||null;
-  if(jgRecord.luckyoneCheck&&jgLuckyOne&&jgLuckyOne.gift==='seer'){ jgLuckyOne.used=true; }
   jgGoStep(jgNextGodStep(null));
 }
 
@@ -4549,7 +4713,7 @@ function jgNextWolfStep(){
   } else {
     if(jgHasRoleAny(['wolfbeauty'])) return 'wolfbeauty-wake';
   }
-  return 'witch-wake';
+  return jgPostWolfStep();
 }
 function jgHasRoleAny(roles){ return roles.some(r=>jgPlayers.some(p=>p.role===r)); }
 
@@ -4637,6 +4801,7 @@ function jgNightmareCheckRepeat(){
 function jgSaveNightmare(){
   const isFirst=jgNight===1;
   if(isFirst){
+    if(!jgRequireFirstId('jg-nightmare-who','夢魘')) return;
     const whoNum=parseInt((document.getElementById('jg-nightmare-who')||{}).value||'0');
     const name=(document.getElementById('jg-nightmare-name')||{}).value?.trim()||'';
     if(whoNum){
@@ -4688,23 +4853,41 @@ function jgNextAfterSubWolf(currentStep){
     }
     if(step===currentStep) found=true;
   }
-  return 'witch-wake';
+  return jgPostWolfStep();
 }
 
 // Full night order is: 夢魘 → 魔術師 → 守衛 → 攝夢人 → 混血兒(僅第1夜) → 狼兄狼弟 → 機械狼 → 狼(+狼美人)
-// → 女巫 → 預言家 → 通靈師 → 石像鬼 → 獵人 → 黑市商人 → 騎士 → 獵魔人 → 守墓人 → 天亮。
+// → 黑市商人 → 女巫 → 預言家 → 通靈師 → 石像鬼 → 獵人 → 騎士 → 獵魔人 → 守墓人 → 天亮。
 // (守衛已移到夜晚最開始睜眼；攝夢人已移到守衛之後、狼之前——見 jgAfterGuardStep / jgAfterDreamcatcherStep；
-//  機械狼已移到狼人睜眼之前——見 jgAfterWolfBrotherStep；女巫已移到預言家之前——見 jgNextAfterSubWolf / jgSaveWitch / jgSaveSeer)
-// GOD_CHAIN 只涵蓋「女巫→預言家」之後、天亮之前的神職鏈：通靈師 → 石像鬼 → 獵人 → 黑市商人 → 騎士 → 獵魔人 → 守墓人。
+//  機械狼已移到狼人睜眼之前——見 jgAfterWolfBrotherStep；女巫已移到預言家之前——見 jgNextAfterSubWolf / jgSaveWitch / jgSaveSeer；
+//  黑市商人已移到狼人（含狼美人）睜眼之後、女巫之前——見 jgBlackMarketPending / jgNextWolfStep / jgNextAfterSubWolf)
+// GOD_CHAIN 只涵蓋「女巫→預言家」之後、天亮之前的神職鏈：通靈師 → 石像鬼 → 獵人 → 騎士 → 獵魔人 → 守墓人。
 const GOD_CHAIN=[
   {step:'medium-wake',      role:'medium',       check:(n,c)=>n===1?(c.medium>0):jgHasRoleAny(['medium'])},
   {step:'gargoyle-wake',    role:'gargoyle',     check:(n,c)=>n===1?(c.gargoyle>0):jgHasRoleAny(['gargoyle'])},
   {step:'hunter-wake',      role:'hunter',       check:(n,c)=>(n===1?(c.hunter>0):jgHasRoleAny(['hunter']))||jgMechWolfHunterActive()},
-  {step:'blackmarket-wake', role:'blackmarket',  check:(n,c)=>!jgBlackMarketUsed&&(n===1?(c.blackmarket>0):jgHasRoleAny(['blackmarket']))},
   {step:'knight-wake',      role:'knight',       check:(n,c)=>n===1?(c.knight>0):jgHasRoleAny(['knight'])},
   {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter'])},
   {step:'gravkeeper-wake',  role:'gravkeeper',   check:(n,c)=>n===1?(c.gravkeeper>0):jgHasRoleAny(['gravkeeper'])},
 ];
+// 黑市商人已移到狼人（含狼美人）睜眼之後、女巫之前——見 jgBlackMarketPending / jgNextWolfStep / jgNextAfterSubWolf
+function jgBlackMarketPending(){
+  return !jgBlackMarketUsed && (jgNight===1?(jgComp.blackmarket>0):jgHasRoleAny(['blackmarket']));
+}
+// 幸運兒（黑市商人交易產生）有自己獨立的睜眼步驟，緊接在黑市商人之後、女巫之前——
+// 避免跟真預言家／真女巫同一個「睜眼」時間點共用畫面而讓彼此知道對方是誰。
+// 只有查驗／毒藥技能需要每晚睜眼；獵人技能是被動的（死亡時才觸發），不需要睜眼。
+function jgLuckyOneWakePending(){
+  if(!jgLuckyOne) return false;
+  if(jgLuckyOne.gift!=='seer'&&jgLuckyOne.gift!=='witch') return false;
+  return jgNight>=jgLuckyOne.startNight;
+}
+// 狼人（含狼美人等）睜眼結束後的下一步：黑市商人 → 幸運兒 → 女巫，依序檢查誰該登場
+function jgPostWolfStep(){
+  if(jgBlackMarketPending()) return 'blackmarket-wake';
+  if(jgLuckyOneWakePending()) return 'luckyone-wake';
+  return 'witch-wake';
+}
 
 function jgNextGodStep(afterStep){
   let found=!afterStep; // if no afterStep, start from beginning
@@ -4774,6 +4957,7 @@ function jgWitchWhoChange(){
 function jgSaveWitch(){
   const isFirst=jgNight===1;
   if(isFirst){
+    if(!jgRequireFirstId('jg-witch-who','女巫')) return;
     const whoNum=parseInt((document.getElementById('jg-witch-who')||{}).value||'0');
     const name=(document.getElementById('jg-witch-name')||{}).value?.trim()||'';
     if(whoNum){
@@ -4808,8 +4992,6 @@ function jgSaveWitch(){
       }
     }
   }
-  jgRecord.luckyonePoison=(document.getElementById('jg-luckyone-poison')||{}).value?.trim()||null;
-  if(jgRecord.luckyonePoison&&jgLuckyOne&&jgLuckyOne.gift==='witch'){ jgLuckyOne.used=true; }
   if(jgTryEarlyEnd()) return;
   jgGoStep('seer-wake');
 }
@@ -5236,8 +5418,12 @@ function jgCheckWin(){
   // 使得單純看人數打平（狼=好）時情勢其實還不明朗；只有狼隊人數「嚴格多於」好人才算篤定，
   // 打平時要再等一輪，讓刀擊/交換結果沉澱後局勢明確（例：狼3好3不算，狼3好2才算）。
   const hasMagicianBoard=(jgComp&&jgComp.magician>0);
+  // 守衛板：只要場上曾經配置守衛，就算守衛已經死亡，狼隊在人數打平時也不能直接判定獲勝——
+  // 守衛存在代表接下來的夜晚仍有機會擋下狼刀，讓好人有機會撐過去、白天再抓一隻狼；
+  // 因此跟魔術師板一樣，狼隊人數要「嚴格多於」好人才算篤定，打平時要再等一輪。
+  const hasGuardBoard=(jgComp&&jgComp.guard>0);
   if(!hasMechWolfBoard){
-    if(hasMagicianBoard){
+    if(hasMagicianBoard||hasGuardBoard){
       if(aw.length>ag.length) return{winner:'wolf',msg:'狼人人數已達多數',icon:'🐺'};
     } else if(aw.length>=ag.length) return{winner:'wolf',msg:'狼人人數已達多數',icon:'🐺'};
   }
@@ -5365,7 +5551,7 @@ function renderRulesCards(){
   function makeCard(id){
     const r=ALL_ROLES[id]; if(!r) return '';
     const bCls=r.team==='wolf'?'team-wolf':'team-good';
-    return `<div class="rcol">
+    return `<div class="rcol" id="role-${id}">
       <div class="rcol-hd" onclick="toggleRcol(this)">
         <span class="rcol-icon">${r.icon}</span>
         <span class="rcol-name">${r.name}</span>
@@ -5388,6 +5574,22 @@ function renderRulesCards(){
 function toggleRcol(hd){
   hd.classList.toggle('open');
   hd.nextElementSibling.classList.toggle('open');
+}
+
+// 板子介紹裡的角色連結：跳到下方對應角色卡片並自動展開
+function jumpToRole(id){
+  const card=document.getElementById('role-'+id);
+  if(!card) return;
+  const hd=card.querySelector('.rcol-hd');
+  const body=card.querySelector('.rcol-body');
+  if(hd && !hd.classList.contains('open')){
+    hd.classList.add('open');
+    body.classList.add('open');
+  }
+  card.scrollIntoView({behavior:'smooth', block:'center'});
+  card.style.transition='background-color 0.3s';
+  card.style.backgroundColor='var(--bg3)';
+  setTimeout(()=>{ card.style.backgroundColor=''; }, 900);
 }
 
 // ── Role Picker ──
@@ -5643,6 +5845,7 @@ const GLOSSARY_TACTIC=[
   {term:'倒鉤', desc:'狼人玩家選擇不幫狼隊友，反而假裝成好人，公開站邊真預言家並為其投票，藉此隱藏自身狼人身份並建立良好形象。'},
   {term:'墊飛', desc:'狼人故意以極差、極像狼人的發言去站邊真預言家，藉由讓自己顯得像狼人，來污染真預言家的金水或團隊信用，使其看起來像「狼人在幫真預言家拉票」。'},
   {term:'奶穿', desc:'守衛的守護與女巫的解藥在同一夜晚作用於同一位玩家，「同守同救」，導致該名玩家依然死亡。'},
+  {term:'屠邊', desc:'狼人陣營不必殺光所有好人也能獲勝的其中一種方式：只要把「神職」全部殺光，或把「平民」全部殺光（任一邊清空），狼人就直接獲勝，不需要等到殺光全部好人。'},
 ];
 function renderGlossary(){
   function makeTermCard(item){
@@ -5706,7 +5909,7 @@ renderGlossary();
 // ═══════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════
-const ABBR={'民':'平民','狼':'狼人','巫':'女巫','預':'預言家','守':'守衛','獵':'獵人','通':'通靈師','混':'混血兒','王':'黑狼王','月':'血月使者','魔':'魔術師','魘':'夢魘','攝':'攝夢人','騎':'騎士'};
+const ABBR={'民':'平民','狼':'狼人','巫':'女巫','預':'預言家','守':'守衛','獵':'獵人','通':'通靈師','混':'混血兒','王':'狼王','月':'血月使者','魔':'魔術師','魘':'夢魘','攝':'攝夢人','騎':'騎士'};
 function normRole(r){return ABBR[r]||r;}
 function classify(role){
   const keys=['狼','機械','魘','血月','王'];
@@ -5734,32 +5937,39 @@ const GAMES=[
 --刀2
 --巫不救
 --驗2-1金
+
 **白天1st
 --票5
+
 **夜晚2nd
 --守2
 --刀6
 --巫不救, 毒1
 --驗6-1金
+
 **白天2nd
 --票3
+
 **夜晚3rd
 --恐4
 --守1
 --攝3
 --刀1
+
 **白天3rd
 --票4
+
 **夜晚4th
 --恐2
 --守x
 --攝死3
 --刀1
+
 **白天4th
 --票6
 ###正義聯盟獲勝###`},
 
-{id:'0716_2',date:'2026-07-16',board:'黑狼王魔術師',resultText:'邪惡陣營獲勝',winner:'evil',
+{id:'0716_2',date:'2026-07-16',board:'狼王魔術師',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
   {num:1,name:'陳玉堂',role:'民'},
   {num:2,name:'王悅謙',role:'王'},
@@ -5775,6 +5985,7 @@ const GAMES=[
 --刀4
 --救4
 --驗3
+
 **白天1st (6號順向發言)
 >票3: 4, 5, 7, 8
 >票5: 1, 3, 6, 9
@@ -5782,23 +5993,28 @@ const GAMES=[
 $PK發言
 >票5: 1, 4, 6, 9
 >票3: 7, 8
+
 **夜晚2nd
 --換3, 7
 --刀3
 --毒7
 --驗1
+
 **白天2nd (8號順向發言)
 >票6: 8, 2
 >票8: 9, 1, 4, 6
+
 **夜晚3rd
 --換4 6
 --刀9
 --驗4->6
+
 **白天3rd (1號順向發言)
 >票6: 1, 4
 >票4: 2, 6
 $PK發言
 >票4: 6
+
 **夜晚4th
 --換1, 2
 --刀4
@@ -5823,16 +6039,20 @@ $PK發言
 --驗1
 --刀9
 --救9
+
 **白天1st
 --票2
+
 **夜晚2nd
 --守9
 --機毒8
 --驗4
 --刀6
+
 **白天2nd
 --獵帶4
 --票9
+
 **夜晚3rd
 --刀5
 =====邪惡陣營獲勝=====`},
@@ -5855,27 +6075,34 @@ $PK發言
 --驗9
 --刀8
 --救8
+
 **白天1st 
 --票4
+
 **夜晚2nd
 --守8
 --機守9
 --驗8
 --刀5
 --毒x
+
 **白天2nd
 --票7
+
 **夜晚3rd
 --守9
 --機守6
 --刀9
 --毒6
+
 **白天3rd
 --票6
+
 **夜晚4th
 --守2
 --機守x
 --機械刀刀8
+
 **白天4th
 --票3
 =====好人陣營獲勝=====`},
@@ -5898,30 +6125,38 @@ $PK發言
 --驗6
 --刀9
 --救9
+
 **白天1st （5號逆向開始發言）
 >票6：全票
+
 **夜晚2nd
 --守5 
 --機驗4
 --刀3
 --驗8
 --毒x
+
 **白天2nd （2號逆向開始發言）
 >票8：全票
+
 **夜晚3rd
 --守1
 --刀5
 --驗2
+
 **白天3rd （4號逆向開始發言）
 >票2：1,4,7,9
 >票9：2
+
 **夜晚4th
 --守4
 --刀4
+
 **白天4th （9號逆向開始發言）
 >票1：9,7
 >票9：4
 >票7：1
+
 **夜晚5th
 --守x 
 --刀4
@@ -5944,17 +6179,20 @@ $PK發言
 --刀5
 --救5
 --驗3
+
 **白天1st (6號順向發言)
 >票7：1,2,5,6
 >票6：3
 >票2：7
 >票4：8
 >棄票：4
+
 **夜晚2nd
 --守5
 --刀3
 --毒6
 --驗2
+
 **白天2nd (4號順向發言)
 >票4：1,2,5,8
 >票8：4
@@ -5977,26 +6215,31 @@ $PK發言
 --刀3
 --救3
 --驗6
+
 **白天1st (2號逆向發言)
 >票5：1,3
 >票3：2,4,7
 >票4：6
 >棄票：5,8
+
 **夜晚2nd
 --刀6
 --毒x
 --驗4
+
 **白天2nd (5號逆向發言)
 >票4：全票
+
 **夜晚3rd
 --刀1
 --毒5
 --驗7
+
 **白天3rd (8號逆向發言)
 >票7：全票
 =====邪惡陣營獲勝=====`},
 
-{id:'0730_3',date:'2026-07-30',board:'黑狼王魔術師',resultText:'邪惡陣營獲勝',winner:'evil',time:'22:34',
+{id:'0730_3',date:'2026-07-30',board:'狼王魔術師',resultText:'邪惡陣營獲勝',winner:'evil',time:'22:34',
  players:[
   {num:1,name:'陳冠竹',role:'民'},
   {num:2,name:'鄭文奇',role:'獵'},
@@ -6014,6 +6257,7 @@ $PK發言
 --刀8
 --救8
 --驗1
+
 **白天1st (4號逆向發言)
 >票7：1
 >票4：2,3,10
@@ -6021,16 +6265,18 @@ $PK發言
 >票10：8
 >棄票：7
 --獵帶5
+
 **夜晚2nd
 --換3,4
 --刀7
 --毒10
+
 **白天2nd (9號逆向發言)
 >票3：4
 >票4：1,3,6,8,9
 =====邪惡陣營獲勝=====`},
 
-{id:'0730_4',date:'2026-07-30',board:'黑狼王魔術師',resultText:'邪惡陣營獲勝',winner:'evil',time:'10:46',
+{id:'0730_4',date:'2026-07-30',board:'狼王魔術師',resultText:'邪惡陣營獲勝',winner:'evil',time:'10:46',
  players:[
   {num:1,name:'巫嘉軒',role:'民'},
   {num:2,name:'鄭文奇',role:'狼'},
@@ -6048,6 +6294,7 @@ $PK發言
 --刀 1
 --救 1
 --驗 8
+
 **白天1st(7號順向發言)
 >票5：1,7,9
 >票4：2,6
@@ -6055,10 +6302,12 @@ $PK發言
 >票3：8
 >票6：4
 >棄票：10
+
 **夜晚2nd
 --換7,8
 --刀1
 --毒x
+
 **白天2nd (2號順向發言)
 >票6：2,4,9
 >票7：6
@@ -6066,6 +6315,7 @@ $PK發言
 >票2：7
 >票3：8,10
 --獵帶3
+
 **夜晚3rd
 --換x
 --刀9
@@ -6077,7 +6327,7 @@ $PK發言
   {num:2,name:'巫嘉軒',role:'狼'},
   {num:3,name:'鄭文奇',role:'狼'},
   {num:4,name:'陳冠彣',role:'平民'},
-  {num:5,name:'潘潘',role:'女巫'},
+  {num:5,name:'潘彥誠',role:'女巫'},
   {num:6,name:'許逸凡',role:'平民'},
   {num:7,name:'王悅謙',role:'通靈師'},
   {num:8,name:'蘇祐樂',role:'守衛'},
@@ -6089,6 +6339,7 @@ $PK發言
 --刀 5
 --救 x
 --通驗 5(巫)
+
 **白天1st（4號逆向開始發言）
 >5死亡
 >票6：3,4
@@ -6098,13 +6349,16 @@ $PK發言
 pk
 >票9：2,3,7
 >票6：1
+
 **夜晚2nd
 --守 x
 --刀 8
 --通驗 4(民)
+
 **白天2nd（7號逆向開始發言）
 >8死亡
 >自爆3
+
 **夜晚3rd
 --刀 7
 --通驗 x
@@ -6116,7 +6370,7 @@ pk
   {num:2,name:'巫嘉軒',role:'平民'},
   {num:3,name:'鄭文奇',role:'機械狼人'},
   {num:4,name:'陳冠彣',role:'平民'},
-  {num:5,name:'潘潘',role:'狼人'},
+  {num:5,name:'潘彥誠',role:'狼人'},
   {num:6,name:'許逸凡',role:'通靈師'},
   {num:7,name:'王悅謙',role:'守衛'},
   {num:8,name:'蘇祐樂',role:'女巫'},
@@ -6128,16 +6382,19 @@ pk
 --刀 1
 --救 1
 --通驗 5(狼)
+
 **白天1st（5號順向開始發言）
 >平安夜
 >票5：1,2,4,6,7,8,9
 >票6：3,5
+
 **夜晚2nd
 --守 6
 --機刀 2
 --刀 2
 --毒 3
 --通驗 9(狼)
+
 **白天2nd（4號順向開始發言）
 >2死亡、3死亡
 >票9：1,4,6,7,8
@@ -6145,7 +6402,7 @@ pk
 
 {id:'0803_3',date:'2026-08-03',board:'機械狼通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
-  {num:1,name:'潘潘',role:'機械守衛'},
+  {num:1,name:'潘彥誠',role:'機械守衛'},
   {num:2,name:'巫嘉軒',role:'狼人'},
   {num:3,name:'許逸凡',role:'狼人'},
   {num:4,name:'王悅謙',role:'平民'},
@@ -6161,31 +6418,37 @@ pk
 --刀 2
 --救 2
 --通驗 5(巫)
+
 **白天1st（1號逆向開始發言）
 >平安夜
 >警長競選：9號 當選警長
 >票2：1,3,5,6,8,9
 >票9：2
 >棄票：4,7
+
 **夜晚2nd
 --守 9
 --機守 4
 --刀 5
 --毒 4
 --通驗 7(民)
+
 **白天2nd（1號逆向開始發言）
 >5死亡
 >票4：1,3,6,7,8,9
 >票7：4
+
 **夜晚3rd
 --守 8
 --機守 x
 --刀 9
 --通驗 1(守)
+
 **白天3rd (3號順向開始發言）
 >9死亡
 >票7：1,6,8
 >票1：3,7
+
 **夜晚4th
 --守 1
 --機守 x
@@ -6194,7 +6457,7 @@ pk
 
 {id:'0803_4',date:'2026-08-03',board:'機械狼通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
-  {num:1,name:'潘潘',role:'女巫'},
+  {num:1,name:'潘彥誠',role:'女巫'},
   {num:2,name:'巫嘉軒',role:'守衛'},
   {num:3,name:'許逸凡',role:'通靈師'},
   {num:4,name:'陳玉堂',role:'平民'},
@@ -6210,37 +6473,45 @@ pk
 --刀 7
 --救 7
 --通驗 6(狼)
+
 **白天1st
 >平安夜
 >票6：1,2,3,4,5,7,8,9
 >票7：6
+
 **夜晚2nd
 --守 2
 --刀 7
 --毒 x
 --通驗 2(守)
+
 **白天2nd
 >7死亡
 >票8：2,4,5,9
 >棄票：1,3,8
+
 **夜晚3rd
 --守 3
 --刀 3
 --毒 2
 --通驗 5(民)
+
 **白天3rd
 >2死亡
 >票1：4
 >票4：9
 >票5：3
 >棄票：1,5
+
 **夜晚4th
 --刀 3
 --毒 x
 --通驗 1(巫)
+
 **白天4th
 >3死亡
 >票4：1,5,9
+
 **夜晚5th
 --刀 1
 --毒 x
