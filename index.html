@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>月黑風高・狼人殺</title>
+<title>🐺狼人殺小分隊🐺</title>
 <style>
 :root{
   --bg:#ffffff;--bg2:#f5f4f2;--bg3:#ebebea;--bg4:#e0dedc;
@@ -5712,6 +5712,13 @@ function classify(role){
   const keys=['狼','機械','魘','血月','王'];
   return keys.some(k=>role.includes(k))?'evil':'good';
 }
+// 統一的「顯示身分」：先去掉括號附註，機械X（不管學到什麼）一律顯示成機械狼，
+// 其餘用完整名稱（例如單字「月」會轉成「血月使者」再判斷陣營，避免漏判）
+function pdDisplayRole(rawRole){
+  const clean=rawRole.replace(/（.*?）/,'').replace(/\(.*?\)/,'');
+  if(clean.includes('機械')) return '機械狼';
+  return normRole(clean);
+}
 
 const GAMES=[
 {id:'0713_2',date:'2026-07-13',board:'夢魘攝夢人（雙身分）',resultText:'正義聯盟獲勝',winner:'good',
@@ -5873,7 +5880,7 @@ $PK發言
 --票3
 =====好人陣營獲勝=====`},
 
-{id:'0723_2',date:'2026-07-23',board:'機械狼通靈師',resultText:'狼人陣營獲勝',winner:'evil',
+{id:'0723_2',date:'2026-07-23',board:'機械狼通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
   {num:1,name:'李想成',role:'民'},
   {num:2,name:'何冠岳',role:'民'},
@@ -5918,7 +5925,7 @@ $PK發言
 **夜晚5th
 --守x 
 --刀4
-=====狼人陣營獲勝=====`},
+=====邪惡陣營獲勝=====`},
 
 {id:'0730_1',date:'2026-07-30',board:'混血兒狼王血月',resultText:'好人陣營獲勝',winner:'good',time:'21:16',
  players:[
@@ -6261,7 +6268,7 @@ const PD_FORM_ENTRIES = {
 const PD_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1q4qLbQLS4GBajy4Zh66spegaXlpC4Uo9TrkcAYLmyQQ/gviz/tq?tqx=out:csv&gid=0';
 // 送出前需要輸入的密碼，避免別人不小心點到「送出到遊玩數據」洗掉資料。
 // 想改密碼就直接改這一行的文字就好（提醒：這只是防呆用，不是真的加密，網頁原始碼打開看得到，不要用太重要的密碼）。
-const PD_SUBMIT_PASSWORD = '12071211';
+const PD_SUBMIT_PASSWORD = '狼人殺';
 const PD_NOT_CONFIGURED = u => !u || u.includes('PASTE_');
 
 // 簡易 CSV 解析（處理欄位內含逗號／換行／引號的情況，Google 試算表匯出的格式）
@@ -6367,11 +6374,10 @@ function pdRebuildAndRender(){
   GAMES.forEach(g=>{
     g.players.forEach(pl=>{
       const p=getP(pl.name);
-      const roleClean=pl.role.replace(/（.*?）/,'').replace(/\(.*?\)/,'');
-      const roleDisp=normRole(roleClean);
+      const roleDisp=pdDisplayRole(pl.role);
       let result='unclear', camp=null;
       if(!g.unclear){
-        camp=classify(pl.role);
+        camp=classify(roleDisp);
         result = (camp===g.winner) ? 'win':'lose';
         p.games++;
         p.camp[camp]++;
@@ -6408,7 +6414,7 @@ function pdRebuildAndRender(){
   const lb=document.getElementById('leaderboard');
   lb.innerHTML=playerList.map((p,i)=>{
     const wr=p.games?Math.round(p.wins/p.games*100):0;
-    const topRoles=Object.entries(p.roleCounts).sort((a,b)=>b[1]-a[1]).slice(0,4)
+    const topRoles=Object.entries(p.roleCounts).sort((a,b)=>b[1]-a[1])
       .map(([r,c])=>`<span class="chip">${r} ×${c}</span>`).join('');
     const histSorted=[...p.history].sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
     const histHtml=histSorted.map(h=>{
@@ -6481,9 +6487,8 @@ function pdRenderGames(){
   list.innerHTML=filtered.map((g,i)=>{
     const badgeCls = g.unclear?'bu':(g.winner==='evil'?'bw':'bv');
     const roster=g.players.map(p=>{
-      const clean=p.role.replace(/（.*?）/,'').replace(/\(.*?\)/,'');
-      const disp=normRole(clean);
-      const camp=g.unclear?null:classify(p.role);
+      const disp=pdDisplayRole(p.role);
+      const camp=g.unclear?null:classify(disp);
       const badge=g.unclear?'':`<span class="badge ${camp==='evil'?'bw':'bv'}" style="padding:2px 8px;font-size:10px;">${camp==='evil'?'邪惡':'好人'}</span>`;
       return `<tr><td>${p.num}</td><td>${p.name}</td><td>${disp}${p.role.includes('（')?'<span style="color:var(--text3);font-size:11px;"> '+p.role.match(/（(.*?)）/)[1]+'</span>':''}</td><td>${badge}</td></tr>`;
     }).join('');
