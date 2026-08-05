@@ -221,6 +221,23 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rpick .rp-ico{font-size:22px;}
 .rpick .rp-nm{font-size:11px;font-weight:700;margin-top:4px;color:var(--text);}
 .rpick .rp-cnt{position:absolute;top:4px;right:6px;font-size:12px;font-weight:800;color:var(--accent);}
+.rpick.locked{cursor:default;border-color:var(--gold);background:rgba(154,124,40,0.08);}
+.rpick.locked:active{opacity:1;}
+.rpick .rp-lock{position:absolute;top:4px;right:6px;font-size:11px;}
+
+/* ── 玩家名單設定：姓名輸入＋自動比對 ── */
+.rname-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;}
+.rname-num{width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;}
+.rname-field{flex:1;position:relative;}
+.rname-field input{width:100%;}
+.rname-suggest{position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);max-height:190px;overflow-y:auto;z-index:50;box-shadow:0 6px 16px rgba(0,0,0,0.15);display:none;}
+.rname-suggest-item{padding:11px 12px;font-size:14px;cursor:pointer;border-bottom:1px solid var(--border);-webkit-user-select:none;user-select:none;}
+.rname-suggest-item:last-child{border-bottom:none;}
+.rname-suggest-item:active{background:var(--bg3);}
+.rname-suggest-item.dup{color:var(--text3);}
+.rname-suggest-item .rname-tag{float:right;font-size:11px;color:var(--text3);}
+.rname-btn{width:38px;height:38px;flex-shrink:0;padding:0;margin:0;border-radius:10px;font-size:15px;}
+.rname-dup-warn{font-size:12px;color:#922418;margin:-2px 0 10px;}
 
 /* ══════ 遊玩數據分頁專用樣式 ══════ */
 
@@ -515,7 +532,7 @@ select{
   <div id="jg-board-preset-row" style="margin-top:14px;">
     <label for="jg-board-preset">選擇板子</label>
     <select id="jg-board-preset" onchange="jgSetBoardPreset(this.value)">
-      <option value="custom">自訂角色（排列組合尚未逐一測試過，遇到狀況請用下方「問題回報」回報）</option>
+      <option value="custom">自訂角色（可能有bug，遇到狀況請用「問題回報」回報）</option>
       <option value="mechwolf_medium">機械狼+通靈師</option>
       <option value="dreamcatcher_nightmare">攝夢人+夢魘</option>
       <option value="blackmarket_wolfbrothers">黑市商人+狼兄狼弟</option>
@@ -1156,73 +1173,112 @@ function jgOpenRosterSetup(){
   document.getElementById('jg-p-roster').classList.add('on');
 }
 
+// 每一列：號碼＋姓名輸入框（打一兩個字就用比對出候選人名單，選錯了可以直接手動改字）
+// ＋「⇄交換」（跟另一個號碼互換姓名，不用先清空）＋「✕清空」按鈕。
 function jgRenderRosterSetupRows(){
   const box=document.getElementById('jg-roster-setup-rows');
   if(!box) return;
-  let html='';
+  let html='<button type="button" class="ghost" style="margin:0 0 12px;" onclick="jgRosterClearAll()">🗑️ 清空全部姓名</button>';
   for(let i=1;i<=jgTotal;i++){
     const cur=jgPlayerNames[i]||'';
-    const isPreset=JG_NAME_PRESET.includes(cur);
-    html+='<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">'
-      +'<div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;">'+i+'</div>'
-      +'<select id="jg-roster-preset-'+i+'" style="flex:1;" onchange="jgRosterPresetChange('+i+')">'
-      +'<option value="">— 選擇姓名 —</option>'
-      +JG_NAME_PRESET.map(nm=>'<option value="'+nm+'"'+(cur===nm?' selected':'')+'>'+nm+'</option>').join('')
-      +'<option value="__custom__"'+(cur&&!isPreset?' selected':'')+'>其他（自行輸入）</option>'
-      +'</select>'
-      +'<input type="text" id="jg-roster-custom-'+i+'" placeholder="自訂姓名" value="'+(cur&&!isPreset?cur:'')+'" style="flex:1;display:'+(cur&&!isPreset?'block':'none')+';"/>'
+    html+='<div class="rname-row">'
+      +'<div class="rname-num">'+i+'</div>'
+      +'<div class="rname-field">'
+      +'<input type="text" id="jg-roster-input-'+i+'" placeholder="輸入姓名或其中一個字" value="'+cur.replace(/"/g,'&quot;')+'" '
+      +'oninput="jgRosterInputChange('+i+')" onfocus="jgRosterInputChange('+i+')" onblur="jgRosterBlur('+i+')" autocomplete="off"/>'
+      +'<div class="rname-suggest" id="jg-roster-suggest-'+i+'"></div>'
+      +'</div>'
+      +'<button type="button" class="rname-btn" onclick="jgRosterClear('+i+')" title="清空這一格">✕</button>'
       +'</div>';
   }
   box.innerHTML=html;
-  // Now that the selects exist with their restored starting values, disable any preset
-  // name that's already taken by a different player number.
-  jgRosterRefreshOptions();
+  jgRosterHighlightDup();
 }
 
-// Rebuild every row's <option> list so a preset name already chosen by a DIFFERENT player
-// number is disabled (greyed out, unselectable) everywhere else — prevents duplicate names.
-function jgRosterRefreshOptions(){
-  const usedByOther={};
+// 打字比對：輸入的字只要出現在候選姓名裡的任何位置就列為建議（例如打「竹」會同時比對出
+// 「陳冠竹」「林芸竹」），法官點一下就套用；找不到或比對錯誤都能直接把輸入框的字改掉。
+// 欄位是空的（例如剛點進去還沒打字）時，直接列出完整名單，等同於一個可點選的選單；
+// 開始打字後名單會即時篩選縮小，兩種用法可以同時搭配使用。
+function jgRosterInputChange(i){
+  const inp=document.getElementById('jg-roster-input-'+i);
+  const box=document.getElementById('jg-roster-suggest-'+i);
+  if(!inp||!box) return;
+  const q=inp.value.trim();
+  const usedElsewhere={};
+  for(let n=1;n<=jgTotal;n++){
+    if(n===i) continue;
+    const v=(document.getElementById('jg-roster-input-'+n)||{}).value?.trim();
+    if(v) usedElsewhere[v]=n;
+  }
+  const pool=q?JG_NAME_PRESET.filter(nm=>nm.includes(q)):JG_NAME_PRESET;
+  if(!pool.length){ box.style.display='none'; box.innerHTML=''; jgRosterHighlightDup(); return; }
+  box.innerHTML=pool.map(nm=>{
+    const takenBy=usedElsewhere[nm];
+    return '<div class="rname-suggest-item'+(takenBy?' dup':'')+'" onclick="jgRosterPick('+i+',\''+nm+'\')">'+nm
+      +(takenBy?'<span class="rname-tag">'+takenBy+'號已使用</span>':'')+'</div>';
+  }).join('');
+  box.style.display='block';
+  jgRosterHighlightDup();
+}
+
+function jgRosterPick(i, name){
+  const inp=document.getElementById('jg-roster-input-'+i);
+  if(inp) inp.value=name;
+  jgRosterHideSuggest(i);
+  jgRosterHighlightDup();
+}
+
+function jgRosterHideSuggest(i){
+  const box=document.getElementById('jg-roster-suggest-'+i);
+  if(box){ box.style.display='none'; box.innerHTML=''; }
+}
+
+// 用短延遲讓「點建議項目」的 click 事件能在 blur 隱藏建議清單之前先觸發
+function jgRosterBlur(i){
+  setTimeout(()=>jgRosterHideSuggest(i),150);
+}
+
+// 同姓名只用邊框標紅提醒（不是強制擋下），因為換號碼過程中本來就會短暫重複，
+// 讓法官自己決定要不要處理，不用被系統卡住。
+function jgRosterHighlightDup(){
+  const counts={};
   for(let i=1;i<=jgTotal;i++){
-    const sel=document.getElementById('jg-roster-preset-'+i);
-    if(sel&&sel.value&&sel.value!=='__custom__') usedByOther[i]=sel.value;
+    const v=(document.getElementById('jg-roster-input-'+i)||{}).value?.trim();
+    if(v) counts[v]=(counts[v]||0)+1;
   }
   for(let i=1;i<=jgTotal;i++){
-    const sel=document.getElementById('jg-roster-preset-'+i);
-    if(!sel) continue;
-    const cur=sel.value;
-    const takenElsewhere=new Set(Object.entries(usedByOther).filter(([n])=>parseInt(n)!==i).map(([,v])=>v));
-    let opts='<option value="">— 選擇姓名 —</option>';
-    opts+=JG_NAME_PRESET.map(nm=>{
-      const disabled=takenElsewhere.has(nm)&&cur!==nm;
-      return '<option value="'+nm+'"'+(cur===nm?' selected':'')+(disabled?' disabled':'')+'>'+nm+(disabled?'（已選）':'')+'</option>';
-    }).join('');
-    opts+='<option value="__custom__"'+(cur==='__custom__'?' selected':'')+'>其他（自行輸入）</option>';
-    sel.innerHTML=opts;
+    const inp=document.getElementById('jg-roster-input-'+i);
+    if(!inp) continue;
+    const v=inp.value.trim();
+    inp.style.borderColor=(v&&counts[v]>1)?'var(--wolf)':'';
   }
 }
 
-function jgRosterPresetChange(num){
-  const sel=document.getElementById('jg-roster-preset-'+num);
-  const custom=document.getElementById('jg-roster-custom-'+num);
-  if(!sel||!custom) return;
-  custom.style.display=sel.value==='__custom__'?'block':'none';
-  jgRosterRefreshOptions();
+function jgRosterClear(i){
+  const inp=document.getElementById('jg-roster-input-'+i);
+  if(!inp) return;
+  inp.value='';
+  jgRosterHideSuggest(i);
+  jgRosterHighlightDup();
+  inp.focus();
+}
+
+function jgRosterClearAll(){
+  if(!confirm('確定要清空所有已設定的姓名嗎？')) return;
+  for(let i=1;i<=jgTotal;i++){
+    const inp=document.getElementById('jg-roster-input-'+i);
+    if(inp) inp.value='';
+    jgRosterHideSuggest(i);
+  }
+  jgRosterHighlightDup();
 }
 
 function jgApplyRosterSetupNames(){
   for(let i=1;i<=jgTotal;i++){
-    const sel=document.getElementById('jg-roster-preset-'+i);
-    const custom=document.getElementById('jg-roster-custom-'+i);
-    if(!sel) continue;
-    if(sel.value==='__custom__'){
-      const v=(custom?.value||'').trim();
-      if(v) jgPlayerNames[i]=v; else delete jgPlayerNames[i];
-    } else if(sel.value){
-      jgPlayerNames[i]=sel.value;
-    } else {
-      delete jgPlayerNames[i];
-    }
+    const inp=document.getElementById('jg-roster-input-'+i);
+    if(!inp) continue;
+    const v=inp.value.trim();
+    if(v) jgPlayerNames[i]=v; else delete jgPlayerNames[i];
   }
 }
 function jgSaveRosterSetup(){
@@ -5541,7 +5597,9 @@ const JG_BOARD_PRESETS = {
 };
 // 板子的基本角色只開放這兩組：狼隊（不限一個）、神職＋混血兒（各自最多一個）
 const JG_PRESET_WOLF_BASE=['wolf','wolfking'];
-const JG_PRESET_GOD_BASE=['hybrid','seer','witch','hunter','guard'];
+// 混血兒不放進這個通用清單：只有在板子本身就固定包含混血兒（見 JG_BOARD_PRESETS）時，
+// 才會以「鎖定」格子出現在該板子裡，不會讓混血兒出現在其他跟他無關的板子讓大家誤選。
+const JG_PRESET_GOD_BASE=['seer','witch','hunter','guard'];
 
 // Role picker state: {roleId: count}
 let jgRolePick = {wolf:2, villager:2, seer:1, witch:1};
@@ -5758,8 +5816,19 @@ function jgApplyPresetDefaults(n){
   jgRolePick=rp;
 }
 
-// 板子模式的精簡選角畫面：固定角色顯示為鎖定提示（不可在此移除），
-// 狼隊【狼人、狼王、平民】可自由調整數量；神職／混血兒【混血兒、預言家、女巫、獵人、守衛】各自最多一個。
+// 把板子固定包含的角色畫成「鎖定」格子：跟一般選角格子長得一樣、有打勾，
+// 但不能點掉（沒有 onclick），並用金色邊框＋🔒標示跟一般可選的格子區分開來。
+function jgPresetLockedTileHtml(id){
+  const r=ALL_ROLES[id];
+  if(!r) return '';
+  return '<div class="rpick sel locked" title="本板固定包含，無法取消">'
+    +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
+    +'<span class="rp-lock">🔒</span></div>';
+}
+
+// 板子模式的精簡選角畫面：固定角色直接以「鎖定」格子顯示在對應陣營區塊裡（不再另外用一行文字
+// 說明，避免大家補角色時看不到固定角色、以為要自己重選），狼隊【狼人、狼王、平民】可自由調整
+// 數量；神職【預言家、女巫、獵人、守衛】各自最多一個；混血兒只有在該板子本身固定包含時才會出現。
 function renderPresetPicker(){
   const el=document.getElementById('jg-preset-picker');
   if(!el) return;
@@ -5767,36 +5836,40 @@ function renderPresetPicker(){
   if(!preset) return;
   const state=jgRolePick;
   const fixedKeys=Object.keys(preset.fixed);
-  const fixedLabel=fixedKeys.map(k=>(ALL_ROLES[k]?ALL_ROLES[k].icon+' '+ALL_ROLES[k].name:k)+' ×'+preset.fixed[k]).join('、');
+  const fixedWolfKeys=fixedKeys.filter(k=>WOLF_ROLES.includes(k));
+  const fixedGodKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&k!=='villager');
   const wolfCount=state.wolf||0;
   const wolfkingCount=state.wolfking||0;
   const vilCount=state.villager||0;
 
-  let html='<div class="info" style="font-size:12px;margin-bottom:8px;">本板固定包含：'+fixedLabel+'</div>';
+  let html='';
 
   html+='<div style="font-size:11px;font-weight:700;color:var(--wolf);margin:6px 0 4px;letter-spacing:0.5px;">狼人陣營</div>';
-  html+='<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:10px;">';
-  html+='<div style="display:flex;align-items:center;gap:8px;">'
+  const wolfTiles=fixedWolfKeys.map(jgPresetLockedTileHtml).join('')
+    +(!fixedKeys.includes('wolfking')
+      ?'<div class="rpick'+(wolfkingCount>0?' sel':'')+'" onclick="jgPresetToggleWolfking()">'
+        +'<span class="rp-ico">👑</span><div class="rp-nm">狼王</div>'
+        +(wolfkingCount>0?'<span class="rp-cnt">✓</span>':'')+'</div>'
+      :'');
+  if(wolfTiles){
+    html+='<div class="rpick-grid" style="margin-bottom:6px;">'+wolfTiles+'</div>';
+  }
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
     +'<button onclick="jgPresetAdjWolf(-1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">−</button>'
     +'<div style="font-size:18px;font-weight:800;min-width:24px;text-align:center;">'+wolfCount+'</div>'
     +'<button onclick="jgPresetAdjWolf(1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">＋</button>'
     +'<span style="font-size:13px;color:var(--text2);">狼人</span></div>';
-  if(!fixedKeys.includes('wolfking')){
-    html+='<div class="rpick'+(wolfkingCount>0?' sel':'')+'" style="min-width:64px;" onclick="jgPresetToggleWolfking()">'
-      +'<span class="rp-ico">👑</span><div class="rp-nm">狼王</div>'
-      +(wolfkingCount>0?'<span class="rp-cnt">✓</span>':'')+'</div>';
-  }
-  html+='</div>';
 
   html+='<div style="font-size:11px;font-weight:700;color:var(--vil);margin:6px 0 4px;letter-spacing:0.5px;">平民</div>';
-  html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
-    +'<button onclick="jgPresetAdjVillager(-1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">−</button>'
-    +'<div style="font-size:22px;font-weight:800;min-width:30px;text-align:center;">'+vilCount+'</div>'
-    +'<button onclick="jgPresetAdjVillager(1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">＋</button>'
+  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+    +'<button onclick="jgPresetAdjVillager(-1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">−</button>'
+    +'<div style="font-size:18px;font-weight:800;min-width:24px;text-align:center;">'+vilCount+'</div>'
+    +'<button onclick="jgPresetAdjVillager(1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">＋</button>'
     +'<span style="font-size:13px;color:var(--text2);">平民</span></div>';
 
-  html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職／混血兒（各自最多一個，點選加入／移除）</div>';
+  html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職</div>';
   html+='<div class="rpick-grid">';
+  fixedGodKeys.forEach(id=>{ html+=jgPresetLockedTileHtml(id); });
   JG_PRESET_GOD_BASE.forEach(id=>{
     if(fixedKeys.includes(id)) return; // 這個板子已經把這個角色當固定角色了，不重複顯示
     const r=ALL_ROLES[id]; const cnt=state[id]||0;
