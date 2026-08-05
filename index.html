@@ -294,6 +294,10 @@ h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;}
 .hist-res.unclear{background:var(--text3);}
 .hist-role{font-weight:700;color:var(--text);flex-shrink:0;}
 .hist-date{margin-left:auto;color:var(--text3);font-size:11px;flex-shrink:0;}
+.pd-formula-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:10px;font-size:12.5px;color:var(--text2);line-height:1.7;}
+.pd-formula-box b{color:var(--text);}
+.pd-formula-box code{display:block;background:var(--bg3);border-radius:6px;padding:8px 10px;margin:6px 0;font-size:12px;color:var(--text);white-space:pre-wrap;}
+.pd-formula-box .pd-note{font-size:11.5px;color:var(--text3);margin-top:4px;}
 .filters{display:flex;gap:8px;margin-bottom:12px;}
 select{
   flex:1;padding:11px 10px;font-size:13px;color:var(--text);
@@ -608,7 +612,15 @@ select{
   <div class="chip-row" id="ov-boards" style="margin-top:14px;"></div>
 
   <!-- 排行榜 -->
-  <div class="section-title">玩家排行榜（勝率）</div>
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>狼人殺小達人排行榜</span>
+    <span onclick="pdManualRefresh()" style="cursor:pointer;color:var(--text2);text-transform:none;letter-spacing:0;font-size:12px;">🔄 重新整理</span>
+  </div>
+  <div class="btn2" id="pd-sort-toggle">
+    <button type="button" id="pd-sort-simple" onclick="pdSetSortMode('simple')">簡單勝率</button>
+    <button type="button" id="pd-sort-bayes" class="primary" onclick="pdSetSortMode('bayes')">Bayesian Score</button>
+  </div>
+  <div class="pd-formula-box" id="pd-formula-box"></div>
   <div class="card" id="leaderboard"></div>
 
   <!-- 場次篩選 -->
@@ -691,6 +703,7 @@ function switchTab(id){
     b.classList.toggle('active',['t-rules','t-glossary','t-judge','t-data','t-report'][i]===id);
   });
   if(id==='t-report') jgLoadReportForm();
+  if(id==='t-data') pdLoadCloudGames(); // 每次切到「遊玩數據」分頁都重新抓一次雲端最新場次
   window.scrollTo(0,0);
 }
 
@@ -6809,6 +6822,30 @@ function pdSubmitGameRecord(){
 }
 
 // ═══════════════════════════════════════════
+// 排行榜排序模式：'simple'＝簡單勝率，'bayes'＝貝葉斯分數
+// ═══════════════════════════════════════════
+let PD_SORT_MODE='bayes';
+const PD_BAYES_C=5; // 信心場數常數：場次少於這個數字時，分數會明顯被拉向陣營平均值
+
+function pdSetSortMode(mode){
+  PD_SORT_MODE=mode;
+  document.getElementById('pd-sort-simple').classList.toggle('primary', mode==='simple');
+  document.getElementById('pd-sort-bayes').classList.toggle('primary', mode==='bayes');
+  pdRebuildAndRender();
+}
+
+// 手動重新整理雲端場次（點排行榜標題旁的 🔄）
+async function pdManualRefresh(){
+  const el=document.querySelector('[onclick="pdManualRefresh()"]');
+  const original=el?el.textContent:'';
+  if(el) el.textContent='🔄 更新中…';
+  const before=GAMES.length;
+  await pdLoadCloudGames();
+  if(el) el.textContent = GAMES.length>before ? `✅ 已更新（新增 ${GAMES.length-before} 場）` : '✅ 已是最新';
+  setTimeout(()=>{ if(el) el.textContent=original||'🔄 重新整理'; }, 2500);
+}
+
+// ═══════════════════════════════════════════
 // STATS + RENDER（可重複呼叫：第一次用內建歷史資料render，
 // 抓到雲端新場次之後會再呼叫一次重新render）
 // ═══════════════════════════════════════════
@@ -6836,17 +6873,33 @@ function pdRebuildAndRender(){
       p.history.push({date:g.date,label:g.id,board:g.board,role:roleDisp,result,resultText:g.resultText});
     });
   });
-  const playerList=Object.values(players).sort((a,b)=>{
-    const wa=a.games?a.wins/a.games:0, wb=b.games?b.wins/b.games:0;
-    if(wb!==wa) return wb-wa;
-    return b.games-a.games;
-  });
-
   const clearGames=GAMES.filter(g=>!g.unclear);
   const goodWins=clearGames.filter(g=>g.winner==='good').length;
   const evilWins=clearGames.filter(g=>g.winner==='evil').length;
   const boardCounts={};
   GAMES.forEach(g=>boardCounts[g.board]=(boardCounts[g.board]||0)+1);
+
+  // 全站基礎勝率（貝葉斯分數的先驗值 m），會隨場次自動更新
+  const mGood=clearGames.length?goodWins/clearGames.length:0.5;
+  const mEvil=clearGames.length?evilWins/clearGames.length:0.5;
+  const C=PD_BAYES_C;
+
+  Object.values(players).forEach(p=>{
+    const ng=p.camp.good, wg=p.campWins.good, ne=p.camp.evil, we=p.campWins.evil;
+    const scoreGood=(C*mGood+wg)/(C+ng);
+    const scoreEvil=(C*mEvil+we)/(C+ne);
+    p.bayesScore = p.games ? (scoreGood*ng + scoreEvil*ne)/p.games : 0;
+  });
+
+  const playerList=Object.values(players).sort((a,b)=>{
+    if(PD_SORT_MODE==='bayes'){
+      if(b.bayesScore!==a.bayesScore) return b.bayesScore-a.bayesScore;
+      return b.games-a.games;
+    }
+    const wa=a.games?a.wins/a.games:0, wb=b.games?b.wins/b.games:0;
+    if(wb!==wa) return wb-wa;
+    return b.games-a.games;
+  });
 
   // ── 總覽 ──
   document.getElementById('ov-games').textContent=GAMES.length;
@@ -6859,10 +6912,31 @@ function pdRebuildAndRender(){
     .sort((a,b)=>b[1]-a[1])
     .map(([b,c])=>`<span class="chip">${b} ×${c}</span>`).join('');
 
+  // ── 排行榜排序方式說明 ──
+  const mGoodPct=Math.round(mGood*100), mEvilPct=Math.round(mEvil*100);
+  const formulaBox=document.getElementById('pd-formula-box');
+  if(PD_SORT_MODE==='simple'){
+    formulaBox.innerHTML=`
+      <b>簡單勝率</b>：直接用「勝場 ÷ 總場數」排序。
+      <code>勝率 ＝ 勝場數 ／ 總場數</code>
+      <div class="pd-note">場次相同時，勝率高者排前面；勝率也相同則場次多者排前面。</div>`;
+  } else {
+    formulaBox.innerHTML=`
+      <b>Bayesian Score</b>：把「場次多寡」也算進去，場次太少時分數會被拉回陣營平均值，場次越多就越接近真實勝率。
+      <code>好人校正勝率 ＝ (C × m好人 ＋ 好人勝場) ／ (C ＋ 好人總場)
+邪惡校正勝率 ＝ (C × m邪惡 ＋ 邪惡勝場) ／ (C ＋ 邪惡總場)
+Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 × 邪惡場次) ／ 總場次</code>
+      其中 <b>m好人</b>、<b>m邪惡</b> 是目前全站好人／邪惡陣營的整體勝率（依全站 ${clearGames.length} 場自動計算：好人 ${mGoodPct}%、邪惡 ${mEvilPct}%），<b>C＝${C}</b> 是「信心場數」，場次不到 C 場時分數會比較保守。
+      <div class="pd-note">好人局與邪惡局的校正勝率，會依玩家實際打好人／邪惡的場次比例加權平均。</div>`;
+  }
+
   // ── 排行榜 ──
   const lb=document.getElementById('leaderboard');
   lb.innerHTML=playerList.map((p,i)=>{
     const wr=p.games?Math.round(p.wins/p.games*100):0;
+    const bayesPct=Math.round(p.bayesScore*100);
+    const scoreLabel=PD_SORT_MODE==='bayes'?'Bayesian Score':'勝率';
+    const scoreVal=p.games?(PD_SORT_MODE==='bayes'?bayesPct+'%':wr+'%'):'–';
     const topRoles=Object.entries(p.roleCounts).sort((a,b)=>b[1]-a[1])
       .map(([r,c])=>`<span class="chip">${r} ×${c}</span>`).join('');
     const histSorted=[...p.history].sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
@@ -6880,8 +6954,8 @@ function pdRebuildAndRender(){
         <div class="nm-sub">${p.games} 場・${p.wins} 勝</div>
       </div>
       <div>
-        <div class="wr">${p.games?wr+'%':'–'}</div>
-        <div class="wr-sub">勝率</div>
+        <div class="wr">${scoreVal}</div>
+        <div class="wr-sub">${scoreLabel}</div>
       </div>
       <div class="arrow" id="pd-arrow-${i}">▶</div>
     </div>
