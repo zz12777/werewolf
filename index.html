@@ -501,8 +501,8 @@ select{
       <span class="rcol-arrow">▶</span>
     </div>
     <div class="rcol-body">
-      <strong>結果判定：</strong>多數票者出局。<br>
-      <strong>平票怎麼辦？</strong>若最高票出現平票，自動進入 PK：平票玩家再次發言，其餘玩家重新投票一次，票投給任一位 PK 候選人。
+            <strong>結果判定：</strong>多數票者出局。<br>
+            <strong>平票怎麼辦？</strong>若最高票出現平票，自動進入 PK：平票玩家再次發言，其餘玩家重新投票一次，票投給任一位 PK 候選人。
     </div>
   </div>
 </div>
@@ -526,8 +526,8 @@ select{
   </div>
   <div class="info" id="jg-dual-mode-desc" style="display:none;font-size:12px;margin-top:8px;">雙身分模式：每人 2 張牌，第一張陣亡才睜眼用第二張；白天可直接換上第二張牌繼續發言。可選角色：民／預／巫／守／獵／騎士／狼／狼王／攝夢人／夢魘。</div>
   <input type="checkbox" id="jg-dual-mode" style="display:none;"/>
-  <label id="jg-count-label" style="margin-top:12px;">玩家人數（6～12）</label>
-  <input type="number" id="jg-count" min="6" max="12" value="6" inputmode="numeric" oninput="jgUpdateComp()"/>
+  <label id="jg-count-label" style="margin-top:12px;">玩家人數（6～14）</label>
+  <input type="number" id="jg-count" min="6" max="14" value="6" inputmode="numeric" oninput="jgUpdateComp()"/>
   <div id="jg-board-preset-row" style="margin-top:14px;">
     <label for="jg-board-preset">選擇板子</label>
     <select id="jg-board-preset" onchange="jgSetBoardPreset(this.value)">
@@ -725,6 +725,51 @@ function jgAutoGameTitle(){
   return specialRoles.map(r=>jgFullRoleName(r)).join('');
 }
 
+// 把 jgSheriffLogLines（依序累積的候選人／發言順序／退水／各輪投票原始行）
+// 整理成分組後的「**警長競選」區塊文字，跟白天流水帳分開、獨立輸出。
+function jgFormatSheriffBlock(){
+  if(!jgSheriffCampaignHappened && !jgSheriffSelfDestruct) return ''; // 沒有人上警，不輸出這個區塊
+  let candidatesNums=null, startNum=null, dirLabel=null, withdrawals=[];
+  const round1Votes=[], pkVotes=[];
+  let round1Abstain=null, pkAbstain=null, noSheriffNote=null;
+  jgSheriffLogLines.forEach(l=>{
+    let m;
+    if((m=l.match(/^候選人：(.+)號$/))) candidatesNums=m[1];
+    else if((m=l.match(/發言順序：.*（(逆時針|順時針)，從\s*(\d+)\s*號開始）/))){ dirLabel=m[1]; startNum=m[2]; }
+    else if((m=l.match(/^退水：(\d+)號$/))) withdrawals.push(m[1]);
+    else if((m=l.match(/^PK警長票(\d+)：(.+)$/))) pkVotes.push([m[1],m[2]]);
+    else if((m=l.match(/^警長票(\d+)：(.+)$/))) round1Votes.push([m[1],m[2]]);
+    else if((m=l.match(/^PK棄票：(.+)$/))) pkAbstain=m[1];
+    else if((m=l.match(/^棄票：(.+)$/))) round1Abstain=m[1];
+    else if(l.startsWith('全數 0 票')||l.startsWith('PK 後再度平票')) noSheriffNote=l;
+  });
+  let out='**警長競選\n';
+  if(candidatesNums){
+    let head='>候選人：'+candidatesNums+'號';
+    if(startNum) head+='（'+startNum+' 號開始'+(dirLabel||'')+'發表政見）';
+    out+=head+'\n';
+  }
+  if(withdrawals.length>0) out+='>退水：'+withdrawals.join('、')+'號\n';
+  if(round1Votes.length>0){
+    out+='>投票\n';
+    round1Votes.forEach(([t,vs])=>{
+      out+='--警長票'+t+'：'+vs+((pkVotes.length===0&&jgSheriffElectedNum==t)?'（當選警長）':'')+'\n';
+    });
+    if(round1Abstain) out+='--棄票：'+round1Abstain+'\n';
+  }
+  if(pkVotes.length>0){
+    out+='>PK\n';
+    pkVotes.forEach(([t,vs])=>{
+      out+='--警長票'+t+'：'+vs+(jgSheriffElectedNum==t?'（當選警長）':'')+'\n';
+    });
+    if(pkAbstain) out+='--棄票：'+pkAbstain+'\n';
+  }
+  if(jgSheriffSelfDestruct) out+='>'+(jgSheriffSelfDestructNum||'x')+'號 自爆吞警徽，本局無警長\n';
+  else if(!jgSheriffElectedNum && noSheriffNote) out+='>'+noSheriffNote+'\n';
+  else if(!jgSheriffElectedNum && jgSheriffElectionDone && round1Votes.length===0 && pkVotes.length===0) out+='>平票或全數退水，本局無警長\n';
+  return out;
+}
+
 // Builds the full copy-pasteable text-file export described by the judge:
 // roster header, then each night/day's abbreviated action log, ending with the result.
 function jgExportGameLog(){
@@ -743,6 +788,10 @@ function jgExportGameLog(){
     if(idx>0) out+='\n';
     out+='**夜晚'+ordSuffix(n)+'\n';
     (jgNightLog[n]||[]).forEach(l=>{ out+='--'+l+'\n'; });
+    if(n===1&&jgSheriffEnabled){
+      const sheriffBlock=jgFormatSheriffBlock();
+      if(sheriffBlock) out+='\n'+sheriffBlock;
+    }
     if(jgDayLog[n]){
       const meta=jgDayMeta[n];
       const dirLabel=meta&&meta.dir?(meta.dir==='逆'?'逆向':'順向'):'';
@@ -751,12 +800,6 @@ function jgExportGameLog(){
       const dd=jgDawnDeaths[n]||{died:[],swapped:[]};
       const dparts=[...(dd.died||[]).map(x=>x+'死亡'), ...(dd.swapped||[]).map(x=>x+'死亡，請使用第二身分')];
       out+='>'+(dparts.length===0?'平安夜':dparts.join('、'))+'\n';
-      if(n===1&&jgSheriffEnabled){
-        jgSheriffLogLines.forEach(l=>{ out+='>警長競選：'+l+'\n'; });
-        if(jgSheriffSelfDestruct) out+='>警長競選：'+(jgSheriffSelfDestructNum||'x')+'號 自爆吞警徽，本局無警長\n';
-        else if(jgSheriffElectedNum) out+='>警長競選：'+jgSheriffElectedNum+'號 當選警長\n';
-        else if(jgSheriffElectionDone) out+='>警長競選：平票或全數退水，本局無警長\n';
-      }
       jgDayLog[n].forEach(l=>{ out+='>'+l+'\n'; });
     }
   });
@@ -1113,14 +1156,14 @@ function jgSetMode(isDual){
   }
   const countInput=document.getElementById('jg-count');
   const label=document.getElementById('jg-count-label');
-  const min=isDual?4:6, max=isDual?7:12;
+  const min=isDual?4:6, max=isDual?7:14;
   let n=min;
   if(countInput){
     countInput.min=min; countInput.max=max;
     n=Math.min(max,Math.max(min,parseInt(countInput.value)||min));
     countInput.value=n;
   }
-  if(label) label.textContent=isDual?'玩家人數（4～7，雙身分共 8～14 個角色）':'玩家人數（6～12）';
+  if(label) label.textContent=isDual?'玩家人數（4～7，雙身分共 8～14 個角色）':'玩家人數（6～14）';
   jgRolePick=Object.assign({}, isDual?(DEFAULT_COMP_DUAL[n]||DEFAULT_COMP_DUAL[4]):(DEFAULT_COMP[n]||DEFAULT_COMP[6]));
   jgRolePick._init=true;
   jgUpdateComp();
@@ -1128,7 +1171,7 @@ function jgSetMode(isDual){
 
 function jgUpdateComp(){
   const isDual=jgSetupDualMode;
-  const min=isDual?4:6, max=isDual?7:12;
+  const min=isDual?4:6, max=isDual?7:14;
   const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count')?.value)||min));
   if(!jgRolePick._init){
     if(!isDual&&jgBoardPreset!=='custom'){ jgApplyPresetDefaults(n); }
@@ -1164,7 +1207,7 @@ function jgUpdateComp(){
 // ── 玩家名單設定：讓法官在開局前先指定每個號碼是誰 ──
 function jgOpenRosterSetup(){
   const isDual=jgSetupDualMode;
-  const min=isDual?4:6, max=isDual?7:12;
+  const min=isDual?4:6, max=isDual?7:14;
   const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count')?.value)||min));
   jgTotal=n;
   jgRenderRosterSetupRows();
@@ -1351,7 +1394,7 @@ function jgNumGridPick(id, num, onChangeFn){
 
 function jgStart(){
   const isDualStart=jgSetupDualMode;
-  const minStart=isDualStart?4:6, maxStart=isDualStart?7:12;
+  const minStart=isDualStart?4:6, maxStart=isDualStart?7:14;
   const n=Math.min(maxStart,Math.max(minStart,parseInt(document.getElementById('jg-count').value)||minStart));
   const compCheck=getPickComp(jgRolePick);
   const compTotal=Object.values(compCheck).reduce((a,b)=>a+b,0);
@@ -5658,6 +5701,8 @@ const DEFAULT_COMP = {
   10:{wolf:3,villager:3,seer:1,witch:1,hunter:1,guard:1},
   11:{wolf:3,villager:4,seer:1,witch:1,hunter:1,guard:1},
   12:{wolf:4,villager:4,seer:1,witch:1,hunter:1,guard:1},
+  13:{wolf:4,villager:5,seer:1,witch:1,hunter:1,guard:1},
+  14:{wolf:5,villager:5,seer:1,witch:1,hunter:1,guard:1},
 };
 
 // 雙身分模式的預設配置（key＝玩家人數 4～7，角色數＝人數×2；僅供參考，法官可自行調整）
@@ -5742,7 +5787,7 @@ const RPICK_STATE = {
 const RPICK_TOTAL = {
   'jg-role-picker': ()=>{
     const isDual=jgSetupDualMode;
-    const min=isDual?4:6, max=isDual?7:12;
+    const min=isDual?4:6, max=isDual?7:14;
     const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count')?.value)||min));
     return isDual?n*2:n;
   },
@@ -5759,8 +5804,9 @@ function rpickTap(cid, id){
     // gods: toggle (max 1)
     state[id]=(state[id]||0)>0?0:1;
   } else if(isWolf){
-    // wolf: cycle 0→1→2→3→0 (狼兄/狼弟 are a fixed pair, capped at 0/1)
-    const max=(id==='wolfbrother_e'||id==='wolfbrother_y')?1:3;
+    // wolf: cycle 0→1→...→max→0 (狼兄/狼弟 are a fixed pair, capped at 0/1；其餘狼人角色上限拉高到 6，
+    // 才夠應付 13、14 人局常見的 4～5 隻狼)
+    const max=(id==='wolfbrother_e'||id==='wolfbrother_y')?1:6;
     state[id]=((state[id]||0)+1)%(max+1);
   }
   refreshPicker(cid);
@@ -5790,7 +5836,7 @@ function getPickComp(state){
 // 切換板子（含切回「自訂角色」）時呼叫；重新套用該板子的預設配置。
 function jgSetBoardPreset(val){
   jgBoardPreset=val;
-  const n=Math.min(12,Math.max(6,parseInt(document.getElementById('jg-count')?.value)||6));
+  const n=Math.min(14,Math.max(6,parseInt(document.getElementById('jg-count')?.value)||6));
   if(val==='custom'){
     jgRolePick=Object.assign({}, DEFAULT_COMP[n]||DEFAULT_COMP[6]);
     jgRolePick._init=true;
@@ -5961,7 +6007,7 @@ function jgLoadReportForm(){
 jgUpdateComp();
 document.getElementById('jg-count').addEventListener('input',()=>{
   const isDual=jgSetupDualMode;
-  const min=isDual?4:6, max=isDual?7:12;
+  const min=isDual?4:6, max=isDual?7:14;
   const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count').value)||min));
   if(!isDual&&jgBoardPreset!=='custom'){
     jgApplyPresetDefaults(n);
