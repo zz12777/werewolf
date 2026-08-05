@@ -717,11 +717,29 @@ const ROLE_ABBR={
 };
 // Builds a short label for the export header from whichever "special" (non-baseline) roles
 // appeared this game — e.g. 通靈師+機械狼 present → "通靈師機械狼".
+// 標題固定的角色排列順序（跟角色實際發在幾號玩家身上無關）。
+// 直接照法官選板子那個下拉選單列出的順序去排（機械狼+通靈師／攝夢人+夢魘／黑市商人+狼兄狼弟／
+// 狼美人+騎士／石像鬼+守墓人／血月使者+獵魔人／魔術師+狼王／混血兒+狼王+血月……），
+// 這樣文字紀錄標題就會跟板子選單的排法完全一致。不在任何預設組合裡的角色（白狼王、惡靈騎士、
+// 警長、幸運兒）沒有既定順序可以照抄，就近安插在概念相近的角色旁邊；
+// 之後如果排出來的順序覺得怪怪的，直接調整這個陣列裡任兩個角色的先後位置就好。
+const GAME_TITLE_ROLE_ORDER=[
+  'mechanicalwolf','medium',
+  'dreamcatcher','nightmare',
+  'blackmarket','wolfbrother_e','wolfbrother_y',
+  'wolfbeauty','knight','evilknight',
+  'gargoyle','gravkeeper',
+  'hybrid','magician','wolfking','whitewolf','bloodmoon','demonhunter',
+  'sheriff','luckyone'
+];
 function jgAutoGameTitle(){
   const baseline=new Set(['villager','wolf','seer','witch','hunter','guard']);
   const specialRoles=[];
   jgPlayers.forEach(p=>{ if(p.role&&!baseline.has(p.role)&&!specialRoles.includes(p.role)) specialRoles.push(p.role); });
   if(specialRoles.length===0) return '基本板';
+  // 固定依照上面的順序排序，不管這些角色實際發在哪個號碼身上，
+  // 標題永遠是同一種排列，文字紀錄標題才不會忽左忽右（同一板子一下叫「狼王魔術師」一下叫「魔術師狼王」）。
+  specialRoles.sort((a,b)=>GAME_TITLE_ROLE_ORDER.indexOf(a)-GAME_TITLE_ROLE_ORDER.indexOf(b));
   return specialRoles.map(r=>jgFullRoleName(r)).join('');
 }
 
@@ -1512,8 +1530,11 @@ function jgSetDiscussStart(n){
 function jgSheriffLRNums(){
   if(!jgSheriff) return null;
   const total=jgTotal;
-  const leftNum=jgSheriff-1<1?total:jgSheriff-1;
-  const rightNum=jgSheriff+1>total?1:jgSheriff+1;
+  const isAlive=n=>{ const p=jgByNum(n); return p?p.alive:false; };
+  let leftNum=jgSheriff;
+  do{ leftNum=leftNum-1<1?total:leftNum-1; } while(!isAlive(leftNum) && leftNum!==jgSheriff);
+  let rightNum=jgSheriff;
+  do{ rightNum=rightNum+1>total?1:rightNum+1; } while(!isAlive(rightNum) && rightNum!==jgSheriff);
   return {leftNum,rightNum};
 }
 function jgSheriffLRAutoDir(n){
@@ -6660,6 +6681,44 @@ const PD_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1q4qLbQLS4GBajy
 const PD_SUBMIT_PASSWORD = '12071211';
 const PD_NOT_CONFIGURED = u => !u || u.includes('PASTE_');
 
+// 日期／時間統一格式化：
+// 本機寫死的 GAMES 是純文字 "2026-07-30"，但雲端試算表那個欄位常常會被 Google 試算表
+// 自動判斷成「日期」格式，用匯出當下的地區設定重新排版（例如變成 "2026/8/5"），
+// 「時間」欄位也可能被判斷成 12 小時制文字（例如 "下午10:18:00"）。
+// 這裡統一解析成內部固定格式（date: "YYYY-MM-DD" 方便排序、time: 24小時制 "HH:MM"），
+// 畫面顯示時再一律轉成「YYYY/M/D」，日期紀錄就不會一下槓一下斜線。
+function pdParseDateTime(rawDate, rawTime){
+  let iso='', time=rawTime?String(rawTime).trim():'';
+  let s=rawDate?String(rawDate).trim():'';
+  // 日期欄位本身夾帶時間的情況（例如試算表把整欄轉成 datetime）
+  const ampmInDate=s.match(/^(.*?)[\s,]+(上午|下午)\s*(\d{1,2}):(\d{2})(:\d{2})?$/);
+  if(ampmInDate){ s=ampmInDate[1].trim(); if(!time) time=ampmInDate[2]+ampmInDate[3]+':'+ampmInDate[4]; }
+  const m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  iso=m?(m[1]+'-'+String(+m[2]).padStart(2,'0')+'-'+String(+m[3]).padStart(2,'0')):s;
+  // 時間欄位轉成 24 小時制 "HH:MM"（處理「下午10:18:00」這種中文上下午格式）
+  const ampmT=time.match(/^(上午|下午)\s*(\d{1,2}):(\d{2})/);
+  if(ampmT){
+    let h=parseInt(ampmT[2],10);
+    if(ampmT[1]==='下午'&&h<12) h+=12;
+    if(ampmT[1]==='上午'&&h===12) h=0;
+    time=String(h).padStart(2,'0')+':'+ampmT[3];
+  } else {
+    const plainT=time.match(/^(\d{1,2}):(\d{2})/);
+    if(plainT) time=String(+plainT[1]).padStart(2,'0')+':'+plainT[2];
+  }
+  return {iso, time};
+}
+// 完整顯示："2026-07-30" → "2026/7/30"
+function pdDisplayDate(iso){
+  const m=(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m?(m[1]+'/'+(+m[2])+'/'+(+m[3])):(iso||'');
+}
+// 精簡顯示（排行榜對局小條目用，不含年份）："2026-07-30" → "7/30"
+function pdDisplayDateShort(iso){
+  const m=(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m?((+m[2])+'/'+(+m[3])):(iso||'');
+}
+
 // 簡易 CSV 解析（處理欄位內含逗號／換行／引號的情況，Google 試算表匯出的格式）
 function pdParseCSV(text){
   const rows=[]; let row=[]; let field=''; let inQuotes=false;
@@ -6683,8 +6742,9 @@ function pdParseCSV(text){
 // 試算表欄位順序：0=Timestamp（Google表單自動加的）, 1=id, 2=date, 3=board, 4=resultText, 5=winner, 6=time, 7=playersJson, 8=log
 function pdCloudGameFromRow(cols){
   try{
-    const id=cols[1], date=cols[2], board=cols[3], resultText=cols[4], winnerRaw=cols[5], time=cols[6], playersJson=cols[7], log=cols[8];
-    if(!id||!date) return null;
+    const id=cols[1], rawDate=cols[2], board=cols[3], resultText=cols[4], winnerRaw=cols[5], rawTime=cols[6], playersJson=cols[7], log=cols[8];
+    if(!id||!rawDate) return null;
+    const {iso:date, time}=pdParseDateTime(rawDate, rawTime);
     return {
       id, date, board, resultText,
       winner: winnerRaw==='evil'?'evil':'good',
@@ -6809,7 +6869,7 @@ function pdRebuildAndRender(){
     const histHtml=histSorted.map(h=>{
       const cls=h.result==='win'?'win':(h.result==='lose'?'lose':'unclear');
       const mark=h.result==='win'?'✓':(h.result==='lose'?'✗':'?');
-      return `<div class="hist-item"><span class="hist-res ${cls}">${mark}</span><span class="hist-role">${h.role}</span><span>${h.board}</span><span class="hist-date">${h.date.slice(5)}</span></div>`;
+      return `<div class="hist-item"><span class="hist-res ${cls}">${mark}</span><span class="hist-role">${h.role}</span><span>${h.board}</span><span class="hist-date">${pdDisplayDateShort(h.date)}</span></div>`;
     }).join('');
     return `
     <div class="row" onclick="pdToggleDetail(${i})">
@@ -6844,7 +6904,7 @@ function pdRebuildAndRender(){
   const fDateEl=document.getElementById('f-date');
   fDateEl.innerHTML='<option value="">全部日期</option>';
   [...new Set(GAMES.map(g=>g.date))].sort().reverse().forEach(d=>{
-    const o=document.createElement('option'); o.value=d; o.textContent=d; fDateEl.appendChild(o);
+    const o=document.createElement('option'); o.value=d; o.textContent=pdDisplayDate(d); fDateEl.appendChild(o);
   });
   const fBoardEl=document.getElementById('f-board');
   fBoardEl.innerHTML='<option value="">全部板子</option>';
@@ -6886,7 +6946,7 @@ function pdRenderGames(){
       <div class="gcard-hd">
         <div class="gcard-title">
           <div class="gcard-board">${g.board}</div>
-          <div class="gcard-meta">${g.date}${g.time?' '+g.time:''}・${g.id}${g.cloud?' ・☁️':''}</div>
+          <div class="gcard-meta">${pdDisplayDate(g.date)}${g.time?' '+g.time:''}・${g.id}${g.cloud?' ・☁️':''}</div>
         </div>
         <span class="badge ${badgeCls}">${g.resultText}</span>
       </div>
