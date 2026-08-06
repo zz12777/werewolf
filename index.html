@@ -297,7 +297,10 @@ h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;}
 .pd-formula-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:10px;font-size:12.5px;color:var(--text2);line-height:1.7;}
 .pd-formula-box b{color:var(--text);}
 .pd-formula-box code{display:block;background:var(--bg3);border-radius:6px;padding:8px 10px;margin:6px 0;font-size:12px;color:var(--text);white-space:pre-wrap;}
-.pd-formula-box .pd-note{font-size:11.5px;color:var(--text3);margin-top:4px;}
+.pd-formula-toggle{font-size:12px;color:var(--text2);cursor:pointer;margin:0 0 10px;user-select:none;}
+.pd-seg{display:flex;background:var(--bg3);border-radius:20px;padding:2px;gap:2px;flex-shrink:0;}
+.pd-seg-btn{border:none;background:none;font-size:11px;padding:5px 10px;border-radius:16px;color:var(--text3);cursor:pointer;white-space:nowrap;font-weight:600;width:auto;margin-top:0;}
+.pd-seg-btn.active{background:var(--accent);color:#fff;}
 .filters{display:flex;gap:8px;margin-bottom:12px;}
 select{
   flex:1;padding:11px 10px;font-size:13px;color:var(--text);
@@ -614,13 +617,15 @@ select{
   <!-- 排行榜 -->
   <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
     <span>狼人殺小達人排行榜</span>
-    <span onclick="pdManualRefresh()" style="cursor:pointer;color:var(--text2);text-transform:none;letter-spacing:0;font-size:12px;">🔄 重新整理</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="pd-seg" id="pd-seg">
+        <button type="button" class="pd-seg-btn active" id="pd-sort-simple" onclick="pdSetSortMode('simple')">簡單勝率</button>
+        <button type="button" class="pd-seg-btn" id="pd-sort-bayes" onclick="pdSetSortMode('bayes')">Bayesian Score</button>
+      </div>
+    </div>
   </div>
-  <div class="btn2" id="pd-sort-toggle">
-    <button type="button" id="pd-sort-simple" onclick="pdSetSortMode('simple')">簡單勝率</button>
-    <button type="button" id="pd-sort-bayes" class="primary" onclick="pdSetSortMode('bayes')">Bayesian Score</button>
-  </div>
-  <div class="pd-formula-box" id="pd-formula-box"></div>
+  <div class="pd-formula-toggle" id="pd-formula-toggle" onclick="pdToggleFormula()">🧮 點擊了解公式 ▾</div>
+  <div class="pd-formula-box" id="pd-formula-box" style="display:none;"></div>
   <div class="card" id="leaderboard"></div>
 
   <!-- 場次篩選 -->
@@ -6824,14 +6829,28 @@ function pdSubmitGameRecord(){
 // ═══════════════════════════════════════════
 // 排行榜排序模式：'simple'＝簡單勝率，'bayes'＝貝葉斯分數
 // ═══════════════════════════════════════════
-let PD_SORT_MODE='bayes';
+let PD_SORT_MODE='simple';
 const PD_BAYES_C=5; // 信心場數常數：場次少於這個數字時，分數會明顯被拉向陣營平均值
 
 function pdSetSortMode(mode){
   PD_SORT_MODE=mode;
-  document.getElementById('pd-sort-simple').classList.toggle('primary', mode==='simple');
-  document.getElementById('pd-sort-bayes').classList.toggle('primary', mode==='bayes');
+  document.getElementById('pd-sort-simple').classList.toggle('active', mode==='simple');
+  document.getElementById('pd-sort-bayes').classList.toggle('active', mode==='bayes');
   pdRebuildAndRender();
+}
+
+// 公式說明區塊的展開／收合狀態
+let PD_FORMULA_OPEN=false;
+function pdToggleFormula(){
+  PD_FORMULA_OPEN=!PD_FORMULA_OPEN;
+  pdApplyFormulaVisibility();
+}
+function pdApplyFormulaVisibility(){
+  const box=document.getElementById('pd-formula-box');
+  const toggle=document.getElementById('pd-formula-toggle');
+  if(!box||!toggle) return;
+  box.style.display = PD_FORMULA_OPEN ? 'block' : 'none';
+  toggle.textContent = PD_FORMULA_OPEN ? '🧮 收起公式 ▴' : '🧮 點擊了解公式 ▾';
 }
 
 // 手動重新整理雲端場次（點排行榜標題旁的 🔄）
@@ -6917,18 +6936,18 @@ function pdRebuildAndRender(){
   const formulaBox=document.getElementById('pd-formula-box');
   if(PD_SORT_MODE==='simple'){
     formulaBox.innerHTML=`
-      <b>簡單勝率</b>：直接用「勝場 ÷ 總場數」排序。
-      <code>勝率 ＝ 勝場數 ／ 總場數</code>
-      <div class="pd-note">場次相同時，勝率高者排前面；勝率也相同則場次多者排前面。</div>`;
+      <b>簡單勝率</b>：直接用「勝場 ÷ 總場數」排序。勝率相同時則場次多者排前面。
+      <code>勝率 ＝ 勝場數 ／ 總場數</code>`;
   } else {
     formulaBox.innerHTML=`
       <b>Bayesian Score</b>：把「場次多寡」也算進去，場次太少時分數會被拉回陣營平均值，場次越多就越接近真實勝率。
       <code>好人校正勝率 ＝ (C × m好人 ＋ 好人勝場) ／ (C ＋ 好人總場)
 邪惡校正勝率 ＝ (C × m邪惡 ＋ 邪惡勝場) ／ (C ＋ 邪惡總場)
 Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 × 邪惡場次) ／ 總場次</code>
-      其中 <b>m好人</b>、<b>m邪惡</b> 是目前全站好人／邪惡陣營的整體勝率（依全站 ${clearGames.length} 場自動計算：好人 ${mGoodPct}%、邪惡 ${mEvilPct}%），<b>C＝${C}</b> 是「信心場數」，場次不到 C 場時分數會比較保守。
-      <div class="pd-note">好人局與邪惡局的校正勝率，會依玩家實際打好人／邪惡的場次比例加權平均。</div>`;
+      其中 <b>m好人</b>、<b>m邪惡</b> 是目前全站好人／邪惡陣營的整體勝率（依全站 ${clearGames.length} 場自動計算：好人 ${mGoodPct}%、邪惡 ${mEvilPct}%），<b>C＝${C}</b> 是「信心場數」，場次不到 C 場時分數會比較貼近陣營平均，分數不會被玩家那一兩場的極端結果（全勝或全輸）大幅影響。場次一旦超過 C，就會漸漸相信玩家自己的真實表現，分數也就會越來越貼近玩家真正的勝率。
+      <div style="margin-top:8px;font-size:11.5px;color:var(--text3);">延伸閱讀：<a href="https://zh.soundoflife.com/blogs/experiences/movie-rating-websites" target="_blank" rel="noopener" style="color:var(--accent);">IMDb Top 250 電影榜單算法</a>。</div>`;
   }
+  pdApplyFormulaVisibility();
 
   // ── 排行榜 ──
   const lb=document.getElementById('leaderboard');
