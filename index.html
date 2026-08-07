@@ -426,7 +426,7 @@ select{
       <span class="rcol-arrow">▶</span>
     </div>
     <div class="rcol-body">
-      <span class="board-role">血月使者</span>：白天隨時可自爆直接進入黑夜，並封印當晚所有神牌技能；若是最後一個被放逐的狼人，還能暫時存活到夜晚再殺一人，達成屠邊就直接獲勝。<br><span class="role-link" onclick="jumpToRole('bloodmoon')">→ 查看血月使者完整規則</span>
+      <span class="board-role">血月使者</span>：白天自己發言階段可自爆直接進入黑夜，並封印當晚所有神牌技能；若是最後一個被放逐的狼人，還能暫時存活到夜晚再殺一人，達成屠邊就直接獲勝。<br><span class="role-link" onclick="jumpToRole('bloodmoon')">→ 查看血月使者完整規則</span>
       <br><br>
       <span class="board-role">獵魔人</span>：從第二晚起可以狩獵一名玩家：對方是狼人則狼死，對方是好人則獵魔人自己死，且免疫女巫毒藥，是專門用來對抗血月的神職。<br><span class="role-link" onclick="jumpToRole('demonhunter')">→ 查看獵魔人完整規則</span>
     </div>
@@ -961,6 +961,7 @@ function jgIsHunterCapable(p){
 // （真獵人／機械狼學到獵人／幸運兒得到獵槍），方便連鎖開槍畫面顯示正確的角色名稱。
 function jgHunterCapableTag(role, num){
   if(role==='hunter') return 'hunter';
+  if(role==='wolfking') return 'wolfking';
   if(role==='mechanicalwolf'&&jgMechWolfHunterActive()) return 'mechanicalwolf';
   if(jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&jgLuckyOne.num===num) return 'luckyone';
   return null;
@@ -991,6 +992,17 @@ function jgBuildHunterStatusHtml(p){
       +'<div class="info-warn" style="font-size:13px;padding:10px 14px;">天亮將啟動角色技能</div>';
   }
   return '<div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
+}
+// 第一晚獵人號碼還沒點選時，jgPlayers 裡還找不到這個角色，jgBuildHunterStatusHtml(undefined)
+// 只會回傳空字串；點選號碼的當下即時用這個號碼組出「你的技能使用狀況是」台詞，讓法官第一晚
+// 指定完獵人身分後也能立刻看到比讚／比倒讚的提示，不用等到之後夜晚才顯示。
+function jgHunterIdCheck(whoId, val){
+  jgSoloIdFearCheck(whoId, val);
+  const statusEl=document.getElementById('jg-hunter-status-live');
+  if(!statusEl) return;
+  if(!val){ statusEl.innerHTML=''; return; }
+  const fakeP={num:parseInt(val), alive:true};
+  statusEl.innerHTML=jgBuildHunterStatusHtml(fakeP);
 }
 // 機械狼「已學得獵人」的技能使用狀況（比讚／比倒讚）已經併在機械狼自己的睜眼畫面裡處理
 // （見 mechanicalwolf-wake 的 learnHtml），獵人自己的步驟結束後直接往下走即可。
@@ -1077,7 +1089,7 @@ function jgFormatNightLog(){
   }
   if(witchP&&witchP.alive){
     if(jgRecord._witchCanShowKilled) lines.push('救 '+(jgRecord.witchSave?jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill):'x'));
-    else lines.push('毒 '+jgSwapDisplay(jgRecord.witchPoisonRaw, jgRecord.witchPoison));
+    else if(jgRecord.witchPoisonRaw||!jgWitchPoisonUsed) lines.push('毒 '+jgSwapDisplay(jgRecord.witchPoisonRaw, jgRecord.witchPoison));
   }
   if(seerP&&seerP.alive){
     const v=jgRecord.seerChecked;
@@ -2428,7 +2440,7 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>夢魘睜眼</h2>
       <div class="speech">「<em>夢魘請睜眼${needId?'':'，今晚要恐懼的對象是？'}</em>」</div>
-      ${needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">夢魘號碼</label>${jgNumSelectHtml('jg-nightmare-who','')}</div><div class="divider"></div><div class="speech">「<em>今晚要恐懼的對象是？</em>」</div>`:''}
+      ${needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>夢魘</strong>號碼</label>${jgNumSelectHtml('jg-nightmare-who','')}</div><div class="divider"></div><div class="speech">「<em>今晚要恐懼的對象是？</em>」</div>`:''}
       ${dead?'<div class="info-warn">夢魘已出局，仍需走完流程</div>':''}
       ${dead?'':`<label>恐懼的對象（一定要恐，不能恐自己）</label>
       ${jgNumSelectHtml('jg-nightmare-target', cur, 'jgNightmareCheckRepeat')}
@@ -2495,9 +2507,9 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>狼兄狼弟相認</h2>
       <div class="speech">「<em>狼兄、狼弟請睜眼，互相確認身份，狼弟請比小拇指。</em>」</div>
-      <div style="margin-bottom:8px;"><label style="margin-top:0;">狼兄號碼</label>
+      <div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>狼兄</strong>號碼</label>
       ${jgNumSelectHtml('jg-wbe-who', ev)}</div>
-      <div style="margin-bottom:8px;"><label style="margin-top:0;">狼弟號碼</label>
+      <div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>狼弟</strong>號碼</label>
       ${jgNumSelectHtml('jg-wby-who', yv)}</div>
       <div class="info" style="font-size:12px;">狼弟平時不進狼窩，不參與狼人商討殺人；狼兄陣亡前，預言家查驗狼弟顯示為好人。</div>
       <div class="speech" style="margin-top:10px;">「<em>狼兄狼弟請閉眼。</em>」</div>
@@ -2567,7 +2579,7 @@ function jgRenderStep(step){
         for(let i=0;i<cnt;i++){
           const kw=jgPlayers.filter(p=>p.role===roleId)[i];
           wolfFieldsInner+='<div style="margin-bottom:8px;">'
-            +'<label style="margin-top:0;">'+(RNAME_L[roleId]||'狼人')+(cnt>1?' '+(i+1):'')+'號碼</label>'
+            +'<label style="margin-top:0;"><strong>'+(RNAME_L[roleId]||'狼人')+(cnt>1?' '+(i+1):'')+'</strong>號碼</label>'
             +jgNumSelectHtml('jg-wolf-who-'+wiIdx, kw?kw.num:'', 'jgWolfIdOnChange', 'data-role="'+roleId+'"')
             +'</div>';
           wiIdx++;
@@ -2579,7 +2591,7 @@ function jgRenderStep(step){
         if(!ggP) allWolfIdsAssigned=false;
         wolfFieldsInner+='<div class="divider" style="margin:12px 0 8px;"></div>';
         wolfFieldsInner+='<div style="margin-bottom:8px;">'
-          +'<label style="margin-top:0;">石像鬼號碼</label>'
+          +'<label style="margin-top:0;"><strong>石像鬼</strong>號碼</label>'
           +jgNumSelectHtml('jg-gargoyle-who-wolf', ggP?ggP.num:'', 'jgWolfIdOnChange')
           +'</div>';
       }
@@ -2614,7 +2626,7 @@ function jgRenderStep(step){
       ${compatNote}
       <div id="jg-wolf-blocked-msg" style="${jgRecord.nightmareBlocksWolf?'':'display:none;'}"><div class="info-danger">⚠️ 夢魘恐懼到狼隊友，狼人今晚不得殺人</div></div>
       ${wbNote}
-      <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}"><label>今晚獵殺的對象（號碼）</label>
+      <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}"><label>今晚獵殺的對象</label>
       ${jgNoSelfCutNums().length>0?'<div class="info" style="font-size:11px;margin-bottom:4px;">灰色號碼為不能自刀的隊友（'+jgNoSelfCutRoleLabel()+'），無法選取</div>':''}
       ${jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgNoSelfCutNums())}</div>
       <div class="speech" style="margin-top:12px;">「<em>狼人請閉眼。</em>」</div>
@@ -2626,7 +2638,7 @@ function jgRenderStep(step){
     const isFirst=jgIsFirstNight();
     const mwP=jgPlayers.find(p=>p.role==='mechanicalwolf');
     const needId=isFirst&&!mwP&&!jgMechAssignDone;
-    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">機械狼號碼</label>${jgNumSelectHtml('jg-mechwolf-who','','jgSoloIdFearCheck')}</div><div class="divider"></div>`:'';
+    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>機械狼</strong>號碼</label>${jgNumSelectHtml('jg-mechwolf-who','','jgSoloIdFearCheck')}</div><div class="divider"></div>`:'';
     const dead=mwP&&!mwP.alive;
     const feared=jgFeared(mwP);
     const otherWolvesAlive=jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='mechanicalwolf'&&p.alive);
@@ -2672,7 +2684,7 @@ function jgRenderStep(step){
         const kv=jgRecord.mechWolfKillTarget||jgRecord.wolfKill||'';
         killGestureHtml='<div class="divider"></div>'
           +'<div class="speech">「<em>今晚的帶刀手勢是？（👍 讚）</em>」（其他狼隊友已全滅，機械狼可以殺人）</div>'
-          +'<label>機械狼今晚要殺的對象（號碼）</label>'
+          +'<label>機械狼今晚要殺的對象</label>'
           +jgNumSelectHtml('jg-mechwolf-kill', kv, null, null, jgNoSelfCutNums());
       } else {
         killGestureHtml='<div class="divider"></div>'
@@ -2701,7 +2713,7 @@ function jgRenderStep(step){
     const isFirst=jgIsFirstNight();
     const wbP=jgPlayers.find(p=>p.role==='wolfbeauty');
     const needId=isFirst&&!wbP;
-    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">狼美人號碼</label>${jgNumSelectHtml('jg-wolfbeauty-who','','jgSoloIdFearCheck')}</div><div class="divider"></div>`:'';
+    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>狼美人</strong>號碼</label>${jgNumSelectHtml('jg-wolfbeauty-who','','jgSoloIdFearCheck')}</div><div class="divider"></div>`:'';
     const curCharm=jgRecord.wolfbeautyCharm||'';
     const dead=wbP&&!wbP.alive;
     const feared=jgFeared(wbP);
@@ -2729,7 +2741,7 @@ function jgRenderStep(step){
     const isFirst=jgIsFirstNight();
     const wwP=jgPlayers.find(p=>p.role==='whitewolf');
     const needId=isFirst&&!wwP;
-    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">白狼王號碼</label>${jgNumSelectHtml('jg-whitewolf-who','')}</div><div class="divider"></div>`:'';
+    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>白狼王</strong>號碼</label>${jgNumSelectHtml('jg-whitewolf-who','')}</div><div class="divider"></div>`:'';
     const dead=wwP&&!wwP.alive;
     jgShowPg(`
       <h2>白狼王睜眼</h2>
@@ -2746,7 +2758,7 @@ function jgRenderStep(step){
     const isFirst=jgIsFirstNight();
     const ekP=jgPlayers.find(p=>p.role==='evilknight');
     const needId=isFirst&&!ekP;
-    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">惡靈騎士號碼</label>${jgNumSelectHtml('jg-evilknight-who','')}</div><div class="divider"></div>`:'';
+    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>惡靈騎士</strong>號碼</label>${jgNumSelectHtml('jg-evilknight-who','')}</div><div class="divider"></div>`:'';
     const dead=ekP&&!ekP.alive;
     jgShowPg(`
       <h2>惡靈騎士睜眼</h2>
@@ -2763,7 +2775,7 @@ function jgRenderStep(step){
     const isFirst=jgIsFirstNight();
     const ggP=jgPlayers.find(p=>p.role==='gargoyle');
     const needId=isFirst&&!ggP;
-    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">石像鬼號碼</label>${jgNumSelectHtml('jg-gargoyle-who','','jgSoloIdFearCheck')}</div><div class="divider"></div>`:'';
+    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>石像鬼</strong>號碼</label>${jgNumSelectHtml('jg-gargoyle-who','','jgSoloIdFearCheck')}</div><div class="divider"></div>`:'';
     const allDead=jgPlayers.filter(p=>WOLF_ROLES.includes(p.role)&&p.role!=='gargoyle'&&!p.alive).length===
       jgPlayers.filter(p=>WOLF_ROLES.includes(p.role)&&p.role!=='gargoyle').length;
     const gv=jgRecord.gargoyleCheck||'';
@@ -2779,7 +2791,7 @@ function jgRenderStep(step){
       <label>查驗對象號碼</label>
       ${jgNumSelectHtml('jg-gargoyle-check', gv, 'jgGargoyleCheck')}
       <div id="jg-gargoyle-result"></div>
-      ${allDead?'<div class="divider" style="margin:12px 0 8px;"></div><div class="speech">「<em>今晚的帶刀手勢是？（👍 讚）</em>」（其他狼隊友已全滅，石像鬼可以殺人）</div><label>石像鬼今晚要殺的對象（號碼，留空=不殺）</label>'+jgNumSelectHtml('jg-gargoyle-kill', jgRecord.gargoyleKillTarget||jgRecord.wolfKill||'', null, null, jgNoSelfCutNums()):''}</div>`}
+      ${allDead?'<div class="divider" style="margin:12px 0 8px;"></div><div class="speech">「<em>今晚的帶刀手勢是？（👍 讚）</em>」（其他狼隊友已全滅，石像鬼可以殺人）</div><label>石像鬼今晚要殺的對象（留空=不殺）</label>'+jgNumSelectHtml('jg-gargoyle-kill', jgRecord.gargoyleKillTarget||jgRecord.wolfKill||'', null, null, jgNoSelfCutNums()):''}</div>`}
       <div class="speech" style="margin-top:10px;">「<em>石像鬼請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveGargoyleNight()">已紀錄，下一步 →</button>
     `,'🗿 石像鬼');
@@ -2852,7 +2864,7 @@ function jgRenderStep(step){
       ${idHtml}
       <div id="jg-seer-feared-note" class="info-warn" style="display:none;">（法官搖頭）你被恐懼了，無法使用技能</div>
       <div id="jg-seer-action">
-      <label>預言家查驗的對象（號碼）</label>
+      <label>預言家查驗的對象</label>
       ${jgNumSelectHtml('jg-seer-target-input', targetVal, 'jgUpdateSeerResult')}
       <div id="jg-seer-result-box"></div>
       </div>
@@ -2872,7 +2884,7 @@ function jgRenderStep(step){
     if(!hasWitchRole){ jgGoStep('seer-wake'); return; }
 
     const needId=isFirst&&!witchP&&!jgMechAssignDone;
-    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;">女巫號碼</label>${jgNumSelectHtml('jg-witch-who','','jgWitchIdCheck')}</div><div class="divider"></div>`:'';
+    const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>女巫</strong>號碼</label>${jgNumSelectHtml('jg-witch-who','','jgWitchIdCheck')}</div><div class="divider"></div>`:'';
 
     if(jgDualIdentityMode&&!witchP){
       jgShowPg(`
@@ -2893,7 +2905,7 @@ function jgRenderStep(step){
         <h2>女巫睜眼</h2>
         <div class="speech">「<em>女巫請睜眼。</em>」</div>
         <div class="info-warn">女巫已出局，仍需走完流程避免洩露身分</div>
-        <div class="speech" style="margin-top:8px;">「<em>你要使用解藥嗎？</em>」</div>
+        <div class="speech" style="margin-top:8px;">「<em>他被殺了，你要使用解藥嗎？</em>」</div>
         <div class="speech" style="margin-top:8px;">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」</div>
         <div class="speech" style="margin-top:12px;">「<em>女巫請閉眼。</em>」</div>
         <button class="primary" onclick="jgSaveWitch()">下一步 →</button>
@@ -2991,13 +3003,13 @@ function jgRenderStep(step){
     const hunterP=jgPlayers.find(p=>p.role==='hunter');
     const hunterExists=(jgNight===1&&jgComp.hunter>0)||hunterP;
     if(!hunterExists){ jgGoStep(jgAfterHunterStep()); return; }
-    const idHtml=jgIdFieldHtml('獵人', hunterP, 'jg-hunter-who', 'jg-hunter-name');
-    const statusHtml=jgBuildHunterStatusHtml(hunterP);
+    const idHtml=jgIdFieldHtml('獵人', hunterP, 'jg-hunter-who', 'jg-hunter-name', 'jgHunterIdCheck');
+    const statusHtml=hunterP?jgBuildHunterStatusHtml(hunterP):'';
     jgShowPg(`
       <h2>獵人睜眼</h2>
       <div class="speech">「<em>獵人請睜眼。</em>」</div>
       ${idHtml}
-      ${statusHtml}
+      <div id="jg-hunter-status-live">${statusHtml}</div>
       <div class="speech" style="margin-top:12px;">「<em>獵人請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveHunterNight()">已紀錄，下一步 →</button>
     `,'🔫 獵人');
@@ -3008,14 +3020,14 @@ function jgRenderStep(step){
   else if(step==='mechhunter-chain-shot'){
     const chainNum=jgRecord._mechHunterChainNum;
     const chainRole=jgRecord._mechHunterChainRole||'hunter';
-    const CHAIN_LABEL={hunter:{title:'獵人',icon:'🔫'},mechanicalwolf:{title:'機械狼（已學得獵人）',icon:'🤖🔫'},luckyone:{title:'幸運兒（獵人技能）',icon:'🍀🔫'}};
+    const CHAIN_LABEL={hunter:{title:'獵人',icon:'🔫'},wolfking:{title:'狼王',icon:'👑🔫'},mechanicalwolf:{title:'機械狼（已學得獵人）',icon:'🤖🔫'},luckyone:{title:'幸運兒（獵人技能）',icon:'🍀🔫'}};
     const cl=CHAIN_LABEL[chainRole]||CHAIN_LABEL.hunter;
     const chainP=chainNum?jgByNum(chainNum):null;
     const chainName=chainP&&chainP.name&&chainP.name!==chainP.num+'號'?chainP.num+'號 '+chainP.name:(chainNum?chainNum+'號':'');
     jgShowPg(`
       <h2>${cl.title}啟動技能</h2>
       <div class="info-warn" style="font-size:14px;">${chainName} 被開槍帶走，本身也具備獵人技能，可一併啟動！</div>
-      <div class="speech">「<em>啟動角色技能，請選擇你要帶走的號碼（留空可不帶）。</em>」</div>
+      <div class="speech">「<em>${chainName} 啟動角色技能，請選擇你要帶走的號碼。</em>」</div>
       ${jgNumSelectHtml('jg-mechhunter-chain-shot','')}
       <button class="primary" onclick="jgSaveMechHunterChainShot()" style="margin-top:10px;">確認 →</button>
     `,cl.icon+' '+cl.title);
@@ -3112,10 +3124,10 @@ function jgRenderStep(step){
       <h2>獵魔人睜眼</h2>
       <div class="speech">「<em>獵魔人請睜眼。</em>」</div>
       ${idHtml}
-      ${dead?'<div class="info-warn">獵魔人已出局，仍需走完流程</div>':''}
+      ${dead?'<div class="info-warn">獵魔人已出局，仍需走完流程</div><div class="speech" style="margin-top:8px;">「<em>今晚要狩獵的人是？</em>」</div>':''}
       <div id="jg-god-demonhunter-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
       ${dead?'':`<div id="jg-god-demonhunter-action" style="${feared?'display:none;':''}">${jgNight<2?'<div class="info">第一晚無法狩獵，只需確認身分。</div>'
-        :'<label>今晚狩獵目標（號碼，留空=不狩獵）</label>'
+        :'<label>今晚狩獵目標（留空=不狩獵）</label>'
          +jgNumSelectHtml('jg-dh-target', cur)
          +'<div class="info" style="font-size:12px;margin-top:4px;">若對方是狼→狼死；若對方是好人→獵魔人自己死。免疫女巫毒藥。</div>'}</div>`}
       <div class="speech" style="margin-top:10px;">「<em>獵魔人請閉眼。</em>」</div>
@@ -3392,7 +3404,7 @@ function jgRenderStep(step){
       const alreadyCounted=trulyDiedNums.some(n=>n.toString()===numStr)||swappedNums.some(n=>n.toString()===numStr);
       if(!alreadyCounted){
         const p=jgFind(d);
-        if(p&&!p.alive){ trulyDiedNums.push(p.num); lateDeadAdded=true; }
+        if(p&&!p.alive){ p._diedThisDawn=true; trulyDiedNums.push(p.num); lateDeadAdded=true; }
       }
     });
     if(lateDeadAdded){
@@ -3435,9 +3447,11 @@ function jgRenderStep(step){
       return overhealHit||(!gSaved&&!mgSaved&&!wSaved);
     })();
     const dawnShoot=dawnHunterShoot||dawnWolfKingShoot;
+    const dawnShootP=dawnShoot?jgFind(jgRecord.wolfKill):null;
+    const dawnShootName=dawnShootP&&dawnShootP.name&&dawnShootP.name!==dawnShootP.num+'號'?dawnShootP.num+'號 '+dawnShootP.name:(dawnShootP?dawnShootP.num+'號':'');
     const hunterShotHtml=dawnShoot
       ?'<div class="divider"></div>'
-        +'<div class="speech">「<em>啟動角色技能，請選擇你要帶走的號碼（留空可不帶）。</em>」</div>'
+        +'<div class="speech">「<em>'+dawnShootName+' 啟動角色技能，請選擇你要帶走的號碼。</em>」</div>'
         +'<label>帶走的玩家號碼（留空=不帶）</label>'
         +jgNumSelectHtml('jg-hunter-dawn-shot', '')
         +'<button class="danger" onclick="jgSaveDawnHunterShot()" style="margin-top:8px;">確認帶走 →</button>'
@@ -3606,7 +3620,7 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>狼王開槍</h2>
       <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${wkname} 被放逐，啟動角色技能</div>
-      <div class="speech">「<em>啟動角色技能，請選擇你要帶走的號碼（留空可不帶）。</em>」</div>
+      <div class="speech">「<em>${wkname} 啟動角色技能，請選擇你要帶走的號碼。</em>」</div>
       <label>帶走的玩家號碼（留空=不帶）</label>
       ${jgNumSelectHtml('jg-wolfking-shot-rec', '')}
       <button class="danger" onclick="jgSaveWolfKingShot()" style="margin-top:10px;">確認 →</button>
@@ -3618,7 +3632,7 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>白狼王自爆</h2>
       <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${wwname} 宣告自爆！</div>
-      <div class="speech">「<em>白狼王自爆，請選擇你要帶走的號碼（留空可不帶）。</em>」</div>
+      <div class="speech">「<em>白狼王自爆，請選擇你要帶走的號碼。</em>」</div>
       <label>帶走的玩家號碼（留空=不帶）</label>
       ${jgNumSelectHtml('jg-whitewolf-blow-rec', '')}
       <button class="danger" onclick="jgSaveWhiteWolfBlow()" style="margin-top:10px;">確認自爆 →</button>
@@ -3669,7 +3683,7 @@ function jgRenderStep(step){
       <h2>血月使者・最後一擊</h2>
       <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${bmname} 為最後一個被放逐的狼人，暫時存活！</div>
       <div class="speech">「<em>血月使者暫時存活，今晚進入黑夜，可以再擊殺一名玩家。若達成屠邊條件，狼人勝利。</em>」</div>
-      <label>血月今晚擊殺的目標（號碼）</label>
+      <label>血月今晚擊殺的目標</label>
       ${jgNumSelectHtml('jg-bloodmoon-last-kill', '')}
       <button class="danger" onclick="jgSaveBloodMoonLastNight()" style="margin-top:10px;">確認擊殺 →</button>
     `,'🌑 血月使者');
@@ -3690,7 +3704,7 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>獵人開槍</h2>
       <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${hvname} 被放逐，啟動角色技能</div>
-      <div class="speech">「<em>啟動角色技能，請選擇你要帶走的號碼（留空可不帶）。</em>」</div>
+      <div class="speech">「<em>${hvname} 啟動角色技能，請選擇你要帶走的號碼。</em>」</div>
       <label>帶走的玩家號碼（留空=不帶）</label>
       ${jgNumSelectHtml('jg-hunter-shot-rec', '')}
       <button class="danger" onclick="jgSaveHunter()" style="margin-top:10px;">確認 →</button>
@@ -3702,7 +3716,7 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>幸運兒開槍</h2>
       <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${lname}（獲得獵人獵槍技能）被放逐，啟動技能</div>
-      <div class="speech">「<em>啟動角色技能，請選擇你要帶走的號碼（留空可不帶）。</em>」</div>
+      <div class="speech">「<em>${lname} 啟動角色技能，請選擇你要帶走的號碼（留空可不帶）。</em>」</div>
       <label>帶走的玩家號碼（留空=不帶）</label>
       ${jgNumSelectHtml('jg-luckyone-shot-rec', '')}
       <button class="danger" onclick="jgSaveLuckyoneHunterShot()" style="margin-top:10px;">確認 →</button>
@@ -3857,15 +3871,15 @@ function jgSaveMechHunterChainShot(){
 // If the identity was already recorded up front (機械狼／黑市商人板 mech-assign page),
 // show nothing here at all — the always-visible roster panel at the bottom of the screen
 // already reminds the judge who's who, so a repeated summary box would just be clutter.
-function jgIdFieldHtml(rn, existingP, whoId, nameId){
+function jgIdFieldHtml(rn, existingP, whoId, nameId, onChangeFn){
   if(jgNight!==1) return '';
   // 身分已在開局前完整記錄（機械狼／黑市商人板的 mech-assign，或雙身分板的 dual-assign），
   // 不管這個角色現在是否有人持有（雙身分板可能還沒翻到卡2），都不需要再問「幾號是這個身分」。
   if(jgMechAssignDone) return '';
   const ev=existingP?existingP.num:'';
   return '<div style="margin-bottom:8px;" id="'+whoId+'-wrap">'
-    +'<label style="margin-top:0;">'+rn+'號碼</label>'
-    +jgNumSelectHtml(whoId, ev, 'jgSoloIdFearCheck')
+    +'<label style="margin-top:0;"><strong>'+rn+'</strong>號碼</label>'
+    +jgNumSelectHtml(whoId, ev, onChangeFn||'jgSoloIdFearCheck')
     +'</div><div class="divider"></div>';
 }
 
@@ -4838,7 +4852,7 @@ function jgWitchSaveChange(){
       <div class="info" style="color:var(--text2);font-size:13px;">已使用解藥，本晚不能同時使用毒藥</div>`;
   } else {
     pw.innerHTML=`<div class="speech" style="margin-top:10px;" id="jg-poison-speech">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」<br>（比讚=不毒，比倒讚=要毒）</div>
-      <label>毒殺的對象（號碼，留空=不毒）</label>
+      <label>毒殺的對象（留空=不毒）</label>
       <input type="text" id="jg-witch-poison-rec" placeholder="留空=不使用"/>`;
   }
 }
@@ -5056,7 +5070,7 @@ function jgWitchSaveBtn(save){
     if(st) st.innerHTML='<div style="font-size:12px;color:#922418;margin-top:4px;">✗ 選擇不救（可按「救人」改變）</div>';
     // Restore poison input
     const pw=document.getElementById('jg-witch-poison-wrap');
-    if(pw&&!jgWitchPoisonUsed) pw.innerHTML='<label>毒殺的對象（號碼，留空=不毒）</label>'
+    if(pw&&!jgWitchPoisonUsed) pw.innerHTML='<label>毒殺的對象（留空=不毒）</label>'
       +jgNumSelectHtml('jg-witch-poison-rec', jgRecord.witchPoison||'');
   }
 }
@@ -5383,11 +5397,31 @@ function jgSaveBloodMoonLastNight(){
   const val=(document.getElementById('jg-bloodmoon-last-kill')||{}).value?.trim()||'';
   const bm=jgPlayers.find(p=>p.role==='bloodmoon');
   if(bm&&bm.alive) jgApplyDeath(bm);
-  if(val){ const p=jgFind(val); if(p&&p.alive){jgApplyDeath(p);} }
+  let killedNum=null;
+  if(val){ const p=jgFind(val); if(p&&p.alive){jgApplyDeath(p); killedNum=p.num;} }
+  jgPushDayLog('血月屠邊刀'+(killedNum||'x'));
   jgRenderRoster();
-  const win=jgCheckWin(); if(win){jgShowWin(win);return;}
+  // 血月使者是場上最後一隻狼，這一刀決定勝負：不能直接呼叫 jgCheckWin()——它一看到
+  // 「場上已無存活的狼」就會先判定好人勝利，完全不管這一刀有沒有真的屠邊。必須先確認
+  // 這一刀砍完之後，好人陣營是否已經被屠邊（神職或平民其中一邊死絕），達成才算狼人勝利；
+  // 否則就算狼隊已經全滅，只要神職和平民都還至少各留一人存活，仍然是好人勝利。
+  const win=jgCheckBloodMoonFinalWin();
+  if(win){jgShowWin(win);return;}
   // Continue as normal night (no seal — bloodmoon already handled their kill)
   jgGoStep('next-night');
+}
+
+// 血月使者屠邊最後一擊專用的勝負判定——見 jgSaveBloodMoonLastNight 上方註解，
+// 不能沿用一般的 jgCheckWin()（它的「狼隊全滅→好人勝利」規則會搶在屠邊判定之前生效）。
+function jgCheckBloodMoonFinalWin(){
+  const a=jgAlive();
+  const ag=a.filter(p=>!jgIsWolfPackMember(p));
+  const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+  const aGod=ag.filter(p=>allGods.includes(p.role));
+  const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid');
+  if(aVil.length===0&&aGod.length>0) return{winner:'wolf',msg:'血月使者屠邊：所有平民已被淘汰',icon:'🐺'};
+  if(aGod.length===0&&aVil.length>0) return{winner:'wolf',msg:'血月使者屠邊：所有神職已被淘汰',icon:'🐺'};
+  return{winner:'good',msg:'所有狼人已被淘汰，血月使者最後一擊未能屠邊',icon:'🎉'};
 }
 
 function jgSaveBloodMoonBlow(){
@@ -5628,11 +5662,11 @@ function jgReset(){
 const ALL_ROLES = {
   // Wolf pack
   wolf:     {icon:'🐺', name:'狼人',   team:'wolf', teamLabel:'狼人陣營', desc:'每晚與同伴商議選擇獵殺對象。白天偽裝好人，引導投票淘汰好人。<br><strong>目標：</strong>狼人數 ≥ 好人數。'},
-  wolfking: {icon:'👑', name:'狼王',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>帶人能力：</strong>被狼刀（夜槍）或被票（白天槍）淘汰時可開槍帶走一名玩家；就算是守衛與女巫解藥同時作用而「奶穿」致死，仍然可以帶人；白天選擇自爆時不能開槍帶人。<br><strong>限制：</strong>被女巫毒殺時無法發動。'},
+  wolfking: {icon:'👑', name:'狼王',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>帶人能力：</strong>被狼刀（夜槍）或被票（白天槍）淘汰時可開槍帶走一名玩家；就算是守衛與女巫解藥同時作用而「奶穿」致死，仍然可以帶人。<br><strong>限制：</strong>若白天自爆、被獵魔人獵出局、被女巫毒殺時皆無法開槍帶人。'},
   whitewolf:{icon:'🤍', name:'白狼王', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>自爆帶人：</strong>白天警上競選、玩家發言等階段可宣告自爆，帶走場上一名玩家，接著直接進入夜晚。'},
   wolfbeauty:{icon:'💋',name:'狼美人', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>魅惑連結：</strong>每晚必須魅惑一名玩家（不能連續兩晚魅惑同一人，不能自刀自爆，不能魅惑自己）。<br><strong>殉情：</strong>狼美人出局（被票、獵人射殺）或夜間被毒，魅惑對象殉情。<br><strong>限制：</strong>被騎士決鬥出局時技能無法發動。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與騎士搭配出現</span>'},
   evilknight:{icon:'🖤',name:'惡靈騎士',team:'wolf',teamLabel:'狼人陣營', desc:'<strong>被動防禦：</strong>夜間免疫狼殺、女巫毒、以及夜槍（獵人/狼王被狼刀淘汰後開槍帶人）（但預言家查驗仍顯示狼人）。<br><strong>反傷：</strong>被預言家查驗→次日預言家死亡；被女巫毒殺→次日女巫死亡。<br><strong>限制：</strong>不可自刀自爆。'},
-  bloodmoon: {icon:'🌑', name:'血月使者', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>主動技：</strong>白天發言階段隨時自爆後直接進入黑夜，當晚所有神牌技能封印。<br><strong>被動技：</strong>若為最後一個被放逐的狼人，可暫時存活進入黑夜，夜晚再擊殺一名玩家，達屠邊則狼人勝利。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與獵魔人搭配出現</span>'},
+  bloodmoon: {icon:'🌑', name:'血月使者', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>主動技：</strong>白天自己發言階段可自爆後直接進入黑夜，當晚所有神牌技能封印。<br><strong>被動技：</strong>若為最後一個被放逐的狼人，可暫時存活進入黑夜，夜晚再擊殺一名玩家，達屠邊則狼人勝利。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與獵魔人搭配出現</span>'},
     gargoyle: {icon:'🗿', name:'石像鬼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>查驗牌面：</strong>每晚查驗一名玩家的具體角色。<br><strong>限制：</strong>不與狼隊見面，隊友全滅前不能殺人；隊友全滅後可在查驗之外，額外選擇今晚的帶刀對象殺人。不可自爆，可自刀。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與守墓人搭配出現</span>'},
   mechanicalwolf:{icon:'🤖',name:'機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊相認：</strong>與其他狼人互不相認，全程不可自爆。<br><strong>學習技能：</strong>任一晚可選擇一名玩家並「學習」其身份技能，次晚起可使用該技能：<br>‧ 學到狼人／狼王：接下來夜晚可選一晚多開一刀（整局限一次）；學到狼王額外還多了「被狼刀或被票出局時可以開槍帶人（被毒則不行）」。<br>‧ 學到平民：沒有主動技能。<br>‧ 學到女巫：只有一瓶毒藥（沒有解藥），整局限一次。<br>‧ 學到通靈師：每晚可查驗一名玩家的具體身份。<br>‧ 學到獵人：出局（夜槍或白天槍）時可開槍帶人。<br>‧ 學到守衛：除一般守衛功能之外，還能抵擋女巫毒與夜槍（獵人/狼王被狼刀淘汰後開槍帶人）；但守護與真守衛一樣仍會跟女巫同守同救「奶穿」死亡，而且只要成功擋到任一種傷害（無論最終是否因奶穿而死），這個技能就視為用畢，之後不能再守。<br><strong>帶刀手勢：</strong>當其餘狼人同伴全部出局時，機械狼開始獨自帶刀殺人。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與通靈師搭配出現</span>'},
   nightmare: {icon:'😈', name:'夢魘',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>恐懼：</strong>每晚在狼人行動前先發動技能，恐懼一名玩家，使其當晚無法發動夜間技能。若恐懼到狼隊友，狼人當晚不得殺人。<br><strong>限制：</strong>不能連續兩晚恐懼同一人，不可自爆、自刀。首夜與狼隊互不見面，可能誤恐懼到隊友。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與攝夢人搭配出現</span>'},
