@@ -724,7 +724,7 @@ let jgPlayerNames={}; // num -> name, set via the roster setup page before jgSta
 let jgNightLog={}; // night number -> array of "--xx" action lines
 let jgDayLog={};   // night number (the night before that day) -> array of "票X：voters" lines
 let jgDayMeta={};  // night number -> {start, dir} speaking-order info for that day
-let jgDawnDeaths={}; // night number -> {died:[nums truly eliminated], swapped:[nums whose card1 died but card2 continues]} (both empty = 平安夜)
+let jgDawnDeaths={}; // night number -> {died:[nums truly eliminated], swapped:[nums whose card1 died but card2 continues], notes:{num:'extra text appended after that num's 死亡 entry'}} (died/swapped both empty = 平安夜)
 let jgGameCount=1; // increments each new game this session, used in the export section label
 let jgHasStartedBefore=false;
 const ROLE_ABBR={
@@ -833,8 +833,9 @@ function jgExportGameLog(){
       const dirLabel=meta&&meta.dir?(meta.dir==='逆'?'逆向':'順向'):'';
       const startLabel=meta&&meta.start?'（'+meta.start+'號'+dirLabel+'開始發言）':'';
       out+='\n**白天'+ordSuffix(n)+startLabel+'\n';
-      const dd=jgDawnDeaths[n]||{died:[],swapped:[]};
-      const dparts=[...(dd.died||[]).map(x=>x+'死亡'), ...(dd.swapped||[]).map(x=>x+'死亡，請使用第二身分')];
+      const dd=jgDawnDeaths[n]||{died:[],swapped:[],notes:{}};
+      const ddNotes=dd.notes||{};
+      const dparts=[...(dd.died||[]).map(x=>x+'死亡'+(ddNotes[x]?' '+ddNotes[x]:'')), ...(dd.swapped||[]).map(x=>x+'死亡，請使用第二身分'+(ddNotes[x]?' '+ddNotes[x]:''))];
       out+='>'+(dparts.length===0?'平安夜':dparts.join('、'))+'\n';
       jgDayLog[n].forEach(l=>{ out+='>'+l+'\n'; });
     }
@@ -930,11 +931,13 @@ function jgApplyDeath(p){
 }
 // 某玩家「真的被淘汰」（不是雙身分換牌）時，若他原本的身分是狼美人，觸發魅惑對象殉情。
 // wasRole 一定要在呼叫 jgApplyDeath 之前先存好，因為換牌會改掉 p.role。
+// 回傳一同殉情的魅惑對象號碼（沒有觸發則回傳 null），方便呼叫端組合法官口白／文字紀錄。
 function jgCascadeWolfBeautyDeath(wasRole, trulyDied){
   if(trulyDied&&wasRole==='wolfbeauty'&&jgRecord.wolfbeautyCharm){
     const ct=jgFind(jgRecord.wolfbeautyCharm);
-    if(ct&&ct.alive) jgApplyDeath(ct);
+    if(ct&&ct.alive){ jgApplyDeath(ct); return ct.num; }
   }
+  return null;
 }
 // 某玩家「真的被淘汰」時，若他原本的身分是攝夢人，當晚夢遊（所睡）的玩家跟著同死。
 function jgCascadeDreamcatcherDeath(wasRole, trulyDied){
@@ -1055,6 +1058,18 @@ function jgFormatNightLog(){
   if(wbyP&&wbyP.alive&&jgWolfBrotherAwakened&&jgWolfBrotherAwakenedNight===jgNight){
     lines.push('覺醒刀 '+(jgRecord.wolfBrotherAwakenKill||'x'));
   }
+  // 守墓人／石像鬼現在排在狼人睜眼之前（見 jgAfterWolfBrotherStep），文字紀錄的順序也跟著調整。
+  const gkP=jgPlayers.find(p=>p.role==='gravkeeper');
+  if(gkP&&gkP.alive&&jgNight>=2){
+    const lp=jgLastVoteOutPlayer?jgByNum(jgLastVoteOutPlayer):null;
+    const isWolf3=lp&&WOLF_ROLES.includes(lp.role);
+    lines.push('守墓 '+(jgLastVoteOutPlayer||'x')+(jgLastVoteOutPlayer?(isWolf3?'(狼)':'(好)'):''));
+  }
+  const ggP=jgPlayers.find(p=>p.role==='gargoyle');
+  if(ggP&&ggP.alive){
+    const v=jgRecord.gargoyleCheck;
+    lines.push('石驗 '+(v||'x')+mediumCheckResult(v));
+  }
   if(mwP&&mwP.alive){
     const learnedBeforeTonight=jgMechWolfLearned&&jgMechWolfLearnedNight!==null&&jgMechWolfLearnedNight<jgNight;
     if(!learnedBeforeTonight){
@@ -1071,6 +1086,8 @@ function jgFormatNightLog(){
     }
   }
   if(hasWolf) lines.push('刀 '+jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill));
+  const wbP3=jgPlayers.find(p=>p.role==='wolfbeauty');
+  if(wbP3&&wbP3.alive) lines.push('魅 '+(jgRecord.wolfbeautyCharm||'x'));
   const bmP2=jgPlayers.find(p=>p.role==='blackmarket');
   if(bmP2&&bmP2.alive&&jgRecord.blackmarketTarget!==undefined){
     const skillAbbr={seer:'驗',witch:'毒',hunter:'獵'}[jgRecord.blackmarketSkill]||'';
@@ -2585,21 +2602,11 @@ function jgRenderStep(step){
           wiIdx++;
         }
       });
-      // Gargoyle joins wolf pack on first night to establish identity
-      if(jgComp.gargoyle>0){
-        const ggP=jgPlayers.find(p=>p.role==='gargoyle');
-        if(!ggP) allWolfIdsAssigned=false;
-        wolfFieldsInner+='<div class="divider" style="margin:12px 0 8px;"></div>';
-        wolfFieldsInner+='<div style="margin-bottom:8px;">'
-          +'<label style="margin-top:0;"><strong>石像鬼</strong>號碼</label>'
-          +jgNumSelectHtml('jg-gargoyle-who-wolf', ggP?ggP.num:'', 'jgWolfIdOnChange')
-          +'</div>';
-      }
+      // 石像鬼「不與狼隊見面」，身分已經在 mech-assign（或自己獨立的 gargoyle-wake）記錄，
+      // 不再跟其餘狼人擠在同一個畫面裡記名字，也不會跟狼人一起睜眼。
     }
     const needId=isFirst&&!jgMechAssignDone&&!allWolfIdsAssigned;
     const killVal=jgRecord.wolfKill||'';
-    const hasGargoyle=(jgNight===1&&jgComp.gargoyle>0)||jgHasRoleAny(['gargoyle']);
-    const wolfTitle=isFirst&&hasGargoyle?'狼人＆石像鬼睜眼':'狼人睜眼';
     const hasNightmareRole=jgNight===1?(jgComp.nightmare>0):jgHasRoleAny(['nightmare']);
     const hasMechWolfRole=jgNight===1?(jgComp.mechanicalwolf>0):jgHasRoleAny(['mechanicalwolf']);
     let compatNote='';
@@ -2619,8 +2626,8 @@ function jgRenderStep(step){
       }
     }
     jgShowPg(`
-      <h2>${wolfTitle}</h2>
-      <div class="speech">「<em>${isFirst&&hasGargoyle?'狼人與石像鬼請睜眼。':'狼人請睜眼。'}</em>」</div>
+      <h2>狼人睜眼</h2>
+      <div class="speech">「<em>狼人請睜眼。</em>」</div>
       ${needId?wolfFieldsInner+'<div class="divider" style="margin:12px 0 8px;"></div>':''}
       <div class="speech">「<em>請選擇今晚要殺的對象。</em>」</div>
       ${compatNote}
@@ -2723,14 +2730,14 @@ function jgRenderStep(step){
       <div class="speech">「<em>狼美人請睜眼。</em>」</div>
       ${idHtml}
       ${dead?'<div class="info-warn">狼美人已出局，仍需走完流程</div>':''}
-      ${wbAlive?`<div class="speech">「<em>今晚要魅惑的對象是？</em>」</div>
-      <div id="jg-wolfbeauty-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      <div class="speech">「<em>今晚要魅惑的對象是？</em>」</div>
+      ${dead?'':`<div id="jg-wolfbeauty-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
       <div id="jg-wolfbeauty-action" style="${feared?'display:none;':''}">
       <label>魅惑的對象（號碼，每晚必須魅惑一人，不能選自己）</label>
       ${jgNumSelectHtml('jg-wolfbeauty-charm', curCharm, 'jgWolfBeautyCheck', null, wbP?[wbP.num]:[])}
       <div id="jg-wolfbeauty-warn"></div>
       <div class="info" style="font-size:12px;margin-top:6px;">出局（被票、獵人射殺）或夜間被毒→魅惑對象殉情<br>不能連續兩晚魅惑同一人・不能自刀・不能魅惑自己</div>
-      </div>`:''}
+      </div>`}
       <div class="speech" style="margin-top:10px;">「<em>狼美人請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolfBeautyNight()">已紀錄，下一步 →</button>
     `,'💋 狼美人');
@@ -2787,11 +2794,13 @@ function jgRenderStep(step){
       ${idHtml}
       ${dead?'<div class="info-warn">石像鬼已出局，仍需走完流程</div>':''}
       <div id="jg-gargoyle-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
-      ${dead?'':`<div id="jg-gargoyle-action" style="${feared?'display:none;':''}">${allDead?'<div class="info-warn">其他狼人隊友已全滅，石像鬼查驗之外，今晚也可以自行帶刀殺人</div>':'<div class="info" style="font-size:12px;">查驗結果只告訴石像鬼具體角色，目前其他狼人隊友存活，暫不能殺人</div>'}
+      ${dead?'':`<div id="jg-gargoyle-action" style="${feared?'display:none;':''}">
       <label>查驗對象號碼</label>
       ${jgNumSelectHtml('jg-gargoyle-check', gv, 'jgGargoyleCheck')}
       <div id="jg-gargoyle-result"></div>
-      ${allDead?'<div class="divider" style="margin:12px 0 8px;"></div><div class="speech">「<em>今晚的帶刀手勢是？（👍 讚）</em>」（其他狼隊友已全滅，石像鬼可以殺人）</div><label>石像鬼今晚要殺的對象（留空=不殺）</label>'+jgNumSelectHtml('jg-gargoyle-kill', jgRecord.gargoyleKillTarget||jgRecord.wolfKill||'', null, null, jgNoSelfCutNums()):''}</div>`}
+      <div class="divider" style="margin:12px 0 8px;"></div>
+      <div class="speech">「<em>今晚的帶刀手勢是？（${allDead?'👍 讚':'👎 倒讚'}）</em>」</div>
+      ${allDead?'<label>石像鬼今晚要殺的對象（留空=不殺）</label>'+jgNumSelectHtml('jg-gargoyle-kill', jgRecord.gargoyleKillTarget||jgRecord.wolfKill||'', null, null, jgNoSelfCutNums()):''}</div>`}
       <div class="speech" style="margin-top:10px;">「<em>石像鬼請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveGargoyleNight()">已紀錄，下一步 →</button>
     `,'🗿 石像鬼');
@@ -3148,7 +3157,7 @@ function jgRenderStep(step){
       const lp=jgByNum(lastVoteOut);
       const isWolf2=lp&&WOLF_ROLES.includes(lp.role);
       const lname=lp?(lp.name&&lp.name!==lp.num+'號'?lp.num+'號 '+lp.name:lp.num+'號'):'未知';
-      revealHtml='<div class="speech">「<em>前一天被放逐的是好人還是狼人？</em>」（法官對守墓人比出手勢：好人 👍 比讚／狼人 👎 倒讚）</div>'
+      revealHtml='<div class="speech">「<em>白天出局的玩家陣營是？</em>」（法官對守墓人比出手勢：好人 👍 比讚／狼人 👎 倒讚）</div>'
         +'<div class="info-'+(isWolf2?'danger':'success')+'" style="font-size:16px;font-weight:800;text-align:center;padding:14px;">'
         +lname+' → '+(isWolf2?'狼人（法官倒讚 👎）':'好人（法官比讚 👍）')+'</div>';
     } else {
@@ -3161,7 +3170,7 @@ function jgRenderStep(step){
       ${idHtml}
       ${revealHtml}
       <div class="speech" style="margin-top:10px;">「<em>守墓人請閉眼。</em>」</div>
-      <button class="primary" onclick="jgSaveSimpleGod('gravkeeper','gravkeeper-wake')">下一步 →</button>
+      <button class="primary" onclick="jgSaveGravkeeper()">下一步 →</button>
     `,'⚰️ 守墓人');
   }
   // ── 黑市商人睜眼 ──
@@ -3482,7 +3491,7 @@ function jgRenderStep(step){
           +'</div>';
       });
     }
-    jgDawnDeaths[jgNight]={died:[...trulyDiedNums], swapped:[...swappedNums]};
+    jgDawnDeaths[jgNight]={died:[...trulyDiedNums], swapped:[...swappedNums], notes:{}};
     // 若是走過警長競選流程才走到這裡（候選人真的有上警競選），「天亮請睜眼」已經在競選一開始就
     // 說過了，這裡不再重複；改成先公布警長結果，再公布平安夜／死亡消息、遺言，最後（若當選了）
     // 讓警長當場決定警左警右，全部整合在同一個畫面，不用另外切換頁面。
@@ -3578,6 +3587,20 @@ function jgRenderStep(step){
         <div class="info" style="font-size:13px;">🎖️ ${jgSheriff}號 警長在場，法官點選警長宣布的左／右邊號碼即可。</div>
         <label>警長選警左還是警右？（點選對應號碼，方向自動判定）</label>
         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;">${jgSheriffLRButtonsHtml(curStart,'jgSetDiscussStart')}</div>
+        ${jgDiscussExtraButtonsHtml()}
+        <button class="primary" onclick="jgGoStep('vote')" style="margin-top:8px;">發言結束，進入投票 →</button>
+      `,'💬 發言');
+      return;
+    }
+    // 今天的發言起點／方向如果已經決定過了（例如騎士決鬥猜錯、以死謝罪後回到討論階段），
+    // 直接沿用同一個結果繼續發言，不用再轉一次轉盤——轉盤只在「今天」還沒決定過時才需要。
+    const dmToday=jgDayMeta[jgNight];
+    if(dmToday&&dmToday.start&&dmToday.dir){
+      const dirLabel3=dmToday.dir==='逆'?'逆時針':'順時針';
+      jgShowPg(`
+        <h2>發言討論</h2>
+        ${jgNight===1?jgFirstDayCompCheckHtml():''}
+        <div class="speech">「<em>從 ${dmToday.start} 號開始，${dirLabel3}依序發言。</em>」</div>
         ${jgDiscussExtraButtonsHtml()}
         <button class="primary" onclick="jgGoStep('vote')" style="margin-top:8px;">發言結束，進入投票 →</button>
       `,'💬 發言');
@@ -3781,23 +3804,31 @@ function jgSaveDawnHunterShot(){
     } else if(p&&p.alive){
       const wasRole=p.role; // 換牌前先記住原本身分，避免 jgApplyDeath 換牌後 role 已經變了
       const trulyDied=jgApplyDeath(p);
-      jgCascadeWolfBeautyDeath(wasRole, trulyDied);
+      const wbCharmNum=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       // 被夜槍／王槍帶走的對象，如果本身也具備獵人開槍資格（真獵人／已學得獵人的機械狼／
       // 得到獵槍技能的幸運兒），也要能連鎖啟動自己的技能帶人
       const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
       if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; }
+      if(wbCharmNum){
+        jgRecord._dawnHunterShotWbCharmNote='（'+val+'狼美，魅惑對象'+wbCharmNum+'一同出局）';
+        alert('💋 '+val+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+val+'號、'+wbCharmNum+'號 淘汰。」');
+      }
     }
-    // Amend this night's export-log kill line with the shooter's follow-up kill
+    // Amend this night's death line (not the 刀 line itself) with the shooter's follow-up kill,
+    // so the export shows it as "X死亡（X獵帶Y）(Y狼美，魅惑對象Z一同出局)" under 白天, not under 夜晚.
     const shooter=jgPlayers.find(pl=>pl.role==='wolfking'&&jgRecord.wolfKill&&pl.num.toString()===jgRecord.wolfKill.toString())
       ||jgFind(jgRecord.wolfKill);
     if(shooter&&jgIsHunterCapable(shooter)&&jgLuckyOne&&jgLuckyOne.gift==='hunter'&&jgLuckyOne.num===shooter.num){
       jgLuckyOne.used=true;
     }
-    if(shooter&&jgNightLog[jgNight]){
+    if(shooter&&jgDawnDeaths[jgNight]){
       const abbr=shooter.role==='wolfking'?'王':'獵';
-      const idx=jgNightLog[jgNight].findIndex(l=>l.startsWith('刀'));
-      if(idx>=0) jgNightLog[jgNight][idx]+='（'+shooter.num+abbr+'帶'+jgSwapDisplay(rawVal,val)+(guardBlocked?'，被守衛擋下':isEvilKnightImmune?'，惡靈騎士免疫':'')+'）';
+      if(!jgDawnDeaths[jgNight].notes) jgDawnDeaths[jgNight].notes={};
+      const wbNote=jgRecord._dawnHunterShotWbCharmNote||'';
+      jgRecord._dawnHunterShotWbCharmNote=null;
+      jgDawnDeaths[jgNight].notes[shooter.num]=(jgDawnDeaths[jgNight].notes[shooter.num]||'')
+        +'（'+shooter.num+abbr+'帶'+jgSwapDisplay(rawVal,val)+(guardBlocked?'，被守衛擋下':isEvilKnightImmune?'，惡靈騎士免疫':'')+'）'+wbNote;
     }
     jgRenderRoster();
     const win=jgCheckWin();
@@ -3842,20 +3873,27 @@ function jgSaveMechHunterChainShot(){
     } else if(p&&p.alive){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
-      jgCascadeWolfBeautyDeath(wasRole, trulyDied);
+      const wbCharmNum2=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      if(wbCharmNum2){
+        jgRecord._chainShotWbCharmNote='（'+val+'狼美，魅惑對象'+wbCharmNum2+'一同出局）';
+        alert('💋 '+val+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+val+'號、'+wbCharmNum2+'號 淘汰。」');
+      }
     }
     if(chainRole==='luckyone'&&jgLuckyOne&&jgLuckyOne.gift==='hunter'&&jgLuckyOne.num===chainNum){
       jgLuckyOne.used=true;
     }
     if(chainNum){
+      const wbNote2=jgRecord._chainShotWbCharmNote||'';
+      jgRecord._chainShotWbCharmNote=null;
       if(chainOrigin==='night'){
-        if(jgNightLog[jgNight]){
-          const idx=jgNightLog[jgNight].findIndex(l=>l.startsWith('刀'));
-          if(idx>=0) jgNightLog[jgNight][idx]+='（'+chainNum+abbr+'帶'+jgSwapDisplay(rawVal,val)+(guardBlocked?'，被守衛擋下':isEvilKnightImmune?'，惡靈騎士免疫':'')+'）';
+        if(jgDawnDeaths[jgNight]){
+          if(!jgDawnDeaths[jgNight].notes) jgDawnDeaths[jgNight].notes={};
+          jgDawnDeaths[jgNight].notes[chainNum]=(jgDawnDeaths[jgNight].notes[chainNum]||'')
+            +'（'+chainNum+abbr+'帶'+jgSwapDisplay(rawVal,val)+(guardBlocked?'，被守衛擋下':isEvilKnightImmune?'，惡靈騎士免疫':'')+'）'+wbNote2;
         }
       } else {
-        jgAmendDayVoteLine(chainNum,abbr,jgSwapDisplay(rawVal,val));
+        jgAmendDayVoteLine(chainNum,abbr,jgSwapDisplay(rawVal,val)+wbNote2);
       }
     }
     jgRenderRoster();
@@ -3923,6 +3961,13 @@ function jgSaveGodId(roleId){
 function jgSaveSimpleGod(roleId, currentStep){
   if(!jgSaveGodId(roleId)) return;
   jgGoStep(jgNextGodStep(currentStep));
+}
+
+// 守墓人現在排在狼人睜眼之前（見 jgAfterWolfBrotherStep），不再屬於 GOD_CHAIN，
+// 所以不能沿用 jgSaveSimpleGod 裡呼叫 jgNextGodStep 的那條舊鏈，改成走 jgAfterGravkeeperStep。
+function jgSaveGravkeeper(){
+  if(!jgSaveGodId('gravkeeper')) return;
+  jgGoStep(jgAfterGravkeeperStep());
 }
 
 // Dreamcatcher consecutive check
@@ -4193,7 +4238,9 @@ function jgGargoyleCheck(){
   const found=jgFind(val);
   if(!found){box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
   const r=found.role||'villager';
-  box.innerHTML='<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+jgFullRoleName(jgCheckDisplayRole(r))+'</div>';
+  const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  box.innerHTML='<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+jgFullRoleName(jgCheckDisplayRole(r))+'</div>'
+    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給石像鬼看</button>';
 }
 
 function jgSaveGargoyleNight(){
@@ -4219,7 +4266,7 @@ function jgSaveGargoyleNight(){
     jgRecord.gargoyleKillTarget=kv||null;
     jgRecord.wolfKill=jgMagicSwapNum(kv||null);
   }
-  jgGoStep(jgNextGodStep('gargoyle-wake'));
+  jgGoStep(jgAfterGargoyleStep());
 }
 
 function jgSaveMechanicalWolf(){
@@ -4318,14 +4365,16 @@ function jgConflictCheck(whoNum, roleId){
 }
 
 // After "確認身分" (everyone has viewed their card), decide where to go:
-// Mechanical-wolf / black-market boards record every player's identity up front
-// (feature request), instead of discovering roles progressively during night-1 wake steps.
+// Mechanical-wolf / black-market / gargoyle+gravkeeper boards record every player's
+// identity up front (feature request), instead of discovering roles progressively
+// during night-1 wake steps. 石像鬼「不與狼隊見面」，這樣才能確保石像鬼的身分不會在
+// 跟狼人擠同一畫面時洩露。
 function jgProceedToNight(){
   if(jgNight===1 && jgDualIdentityMode && !jgDualAssignDone){
     jgGoStep('dual-assign');
     return;
   }
-  if(jgNight===1 && (jgComp.mechanicalwolf>0) && !jgMechAssignDone){
+  if(jgNight===1 && (jgComp.mechanicalwolf>0||jgComp.gargoyle>0) && !jgMechAssignDone){
     jgGoStep('mech-assign');
     return;
   }
@@ -4704,9 +4753,16 @@ function jgSaveLuckyoneHunterShot(){
     const p=jgFind(val);
     if(p&&p.alive){
       const wasRole=p.role;
-      p.alive=false;
-      jgAmendDayVoteLine(jgRecord._voteOutNum,'幸獵',val);
-      const chainTag=jgHunterCapableTag(wasRole,p.num);
+      const trulyDied=jgApplyDeath(p);
+      const wbCharmNum3=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
+      jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      let wbNote3='';
+      if(wbCharmNum3){
+        wbNote3='（'+val+'狼美，魅惑對象'+wbCharmNum3+'一同出局）';
+        alert('💋 '+val+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+val+'號、'+wbCharmNum3+'號 淘汰。」');
+      }
+      jgAmendDayVoteLine(jgRecord._voteOutNum,'幸獵',val+wbNote3);
+      const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
       if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; }
     }
   }
@@ -4773,17 +4829,8 @@ function jgSaveWolf(){
       }
       i++;
     }
-    // Save gargoyle identity if entered during first night wolf wake
-    const ggWhoEl=document.getElementById('jg-gargoyle-who-wolf');
-    if(ggWhoEl){
-      const ggNum=parseInt(ggWhoEl.value||'0');
-      const ggName=(document.getElementById('jg-gargoyle-name-wolf')||{}).value?.trim()||'';
-      if(ggNum){
-        if(!jgConflictCheck(ggNum,'gargoyle')) return;
-        jgPlayers.forEach(p=>{ if(p.role==='gargoyle') p.role=null; });
-        const ggP2=jgByNum(ggNum); if(ggP2){ggP2.role='gargoyle';if(ggName)ggP2.name=ggName;}
-      }
-    }
+    // 石像鬼「不與狼隊見面」，身分已在 mech-assign 或自己的 gargoyle-wake 步驟記錄，
+    // 不再跟狼人擠在同一個畫面裡（見上方 wolf-wake 的畫面已移除石像鬼欄位）。
     jgRenderRoster();
   }
   { const wolfKillRawVal=(document.getElementById('jg-wolf-rec')||{}).value?.trim()||null;
@@ -4920,7 +4967,30 @@ function jgAfterHybridStep(){
 // wolf pack every night (including night 1 — its identity is already known via mech-assign,
 // so it no longer needs to wait until last), so it can decide learning/skill use/kill-takeover
 // before the pack's own kill decision.
+// 石像鬼守墓人板要求的順序：守墓人(第二晚起) → 石像鬼 → 機械狼／狼人 → ……
+// 守墓人排最先是因為它查的是「前一天白天」的結果，跟今晚任何人的行動無關；
+// 石像鬼排在狼人之前是因為它「不與狼隊見面」，必須自己先獨立睜眼查驗（且隊友全滅後要在
+// 自己的畫面裡選今晚帶刀對象），而不是像過去那樣跟狼人擠在同一個「狼人睜眼」畫面裡。
 function jgAfterWolfBrotherStep(){
+  const hasGravkeeper = jgNight===1 ? (jgComp.gravkeeper>0&&!jgMechAssignDone) : jgHasRoleAny(['gravkeeper']);
+  if(hasGravkeeper) return 'gravkeeper-wake';
+  return jgAfterGravkeeperStep();
+}
+// Where to go once gravkeeper is done (or skipped: night 1, or no gravkeeper on the board)
+function jgAfterGravkeeperStep(){
+  const hasGargoyle = jgNight===1 ? (jgComp.gargoyle>0) : jgHasRoleAny(['gargoyle']);
+  if(hasGargoyle) return 'gargoyle-wake';
+  return jgAfterGargoyleStep();
+}
+// Where to go once gargoyle is done. If gargoyle just took over the kill (its own wolf
+// teammates are all dead, so it chose the target itself on its own screen), the now-empty
+// 狼人睜眼／機械狼睜眼 steps have nobody left to wake — skip straight past them, same idea
+// as jgAfterMechWolfStep's pack-less-night skip.
+function jgAfterGargoyleStep(){
+  const ggAllDead=jgNight>=2&&jgHasRoleAny(['gargoyle'])&&
+    jgPlayers.filter(p=>WOLF_ROLES.includes(p.role)&&p.role!=='gargoyle'&&!p.alive).length===
+    jgPlayers.filter(p=>WOLF_ROLES.includes(p.role)&&p.role!=='gargoyle').length;
+  if(ggAllDead) return jgNextWolfStep();
   const hasMechWolf = jgNight===1 ? (jgComp.mechanicalwolf>0) : jgHasRoleAny(['mechanicalwolf']);
   if(hasMechWolf) return 'mechanicalwolf-wake';
   return 'wolf-wake';
@@ -5012,14 +5082,14 @@ function jgNextAfterSubWolf(currentStep){
 // (守衛已移到夜晚最開始睜眼；攝夢人已移到守衛之後、狼之前——見 jgAfterGuardStep / jgAfterDreamcatcherStep；
 //  機械狼已移到狼人睜眼之前——見 jgAfterWolfBrotherStep；女巫已移到預言家之前——見 jgNextAfterSubWolf / jgSaveWitch / jgSaveSeer；
 //  黑市商人已移到狼人（含狼美人）睜眼之後、女巫之前——見 jgBlackMarketPending / jgNextWolfStep / jgNextAfterSubWolf)
-// GOD_CHAIN 只涵蓋「女巫→預言家」之後、天亮之前的神職鏈：通靈師 → 石像鬼 → 獵人 → 騎士 → 獵魔人 → 守墓人。
+// 石像鬼、守墓人已經移出這條鏈，改到狼人睜眼之前（見 jgAfterWolfBrotherStep／
+// jgAfterGravkeeperStep／jgAfterGargoyleStep）；GOD_CHAIN 現在只涵蓋「女巫→預言家」
+// 之後、天亮之前的神職鏈：通靈師 → 獵人 → 騎士 → 獵魔人。
 const GOD_CHAIN=[
   {step:'medium-wake',      role:'medium',       check:(n,c)=>n===1?(c.medium>0):jgHasRoleAny(['medium'])},
-  {step:'gargoyle-wake',    role:'gargoyle',     check:(n,c)=>n===1?(c.gargoyle>0):jgHasRoleAny(['gargoyle'])},
   {step:'hunter-wake',      role:'hunter',       check:(n,c)=>(n===1?(c.hunter>0):jgHasRoleAny(['hunter']))||jgMechWolfHunterActive()},
-  {step:'knight-wake',      role:'knight',       check:(n,c)=>n===1?(c.knight>0):jgHasRoleAny(['knight'])},
+  {step:'knight-wake',      role:'knight',       check:(n,c)=>n===1&&c.knight>0},
   {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter'])},
-  {step:'gravkeeper-wake',  role:'gravkeeper',   check:(n,c)=>n===1?(c.gravkeeper>0):jgHasRoleAny(['gravkeeper'])},
 ];
 // 黑市商人已移到狼人（含狼美人）睜眼之後、女巫之前——見 jgBlackMarketPending / jgNextWolfStep / jgNextAfterSubWolf
 function jgBlackMarketPending(){
@@ -5373,9 +5443,14 @@ function jgSaveWolfKingShot(){
     if(p&&p.alive){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
-      jgCascadeWolfBeautyDeath(wasRole, trulyDied);
+      const wbCharmNum4=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
-      jgAmendDayVoteLine(jgRecord._voteOutNum,'王',val);
+      let wbNote4='';
+      if(wbCharmNum4){
+        wbNote4='（'+val+'狼美，魅惑對象'+wbCharmNum4+'一同出局）';
+        alert('💋 '+val+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+val+'號、'+wbCharmNum4+'號 淘汰。」');
+      }
+      jgAmendDayVoteLine(jgRecord._voteOutNum,'王',val+wbNote4);
       { const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
         if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; } }
       jgRenderRoster();
@@ -5507,11 +5582,18 @@ function jgSaveHunter(){
     if(p&&p.alive){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
-      jgCascadeWolfBeautyDeath(wasRole, trulyDied);
+      const wbCharmNum5=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
-      jgAmendDayVoteLine(jgRecord._voteOutNum,'獵',val);
+      let wbNote5='';
+      if(wbCharmNum5){
+        wbNote5='（'+val+'狼美，魅惑對象'+wbCharmNum5+'一同出局）';
+        alert('💋 '+val+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+val+'號、'+wbCharmNum5+'號 淘汰。」');
+      }
+      jgAmendDayVoteLine(jgRecord._voteOutNum,'獵',val+wbNote5);
       { const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
         if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; } }
+      jgRenderRoster();
+      const w=jgCheckWin();if(w){jgShowWin(w);return;}
     }
   }
   if(chainTarget){
