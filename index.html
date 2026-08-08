@@ -6396,7 +6396,7 @@ function renderGuideArticles(articles){
   if(emptyEl) emptyEl.style.display='none';
   listEl.innerHTML=articles.map(a=>{
     const safeUrl=a.url?a.url.replace(/"/g,'&quot;'):'';
-    const linkHtml=safeUrl?`<br><br><a class="role-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">→ 查看原文</a>`:'';
+    const linkHtml=safeUrl?`<br><br><a class="role-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">→ 參考來源</a>`:'';
     return `<div class="rcol">
       <div class="rcol-hd" onclick="toggleRcol(this)">
         <span class="rcol-icon">📝</span>
