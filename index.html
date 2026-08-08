@@ -17,6 +17,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{min-height:100vh;background:var(--bg);font-family:-apple-system,'PingFang TC','Noto Sans TC',sans-serif;color:var(--text);overscroll-behavior:none;}
+html{scroll-behavior:smooth;}
 
 /* ── NAV ── */
 .nav{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
@@ -200,6 +201,41 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 #jg-roster-wrap{flex-shrink:0;position:sticky;bottom:0;z-index:50;max-width:540px;margin:0 auto;width:100%;}
 /* ── COLLAPSIBLE ROLE CARDS ── */
 .rcol{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden;}
+/* ── 角色與規則：搜尋框、目錄 ── */
+.rules-search-wrap{margin:14px 0 10px;}
+.rules-search-input{width:100%;padding:13px 14px;font-size:15px;color:var(--text);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);outline:none;-webkit-appearance:none;appearance:none;}
+.rules-search-input:focus{border-color:var(--accent);}
+.rules-toc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px;}
+.toc-btn{display:inline-block;padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:20px;text-decoration:none;white-space:nowrap;}
+.toc-btn:active{opacity:0.65;}
+/* 每個大區塊獨立成一個有邊框的卡片，彼此拉開間距，一眼就能看出區塊分界 */
+.rules-section{scroll-margin-top:64px;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:18px 16px 20px;margin-bottom:18px;}
+/* 第一層標題（對應目錄）：明顯大一號、粗體、底線分隔，跟底下的第二層標題拉開視覺層級 */
+.rules-h1{font-size:19px;font-weight:800;color:var(--text);letter-spacing:0;text-transform:none;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid var(--border2);display:flex;align-items:center;gap:8px;}
+/* 第二層標題（區塊內的分類，如「平民／神職」「查驗結果／警長競選」）：維持小標籤感，但比卡片名稱明顯 */
+.rules-h2{font-size:12.5px;font-weight:800;color:var(--accent);letter-spacing:0.6px;text-transform:none;margin:20px 0 10px;padding-left:9px;border-left:3px solid var(--accent);}
+.rules-h2:first-of-type{margin-top:2px;}
+/* ── RESPONSIVE CARD GRID (板子介紹／角色卡／名詞卡 在平板、電腦上彈性排列) ── */
+.card-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));align-items:start;margin:16px 0;}
+.card-grid > .rcol,.card-grid > .gcard{margin-bottom:0;max-width:460px;width:100%;}
+/* 內容較長的頁籤在平板／電腦上放寬可視寬度，讓卡片有機會排成多欄 */
+@media (min-width:680px){
+  .tab-wide{max-width:680px;}
+}
+@media (min-width:920px){
+  .tab-wide{max-width:900px;}
+}
+@media (min-width:1240px){
+  .tab-wide{max-width:1180px;}
+}
+/* ── 法官の助手：設定表單與遊戲進行畫面維持一致的可讀寬度，不隨螢幕變寬而跳動 ── */
+#jg-p-setup,#jg-p-roster{max-width:640px;margin:0 auto;}
+#jg-main-scroll,#jg-roster-wrap{max-width:640px;}
+/* 遊玩數據：總覽／排行榜維持較窄寬度（比手機寬一點即可），場次紀錄卡片維持較寬多欄 */
+.data-narrow{max-width:460px;margin:0 auto;}
+@media (min-width:680px){
+  .data-narrow{max-width:560px;}
+}
 .rcol-hd{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;background:var(--bg2);-webkit-user-select:none;user-select:none;}
 .rcol-icon{font-size:22px;flex-shrink:0;}
 .rcol-name{flex:1;font-size:15px;font-weight:700;}
@@ -335,7 +371,7 @@ select{
 <!-- ════════════════ NAV ════════════════ -->
 <nav class="nav">
   <button class="nav-btn" onclick="switchTab('t-rules')"><span class="nv-icon">📖</span>角色與規則</button>
-  <button class="nav-btn" onclick="switchTab('t-glossary')"><span class="nv-icon">📚</span>專有名詞</button>
+  <button class="nav-btn" onclick="switchTab('t-guide')"><span class="nv-icon">🧭</span>攻略參考</button>
   <button class="nav-btn active" onclick="switchTab('t-judge')"><span class="nv-icon">📋</span>法官の助手</button>
   <button class="nav-btn" onclick="switchTab('t-data')"><span class="nv-icon">📊</span>遊玩數據</button>
   <button class="nav-btn" onclick="switchTab('t-report')"><span class="nv-icon">🐛</span>問題回報</button>
@@ -344,16 +380,34 @@ select{
 <!-- ══════════════════════════════════════
      TAB 1: 規則
 ══════════════════════════════════════ -->
-<div id="t-rules" class="tab">
+<div id="t-rules" class="tab tab-wide">
   <div class="nbanner">
     <div class="nicon">🐺</div>
     <h1>狼人殺</h1>
     <p class="sub" style="text-align:center;margin-top:8px;">角色介紹與遊戲規則</p>
   </div>
 
-  <!-- 板子介紹 -->
-  <div class="section-title">🎴 板子介紹</div>
+  <!-- 搜尋 -->
+  <div class="rules-search-wrap">
+    <input type="search" id="rules-search" class="rules-search-input" placeholder="🔍 搜尋角色、板子、名詞…" oninput="rulesSearch(this.value)">
+  </div>
+  <div class="empty" id="rules-search-empty" style="display:none;">沒有符合「<span id="rules-search-empty-term"></span>」的結果</div>
 
+  <!-- 目錄 -->
+  <nav class="rules-toc" id="rules-toc">
+    <a class="toc-btn" href="#sec-boards">🎴 板子介紹</a>
+    <a class="toc-btn" href="#sec-win">🏆 勝利條件</a>
+    <a class="toc-btn" href="#sec-wolf">🐺 狼人陣營角色</a>
+    <a class="toc-btn" href="#sec-good">🧑‍🌾 好人陣營角色</a>
+    <a class="toc-btn" href="#sec-special">⭐ 附加身分</a>
+    <a class="toc-btn" href="#sec-vote">🗳️ 投票放逐規則</a>
+    <a class="toc-btn" href="#sec-glossary">📚 專有名詞小辭典</a>
+  </nav>
+
+  <!-- 板子介紹 -->
+  <div class="rules-section" id="sec-boards">
+  <div class="rules-h1">🎴 板子介紹</div>
+  <div class="card-grid">
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-icon">🤖</span>
@@ -457,50 +511,43 @@ select{
       <span class="board-role">狼王／血月使者</span>：這個板子把混血兒和兩個狼隊技能（狼王的開槍帶人、血月使者的自爆封技與屠邊絕殺）放在一起，讓好人陣營在推理和投票上都要更小心。<br><span class="role-link" onclick="jumpToRole('wolfking')">→ 查看狼王完整規則</span>　<span class="role-link" onclick="jumpToRole('bloodmoon')">→ 查看血月使者完整規則</span>
     </div>
   </div>
+  </div>
+  </div>
 
-  <div class="section-title">勝利條件</div>
+  <!-- 勝利條件 -->
+  <div class="rules-section" id="sec-win">
+  <div class="rules-h1">🏆 勝利條件</div>
   <div class="info-danger" style="margin-bottom:8px;">🐺 狼人勝利：存活狼人數 ≥ 存活好人數，或所有神職死亡，或所有平民死亡</div>
   <div class="info-success">✓ 好人勝利：所有狼人被淘汰</div>
+  </div>
 
   <!-- 狼人陣營 -->
-  <div class="section-title" style="margin-top:20px;">🐺 狼人陣營</div>
+  <div class="rules-section" id="sec-wolf">
+  <div class="rules-h1">🐺 狼人陣營角色</div>
   <p class="sub">共同目標：殺光所有平民或神職人員（屠邊）</p>
-  <div id="rules-wolf-list"></div>
+  <div id="rules-wolf-list" class="card-grid"></div>
+  </div>
 
-  <!-- 好人陣營 平民 -->
-  <div class="section-title">🧑‍🌾 好人陣營・平民</div>
-  <div id="rules-vil-list"></div>
+  <!-- 好人陣營（平民＋神職） -->
+  <div class="rules-section" id="sec-good">
+  <div class="rules-h1">🧑‍🌾 好人陣營角色</div>
+  <div class="rules-h2">平民</div>
+  <div id="rules-vil-list" class="card-grid"></div>
 
-  <!-- 好人陣營 神職 -->
-  <div class="section-title">✨ 好人陣營・神職</div>
-  <div id="rules-god-list"></div>
+  <div class="rules-h2">✨ 神職</div>
+  <div id="rules-god-list" class="card-grid"></div>
+  </div>
 
-  <!-- 附加身分 -->
-  <div class="section-title">⭐ 附加身分</div>
-  <div id="rules-special-list"></div>
-
-  <!-- 警長競選規則 -->
-  <div class="section-title" style="margin-top:20px;">🎖️ 警長競選規則</div>
-  <div class="rcol">
-    <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🎖️</span>
-      <span class="rcol-name">流程與平票處理</span>
-      <span class="rcol-arrow">▶</span>
-    </div>
-    <div class="rcol-body">
-      <strong>基本流程：</strong>第一夜結束、天亮前先問是否上警，候選人起立 → 抽政見發表順序，依序發言 → 發言結束後可退水 → 未上警的玩家投票，最高票者當選警長 → 警長宣布警左／警右決定發言起始方向。<br><br>
-      <strong>平票怎麼處理？</strong>
-      <ul>
-        <li>如果最高票是 0 票（沒有人投票給任何候選人），本局無警長。</li>
-        <li>如果最高票是非 0 的平票，平票的玩家進行新一輪發言 PK，然後重新投票，得票較多者當選警長；如果 PK 之後再度平票，本局不再有警長。</li>
-        <li>狼人可以在競選環節的任何時間點自爆；狼人自爆會直接吞掉警徽，本局不再有警長。</li>
-      </ul>
-      <strong>PK 平票後還能退水嗎？</strong> 原則上不行——進入投票環節、出現平票之後，參與 PK 的候選人不能再退水。
-    </div>
+  <!-- 附加身分（含警長競選規則） -->
+  <div class="rules-section" id="sec-special">
+  <div class="rules-h1">⭐ 附加身分</div>
+  <div id="rules-special-list" class="card-grid"></div>
   </div>
 
   <!-- 投票放逐規則 -->
-  <div class="section-title" style="margin-top:20px;">🗳️ 投票放逐規則</div>
+  <div class="rules-section" id="sec-vote">
+  <div class="rules-h1">🗳️ 投票放逐規則</div>
+  <div class="card-grid">
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-icon">🗳️</span>
@@ -512,12 +559,26 @@ select{
             <strong>平票怎麼辦？</strong>若最高票出現平票，自動進入 PK：平票玩家再次發言，其餘玩家重新投票一次，票投給任一位 PK 候選人。
     </div>
   </div>
-</div>
+  </div>
+  </div>
 
+  <!-- 專有名詞小辭典 -->
+  <div class="rules-section" id="sec-glossary">
+  <div class="rules-h1">📚 專有名詞小辭典</div>
+  <div class="rules-h2">🔎 查驗／守護結果</div>
+  <div id="glossary-water-list" class="card-grid"></div>
+
+  <div class="rules-h2">🎖️ 警長競選</div>
+  <div id="glossary-sheriff-list" class="card-grid"></div>
+
+  <div class="rules-h2">🎭 發言與戰術</div>
+  <div id="glossary-tactic-list" class="card-grid"></div>
+  </div>
+</div>
 <!-- ══════════════════════════════════════
      TAB 3: 人工法官助手
 ══════════════════════════════════════ -->
-<div id="t-judge" class="tab on">
+<div id="t-judge" class="tab tab-wide on">
 
 <!-- 法官設定 -->
 <div id="jg-p-setup" class="pg on">
@@ -594,7 +655,7 @@ select{
 <!-- ══════════════════════════════════════
      TAB: 遊玩數據
 ══════════════════════════════════════ -->
-<div id="t-data" class="tab">
+<div id="t-data" class="tab tab-wide">
 
 
   <div class="nbanner">
@@ -603,7 +664,8 @@ select{
     <p class="sub">狼人殺紀錄・場次 / 勝率 / 身分統計</p>
   </div>
 
-  <!-- 總覽 -->
+  <!-- 總覽 + 排行榜：維持較窄、易讀的寬度 -->
+  <div class="data-narrow">
   <div class="section-title">總覽</div>
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-num" id="ov-games">–</div><div class="stat-lbl">總場次</div></div>
@@ -627,6 +689,7 @@ select{
   <div class="pd-formula-toggle" id="pd-formula-toggle" onclick="pdToggleFormula()">🧮 點擊了解公式 ▾</div>
   <div class="pd-formula-box" id="pd-formula-box" style="display:none;"></div>
   <div class="card" id="leaderboard"></div>
+  </div>
 
   <!-- 場次篩選 -->
   <div class="section-title">場次紀錄</div>
@@ -636,28 +699,23 @@ select{
     <select id="f-board"><option value="">全部板子</option></select>
   </div>
   <div class="gcount" id="gcount"></div>
-  <div id="game-list"></div>
+  <div id="game-list" class="card-grid"></div>
 
 </div>
 
 <!-- ══════════════════════════════════════
      TAB: 專有名詞
 ══════════════════════════════════════ -->
-<div id="t-glossary" class="tab">
+<div id="t-guide" class="tab tab-wide">
   <div class="nbanner">
-    <div class="nicon">📚</div>
-    <h1>專有名詞</h1>
-    <p class="sub" style="text-align:center;margin-top:8px;">狼人殺常見術語小辭典</p>
+    <div class="nicon">🧭</div>
+    <h1>攻略參考</h1>
+    <p class="sub" style="text-align:center;margin-top:8px;">精選狼人殺攻略文章，站方不定期更新收錄</p>
   </div>
 
-  <div class="section-title">🔎 查驗／守護結果</div>
-  <div id="glossary-water-list"></div>
-
-  <div class="section-title" style="margin-top:20px;">🎖️ 警長競選</div>
-  <div id="glossary-sheriff-list"></div>
-
-  <div class="section-title" style="margin-top:20px;">🎭 發言與戰術</div>
-  <div id="glossary-tactic-list"></div>
+  <div id="guide-loading" class="empty">載入攻略中…</div>
+  <div id="guide-empty" class="empty" style="display:none;">目前還沒有收錄文章，之後會陸續新增。</div>
+  <div id="guide-list" class="card-grid"></div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -705,10 +763,11 @@ function switchTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   document.querySelectorAll('.nav-btn').forEach((b,i)=>{
-    b.classList.toggle('active',['t-rules','t-glossary','t-judge','t-data','t-report'][i]===id);
+    b.classList.toggle('active',['t-rules','t-guide','t-judge','t-data','t-report'][i]===id);
   });
   if(id==='t-report') jgLoadReportForm();
   if(id==='t-data') pdLoadCloudGames(); // 每次切到「遊玩數據」分頁都重新抓一次雲端最新場次
+  if(id==='t-guide') loadGuideArticles(); // 第一次切到「攻略參考」才去抓資料，避免沒用到還耗流量
   window.scrollTo(0,0);
 }
 
@@ -5770,7 +5829,13 @@ const ALL_ROLES = {
   medium:   {icon:'👁️', name:'通靈師', team:'good', teamLabel:'神職', desc:'<strong>查驗具體身份：</strong>每晚查驗一名玩家的具體角色（而非單純好人／狼人）。可以重複查驗已查過的號碼；不能查驗已死亡的號碼。<br><strong>查驗機械狼：</strong>若機械狼尚未學習技能，顯示為「機械狼」；若已學習，顯示其學到的具體身份。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與機械狼搭配出現</span>'},
   blackmarket:{icon:'💰',name:'黑市商人',team:'good',teamLabel:'神職', desc:'<strong>黑市交易：</strong>整局限一次，任一晚選擇一名玩家進行交易，給予「預言家查驗」「女巫毒藥」「獵人獵槍」三選一的技能。<br><strong>交易成功：</strong>若對象是好人，成為「幸運兒」，從下一晚（查驗／毒藥）或下一個白天（獵槍）起可使用該技能。<br><strong>交易失敗：</strong>若對象是狼人，交易失敗，黑市商人於次日死亡，該狼人不會知道自己曾被選中。<br><span style="color:var(--seer);font-size:12px;">⚡ 帶出「幸運兒」附加身分，常見板子搭配「狼兄狼弟」——覺醒前的狼弟形同隱狼，若黑市商人誤與其交易會直接失敗身亡</span>'},
   // Special
-  sheriff:  {icon:'🏅', name:'警長',   team:'special', teamLabel:'附加身分', desc:'<strong>投票 1.5 票。</strong>可決定發言順序，擁有歸票位。死亡時可傳警長牌或撕毀。'},
+  sheriff:  {icon:'🏅', name:'警長',   team:'special', teamLabel:'附加身分', desc:'<strong>投票 1.5 票。</strong>可決定發言順序，擁有歸票位。死亡時可傳警長牌或撕毀。'
+    +'<br><br><strong>競選流程：</strong>第一夜結束、天亮前先問是否上警，候選人起立 → 抽政見發表順序，依序發言 → 發言結束後可退水 → 未上警的玩家投票，最高票者當選警長 → 警長宣布警左／警右決定發言起始方向。'
+    +'<br><br><strong>平票怎麼處理？</strong><ul>'
+    +'<li>如果最高票是 0 票（沒有人投票給任何候選人），本局無警長。</li>'
+    +'<li>如果最高票是非 0 的平票，平票的玩家進行新一輪發言 PK，然後重新投票，得票較多者當選警長；如果 PK 之後再度平票，本局不再有警長。</li>'
+    +'<li>狼人可以在競選環節的任何時間點自爆；狼人自爆會直接吞掉警徽，本局不再有警長。</li></ul>'
+    +'<strong>PK 平票後還能退水嗎？</strong> 原則上不行——進入投票環節、出現平票之後，參與 PK 的候選人不能再退水。'},
   luckyone: {icon:'🍀', name:'幸運兒', team:'special', teamLabel:'附加身分', desc:'由黑市商人交易產生，並非開局直接分配的身分。獲得預言家查驗、女巫毒藥或獵人獵槍其中一項技能，自取得的下個夜晚（查驗／毒藥）或下個白天（獵槍）起可以使用。'},
 };
 
@@ -5848,16 +5913,19 @@ function jumpToRole(id){
 }
 
 // ── Role Picker ──
+// 預設配置盡量抓 1:1:1（狼／神／民）比例：狼人以基本狼人為主，神職依序（預言家／女巫／獵人／守衛）補上；
+// 狼人陣營能力較強，人數無法整除 3 時，多出來的名額優先分給平民（不會讓狼人數量更多），
+// 法官仍可在畫面上自行調整每個角色的數量。
 const DEFAULT_COMP = {
   6:{wolf:2,villager:2,seer:1,witch:1},
   7:{wolf:2,villager:3,seer:1,witch:1},
-  8:{wolf:2,villager:3,seer:1,witch:1,hunter:1},
+  8:{wolf:2,villager:4,seer:1,witch:1},
   9:{wolf:3,villager:3,seer:1,witch:1,hunter:1},
-  10:{wolf:3,villager:3,seer:1,witch:1,hunter:1,guard:1},
-  11:{wolf:3,villager:4,seer:1,witch:1,hunter:1,guard:1},
+  10:{wolf:3,villager:4,seer:1,witch:1,hunter:1},
+  11:{wolf:3,villager:5,seer:1,witch:1,hunter:1},
   12:{wolf:4,villager:4,seer:1,witch:1,hunter:1,guard:1},
   13:{wolf:4,villager:5,seer:1,witch:1,hunter:1,guard:1},
-  14:{wolf:5,villager:5,seer:1,witch:1,hunter:1,guard:1},
+  14:{wolf:4,villager:6,seer:1,witch:1,hunter:1,guard:1},
 };
 
 // 雙身分模式的預設配置（key＝玩家人數 4～7，角色數＝人數×2；僅供參考，法官可自行調整）
@@ -5921,9 +5989,14 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   }
 
   // God roles
+  // 通靈師會顯示比預言家更完整的查驗資訊（含機械狼學到的身份），兩者效果重疊，
+  // 所以其中一個被選了之後，另一個就不再顯示讓大家選，避免同時出現在同一場。
+  const seerCnt=pickState.seer||0, mediumCnt=pickState.medium||0;
   html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職（點選加入，再點移除）</div>';
   html+='<div class="rpick-grid">';
   gods.forEach(id=>{
+    if(id==='seer'&&mediumCnt>0) return;
+    if(id==='medium'&&seerCnt>0) return;
     const r=ALL_ROLES[id]; const cnt=pickState[id]||0;
     html+=`<div class="rpick${cnt>0?' sel':''}" onclick="rpickTap('${containerId}','${id}')">
       <span class="rp-ico">${r.icon}</span>
@@ -5932,6 +6005,8 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
     </div>`;
   });
   html+='</div>';
+  if(mediumCnt>0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">已選通靈師，預言家不會重複出現</div>';
+  if(seerCnt>0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">已選預言家，通靈師不會重複出現</div>';
   el.innerHTML=html;
 }
 
@@ -6010,8 +6085,34 @@ function jgApplyPresetDefaults(n){
   const rp={};
   Object.entries(preset.fixed).forEach(([k,v])=>{ rp[k]=v; });
   if(!rp.wolf) rp.wolf=1;
-  const fixedTotal=Object.values(rp).reduce((a,b)=>a+b,0);
-  rp.villager=Math.max(0, n-fixedTotal);
+
+  // 盡量抓 1:1:1（狼／神／民）比例：狼人以基本狼人為主，神職依序（預言家／女巫／獵人／守衛）補上，
+  // 若板子已固定通靈師，就不預設加預言家（兩者查驗效果重疊，不同時出現）。
+  // 狼人陣營能力較強，人數無法整除 3 時，多出來的名額優先分給平民，不會讓狼人數量更多。
+  const wolfFixedCount=Object.entries(rp).filter(([k])=>WOLF_ROLES.includes(k)).reduce((s,[,v])=>s+v,0);
+  const godFixedKeys=Object.keys(rp).filter(k=>GOD_ROLES.includes(k));
+  const godFixedCount=godFixedKeys.reduce((s,k)=>s+rp[k],0);
+
+  const base=Math.floor(n/3);
+  const targetWolf=base;
+  const targetGod=Math.min(4, base);
+
+  const wolfNeeded=Math.max(0, targetWolf-wolfFixedCount);
+  if(wolfNeeded>0) rp.wolf=(rp.wolf||0)+wolfNeeded;
+
+  const godPriority=['seer','witch','hunter','guard'];
+  const excludeSeer=godFixedKeys.includes('medium');
+  let godCount=godFixedCount;
+  for(const g of godPriority){
+    if(godCount>=targetGod) break;
+    if(godFixedKeys.includes(g)) continue;
+    if(g==='seer'&&excludeSeer) continue;
+    rp[g]=(rp[g]||0)+1;
+    godCount++;
+  }
+
+  const usedTotal=Object.entries(rp).filter(([k])=>k!=='villager').reduce((s,[,v])=>s+v,0);
+  rp.villager=Math.max(0, n-usedTotal);
   rp._init=true;
   jgRolePick=rp;
 }
@@ -6070,14 +6171,18 @@ function renderPresetPicker(){
   html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職</div>';
   html+='<div class="rpick-grid">';
   fixedGodKeys.forEach(id=>{ html+=jgPresetLockedTileHtml(id); });
+  // 通靈師（medium）與預言家（seer）查驗效果重疊，本板固定通靈師時就不再顯示預言家可選
+  const excludeSeer=fixedKeys.includes('medium');
   JG_PRESET_GOD_BASE.forEach(id=>{
     if(fixedKeys.includes(id)) return; // 這個板子已經把這個角色當固定角色了，不重複顯示
+    if(id==='seer'&&excludeSeer) return;
     const r=ALL_ROLES[id]; const cnt=state[id]||0;
     html+='<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
       +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
       +(cnt>0?'<span class="rp-cnt">✓</span>':'')+'</div>';
   });
   html+='</div>';
+  if(excludeSeer) html+='<div style="font-size:11px;color:var(--text3);margin:4px 0 0;">本板固定為通靈師，不會重複出現預言家</div>';
 
   el.innerHTML=html;
 }
@@ -6138,6 +6243,54 @@ function renderGlossary(){
   if(tEl) tEl.innerHTML=GLOSSARY_TACTIC.map(makeTermCard).join('');
 }
 
+// ── 角色與規則頁的關鍵字搜尋：比對每張卡片（板子介紹／角色／名詞）的標題與內文 ──
+function rulesSearch(qRaw){
+  const q=(qRaw||'').trim().toLowerCase();
+  const root=document.getElementById('t-rules');
+  if(!root) return;
+  let anyMatch=false;
+  root.querySelectorAll('.rules-section').forEach(sec=>{
+    const cards=sec.querySelectorAll('.rcol');
+    if(cards.length===0){ return; } // 像「勝利條件」沒有卡片，永遠顯示
+    let sectionHasMatch=false;
+    cards.forEach(card=>{
+      const nameEl=card.querySelector('.rcol-name');
+      const bodyEl=card.querySelector('.rcol-body');
+      const text=((nameEl?nameEl.textContent:'')+' '+(bodyEl?bodyEl.textContent:'')).toLowerCase();
+      const match=!q||text.includes(q);
+      card.style.display=match?'':'none';
+      if(q&&match){
+        sectionHasMatch=true; anyMatch=true;
+        const hd=card.querySelector('.rcol-hd');
+        if(hd&&bodyEl){ hd.classList.add('open'); bodyEl.classList.add('open'); }
+      } else if(!q){
+        sectionHasMatch=true;
+      }
+    });
+    sec.style.display=(q&&!sectionHasMatch)?'none':'';
+
+    // 同時處理區塊內的第二層標題（如「神職」「警長競選」）：往下找到下一個 h2 或區塊結尾之間
+    // 若完全沒有可見卡片，就把這個標題也一起藏起來，避免搜尋時留下孤零零的標題文字。
+    const subHeads=sec.querySelectorAll('.rules-h2');
+    subHeads.forEach(h2=>{
+      let hasVisible=false;
+      let el=h2.nextElementSibling;
+      while(el&&!el.classList.contains('rules-h2')){
+        if(el.matches('.rcol')&&el.style.display!=='none'){ hasVisible=true; }
+        el.querySelectorAll&&el.querySelectorAll('.rcol').forEach(c=>{ if(c.style.display!=='none') hasVisible=true; });
+        el=el.nextElementSibling;
+      }
+      h2.style.display=(q&&!hasVisible)?'none':'';
+    });
+  });
+  const emptyEl=document.getElementById('rules-search-empty');
+  const termEl=document.getElementById('rules-search-empty-term');
+  if(emptyEl){ emptyEl.style.display=(q&&!anyMatch)?'':'none'; }
+  if(termEl){ termEl.textContent=qRaw||''; }
+  const toc=document.getElementById('rules-toc');
+  if(toc){ toc.style.display=q?'none':''; }
+}
+
 // ═══════════════════════════════════
 // 問題回報 (Issue reporting)
 // ═══════════════════════════════════
@@ -6156,6 +6309,122 @@ function jgLoadReportForm(){
   const embedUrl=REPORT_FORM_URL+(REPORT_FORM_URL.includes('?')?'&':'?')+'embedded=true';
   ifr.src=embedUrl;
   ifr.dataset.loaded='1';
+}
+
+// ═══════════════════════════════════
+// 攻略參考 (Guide articles)
+// ═══════════════════════════════════
+// 設定方式（跟「遊玩數據」抓雲端場次紀錄是同一套 Google 試算表 + 發布成 CSV 的做法）：
+// 1. 開一份新的 Google 試算表，A／B／C 三欄依序放「標題」「內文」「參考網址」，
+//    第一列可以放「標題／內文／參考網址」當表頭（程式會自動偵測並跳過，不放表頭也沒關係）。
+//    每一列 = 一篇文章，之後看到不錯的文章，就直接在試算表最下面新增一列即可。
+// 2. 檔案 → 共用 → 發布到網路（File → Share → Publish to web），來源選「該工作表」、
+//    格式選「逗號分隔值 (.csv)」，按發布，把產生的網址整段複製起來。
+// 3. 把複製到的網址貼進下面 GUIDE_SHEET_CSV_URL 的單引號中間，存檔上傳即可。
+// 4. 之後只要在試算表裡新增一列，重新整理網頁、切到「攻略參考」分頁就會抓到最新內容，
+//    完全不需要再回來改這份 HTML。
+// 5. 如果沒有設定試算表網址，或抓取失敗（例如網路離線、試算表還沒發布成功），
+//    會改用下面 GUIDE_ARTICLES_LOCAL 這個陣列（可以直接手動在這裡加文章當作備援內容）。
+//
+// 內文格式（標題、內文兩欄都適用）：
+// ‧ 換行：儲存格裡直接按 Enter 打成好幾行就好，存成 CSV 後會自動變成分段，不用打任何符號。
+// ‧ 粗體：把想加粗的文字前後各打兩個星號，例如 **這句話很重要**，顯示出來就會變粗體。
+// ‧ 其餘一律當作純文字處理（尖括號等符號會被自動跳脫），不用擔心打字打到特殊符號會把版面弄壞，
+//   但也代表不能直接貼真正的 HTML 標籤進去（例如 <b>…</b> 不會生效，請一律改用 **…**）。
+const GUIDE_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA5OjCfXPH9iKiVzR_WvUFCLfqAjTHJRZeU8RwhXyMNKliM5lTn8-zfqjGpYwBv7IWgNKAtVjIaWG/pub?gid=0&single=true&output=csv';
+const GUIDE_ARTICLES_LOCAL=[
+  // {title:'新手常見誤區整理', content:'這裡放文章內容或摘要，換行直接按 Enter，**重點**用兩個星號包起來即可。', url:'https://example.com/article'},
+];
+let guideLoaded=false;
+
+// 簡易 CSV 解析：處理雙引號欄位、欄位內逗號與換行
+function parseGuideCsv(text){
+  const rows=[]; let row=[]; let field=''; let inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQuotes){
+      if(c==='"'){
+        if(text[i+1]==='"'){ field+='"'; i++; } else { inQuotes=false; }
+      } else { field+=c; }
+    } else {
+      if(c==='"'){ inQuotes=true; }
+      else if(c===','){ row.push(field); field=''; }
+      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else if(c==='\r'){ /* skip */ }
+      else { field+=c; }
+    }
+  }
+  if(field.length||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r=>r.some(c=>c&&c.trim()));
+}
+
+function guideRowsToArticles(rows){
+  if(!rows.length) return [];
+  let start=0;
+  const first=(rows[0][0]||'').trim().toLowerCase();
+  if(first==='標題'||first==='title'||first==='') start=1; // 跳過標題列
+  return rows.slice(start).map(r=>({
+    title:(r[0]||'').trim(),
+    content:(r[1]||'').trim(),
+    url:(r[2]||'').trim(),
+  })).filter(a=>a.title);
+}
+
+// 把試算表打進來的純文字轉成安全的 HTML：先跳脫尖括號等符號避免版面跑掉，
+// 再支援兩個簡單語法──直接按 Enter 換行會變成段落分行；用 **文字** 包住會變成粗體。
+function formatGuideText(raw){
+  const esc=(raw||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+  return esc
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+}
+
+function renderGuideArticles(articles){
+  const listEl=document.getElementById('guide-list');
+  const emptyEl=document.getElementById('guide-empty');
+  const loadingEl=document.getElementById('guide-loading');
+  if(loadingEl) loadingEl.style.display='none';
+  if(!listEl) return;
+  if(!articles||!articles.length){
+    listEl.innerHTML='';
+    if(emptyEl) emptyEl.style.display='';
+    return;
+  }
+  if(emptyEl) emptyEl.style.display='none';
+  listEl.innerHTML=articles.map(a=>{
+    const safeUrl=a.url?a.url.replace(/"/g,'&quot;'):'';
+    const linkHtml=safeUrl?`<br><br><a class="role-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">→ 查看原文</a>`:'';
+    return `<div class="rcol">
+      <div class="rcol-hd" onclick="toggleRcol(this)">
+        <span class="rcol-icon">📝</span>
+        <span class="rcol-name">${formatGuideText(a.title)}</span>
+        <span class="rcol-arrow">▶</span>
+      </div>
+      <div class="rcol-body">${formatGuideText(a.content)}${linkHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadGuideArticles(){
+  if(guideLoaded) return;
+  guideLoaded=true;
+  if(!GUIDE_SHEET_CSV_URL){
+    renderGuideArticles(GUIDE_ARTICLES_LOCAL);
+    return;
+  }
+  try{
+    const res=await fetch(GUIDE_SHEET_CSV_URL);
+    if(!res.ok) throw new Error('fetch failed');
+    const text=await res.text();
+    const rows=parseGuideCsv(text);
+    const articles=guideRowsToArticles(rows);
+    renderGuideArticles(articles.length?articles:GUIDE_ARTICLES_LOCAL);
+  }catch(e){
+    renderGuideArticles(GUIDE_ARTICLES_LOCAL);
+  }
 }
 
 // ── INIT ──
