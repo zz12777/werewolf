@@ -7523,7 +7523,7 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
   const thresholdNote=document.getElementById('pd-rank-threshold-note');
   if(thresholdNote){
     thresholdNote.textContent=GAMES.length>0
-      ?`僅計入遊玩場數 ≥ 全站總場次 1/10（${(GAMES.length/10).toFixed(1)} 場，取整數 ${Math.ceil(GAMES.length/10)} 場以上）的玩家排名，場數不足的玩家仍會顯示勝率與紀錄，但排在最下面、不佔正式名次`
+      ?`僅計入遊玩場數 ≥ 全站總場次 1/10（${(GAMES.length/10).toFixed(1)} 場，取整數 ${Math.ceil(GAMES.length/10)} 場以上）的玩家排名。`
       :'';
   }
 
