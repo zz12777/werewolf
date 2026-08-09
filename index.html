@@ -400,7 +400,7 @@ select{
     <a class="toc-btn" href="#sec-wolf">🐺 狼人陣營角色</a>
     <a class="toc-btn" href="#sec-good">🧑‍🌾 好人陣營角色</a>
     <a class="toc-btn" href="#sec-special">⭐ 附加身分</a>
-    <a class="toc-btn" href="#sec-vote">🗳️ 投票放逐規則</a>
+    <a class="toc-btn" href="#sec-vote">🗳️ 投票放逐與吞警徽規則</a>
     <a class="toc-btn" href="#sec-glossary">📚 專有名詞小辭典</a>
   </nav>
 
@@ -546,7 +546,7 @@ select{
 
   <!-- 投票放逐規則 -->
   <div class="rules-section" id="sec-vote">
-  <div class="rules-h1">🗳️ 投票放逐規則</div>
+  <div class="rules-h1">🗳️ 投票放逐與吞警徽規則</div>
   <div class="card-grid">
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
@@ -557,6 +557,25 @@ select{
     <div class="rcol-body">
             <strong>結果判定：</strong>多數票者出局。<br>
             <strong>平票怎麼辦？</strong>若最高票出現平票，自動進入 PK：平票玩家再次發言，其餘玩家重新投票一次，票投給任一位 PK 候選人。
+    </div>
+  </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">💥</span>
+      <span class="rcol-name">自爆吞警徽規則</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+            <strong>是什麼：</strong>狼人在警長競選（警上）過程中主動自爆，讓警徽提前流失、拖慢好人陣營的查驗與投票節奏的操作。依照各房間／賽事規則不同，主流有兩種：<br><br>
+            <strong>① 單爆吞警徽：</strong>首個白天的警上環節，只要有一名狼人自爆，警徽立刻流失，本局不再有警長。<br>
+            流程：首日上警 → 狼人自爆 → 警徽流失、公佈死訊、發表遺言 → 進入黑夜。<br><br>
+            <strong>② 雙爆吞警徽：</strong>需要 2 名狼人分兩天配合，難度較高。首個白天警上環節，第一名狼人先自爆，但警徽<u>暫時保留</u>，直接公佈死訊、發表遺言後進入黑夜；隔天白天重新競選警長，進行到退水環節時，第二名狼人再次自爆，警徽這才真正流失。<br>
+            流程：首個白天 → 警上環節 → 狼人自爆 → 公佈死訊 → 進入黑夜 → 第二白天 → 再次競選警長 → 退水環節 → 狼人再次自爆 → 警徽流失 → 公佈死訊 → 進入黑夜。<br><br>
+            <strong>補充說明：</strong><br>
+            ‧ 自爆是主動技能，競選過程中的任何時候（起立、發言、退水前、投票前）都可以發動，發動後直接淘汰自己、不能開槍帶人，並跳過當輪投票直接公佈死訊、進入黑夜。<br>
+            ‧ 這裡討論的「自爆吞警徽」，專指<u>警上競選期間</u>的自爆；一般發言階段的「警下自爆」只是單純淘汰自己，若當時已經選出警長，警徽仍在警長身上、不受影響。<br>
+            ‧ 雙爆吞警徽規則下，若最終只有一名狼人完成自爆（另一狼沒有跟上），警徽不會流失：流程會停在「首日自爆 → 公佈死訊 → 天黑 → 隔天直接進入退水 → 投票」，警長依然照常選出。<br>
+            ‧ 法官の助手在「上警局」設定中可以直接選擇本局採用單爆或雙爆，開始主持後競選流程會自動依規則微調。
     </div>
   </div>
   </div>
@@ -617,6 +636,14 @@ select{
     <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
     <span style="font-weight:800;font-size:16px;">🎖️ 上警局（開放警長競選）</span>
   </label>
+  <div id="jg-badge-mode-wrap" style="display:none;margin-top:10px;">
+    <label>💥 自爆吞警徽規則</label>
+    <div class="btn2" style="margin-top:0;">
+      <button type="button" id="jg-badge-mode-single" class="primary" onclick="jgSetBadgeMode('single')">單爆吞警徽</button>
+      <button type="button" id="jg-badge-mode-double" onclick="jgSetBadgeMode('double')">雙爆吞警徽</button>
+    </div>
+    <div class="info" id="jg-badge-mode-desc" style="font-size:12px;margin-top:8px;">單爆吞警徽：只要有狼人在首個白天的警上環節自爆，警徽立刻流失，本局不再有警長。</div>
+  </div>
   <button style="margin-top:8px;" onclick="jgOpenRosterSetup()">👥 設定本局玩家名單（選填）</button>
   <button class="primary" style="margin-top:14px;" onclick="jgStart()">開始主持 →</button>
 </div>
@@ -883,7 +910,7 @@ function jgExportGameLog(){
     if(idx>0) out+='\n';
     out+='**夜晚'+ordSuffix(n)+'\n';
     (jgNightLog[n]||[]).forEach(l=>{ out+='--'+l+'\n'; });
-    if(n===1&&jgSheriffEnabled){
+    if(jgSheriffEnabled&&n===(jgSheriffFinalNight||1)){
       const sheriffBlock=jgFormatSheriffBlock();
       if(sheriffBlock) out+='\n'+sheriffBlock;
     }
@@ -1230,6 +1257,13 @@ let jgSheriffElectedNum=null; // 競選當選的警長號碼，當選後固定�
 let jgSheriffTransferPending=false; // 警長剛陣亡、尚待法官選擇交接對象（或撕毀警徽）
 let jgSheriffTransferDeadNum=null;  // 剛陣亡的警長號碼，供交接畫面與文字紀錄使用
 let jgSheriffTransferNextStep=null; // 交接完成後要繼續前往的原定步驟（由 jgGoStep 攔截時記錄）
+// ── 自爆吞警徽規則（設定頁選擇：單爆／雙爆） ──
+let jgBadgeMode='single';     // 本局採用的自爆吞警徽規則：'single'=單爆吞警徽／'double'=雙爆吞警徽
+let jgSheriffFirstBlowDone=false; // 雙爆模式下，是否已經發生過第一次自爆（警徽尚未流失）
+let jgSheriffFirstBlowNum=null;   // 第一次自爆（保留警徽）的玩家號碼
+let jgSheriffPostponedToDay2=false; // 雙爆模式下，第一次自爆後，警長競選是否延到隔天白天繼續
+let jgSheriffDay2CandidatesAsked=false; // 雙爆模式下，隔天是否已經重新問過候選人起立（避免重複詢問）
+let jgSheriffFinalNight=null; // 警長競選真正塵埃落定（選出警長／確定無警長）的那個白天，供文字紀錄輸出用
 // ── 白天投票放逐：平票 PK ──
 let jgVotePkRound=false;    // 是否正處於白天投票平票後的 PK 重新投票回合
 let jgVotePkCandidates=[];  // PK 回合中僅平票玩家可被投票（其餘玩家才有投票權）
@@ -1253,16 +1287,31 @@ let jgSetupDualMode=false;
 function jgUpdateSheriffToggleStyle(){
   const cb=document.getElementById('jg-sheriff-enabled');
   const lb=document.getElementById('jg-sheriff-enabled-label');
+  const wrap=document.getElementById('jg-badge-mode-wrap');
   if(!cb||!lb) return;
   if(cb.checked){
     lb.style.background='var(--accent,#2e7d32)';
     lb.style.borderColor='var(--accent,#2e7d32)';
     lb.querySelector('span').style.color='#fff';
+    if(wrap) wrap.style.display='';
   } else {
     lb.style.background='rgba(46,125,50,0.08)';
     lb.style.borderColor='var(--accent,#2e7d32)';
     lb.querySelector('span').style.color='';
+    if(wrap) wrap.style.display='none';
   }
+}
+// 法官設定頁：自爆吞警徽規則（single=單爆／double=雙爆），開始主持時會存進 jgBadgeMode
+let jgSetupBadgeMode='single';
+function jgSetBadgeMode(mode){
+  jgSetupBadgeMode=mode;
+  const bS=document.getElementById('jg-badge-mode-single'), bD=document.getElementById('jg-badge-mode-double');
+  if(bS) bS.classList.toggle('primary',mode==='single');
+  if(bD) bD.classList.toggle('primary',mode==='double');
+  const desc=document.getElementById('jg-badge-mode-desc');
+  if(desc) desc.innerHTML = mode==='double'
+    ? '雙爆吞警徽：需要 2 名狼人配合，分兩天操作。首日警上先自爆，警徽暫不流失，直接公佈死訊、進入黑夜；隔天重新競選警長，過程中第二名狼人再次自爆，警徽才真正流失。若最終只有一狼完成自爆，警徽不會流失，警長照常選出。'
+    : '單爆吞警徽：只要有狼人在首個白天的警上環節自爆，警徽立刻流失，本局不再有警長。';
 }
 function jgSetMode(isDual){
   jgSetupDualMode=isDual;
@@ -1568,6 +1617,12 @@ function jgStart(){
   jgSheriffPkRound=false;
   jgSheriffSelfDestruct=false;
   jgSheriffSelfDestructNum=null;
+  jgBadgeMode=jgSetupBadgeMode;
+  jgSheriffFirstBlowDone=false;
+  jgSheriffFirstBlowNum=null;
+  jgSheriffPostponedToDay2=false;
+  jgSheriffDay2CandidatesAsked=false;
+  jgSheriffFinalNight=null;
   jgEvilKnightRevengeUsed=false;
   jgLastVoteOutPlayer=null;
   jgLastNightPeaceful=false;
@@ -1684,10 +1739,14 @@ function jgRenderSheriffCandidates(){
     return '<button type="button" onclick="jgToggleSheriffCandidate('+n+')" style="width:44px;height:44px;border-radius:50%;padding:0;font-size:14px;font-weight:700;'
       +(sel?'background:var(--accent);color:#fff;border-color:transparent;':'')+'">'+n+'</button>';
   }).join('');
+  const badgeBanner = (jgBadgeMode==='double'&&jgSheriffPostponedToDay2)
+    ? '<div class="info-warn" style="font-size:12px;">💥 雙爆吞警徽：昨天 '+jgSheriffFirstBlowNum+' 號已先自爆（警徽保留），今天重新競選；過程中若再有狼人自爆，警徽才會真正流失。</div>'
+    : (jgBadgeMode==='double' ? '<div class="info" style="font-size:12px;">💥 本局採雙爆吞警徽規則：第一次自爆警徽保留、競選延到隔天；再次自爆警徽才會流失。</div>' : '');
   jgShowPg(`
     <h2>警長競選・候選人</h2>
     <div class="speech" style="font-size:16px;">「<em>現在開始競選警長，候選人請起立。</em>」</div>
     <div class="info" style="font-size:12px;">（等候約 5 秒，讓想上警的玩家站起來，再點選以下號碼記錄候選人）</div>
+    ${badgeBanner}
     <label>候選人（點選起立的號碼，可複選）</label>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">${selHtml}</div>
     <button class="danger" style="margin-top:14px;" onclick="jgSheriffSelfDestructPrompt()">💥 有狼人自爆（吞警徽，本局無警長）</button>
@@ -1701,9 +1760,11 @@ function jgToggleSheriffCandidate(n){
 }
 function jgSaveSheriffCandidates(){
   jgSheriffCandidatesAsked=true;
+  jgSheriffDay2CandidatesAsked=true;
   if(jgSheriffCandidates.length===0){
     // 沒有人上警，競選視為結束（無警長），直接進入正常的天亮公布
     jgSheriffElectionDone=true;
+    jgSheriffFinalNight=jgNight;
     jgGoStep('dawn');
     return;
   }
@@ -1711,20 +1772,39 @@ function jgSaveSheriffCandidates(){
   jgSheriffLogLines.push('候選人：'+jgSheriffCandidates.slice().sort((a,b)=>a-b).join('、')+'號');
   jgGoStep('sheriff-dawn-placeholder');
 }
-// 競選過程中任何時候，狼人都可以自爆吞警徽：本局直接沒有警長，該玩家淘汰。
+// 競選過程中任何時候，狼人都可以自爆：
+// ・單爆吞警徽規則下，自爆直接吞掉警徽，本局不再有警長。
+// ・雙爆吞警徽規則下，第一次自爆警徽先保留、競選延到隔天繼續；隔天競選過程中再次自爆，警徽才真正流失。
 // 因為整個競選流程都發生在天亮公布死訊之前，這裡固定回到 dawn 去做真正的天亮結算即可，
 // 不會有「天亮已經公布過一次」的情況。
 function jgSheriffSelfDestructPrompt(){
-  const val=prompt('自爆的玩家號碼？（本局將不再有警長，該玩家會被淘汰）');
+  const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
+  const val=prompt('自爆的玩家號碼？'+(isFirstBlow?'（雙爆吞警徽規則：這是第一次自爆，警徽暫不流失，競選會延到隔天繼續）':'（本局將不再有警長，該玩家會被淘汰）'));
   if(!val) return;
   const p=jgFind(val.trim());
   if(!p){ alert('找不到這個號碼'); return; }
-  if(!confirm(p.num+'號 自爆吞警徽，本局將不再有警長，確定嗎？')) return;
+  if(!confirm(p.num+'號 自爆'+(isFirstBlow?'，警徽暫不流失，競選延到隔天繼續，確定嗎？':'吞警徽，本局將不再有警長，確定嗎？'))) return;
   jgApplyDeath(p);
+  jgSheriffCandidatesAsked=true;
+  jgSheriffDay2CandidatesAsked=true;
+  jgSheriffCampaignHappened=true;
+  if(isFirstBlow){
+    // 雙爆吞警徽・第一爆：警徽保留，競選延到隔天繼續，本輪不產生警長結果
+    jgSheriffFirstBlowDone=true;
+    jgSheriffFirstBlowNum=p.num;
+    jgSheriffPostponedToDay2=true;
+    jgPushDayLog(p.num+'號 自爆（雙爆吞警徽・第一爆，警徽保留，競選延到隔天繼續）');
+    jgRenderRoster();
+    const win=jgCheckWin();
+    if(win){ jgShowWin(win); return; }
+    alert('💥 '+p.num+'號 自爆，警徽暫不流失，隔天將重新競選警長。');
+    jgGoStep('dawn');
+    return;
+  }
+  // 單爆吞警徽，或雙爆吞警徽的第二爆：警徽正式流失，本局不再有警長
   jgSheriff=null;
   jgSheriffElectionDone=true;
-  jgSheriffCandidatesAsked=true;
-  jgSheriffCampaignHappened=true;
+  jgSheriffFinalNight=jgNight;
   jgSheriffSelfDestruct=true;
   jgSheriffSelfDestructNum=p.num;
   jgRenderRoster();
@@ -1828,7 +1908,7 @@ function jgRenderSheriffVote(){
   const cands=jgSheriffCandidates.slice().sort((a,b)=>a-b);
   if(cands.length===0){
     // 候選人都退水光了，直接沒有警長
-    jgSheriff=null; jgSheriffElectionDone=true;
+    jgSheriff=null; jgSheriffElectionDone=true; jgSheriffFinalNight=jgNight;
     jgGoStep('dawn');
     return;
   }
@@ -1919,12 +1999,12 @@ function jgSaveSheriffVote(){
   if(maxCount===0){
     // 規則 1：都是 0 票，本局無警長
     jgSheriffLogLines.push('全數 0 票，本局無警長');
-    jgSheriff=null; jgSheriffElectionDone=true;
+    jgSheriff=null; jgSheriffElectionDone=true; jgSheriffFinalNight=jgNight;
     jgGoStep('dawn');
     return;
   }
   if(top.length===1){
-    jgSheriff=top[0]; jgSheriffElectedNum=top[0]; jgSheriffElectionDone=true;
+    jgSheriff=top[0]; jgSheriffElectedNum=top[0]; jgSheriffElectionDone=true; jgSheriffFinalNight=jgNight;
     jgRenderRoster();
     jgGoStep('dawn');
     return;
@@ -1933,7 +2013,7 @@ function jgSaveSheriffVote(){
   if(jgSheriffPkRound){
     // 規則 2：PK 之後再度平票，本局不再有警長
     jgSheriffLogLines.push('PK 後再度平票：'+top.join('、')+'號，本局無警長');
-    jgSheriff=null; jgSheriffElectionDone=true;
+    jgSheriff=null; jgSheriffElectionDone=true; jgSheriffFinalNight=jgNight;
     jgGoStep('dawn');
     return;
   }
@@ -2336,7 +2416,8 @@ function jgCaptureState(){
     jgSheriffSpeakStart, jgSheriffSpeakDir, jgSheriffVoteTally, jgSheriffPkRound, jgSheriffSelfDestruct, jgSheriffSelfDestructNum,
     jgEvilKnightRevengeUsed, jgLastVoteOutPlayer, jgAbstainVoters,
     jgSheriffLogLines, jgSheriffElectedNum, jgSheriffTransferPending, jgSheriffTransferDeadNum, jgSheriffTransferNextStep,
-    jgVotePkRound, jgVotePkCandidates
+    jgVotePkRound, jgVotePkCandidates,
+    jgBadgeMode, jgSheriffFirstBlowDone, jgSheriffFirstBlowNum, jgSheriffPostponedToDay2, jgSheriffDay2CandidatesAsked, jgSheriffFinalNight
   }));
 }
 
@@ -2400,6 +2481,12 @@ function jgRestoreState(snap){
   jgSheriffTransferPending=!!snap.jgSheriffTransferPending;
   jgSheriffTransferDeadNum=snap.jgSheriffTransferDeadNum;
   jgSheriffTransferNextStep=snap.jgSheriffTransferNextStep;
+  jgBadgeMode=snap.jgBadgeMode||'single';
+  jgSheriffFirstBlowDone=!!snap.jgSheriffFirstBlowDone;
+  jgSheriffFirstBlowNum=snap.jgSheriffFirstBlowNum;
+  jgSheriffPostponedToDay2=!!snap.jgSheriffPostponedToDay2;
+  jgSheriffDay2CandidatesAsked=!!snap.jgSheriffDay2CandidatesAsked;
+  jgSheriffFinalNight=snap.jgSheriffFinalNight;
   jgVotePkRound=!!snap.jgVotePkRound;
   jgVotePkCandidates=snap.jgVotePkCandidates||[];
 }
@@ -3312,7 +3399,10 @@ function jgRenderStep(step){
   else if(step==='dawn'){
     // 有開警長競選的話，第一夜結束、天亮公布死訊之前，先問候選人要不要上警
     // （這樣候選人站起來的時候還不知道昨晚誰死了，跟真實遊戲流程一致）。
-    if(jgSheriffEnabled&&jgNight===1&&!jgSheriffElectionDone&&!jgSheriffCandidatesAsked){
+    if(jgSheriffEnabled&&!jgSheriffElectionDone&&(
+      (jgNight===1&&!jgSheriffCandidatesAsked) ||
+      (jgBadgeMode==='double'&&jgSheriffPostponedToDay2&&jgNight===2&&!jgSheriffDay2CandidatesAsked)
+    )){
       jgRenderSheriffCandidates();
       return;
     }
