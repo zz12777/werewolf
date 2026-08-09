@@ -294,6 +294,8 @@ html,body{min-height:100vh;background:var(--bg);font-family:-apple-system,'PingF
 h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;}
 .sub{font-size:13px;color:var(--text2);line-height:1.6;margin-top:6px;}
 .section-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;margin:26px 0 10px;}
+.big-section-title{font-size:19px;font-weight:800;color:var(--text);letter-spacing:0.2px;text-transform:none;margin:28px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--border2);}
+.big-section-title:first-child{margin-top:4px;}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center;}
 .stat-num{font-size:24px;font-weight:800;}
@@ -308,6 +310,9 @@ h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;}
 .row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;-webkit-user-select:none;user-select:none;}
 .row:last-child{border-bottom:none;}
 .rank{width:22px;font-size:13px;font-weight:800;color:var(--text3);flex-shrink:0;text-align:center;}
+.rank-nr{font-size:10px;font-weight:700;color:var(--text3);}
+.pd-unranked-divider{padding:10px 0 6px;font-size:11.5px;color:var(--text3);border-top:1px dashed var(--border2);margin-top:4px;}
+.row.unranked{opacity:0.6;}
 .av{width:38px;height:38px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;color:var(--text2);}
 .nm-wrap{flex:1;min-width:0;}
 .nm{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -606,6 +611,7 @@ select{
     <h2 class="ntitle">法官の助手</h2>
     <p class="sub" style="text-align:center;">幫助法官主持遊戲的腳本與紀錄系統</p>
   </div>
+  <div class="big-section-title" style="margin-top:8px;">遊戲基本設定</div>
   <label>身分模式</label>
   <div class="btn2" style="margin-top:0;">
     <button type="button" id="jg-mode-single" class="primary" onclick="jgSetMode(false)">單身分</button>
@@ -615,7 +621,8 @@ select{
   <input type="checkbox" id="jg-dual-mode" style="display:none;"/>
   <label id="jg-count-label" style="margin-top:12px;">玩家人數（6～14）</label>
   <input type="number" id="jg-count" min="6" max="14" value="6" inputmode="numeric" oninput="jgUpdateComp()"/>
-  <div id="jg-board-preset-row" style="margin-top:14px;">
+  <div class="big-section-title">選擇板子</div>
+  <div id="jg-board-preset-row">
     <label for="jg-board-preset">選擇板子</label>
     <select id="jg-board-preset" onchange="jgSetBoardPreset(this.value)">
       <option value="custom">自訂角色（可能有bug，遇到狀況請用「問題回報」回報）</option>
@@ -632,7 +639,8 @@ select{
   <div class="info" id="jg-comp-desc" style="text-align:center;font-size:13px;margin-bottom:4px;"></div>
   <div id="jg-role-picker"></div>
   <div id="jg-preset-picker" style="display:none;"></div>
-  <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:16px;padding:14px 16px;border-radius:12px;border:2px solid var(--accent,#2e7d32);background:rgba(46,125,50,0.08);cursor:pointer;transition:background .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
+  <div class="big-section-title">警長設定（選填）</div>
+  <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:0;padding:14px 16px;border-radius:12px;border:2px solid var(--accent,#2e7d32);background:rgba(46,125,50,0.08);cursor:pointer;transition:background .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
     <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
     <span style="font-weight:800;font-size:16px;">🎖️ 上警局（開放警長競選）</span>
   </label>
@@ -644,7 +652,8 @@ select{
     </div>
     <div class="info" id="jg-badge-mode-desc" style="font-size:12px;margin-top:8px;">單爆吞警徽：只要有狼人在首個白天的警上環節自爆，警徽立刻流失，本局不再有警長。</div>
   </div>
-  <button style="margin-top:8px;" onclick="jgOpenRosterSetup()">👥 設定本局玩家名單（選填）</button>
+  <div class="big-section-title">開始遊戲</div>
+  <button onclick="jgOpenRosterSetup()">👥 設定本局玩家名單（選填）</button>
   <button class="primary" style="margin-top:14px;" onclick="jgStart()">開始主持 →</button>
 </div>
 
@@ -693,7 +702,7 @@ select{
 
   <!-- 總覽 + 排行榜：維持較窄、易讀的寬度 -->
   <div class="data-narrow">
-  <div class="section-title">總覽</div>
+  <div class="big-section-title">總覽</div>
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-num" id="ov-games">–</div><div class="stat-lbl">總場次</div></div>
     <div class="stat-card"><div class="stat-num" id="ov-players">–</div><div class="stat-lbl">出賽玩家</div></div>
@@ -704,7 +713,7 @@ select{
   <div class="chip-row" id="ov-boards" style="margin-top:14px;"></div>
 
   <!-- 排行榜 -->
-  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+  <div class="big-section-title" style="display:flex;align-items:center;justify-content:space-between;">
     <span>狼人殺小達人排行榜</span>
     <div style="display:flex;align-items:center;gap:10px;">
       <div class="pd-seg" id="pd-seg">
@@ -713,13 +722,14 @@ select{
       </div>
     </div>
   </div>
+  <div style="font-size:11.5px;color:var(--text3);margin:-6px 0 10px;" id="pd-rank-threshold-note"></div>
   <div class="pd-formula-toggle" id="pd-formula-toggle" onclick="pdToggleFormula()">🧮 點擊了解公式 ▾</div>
   <div class="pd-formula-box" id="pd-formula-box" style="display:none;"></div>
   <div class="card" id="leaderboard"></div>
   </div>
 
   <!-- 場次篩選 -->
-  <div class="section-title">場次紀錄</div>
+  <div class="big-section-title">場次紀錄</div>
   <div class="filters">
     <select id="f-player"><option value="">全部玩家</option></select>
     <select id="f-date"><option value="">全部日期</option></select>
@@ -1582,7 +1592,7 @@ function jgStart(){
   jgDualAssignDone=false;
   jgPlayers=[]; jgNight=1;
   jgWitchSaveUsed=false; jgWitchPoisonUsed=false;
-  jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,hunterNightShot:null};
+  jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,hunterNightShot:null,witchStepDone:false};
   jgLastGuardTarget=null;
   jgLastWolfBeautyCharm=null;
   jgLastNightmareTarget=null;
@@ -2229,7 +2239,8 @@ function jgDiscussExtraButtonsHtml(){
   const ww=jgPlayers.find(p=>p.role==='whitewolf'&&p.alive);
   if(ww) html+='<button class="danger" onclick="jgGoStep(\'whitewolf-selfblow\')" style="margin-top:4px;">'+ww.num+'號 白狼王宣告自爆 →</button>';
   const bm=jgPlayers.find(p=>p.role==='bloodmoon'&&p.alive);
-  if(bm) html+='<button class="danger" onclick="jgGoStep(\'bloodmoon-selfblow\')" style="margin-top:4px;">'+bm.num+'號 血月使者宣告自爆 →</button>';
+  if(bm) html+='<button class="danger" onclick="jgGoStep(\'bloodmoon-selfblow\')" style="margin-top:4px;">'+bm.num+'號 血月使者宣告自爆 →</button>'
+    +'<div style="font-size:11px;color:var(--text3);margin:2px 2px 2px;">⚠️ 只能在'+bm.num+'號「自己發言的階段」宣告自爆，不能搶在別人發言時自爆</div>';
   const knP=jgPlayers.find(p=>p.role==='knight'&&p.alive);
   if(knP) html+='<button class="danger" onclick="jgGoStep(\'knight-duel\')" style="margin-top:4px;">'+knP.num+'號 騎士翻牌決鬥 →</button>';
   const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'));
@@ -2584,7 +2595,7 @@ function jgRenderStep(step){
   }
   else if(step==='night-start'){
     const isSealNight=!!(jgRecord&&jgRecord.bloodmoonSealNight); // save before reset
-    jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false};
+    jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,witchStepDone:false};
     if(isSealNight) jgRecord.bloodmoonSealNight=true; // carry into new record for wolf-wake to check
     const firstNight=jgIsFirstNight();
     jgShowPg(`
@@ -3471,6 +3482,27 @@ function jgRenderStep(step){
     if(ekP){
       deads=deads.filter(d=>d.toString()!==ekP.num.toString());
     }
+    // 獵人／狼王被狼刀刀死時，開槍是他的技能反擊、不是「已經定案的死亡結果」——他的槍有可能
+    // 直接帶走一隻狼，讓看似「狼已達人數多數/屠邊」的盤面瞬間翻盤。所以只要他還沒開槍，
+    // 底下任何 checkWin() 都不能提前把遊戲判定收掉，要等他開完槍才能真的定案。
+    const _pendingWolfKingP=jgPlayers.find(p=>p.role==='wolfking')
+      || (jgMechWolfWolfkingActive()?jgPlayers.find(p=>p.role==='mechanicalwolf'):null);
+    const _pendingWolfKingShoot=!!(_pendingWolfKingP&&jgRecord.wolfKill&&wolfKillDies&&
+      _pendingWolfKingP.num.toString()===jgRecord.wolfKill.toString());
+    const _pendingHunterVictim=jgRecord.wolfKill?jgFind(jgRecord.wolfKill):null;
+    const _pendingHunterShoot=!!(wolfKillDies&&_pendingHunterVictim&&jgIsHunterCapable(_pendingHunterVictim));
+    const _pendingDawnShoot=_pendingHunterShoot||_pendingWolfKingShoot;
+    // 獵魔人夜擊：他一定睡在狼人之後，換句話說他這一擊「早就已經決定」了（只是還沒套用到
+    // 場上人數），不是還沒發生的懸而未決動作。狼刀單純湊出「人數已達多數」這種統計上的
+    // 提前判定（不是真的屠邊、平民或神職都還沒死絕），這只是「等一下投票大概率會贏」的捷徑，
+    // 若獵魔人這一擊剛好砍在僅存的狼身上，會直接打破這個人數判斷，所以要先套用他的擊殺結果
+    // 再判斷，不能搶在前面就用「還沒扣掉獵魔人這一刀」的數字判定勝負。
+    // 但如果狼刀已經是「真的屠邊」（平民或神職死絕），這件事本身就已經成立、獨立於獵魔人的
+    // 這一擊之外，不受影響，可以直接判定狼贏，不用等。
+    const _pendingDhP=jgPlayers.find(p=>p.role==='demonhunter'&&p.alive);
+    const _pendingDhTarget=(jgNight>=2&&jgRecord.demonhunterTarget)?jgFind(jgRecord.demonhunterTarget):null;
+    const _pendingDemonhunterWolfKill=!!(_pendingDhP&&_pendingDhTarget&&_pendingDhTarget.alive&&WOLF_ROLES.includes(_pendingDhTarget.role));
+    const _isMajorityReason=r=>!!(r&&r.winner==='wolf'&&typeof r.msg==='string'&&r.msg.indexOf('人數已達多數')>=0);
     if(!jgNightLog[jgNight]) jgNightLog[jgNight]=jgFormatNightLog();
     // Apply wolf-side deaths first (wolf kill, witch poison that kills good people)
     // Then check if wolf already won BEFORE applying good-side deaths (evilknight revenge etc.)
@@ -3482,8 +3514,11 @@ function jgRenderStep(step){
     if(swappedNums.length&&jgNightLog[jgNight]) jgNightLog[jgNight].push('換牌 '+swappedNums.join(','));
     jgPlayers.forEach(p=>{ if(p._diedThisDawn&&!trulyDiedNums.includes(p.num)) delete p._diedThisDawn; });
     // Check wolf win BEFORE revenge deaths — wolves attacked first
+    // （但若獵人/狼王的槍還沒開，先不要在這裡定案，等他開完槍再說；
+    // 若這只是「人數已達多數」而獵魔人這一擊剛好砍在僅存的狼身上，也先不要定案）
     const wolfFirstWin=jgCheckWin();
-    if(wolfFirstWin&&wolfFirstWin.winner==='wolf'){ jgRenderRoster(); jgShowWin(wolfFirstWin); return; }
+    if(wolfFirstWin&&wolfFirstWin.winner==='wolf'&&!_pendingDawnShoot&&
+      !(_isMajorityReason(wolfFirstWin)&&_pendingDemonhunterWolfKill)){ jgRenderRoster(); jgShowWin(wolfFirstWin); return; }
     jgRecord.hunterNightShot=null;
     jgRecord.blackmarketFail=false;
     jgRecord.luckyonePoison=null;
@@ -3511,7 +3546,7 @@ function jgRenderStep(step){
     jgLastNightPeaceful=(deadNames2.length===0&&swapNames2.length===0);
     jgRenderRoster();
     const dawnWin=jgCheckWin();
-    if(dawnWin){ jgShowWin(dawnWin); return; }
+    if(dawnWin&&!_pendingDawnShoot&&!(_isMajorityReason(dawnWin)&&_pendingDemonhunterWolfKill)){ jgShowWin(dawnWin); return; }
 
     // Demonhunter hunt at night
     if(jgNight>=2&&jgRecord.demonhunterTarget){
@@ -3668,10 +3703,38 @@ function jgRenderStep(step){
         +'<div class="info" style="font-size:13px;">法官手動選取本輪起始號碼與方向。</div>'
         +'<div id="jg-dawn-sheriff-dir-picker">'+jgDawnSheriffDirPickerHtml()+'</div>';
     }
+    // 血月使者殘局提示（僅供參考，不會自動判定輸贏）：如果場上只剩「1血月＋1神＋1民」，
+    // 且這位神職已經沒有任何主動能力可以反殺血月（獵魔人夜擊、女巫毒藥、騎士決鬥），那麼
+    // 不管白天投不投得到血月，血月最後都穩贏（票走了還有屠邊最後一擊，沒票走就繼續刀）。
+    // 但如果這位神職還有主動技能沒用，好人陣營仍有翻盤機會，不能直接判定，要正常走完流程。
+    let bloodmoonEndgameHtml='';
+    {
+      const _beAlive=jgAlive();
+      const _beWolves=_beAlive.filter(p=>jgIsWolfPackMember(p));
+      const _beGood=_beAlive.filter(p=>!jgIsWolfPackMember(p));
+      const _beAllGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+      const _beGods=_beGood.filter(p=>_beAllGods.includes(p.role));
+      const _beVils=_beGood.filter(p=>p.role==='villager'||p.role==='hybrid');
+      if(_beWolves.length===1&&_beWolves[0].role==='bloodmoon'&&_beGods.length===1&&_beVils.length===1){
+        const godRole=_beGods[0].role;
+        // 這個殘局的白天投票只有三種結果，而且每一種都在「投票當下」或「當晚被血月封印」就
+        // 已經決定勝負：推錯（推民）→ 屠民，投票當下直接狼贏；推對（推血月）→ 血月暫存活的
+        // 被動技能本身就會封印當晚所有神職技能，獵魔人／女巫照樣動不了；推更錯（推神）→
+        // 屠神，投票當下直接狼贏。三種結果裡沒有一種能讓獵魔人／女巫在「正常、沒被封印」的
+        // 夜晚出手，所以他們在這個殘局其實跟預言家、守衛一樣是純被動、幫不上忙。
+        // 只有騎士能在白天發言階段直接翻牌決鬥（不用等投票、也不會被封印），是唯一真正
+        // 還有機會翻盤的神職。
+        const stillThreat=godRole==='knight';
+        bloodmoonEndgameHtml=stillThreat
+          ?'<div class="info-warn" style="font-size:13px;padding:10px 14px;margin-top:8px;">⚠️ 場上剩血月＋1神（'+jgFullRoleName(godRole)+'）＋1民，但這位神職還有主動技能沒用，好人仍有機會反殺血月，請照正常流程繼續走。</div>'
+          :'<div class="info-success" style="font-size:13px;padding:10px 14px;margin-top:8px;">✅ 場上剩血月＋1神（'+jgFullRoleName(godRole)+'，已無主動技能可以反殺血月）＋1民：不管白天投不投得到血月，血月最後都穩贏（票走了還有屠邊最後一擊，沒票走就繼續刀），法官可以視情況直接公布狼人獲勝，不用等流程走完。</div>';
+      }
+    }
     jgShowPg(`
       <h2>天亮了！</h2>
       ${sheriffJustResolved?sheriffBannerHtml:'<div class="speech" style="font-size:16px;">「<em>天亮請睜眼。</em>」</div>'}
       <div class="speech" style="font-size:16px;">「<em>${dawnMsg}</em>」</div>
+      ${bloodmoonEndgameHtml}
       ${hunterShotHtml}
       ${lwHtml}
       ${sheriffDirHtml}
@@ -3851,10 +3914,20 @@ function jgRenderStep(step){
   else if(step==='bloodmoon-last-night'){
     const bmp=jgPlayers.find(p=>p.role==='bloodmoon');
     const bmname=bmp&&bmp.name!==bmp.num+'號'?bmp.num+'號 '+bmp.name:bmp?bmp.num+'號':'血月使者';
+    // 若剩下的好人正好「一神一民」，血月今晚不管刀誰，都會湊成屠神或屠民，狼人穩贏——
+    // 這一步只是在記錄他刀了誰、走完流程，勝負其實已經注定，先跟法官說清楚以免誤會成
+    // 「還要看刀到誰才知道輸贏」。
+    const _blmA=jgAlive();
+    const _blmAg=_blmA.filter(p=>!jgIsWolfPackMember(p));
+    const _blmAllGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+    const _blmGodCnt=_blmAg.filter(p=>_blmAllGods.includes(p.role)).length;
+    const _blmVilCnt=_blmAg.filter(p=>p.role==='villager'||p.role==='hybrid').length;
+    const _blmGuaranteed=_blmGodCnt===1&&_blmVilCnt===1;
     jgShowPg(`
       <h2>血月使者・最後一擊</h2>
       <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${bmname} 為最後一個被放逐的狼人，暫時存活！</div>
       <div class="speech">「<em>血月使者暫時存活，今晚進入黑夜，可以再擊殺一名玩家。若達成屠邊條件，狼人勝利。</em>」</div>
+      ${_blmGuaranteed?'<div class="info-success" style="font-size:13px;padding:10px 14px;">✅ 場上只剩一神一民，不管血月今晚刀誰，都會屠神或屠民，狼人這場已經穩贏——這一步只是記錄他刀了誰。</div>':''}
       <label>血月今晚擊殺的目標</label>
       ${jgNumSelectHtml('jg-bloodmoon-last-kill', '')}
       <button class="danger" onclick="jgSaveBloodMoonLastNight()" style="margin-top:10px;">確認擊殺 →</button>
@@ -4614,7 +4687,7 @@ function jgConfirmMechAssign(){
   jgRenderRoster();
   // Eyes were already closed for the whole card-recording process, so skip the redundant
   // "天黑請閉眼" page and go straight into the first wake step of the night.
-  jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false};
+  jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,witchStepDone:false};
   jgGoStep(jgNightStartNext());
 }
 
@@ -4718,7 +4791,7 @@ function jgConfirmDualAssign(){
   jgRenderRoster();
   // Eyes were already closed for the whole card-recording process, so skip the redundant
   // "天黑請閉眼" page and go straight into the first wake step of the night.
-  jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false};
+  jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,witchStepDone:false};
   jgGoStep(jgNightStartNext());
 }
 
@@ -5362,6 +5435,7 @@ function jgSaveWitch(){
       }
     }
   }
+  jgRecord.witchStepDone=true;
   if(jgTryEarlyEnd()) return;
   jgGoStep('seer-wake');
 }
@@ -5770,9 +5844,18 @@ function jgTryEarlyEnd(){
   const wolfKillIsEK=ekNum&&jgRecord.wolfKill&&(jgRecord.wolfKill.toString()===ekNum.toString());
   const witchP=jgPlayers.find(p=>p.role==='witch');
   const witchSelfKilled=witchP&&jgRecord.wolfKill&&(witchP.num.toString()===jgRecord.wolfKill.toString());
-  const witchCanStillSave=witchP&&witchP.alive&&!jgWitchSaveUsed&&!jgRecord.witchSave&&
+  const witchFearedForEarlyEnd=witchP&&jgFeared(witchP);
+  // 女巫這一夜還沒真正做完決定（jgSaveWitch 存檔時才會設 witchStepDone=true）之前，
+  // 只要她「解藥」或「毒藥」還有任一項沒用過、有可能改變結果，就不能提前判定輸贏——
+  // 之前的寫法只看解藥，若解藥已經在更早的夜晚用掉，就會誤以為她這夜「沒事可做」，
+  // 直接跳過她本來還沒被問過的毒藥決定，把遊戲提前判定收掉。
+  const witchStepDoneThisNight=!!jgRecord.witchStepDone;
+  const witchSaveCouldStillMatter=witchP&&witchP.alive&&!jgWitchSaveUsed&&
     !guardedByAny&&!wolfKillIsEK&&!witchSelfKilled&&jgRecord.wolfKill;
-  if(witchCanStillSave) return false; // witch hasn't decided yet — outcome not certain
+  const witchPoisonCouldStillMatter=witchP&&witchP.alive&&!jgWitchPoisonUsed;
+  const witchCanStillAct=!witchFearedForEarlyEnd&&!witchStepDoneThisNight&&
+    (witchSaveCouldStillMatter||witchPoisonCouldStillMatter);
+  if(witchCanStillAct) return false; // witch hasn't decided yet this night — outcome not certain
 
   let deads=[];
   const _dcImmune2=jgRecord.dreamcatcherImmune;
@@ -7235,12 +7318,17 @@ function pdParseCSV(text){
 // 試算表欄位順序：0=Timestamp（Google表單自動加的）, 1=id, 2=date, 3=board, 4=resultText, 5=winner, 6=time, 7=playersJson, 8=log
 function pdCloudGameFromRow(cols){
   try{
-    const id=cols[1], rawDate=cols[2], board=cols[3], resultText=cols[4], winnerRaw=cols[5], rawTime=cols[6], playersJson=cols[7], log=cols[8];
+    const id=cols[1], rawDate=cols[2], board=cols[3], resultTextRaw=cols[4], winnerRaw=cols[5], rawTime=cols[6], playersJson=cols[7], log=cols[8];
     if(!id||!rawDate) return null;
     const {iso:date, time}=pdParseDateTime(rawDate, rawTime);
+    // 「結果」「陣營」兩欄留空＝這場不列入戰績（例如系統bug、中途取消等），
+    // 場次紀錄、場數統計還是會保留，只是不算進勝負／勝率。
+    const unclear = !resultTextRaw && !winnerRaw;
     return {
-      id, date, board, resultText,
-      winner: winnerRaw==='evil'?'evil':'good',
+      id, date, board,
+      resultText: unclear ? '不記勝敗' : resultTextRaw,
+      winner: unclear ? null : (winnerRaw==='evil'?'evil':'good'),
+      unclear,
       time: time||undefined,
       players: JSON.parse(playersJson),
       log: log||'',
@@ -7348,7 +7436,7 @@ function pdRebuildAndRender(){
 
   const players={};
   function getP(name){
-    if(!players[name]) players[name]={name,games:0,wins:0,roleCounts:{},camp:{good:0,evil:0},campWins:{good:0,evil:0},history:[]};
+    if(!players[name]) players[name]={name,games:0,wins:0,unclearGames:0,roleCounts:{},camp:{good:0,evil:0},campWins:{good:0,evil:0},history:[]};
     return players[name];
   }
   GAMES.forEach(g=>{
@@ -7362,6 +7450,8 @@ function pdRebuildAndRender(){
         p.games++;
         p.camp[camp]++;
         if(result==='win'){ p.wins++; p.campWins[camp]++; }
+      } else {
+        p.unclearGames++;
       }
       p.roleCounts[roleDisp]=(p.roleCounts[roleDisp]||0)+1;
       p.history.push({date:g.date,label:g.id,board:g.board,role:roleDisp,result,resultText:g.resultText});
@@ -7394,6 +7484,11 @@ function pdRebuildAndRender(){
     if(wb!==wa) return wb-wa;
     return b.games-a.games;
   });
+  // 場次太少（少於全站總場次的十分之一）的玩家，勝率參考價值不高（一兩場全勝/全輸就能把
+  // 排名衝到很前面），所以還是照樣顯示勝率跟對局紀錄，但不排進正式名次，統一放到排行榜最下面。
+  const pdRankThreshold=GAMES.length/10;
+  const pdRankedList=playerList.filter(p=>p.games>=pdRankThreshold);
+  const pdUnrankedList=playerList.filter(p=>p.games<pdRankThreshold);
 
   // ── 總覽 ──
   document.getElementById('ov-games').textContent=GAMES.length;
@@ -7424,9 +7519,22 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
   }
   pdApplyFormulaVisibility();
 
+  // ── 排行榜排名門檻說明 ──
+  const thresholdNote=document.getElementById('pd-rank-threshold-note');
+  if(thresholdNote){
+    thresholdNote.textContent=GAMES.length>0
+      ?`僅計入遊玩場數 ≥ 全站總場次 1/10（${(GAMES.length/10).toFixed(1)} 場，取整數 ${Math.ceil(GAMES.length/10)} 場以上）的玩家排名，場數不足的玩家仍會顯示勝率與紀錄，但排在最下面、不佔正式名次`
+      :'';
+  }
+
   // ── 排行榜 ──
+  // 場次太少的玩家勝率波動很大（例如只玩1場全勝就變100%），排到前面沒有參考意義，
+  // 所以排名只計入場數達門檻的玩家；沒達到門檻的玩家還是會顯示（勝率、對局紀錄都在），
+  // 只是統一放到排行榜最下面、不給正式名次，避免灌水的高勝率誤導大家。
+  const pdOrderedList=[...pdRankedList, ...pdUnrankedList];
   const lb=document.getElementById('leaderboard');
-  lb.innerHTML=playerList.map((p,i)=>{
+  lb.innerHTML=pdOrderedList.map((p,i)=>{
+    const isRanked=i<pdRankedList.length;
     const wr=p.games?Math.round(p.wins/p.games*100):0;
     const bayesPct=Math.round(p.bayesScore*100);
     const scoreLabel=PD_SORT_MODE==='bayes'?'Bayesian Score':'勝率';
@@ -7436,12 +7544,15 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
     const histSorted=[...p.history].sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
     const histHtml=histSorted.map(h=>{
       const cls=h.result==='win'?'win':(h.result==='lose'?'lose':'unclear');
-      const mark=h.result==='win'?'✓':(h.result==='lose'?'✗':'?');
-      return `<div class="hist-item"><span class="hist-res ${cls}">${mark}</span><span class="hist-role">${h.role}</span><span>${h.board}</span><span class="hist-date">${pdDisplayDateShort(h.date)}</span></div>`;
+      const mark=h.result==='win'?'✓':(h.result==='lose'?'✗':'－');
+      const title=h.result==='unclear'?' title="不列入戰績勝率"':'';
+      return `<div class="hist-item"><span class="hist-res ${cls}"${title}>${mark}</span><span class="hist-role">${h.role}</span><span>${h.board}</span><span class="hist-date">${pdDisplayDateShort(h.date)}</span></div>`;
     }).join('');
-    return `
-    <div class="row" onclick="pdToggleDetail(${i})">
-      <div class="rank">${i+1}</div>
+    const divider=(!isRanked&&i===pdRankedList.length)
+      ?`<div class="pd-unranked-divider">⬇ 以下玩家遊玩場數未達門檻，僅供參考、不列入正式排名</div>`:'';
+    return `${divider}
+    <div class="row${isRanked?'':' unranked'}" onclick="pdToggleDetail(${i})">
+      <div class="rank"${isRanked?'':' title="場數未達門檻，不列入排名"'}>${isRanked?(i+1):'－'}</div>
       <div class="av">${p.name.slice(0,1)}</div>
       <div class="nm-wrap">
         <div class="nm">${p.name}</div>
@@ -7457,6 +7568,7 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
       <div class="chip-row">
         <span class="chip good">好人 ${p.camp.good} 場・${p.camp.good?Math.round(p.campWins.good/p.camp.good*100):0}% 勝率</span>
         <span class="chip evil">邪惡 ${p.camp.evil} 場・${p.camp.evil?Math.round(p.campWins.evil/p.camp.evil*100):0}% 勝率</span>
+        ${p.unclearGames?`<span class="chip">和局 ${p.unclearGames} 場</span>`:''}
       </div>
       <div class="chip-row">${topRoles}</div>
       <div class="hist">${histHtml}</div>
