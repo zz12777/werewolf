@@ -1201,8 +1201,11 @@ function jgFormatNightLog(){
     }
   }
   if(witchP&&witchP.alive){
+    // 這裡原本是 if/else if，意味著「救」跟「毒」只會記錄其中一個——只要當晚有刀可以給女巫看
+    // （會記錄「救」那一行），就算她這晚同時也用了毒藥，「毒」那一行也會被跳過、完全沒記錄到。
+    // 救人跟下毒是女巫同一晚的兩個獨立決定，不是互斥的，要各自獨立判斷是否要記一行。
     if(jgRecord._witchCanShowKilled) lines.push('救 '+(jgRecord.witchSave?jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill):'x'));
-    else if(jgRecord.witchPoisonRaw||!jgWitchPoisonUsed) lines.push('毒 '+jgSwapDisplay(jgRecord.witchPoisonRaw, jgRecord.witchPoison));
+    if(jgRecord.witchPoisonRaw||!jgWitchPoisonUsed) lines.push('毒 '+jgSwapDisplay(jgRecord.witchPoisonRaw, jgRecord.witchPoison));
   }
   if(seerP&&seerP.alive){
     const v=jgRecord.seerChecked;
@@ -1548,6 +1551,27 @@ function jgNumSelectHtml(id, curVal, onChangeFn, extraAttr, excludeNums, exclude
 function jgNoSelfCutNums(){
   return jgPlayers.filter(p=>p.alive&&(p.role==='evilknight'||p.role==='wolfbeauty')).map(p=>p.num);
 }
+// 警上競選期間（天亮公布死訊之前），夜間死亡還沒真的套用到玩家身上，資料上暫時仍顯示存活——
+// 但這種人等一下天亮就會被公布死亡，自爆選人時要先排除，避免選到一個其實已經死亡的狼。
+// 這裡只覆蓋最常見的幾種死法（狼刀沒被守衛/女巫救下、女巫毒沒被機械守衛擋下、機械狼學到的
+// 毒／狼刀、狼弟覺醒刀），惡靈騎士／夢中目標免疫等特殊情況本來就不在自爆候選名單裡，不影響判斷。
+function jgPendingNightDeadNums(){
+  const nums=new Set();
+  if(jgRecord.wolfKill){
+    const guarded=!!((jgRecord.guardTarget&&jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString())
+      ||(jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===jgRecord.wolfKill.toString()));
+    const saved=!!jgRecord.witchSave;
+    if(!guarded&&!saved) nums.add(jgRecord.wolfKill.toString());
+  }
+  if(jgRecord.witchPoison){
+    const mechGuarded=!!(jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===jgRecord.witchPoison.toString());
+    if(!mechGuarded) nums.add(jgRecord.witchPoison.toString());
+  }
+  if(jgRecord.mechWolfPoison) nums.add(jgRecord.mechWolfPoison.toString());
+  if(jgRecord.wolfBrotherAwakenKill) nums.add(jgRecord.wolfBrotherAwakenKill.toString());
+  if(jgRecord.mechWolfBonusKillTarget) nums.add(jgRecord.mechWolfBonusKillTarget.toString());
+  return [...nums].map(Number);
+}
 // 依本局實際在場的角色，組出提示文字用的角色名稱（只列出真的存在的，不寫死兩個都列）
 function jgNoSelfCutRoleLabel(){
   const labels=[];
@@ -1689,7 +1713,16 @@ function jgSealVillagers(){
 // sheriff election with candidates on the table, go run that; otherwise go straight to discuss.
 // 警長競選子流程（候選人／轉盤／政見發表／投票）現在整個發生在「天亮公布死訊」之前，
 // 所以真正跑到 dawn 的死亡結算時，競選一定已經結束了，這裡固定回到 discuss 即可。
+// 自爆按鈕文字：雙爆模式下第一次自爆時，警徽其實還沒流失（保留到隔天），不能寫「吞警徽，本局無警長」，
+// 免得誤導法官；單爆模式，或雙爆模式的第二次自爆，才是警徽真的流失、本局確定沒有警長。
+function jgSelfDestructBtnLabel(){
+  const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
+  return isFirstBlow?'💥 有狼人自爆（警徽暫不流失，競選延到隔天）':'💥 有狼人自爆（吞警徽，本局無警長）';
+}
 function jgAfterDawn(){
+  // 警上競選過程中若有狼人自爆（不論雙爆的第一爆、還是最終真的流失警徽的一爆），當天不進行
+  // 發言與投票，遺言結束後直接天黑；沒有自爆的一般狀況才正常進入白天發言、投票。
+  if(jgRecord&&jgRecord._selfDestructNum) return 'next-night';
   return 'discuss';
 }
 function jgSetDiscussStart(n){
@@ -1759,7 +1792,7 @@ function jgRenderSheriffCandidates(){
     ${badgeBanner}
     <label>候選人（點選起立的號碼，可複選）</label>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">${selHtml}</div>
-    <button class="danger" style="margin-top:14px;" onclick="jgSheriffSelfDestructPrompt()">💥 有狼人自爆（吞警徽，本局無警長）</button>
+    <button class="danger" style="margin-top:14px;" onclick="jgSheriffSelfDestructPrompt()">${jgSelfDestructBtnLabel()}</button>
     <button class="primary" style="margin-top:10px;" onclick="jgSaveSheriffCandidates()">候選人已確定 →</button>
   `,'🎖️ 警長競選');
 }
@@ -1769,8 +1802,10 @@ function jgToggleSheriffCandidate(n){
   jgRenderSheriffCandidates();
 }
 function jgSaveSheriffCandidates(){
-  jgSheriffCandidatesAsked=true;
-  jgSheriffDay2CandidatesAsked=true;
+  // 只標記「這一天」問過候選人，不能兩個 flag 一起設——雙爆模式下，第一天候選人確定時若
+  // 連隔天（day2）的 flag 都一起設成 true，會導致隔天重新競選的畫面永遠不會出現。
+  if(jgNight===1) jgSheriffCandidatesAsked=true;
+  else jgSheriffDay2CandidatesAsked=true;
   if(jgSheriffCandidates.length===0){
     // 沒有人上警，競選視為結束（無警長），直接進入正常的天亮公布
     jgSheriffElectionDone=true;
@@ -1785,18 +1820,30 @@ function jgSaveSheriffCandidates(){
 // 競選過程中任何時候，狼人都可以自爆：
 // ・單爆吞警徽規則下，自爆直接吞掉警徽，本局不再有警長。
 // ・雙爆吞警徽規則下，第一次自爆警徽先保留、競選延到隔天繼續；隔天競選過程中再次自爆，警徽才真正流失。
-// 因為整個競選流程都發生在天亮公布死訊之前，這裡固定回到 dawn 去做真正的天亮結算即可，
-// 不會有「天亮已經公布過一次」的情況。
+// 改成點按鈕選號碼（不用輸入框），並且限制只能選存活的狼人／狼王／血月使者——
+// 惡靈騎士、石像鬼、狼美人、機械狼、夢魘都不能自爆，夜間已經死亡的狼也不能選（按鈕直接鎖住）。
 function jgSheriffSelfDestructPrompt(){
+  jgGoStep('sheriff-selfdestruct-pick');
+}
+function jgSaveSheriffSelfDestruct(){
+  const val=(document.getElementById('jg-sheriff-blow-rec')||{}).value?.trim()||'';
+  if(!val){ alert('⚠️ 請選擇自爆的玩家號碼！'); return; }
+  const p=jgFind(val);
+  if(!p||!p.alive||!(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon')){
+    alert('⚠️ 這個號碼目前不是存活的狼人／狼王／血月使者，不能自爆！');
+    return;
+  }
+  if(jgPendingNightDeadNums().includes(p.num)){
+    alert('⚠️ '+p.num+'號昨晚已經死亡（等一下天亮就會公布），不能自爆！');
+    return;
+  }
   const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
-  const val=prompt('自爆的玩家號碼？'+(isFirstBlow?'（雙爆吞警徽規則：這是第一次自爆，警徽暫不流失，競選會延到隔天繼續）':'（本局將不再有警長，該玩家會被淘汰）'));
-  if(!val) return;
-  const p=jgFind(val.trim());
-  if(!p){ alert('找不到這個號碼'); return; }
-  if(!confirm(p.num+'號 自爆'+(isFirstBlow?'，警徽暫不流失，競選延到隔天繼續，確定嗎？':'吞警徽，本局將不再有警長，確定嗎？'))) return;
   jgApplyDeath(p);
-  jgSheriffCandidatesAsked=true;
-  jgSheriffDay2CandidatesAsked=true;
+  jgRecord._selfDestructNum=p.num;
+  // 只標記「這一天」問過候選人，不能兩個 flag 一起設——雙爆模式下，第一天候選人確定時若
+  // 連隔天（day2）的 flag 都一起設成 true，會導致隔天重新競選的畫面永遠不會出現。
+  if(jgNight===1) jgSheriffCandidatesAsked=true;
+  else jgSheriffDay2CandidatesAsked=true;
   jgSheriffCampaignHappened=true;
   if(isFirstBlow){
     // 雙爆吞警徽・第一爆：警徽保留，競選延到隔天繼續，本輪不產生警長結果
@@ -1899,7 +1946,7 @@ function jgRenderSheriffSpeech(){
     <div style="margin-top:10px;">${rows}</div>
     ${jgSheriffPkRound?'<div class="info-warn" style="font-size:12px;">平票 PK 回合中，此輪不可退水</div>'
       :'<div class="speech" style="margin-top:8px;">「<em>要退水的玩家請坐下。</em>」</div><div class="info" style="font-size:12px;">全部候選人發言結束後宣布上面這句話，想退出競選的候選人這時點選對應「退水」即可</div>'}
-    <button class="danger" style="margin-top:12px;" onclick="jgSheriffSelfDestructPrompt()">💥 有狼人自爆（吞警徽，本局無警長）</button>
+    <button class="danger" style="margin-top:12px;" onclick="jgSheriffSelfDestructPrompt()">${jgSelfDestructBtnLabel()}</button>
     <button class="primary" style="margin-top:10px;" onclick="jgGoStep('sheriff-vote')">${jgSheriffPkRound?'PK 發言結束，重新投票 →':'要退水的都退水了，進入投票 →'}</button>
   `,'🎖️ 警長競選');
 }
@@ -1930,7 +1977,7 @@ function jgRenderSheriffVote(){
     <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">候選人：${cands.join('、')}號；只有從未上警的玩家（${voters.join('、')||'無'}）有投票權</div>
     <div id="jg-sheriff-vote-tally"></div>
     <div id="jg-sheriff-vote-summary" style="margin-top:6px;"></div>
-    <button class="danger" style="margin-top:10px;" onclick="jgSheriffSelfDestructPrompt()">💥 有狼人自爆（吞警徽，本局無警長）</button>
+    <button class="danger" style="margin-top:10px;" onclick="jgSheriffSelfDestructPrompt()">${jgSelfDestructBtnLabel()}</button>
     <button class="primary" style="margin-top:10px;" onclick="jgSaveSheriffVote()">確認投票結果 →</button>
   `,'🎖️ 警長競選');
   jgRenderSheriffVoteTally();
@@ -2238,13 +2285,12 @@ function jgDiscussExtraButtonsHtml(){
   let html='';
   const ww=jgPlayers.find(p=>p.role==='whitewolf'&&p.alive);
   if(ww) html+='<button class="danger" onclick="jgGoStep(\'whitewolf-selfblow\')" style="margin-top:4px;">'+ww.num+'號 白狼王宣告自爆 →</button>';
-  const bm=jgPlayers.find(p=>p.role==='bloodmoon'&&p.alive);
-  if(bm) html+='<button class="danger" onclick="jgGoStep(\'bloodmoon-selfblow\')" style="margin-top:4px;">'+bm.num+'號 血月使者宣告自爆 →</button>'
-    +'<div style="font-size:11px;color:var(--text3);margin:2px 2px 2px;">⚠️ 只能在'+bm.num+'號「自己發言的階段」宣告自爆，不能搶在別人發言時自爆</div>';
   const knP=jgPlayers.find(p=>p.role==='knight'&&p.alive);
   if(knP) html+='<button class="danger" onclick="jgGoStep(\'knight-duel\')" style="margin-top:4px;">'+knP.num+'號 騎士翻牌決鬥 →</button>';
-  const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'));
-  if(canWolfBlow) html+='<button class="danger" onclick="jgGoStep(\'wolf-selfblow\')" style="margin-top:4px;">🐺 狼人／狼王宣告自爆 →</button>';
+  // 血月使者的自爆併進「狼人自爆」這顆按鈕：點進去選號碼，選到血月使者會自動導去血月專屬流程
+  // （封印當晚神職技能），選到一般狼人／狼王則走一般自爆流程，不用另外分開兩顆按鈕。
+  const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'));
+  if(canWolfBlow) html+='<button class="danger" onclick="jgGoStep(\'wolf-selfblow\')" style="margin-top:4px;">🐺 狼人自爆 →</button>';
   return html;
 }
 function jgFirstDayCompCheckHtml(){
@@ -2817,9 +2863,10 @@ function jgRenderStep(step){
         learnHtml='';
       } else {
         const lv=jgRecord.mechwolfLearnTarget||'';
+        const mwSelfNums=mwP?[mwP.num]:[];
         learnHtml='<div class="speech">「<em>今晚要學習的對象是？</em>」</div>'
-          +'<label>學習對象號碼（整局限一次，留空=本晚不學習）</label>'
-          +jgNumSelectHtml('jg-mechwolf-learn', lv, 'jgMechWolfLearnCheck')
+          +'<label>學習對象號碼（整局限一次，留空=本晚不學習，不能學自己）</label>'
+          +jgNumSelectHtml('jg-mechwolf-learn', lv, 'jgMechWolfLearnCheck', null, mwSelfNums, '機械狼不能學習自己')
           +'<div id="jg-mechwolf-learn-result"></div>';
       }
     } else if(canUseSkill){
@@ -3511,6 +3558,13 @@ function jgRenderStep(step){
     let trulyDiedNums=[];
     let swappedNums=[];
     deads.forEach(d=>{ const p=jgFind(d); if(p){ const trulyDied=jgApplyDeath(p); if(trulyDied){ p._diedThisDawn=true; trulyDiedNums.push(p.num); } else { swappedNums.push(p.num); } } });
+    // 警上競選過程中若有狼人自爆（雙爆的第一爆、或最終真的流失警徽的一爆），他的死亡在進
+    // 這個 dawn 步驟之前就已經用 jgApplyDeath 另外處理過了，不會出現在上面的 deads 清單裡；
+    // 這裡把他併入遺言名單，讓自爆的人跟一般死亡玩家一樣可以發表遺言。
+    if(jgRecord._selfDestructNum){
+      const sdp=jgFind(jgRecord._selfDestructNum);
+      if(sdp&&!trulyDiedNums.includes(sdp.num)){ sdp._diedThisDawn=true; trulyDiedNums.push(sdp.num); }
+    }
     if(swappedNums.length&&jgNightLog[jgNight]) jgNightLog[jgNight].push('換牌 '+swappedNums.join(','));
     jgPlayers.forEach(p=>{ if(p._diedThisDawn&&!trulyDiedNums.includes(p.num)) delete p._diedThisDawn; });
     // Check wolf win BEFORE revenge deaths — wolves attacked first
@@ -3651,9 +3705,10 @@ function jgRenderStep(step){
       :'';
 
     // 只有第一夜「真正淘汰」的人白天才有遺言；第二夜起夜間淘汰不再有遺言（只有被投票出去的人才有遺言）。
+    // 但自爆是主動技能、不是夜間淘汰，不管第幾夜發生都要有遺言，所以額外放行。
     // 雙身分模式的「換牌」（卡1陣亡、卡2還在）則不受此限制——不管第幾夜，只要當晚有人換牌，
     // 白天都要先讓他發表（卡1的）遺言，之後才換上卡2、依序順/逆進行正常發言。
-    const showTrueLastWords=jgNight===1&&trulyDiedNums.length>0&&!dawnHunterShoot;
+    const showTrueLastWords=(jgNight===1||!!jgRecord._selfDestructNum)&&trulyDiedNums.length>0&&!dawnHunterShoot;
     const showSwapLastWords=swappedNums.length>0&&!dawnHunterShoot;
     const showLastWords=showTrueLastWords||showSwapLastWords;
     let lwHtml='';
@@ -3679,7 +3734,8 @@ function jgRenderStep(step){
     // 若是走過警長競選流程才走到這裡（候選人真的有上警競選），「天亮請睜眼」已經在競選一開始就
     // 說過了，這裡不再重複；改成先公布警長結果，再公布平安夜／死亡消息、遺言，最後（若當選了）
     // 讓警長當場決定警左警右，全部整合在同一個畫面，不用另外切換頁面。
-    const sheriffJustResolved=jgSheriffEnabled&&jgNight===1&&jgSheriffCampaignHappened;
+    const sheriffJustResolved=jgSheriffEnabled&&jgSheriffCampaignHappened&&
+      (jgNight===1||(jgBadgeMode==='double'&&jgSheriffPostponedToDay2&&jgNight===2));
     let sheriffBannerHtml='';
     if(sheriffJustResolved){
       if(jgSheriffSelfDestruct){
@@ -3727,7 +3783,8 @@ function jgRenderStep(step){
         const stillThreat=godRole==='knight';
         bloodmoonEndgameHtml=stillThreat
           ?'<div class="info-warn" style="font-size:13px;padding:10px 14px;margin-top:8px;">⚠️ 場上剩血月＋1神（'+jgFullRoleName(godRole)+'）＋1民，但這位神職還有主動技能沒用，好人仍有機會反殺血月，請照正常流程繼續走。</div>'
-          :'<div class="info-success" style="font-size:13px;padding:10px 14px;margin-top:8px;">✅ 場上剩血月＋1神（'+jgFullRoleName(godRole)+'，已無主動技能可以反殺血月）＋1民：不管白天投不投得到血月，血月最後都穩贏（票走了還有屠邊最後一擊，沒票走就繼續刀），法官可以視情況直接公布狼人獲勝，不用等流程走完。</div>';
+          :'<div class="info-success" style="font-size:13px;padding:10px 14px;margin-top:8px;">✅ 場上剩血月＋1神（'+jgFullRoleName(godRole)+'，已無主動技能可以反殺血月）＋1民：不管白天投不投得到血月，血月最後都穩贏（票走了還有屠邊最後一擊，沒票走就繼續刀）。</div>'
+            +'<button class="danger" style="margin-top:6px;" onclick="jgDeclareBloodmoonWin()">🌑 直接公布狼人獲勝，不用等流程走完 →</button>';
       }
     }
     jgShowPg(`
@@ -3743,12 +3800,13 @@ function jgRenderStep(step){
     if(!dawnHunterShoot){
       const ph=document.getElementById('jg-dawn-discuss-placeholder');
       if(ph){
+        const skipToNight=jgAfterDawn()==='next-night';
         const btn=document.createElement('button');
         btn.className='primary';
         btn.style.marginTop='12px';
         btn.style.width='100%';
-        btn.textContent=(showLastWords?'遺言發表完，':'')+'開始發言 →';
-        btn.onclick=()=>jgGoStep('discuss');
+        btn.textContent=(showLastWords?'遺言發表完，':'')+(skipToNight?'天黑 →':'開始發言 →');
+        btn.onclick=()=>jgGoStep(skipToNight?'next-night':'discuss');
         ph.replaceWith(btn);
       }
     }
@@ -3874,16 +3932,32 @@ function jgRenderStep(step){
     `,'🤍 白狼王');
   }
   else if(step==='wolf-selfblow'){
-    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking')).map(p=>p.num);
+    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
+    const bmEligible=jgPlayers.find(p=>p.role==='bloodmoon'&&p.alive);
     jgShowPg(`
-      <h2>狼人／狼王自爆</h2>
-      <div class="speech">「<em>請選擇宣告自爆的狼人／狼王號碼。</em>」</div>
-      <label>自爆的玩家號碼</label>
-      ${jgNumSelectHtml('jg-wolf-blow-rec', '', null, null, exclude)}
-      <div class="info" style="font-size:12px;margin-top:6px;">狼人／狼王自爆：直接淘汰，不能開槍帶人，跳過投票，直接進入夜晚。</div>
+      <h2>狼人自爆</h2>
+      <div class="speech">「<em>請選擇宣告自爆的玩家號碼。</em>」</div>
+      <label>自爆的玩家號碼（只能選存活的狼人／狼王／血月使者；惡靈騎士、石像鬼、狼美人、機械狼、夢魘都不能自爆）</label>
+      ${jgNumSelectHtml('jg-wolf-blow-rec', '', null, null, exclude, '這個角色不能自爆，不可選取')}
+      <div class="info" style="font-size:12px;margin-top:6px;">一般狼人／狼王自爆：直接淘汰，不能開槍帶人，跳過投票，直接進入夜晚。</div>
+      ${bmEligible?'<div class="info" style="font-size:12px;margin-top:4px;">⚠️ 選到'+bmEligible.num+'號血月使者會走血月專屬流程：封印當晚神職技能，只能在血月使者「自己發言的階段」宣告，不能搶在別人發言時自爆。</div>':''}
       <button class="danger" onclick="jgSaveWolfSelfBlow()" style="margin-top:10px;">確認自爆 →</button>
     `,'🐺 狼人自爆');
+  }
+  else if(step==='sheriff-selfdestruct-pick'){
+    const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
+    const pendingDead=jgPendingNightDeadNums();
+    const eligible=jgPlayers.filter(p=>p.alive&&!pendingDead.includes(p.num)&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon')).map(p=>p.num);
+    const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
+    jgShowPg(`
+      <h2>狼人自爆（吞警徽）</h2>
+      <div class="speech">「<em>請選擇宣告自爆的玩家號碼。</em>」</div>
+      <label>自爆的玩家號碼（只能選存活的狼人／狼王／血月使者；惡靈騎士、石像鬼、狼美人、機械狼、夢魘都不能自爆，昨晚已經死亡的狼也不能選）</label>
+      ${jgNumSelectHtml('jg-sheriff-blow-rec', '', null, null, exclude, '這個角色不能自爆，或昨晚已經死亡，不可選取')}
+      <div class="info" style="font-size:12px;margin-top:6px;">${isFirstBlow?'雙爆吞警徽規則：這是第一次自爆，警徽暫不流失，競選會延到隔天繼續。':'本局將不再有警長，該玩家會被淘汰。'}</div>
+      <button class="danger" onclick="jgSaveSheriffSelfDestruct()" style="margin-top:10px;">確認自爆 →</button>
+    `,'💥 自爆吞警徽');
   }
   else if(step==='knight-duel'){
     const knP=jgPlayers.find(p=>p.role==='knight');
@@ -5749,10 +5823,13 @@ function jgSaveWolfSelfBlow(){
   const val=(document.getElementById('jg-wolf-blow-rec')||{}).value?.trim()||'';
   if(!val){ alert('⚠️ 請選擇自爆的玩家號碼！'); return; }
   const p=jgFind(val);
-  if(!p||!p.alive||!(p.role==='wolf'||p.role==='wolfking')){
-    alert('⚠️ 這個號碼目前不是存活的狼人／狼王！');
+  if(!p||!p.alive||!(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon')){
+    alert('⚠️ 這個號碼目前不是存活的狼人／狼王／血月使者！');
     return;
   }
+  // 血月使者的自爆有自己專屬的特殊規則（封印當晚神職技能、屠邊最後一擊等），
+  // 併進這顆按鈕的選號只是共用入口，實際規則仍照血月使者專屬流程走。
+  if(p.role==='bloodmoon'){ jgGoStep('bloodmoon-selfblow'); return; }
   jgApplyDeath(p);
   jgPushDayLog('自爆'+p.num);
   jgRenderRoster();
@@ -5922,6 +5999,20 @@ function jgCheckWin(){
 }
 
 let jgLastWinResult=null;
+// 血月殘局一鍵宣布：場上只剩「血月＋1神（非騎士）＋1民」時，血月已經穩贏、流程走完也是一樣的
+// 結果，這裡讓法官可以直接跳過白天投票／夜晚流程，一鍵公布狼人獲勝。點擊當下重新驗算一次條件，
+// 避免畫面顯示之後場上人數又有變動（理論上不太會發生，但保險起見還是重新檢查一次）。
+function jgDeclareBloodmoonWin(){
+  const alive=jgAlive();
+  const wolves=alive.filter(p=>jgIsWolfPackMember(p));
+  const good=alive.filter(p=>!jgIsWolfPackMember(p));
+  const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+  const gods=good.filter(p=>allGods.includes(p.role));
+  const vils=good.filter(p=>p.role==='villager'||p.role==='hybrid');
+  const ok=wolves.length===1&&wolves[0].role==='bloodmoon'&&gods.length===1&&gods[0].role!=='knight'&&vils.length===1;
+  if(!ok){ alert('⚠️ 場上狀態已經不符合「血月＋1神（非騎士）＋1民」的殘局條件，請照正常流程繼續走。'); return; }
+  jgShowWin({winner:'wolf', msg:'血月殘局：場上僅剩血月＋'+jgFullRoleName(gods[0].role)+'＋1民，好人已無翻盤機會，法官直接公布狼人獲勝', icon:'🌑'});
+}
 function jgShowWin(res){
   jgLastWinResult=res;
   const isGood=res.winner==='good';
