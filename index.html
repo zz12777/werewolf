@@ -6488,7 +6488,9 @@ function jgLoadReportForm(){
 // 攻略參考 (Guide articles)
 // ═══════════════════════════════════
 // 設定方式（跟「遊玩數據」抓雲端場次紀錄是同一套 Google 試算表 + 發布成 CSV 的做法）：
-// 1. 開一份新的 Google 試算表，A／B／C 三欄依序放「標題」「內文」「參考網址」，
+// 1. 開一份新的 Google 試算表，A／B 兩欄放「標題」「內文」，C 欄開始放「參考網址」，
+//    可以有多個參考來源：C＝參考網址1、D＝參考網址2、E＝參考網址3……往右加多少欄都可以，
+//    程式會自動把 C 欄之後每一個有填值的欄位都當成一個參考來源依序顯示（參考來源1、參考來源2…）。
 //    第一列可以放「標題／內文／參考網址」當表頭（程式會自動偵測並跳過，不放表頭也沒關係）。
 //    每一列 = 一篇文章，之後看到不錯的文章，就直接在試算表最下面新增一列即可。
 // 2. 檔案 → 共用 → 發布到網路（File → Share → Publish to web），來源選「該工作表」、
@@ -6506,7 +6508,7 @@ function jgLoadReportForm(){
 //   但也代表不能直接貼真正的 HTML 標籤進去（例如 <b>…</b> 不會生效，請一律改用 **…**）。
 const GUIDE_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA5OjCfXPH9iKiVzR_WvUFCLfqAjTHJRZeU8RwhXyMNKliM5lTn8-zfqjGpYwBv7IWgNKAtVjIaWG/pub?gid=0&single=true&output=csv';
 const GUIDE_ARTICLES_LOCAL=[
-  // {title:'新手常見誤區整理', content:'這裡放文章內容或摘要，換行直接按 Enter，**重點**用兩個星號包起來即可。', url:'https://example.com/article'},
+  // {title:'新手常見誤區整理', content:'這裡放文章內容或摘要，換行直接按 Enter，**重點**用兩個星號包起來即可。', urls:['https://example.com/article1','https://example.com/article2']},
 ];
 let guideLoaded=false;
 
@@ -6539,7 +6541,8 @@ function guideRowsToArticles(rows){
   return rows.slice(start).map(r=>({
     title:(r[0]||'').trim(),
     content:(r[1]||'').trim(),
-    url:(r[2]||'').trim(),
+    // C 欄開始每一欄都是一個參考網址，有填值的依序收集成陣列（可以有 1 個、3 個、10 個都行）
+    urls:r.slice(2).map(u=>(u||'').trim()).filter(Boolean),
   })).filter(a=>a.title);
 }
 
@@ -6568,8 +6571,13 @@ function renderGuideArticles(articles){
   }
   if(emptyEl) emptyEl.style.display='none';
   listEl.innerHTML=articles.map(a=>{
-    const safeUrl=a.url?a.url.replace(/"/g,'&quot;'):'';
-    const linkHtml=safeUrl?`<br><br><a class="role-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">→ 參考來源</a>`:'';
+    // 相容舊格式的單一 url 欄位，同時支援新的多網址 urls 陣列
+    const urls=(a.urls&&a.urls.length)?a.urls:(a.url?[a.url]:[]);
+    const linkHtml=urls.length?'<br><br>'+urls.map((u,i)=>{
+      const safeUrl=u.replace(/"/g,'&quot;');
+      const label=urls.length>1?`參考來源${i+1}`:'參考來源';
+      return `<a class="role-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:4px;">→ ${label}</a>`;
+    }).join(''):'';
     return `<div class="rcol">
       <div class="rcol-hd" onclick="toggleRcol(this)">
         <span class="rcol-icon">📝</span>
@@ -6627,14 +6635,37 @@ renderGlossary();
 const ABBR={'民':'平民','狼':'狼人','巫':'女巫','預':'預言家','守':'守衛','獵':'獵人','通':'通靈師','混':'混血兒','王':'狼王','月':'血月使者','魔':'魔術師','魘':'夢魘','攝':'攝夢人','騎':'騎士'};
 function normRole(r){return ABBR[r]||r;}
 function classify(role){
-  const keys=['狼','機械','魘','血月','王'];
+  // 混血兒是唯一陣營會依「這場實際跟誰」而變動的角色：若是狼混（混到狼隊），
+  // 這場要算邪惡陣營、跟狼隊共享勝負；沒有標註或標註好人混，才維持原本一律算好人。
+  if(role.startsWith('混血兒')){
+    return role.includes('狼混') ? 'evil' : 'good';
+  }
+  // 其餘角色優先用 ALL_ROLES 的陣營資料（team）當唯一真相來源，跟法官系統的判定保持一致，
+  // 避免「石像鬼」「惡靈騎士」這類名稱裡沒有「狼」字、但其實是狼隊的角色被誤判成好人
+  for(const k in ALL_ROLES){
+    if(ALL_ROLES[k].name===role) return ALL_ROLES[k].team==='wolf'?'evil':'good';
+  }
+  // 找不到完全對應時（例如雙身分紀錄「民/攝」、或機械狼帶著學到身分的「機械狼(機械民)」
+  // 這種組合字串）才退回關鍵字比對，補上「鬼」「惡靈」避免石像鬼／惡靈騎士的縮寫組合漏判
+  const keys=['狼','機械','魘','血月','王','鬼','惡靈'];
   return keys.some(k=>role.includes(k))?'evil':'good';
 }
-// 統一的「顯示身分」：先去掉括號附註，機械X（不管學到什麼）一律顯示成機械狼，
-// 其餘用完整名稱（例如單字「月」會轉成「血月使者」再判斷陣營，避免漏判）
+// 統一的「顯示身分」：
+// ‧ 混血兒：括號註記（好人混／狼混）要保留下來，不能被括號清除規則拿掉，
+//   因為 classify() 要靠它判斷這場混血兒實際算好人還是邪惡陣營。
+// ‧ 機械狼：學到的具體身分改成保留在括號內顯示（例如「機械狼(機械民)」「機械狼(機械守衛)」），
+//   不再直接收斂成單純的「機械狼」，方便在每人細項、每場紀錄裡看出他當時學到什麼。
+// ‧ 其餘角色：去掉括號附註後用完整名稱顯示。
 function pdDisplayRole(rawRole){
+  if(rawRole.includes('混')){
+    const m=rawRole.match(/[（(]([^）)]*)[）)]/);
+    const note=(m?m[1]:'').trim();
+    if(note.includes('狼')) return '混血兒(狼混)';
+    if(note) return '混血兒(好人混)';
+    return '混血兒';
+  }
   const clean=rawRole.replace(/（.*?）/,'').replace(/\(.*?\)/,'');
-  if(clean.includes('機械')) return '機械狼';
+  if(clean.includes('機械')) return clean==='機械狼' ? '機械狼' : `機械狼(${clean})`;
   return normRole(clean);
 }
 
@@ -7453,7 +7484,11 @@ function pdRebuildAndRender(){
       } else {
         p.unclearGames++;
       }
-      p.roleCounts[roleDisp]=(p.roleCounts[roleDisp]||0)+1;
+      // 「玩過角色」統計用收斂過的身分：不管是機械狼學到什麼、還是混血兒混到哪邊，
+      // 統計格都只看角色本身、去掉括號細節，避免被拆成機械民／機械女巫／混血兒(狼混)…
+      // 太細碎；每局紀錄仍然用 roleDisp，保留括號內的具體資訊。
+      const roleTally=roleDisp.replace(/\(.*?\)/,'');
+      p.roleCounts[roleTally]=(p.roleCounts[roleTally]||0)+1;
       p.history.push({date:g.date,label:g.id,board:g.board,role:roleDisp,result,resultText:g.resultText});
     });
   });
