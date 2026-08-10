@@ -118,6 +118,20 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .comp-count{font-size:26px;font-weight:800;}
 .comp-label{font-size:11px;color:var(--text2);margin-top:3px;}
 
+/* ── AWARDS STRIP ── */
+.awards-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin:8px 0 4px;}
+.award-card{background:var(--bg3);border:1px solid transparent;border-radius:var(--r-sm);padding:10px 6px 9px;text-align:center;cursor:pointer;-webkit-user-select:none;}
+.award-card:active{opacity:0.7;}
+.award-card.sel{border-color:var(--accent);}
+.award-card .aw-icon{font-size:17px;}
+.award-card .aw-title{font-size:10px;color:var(--text2);margin-top:2px;line-height:1.25;min-height:24px;}
+.award-card .aw-name{font-size:12.5px;font-weight:700;color:var(--text);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.award-card .aw-count{font-size:10px;color:var(--text3);margin-top:1px;}
+.award-detail{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 13px;margin:6px 0 16px;font-size:12.5px;color:var(--text2);line-height:1.85;}
+.award-detail.open{display:block;}
+.award-detail b{color:var(--text);}
+.award-detail .aw-note{font-size:11px;color:var(--text3);margin-top:6px;}
+
 /* ── TAP GRID ── */
 .tap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin:12px 0;}
 .ptap{border:2px solid var(--border2);border-radius:var(--r-sm);padding:13px 4px;text-align:center;cursor:pointer;background:var(--bg3);}
@@ -711,6 +725,11 @@ select{
   </div>
   <div class="bar"><span class="g" id="ov-bar-g"></span><span class="e" id="ov-bar-e"></span></div>
   <div class="chip-row" id="ov-boards" style="margin-top:14px;"></div>
+
+  <!-- 特別獎項（小分隊限定成就） -->
+  <div class="big-section-title">🏆 特別獎項</div>
+  <div class="awards-strip" id="awards-strip"></div>
+  <div class="award-detail" id="award-detail"></div>
 
   <!-- 排行榜 -->
   <div class="big-section-title" style="display:flex;align-items:center;justify-content:space-between;">
@@ -7719,6 +7738,7 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
   });
 
   pdRenderGames();
+  if(typeof awardsRender==='function') awardsRender();
 }
 
 function pdToggleDetail(i){
@@ -7769,6 +7789,174 @@ function pdToggleGame(i){
 document.getElementById('f-player').addEventListener('change', pdRenderGames);
 document.getElementById('f-date').addEventListener('change', pdRenderGames);
 document.getElementById('f-board').addEventListener('change', pdRenderGames);
+
+// ═══════════════════════════════════════════
+// 🏆 特別獎項：自動從 GAMES（含雲端場次）逐場重新計算，
+//    每次 pdRebuildAndRender() 被呼叫（開頁 / 切到遊玩數據 tab / 新場次載入）都會重跑。
+//    新增場次不用改這段程式，資料對就會自動算進去。
+// ═══════════════════════════════════════════
+
+// ── 角色判斷規則（可對照雙身分板 role 用 "/" 分隔，如 "巫/王"） ──
+const AW_WOLF_CORE=new Set(['狼','狼人','王','狼王']);            // 會一起商量刀口的正牌狼
+const AW_WOLF_SUPPORT=new Set(['月','血月使者','魘','夢魘']);       // 邪惡陣營但不參與刀口決策的支援角色
+function awRoleParts(role){ return String(role||'').split('/'); }
+// 廣義狼隊（查狼／毒對狼命中判定用）：正牌狼 + 支援邪惡角色 + 機械狼
+// 注意：「機械民/機械巫/機械守/機械通」等都是機械狼目前「學到的技能」標籤，本體仍是狼隊，
+// 通靈師查到機械狼時本來就該顯示「查到狼」（詳見板子規則說明），所以只要角色字串以「機械」開頭就算狼。
+function awIsWolfBroad(role){
+  if(/^機械/.test(role)) return true;
+  return awRoleParts(role).some(r=>AW_WOLF_CORE.has(r)||AW_WOLF_SUPPORT.has(r));
+}
+// 核心狼隊（自刀／抿女巫用；機械狼、石像鬼等不見面角色不算）
+function awIsWolfCore(role){ return awRoleParts(role).some(r=>AW_WOLF_CORE.has(r)); }
+// 機械狼即使學到了女巫/守衛技能，本體仍是狼隊，不能算好人陣營的「超強女巫」「鋼鐵守衛」，故排除 /^機械/。
+function awIsWitchStd(role){ return /巫/.test(role) && !/^機械/.test(role); }
+function awIsGuardStd(role){ return /守/.test(role) && !/墓/.test(role) && !/^機械/.test(role); }
+function awIsSeerOrMedium(role){ return role==='預'||role==='預言家'||role==='通'||role==='通靈師'; } // 守墓人、石像鬼、機械通不算
+function awIsX(v){ return /^x$/i.test(String(v==null?'':v).trim()); }
+
+// ── 把一晚的文字（"**夜晚Nth" 到下一個 "**白天"/"**警長競選" 之間）拆成動作 ──
+function awParseNight(block){
+  const lines=String(block||'').split('\n').map(l=>l.trim()).filter(l=>l.startsWith('--')).map(l=>l.slice(2).trim());
+  const info={kill:null,witchSave:null,witchPoison:null,witchPoisonMachine:null,guardTarget:null,guardTargetMachine:null,checks:[]};
+  for(const line of lines){
+    let m;
+    if((m=line.match(/^通驗\s*(\d+|[xX])/))){ info.checks.push({type:'通驗',target:m[1]}); continue; }
+    if((m=line.match(/^機驗\s*(\d+|[xX])/))){ info.checks.push({type:'機驗',target:m[1]}); continue; }
+    if((m=line.match(/^石驗\s*(\d+|[xX])/))){ info.checks.push({type:'石驗',target:m[1]}); continue; }
+    if((m=line.match(/^守墓\s*(\d+|[xX])/))){ info.checks.push({type:'守墓',target:m[1]}); continue; }
+    if((m=line.match(/^機守\s*(\d+|[xX])/))){ info.guardTargetMachine=m[1]; continue; }
+    if((m=line.match(/^機毒\s*(\d+|[xX])/))){ info.witchPoisonMachine=m[1]; continue; }
+    if((m=line.match(/^機械刀刀?\s*(\d+|[xX])/))){ info.killMachine=m[1]; continue; }
+    if((m=line.match(/^驗\s*(\d+|[xX])/))){ info.checks.push({type:'驗',target:m[1]}); continue; }
+    if((m=line.match(/^守\s*(\d+|[xX])/))){ info.guardTarget=m[1]; continue; }
+    if((m=line.match(/^刀\s*(\d+|[xX])/))){ if(info.kill===null) info.kill=m[1]; else info.kill2=m[1]; continue; }
+    if((m=line.match(/^救\s*(\d+|[xX])/))){ info.witchSave=m[1]; continue; }
+    if((m=line.match(/^毒\s*(\d+|[xX])/))){ info.witchPoison=m[1]; continue; }
+  }
+  return info;
+}
+
+function awAddCredit(dict,name,gameId){
+  dict[name]=dict[name]||{count:0,games:new Set()};
+  dict[name].count++;
+  dict[name].games.add(gameId);
+}
+
+// 把 {name:{count,games}} 依次數分組，取前 maxTiers 個「名次區間」（同分並列同名次）
+function awTopTiers(dict, maxTiers){
+  maxTiers=maxTiers||3;
+  const entries=Object.entries(dict).map(([name,d])=>({name,count:d.count,gamesStr:[...d.games].join('、')}));
+  entries.sort((a,b)=>b.count-a.count);
+  const groups=[];
+  entries.forEach(e=>{
+    let grp=groups.find(g=>g.count===e.count);
+    if(!grp){ grp={count:e.count,items:[]}; groups.push(grp); }
+    grp.items.push(e);
+  });
+  return groups.slice(0,maxTiers).map((g,i)=>({
+    rank:i+1, count:g.count,
+    name:g.items.map(x=>x.name).join('／'),
+    detail:g.items.map(x=>x.name+'：'+x.gamesStr).join('；')
+  }));
+}
+
+function computeAwards(){
+  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={};
+
+  (GAMES||[]).forEach(g=>{
+    if(!g.players||!g.log) return;
+    const players=g.players;
+    const rawNights=String(g.log).split(/\*\*夜晚\d+(?:st|nd|rd|th)?/).slice(1);
+    const nights=rawNights.map(seg=>seg.split(/\*\*白天|\*\*警長競選/)[0]);
+    if(!nights.length) return;
+
+    const witchStd=players.find(p=>awIsWitchStd(p.role));
+    const guardStd=players.find(p=>awIsGuardStd(p.role));
+    const seerP=players.find(p=>awIsSeerOrMedium(p.role));
+
+    const n1=awParseNight(nights[0]);
+
+    // 🔪 自刀專家：首夜狼隊「刀」自己隊友（機械狼／石像鬼等不見面角色不算）
+    if(n1.kill && !awIsX(n1.kill)){
+      const victim=players.find(p=>String(p.num)===String(n1.kill));
+      if(victim && awIsWolfCore(victim.role)) awAddCredit(selfKillDict, victim.name, g.id);
+    }
+    // 🤐 抿女巫專家：女巫座號 ＝ 首夜刀口號碼，同局所有正牌狼都算一次
+    if(witchStd && n1.kill && String(witchStd.num)===String(n1.kill)){
+      players.filter(p=>awIsWolfCore(p.role)).forEach(w=>awAddCredit(minWitchCredit, w.name, g.id));
+    }
+
+    nights.forEach(seg=>{
+      const info=awParseNight(seg);
+      // 🧪 超強女巫：毒到廣義狼隊（含機械狼）
+      if(witchStd && info.witchPoison && !awIsX(info.witchPoison)){
+        const t=players.find(p=>String(p.num)===String(info.witchPoison));
+        if(t && awIsWolfBroad(t.role)) awAddCredit(poisonHits, witchStd.name, g.id);
+      }
+      // 🛡️ 鋼鐵守衛：守X＝刀X
+      if(guardStd && info.guardTarget && info.kill && !awIsX(info.guardTarget) && info.guardTarget===info.kill){
+        awAddCredit(guardHits, guardStd.name, g.id);
+      }
+      // 🔮 查狼專家：僅計「預言家／通靈師」的「驗／通驗」，查到廣義狼隊
+      if(seerP){
+        info.checks.forEach(c=>{
+          if(c.type!=='驗' && c.type!=='通驗') return;
+          if(awIsX(c.target)) return;
+          const t=players.find(p=>String(p.num)===String(c.target));
+          if(t && awIsWolfBroad(t.role)) awAddCredit(seerHits, seerP.name, g.id);
+        });
+      }
+    });
+  });
+
+  return [
+    {icon:'🧪',title:'超強女巫',top:awTopTiers(poisonHits),
+      note:'女巫毒藥使用對象，該局實際屬於狼隊（含機械狼）即算命中1次。'},
+    {icon:'🔮',title:'查狼專家',top:awTopTiers(seerHits),
+      note:'僅計「預言家／通靈師」的查驗結果（守墓人、石像鬼、機械狼自己偷學到的查驗不算），查到邪惡陣營（含機械狼）即算命中；雙身分板若牌面顯示為好人則不算。'},
+    {icon:'🔪',title:'自刀專家',top:awTopTiers(selfKillDict),
+      note:'首夜狼隊「刀」的目標本身也是同隊狼人／狼王（機械狼不與其他狼人相認、石像鬼等不見面角色不算），不論當晚是否被女巫救下都算1次。'},
+    {icon:'🛡️',title:'鋼鐵守衛',top:awTopTiers(guardHits),
+      note:'逐晚比對「守X」與「刀X」，號碼相同才算守到刀口。'},
+    {icon:'🤐',title:'抿女巫專家',top:awTopTiers(minWitchCredit),
+      note:'女巫座位號碼剛好等於首夜被狼刀的號碼，該局所有正牌狼隊成員（不含機械狼）都算1次。'},
+  ];
+}
+
+function awardsRender(){
+  const strip=document.getElementById('awards-strip');
+  if(!strip) return;
+  const awards=computeAwards();
+  window.AW_CURRENT=awards; // 給 awardsToggle 用
+  strip.innerHTML=awards.map((a,i)=>{
+    const first=a.top[0];
+    return `<div class="award-card" id="aw-card-${i}" onclick="awardsToggle(${i})">
+      <div class="aw-icon">${a.icon}</div>
+      <div class="aw-title">${a.title}</div>
+      <div class="aw-name">${first?first.name:'尚無資料'}</div>
+      <div class="aw-count">${first?first.count+'次':''}</div>
+    </div>`;
+  }).join('');
+  const detail=document.getElementById('award-detail');
+  if(detail){ detail.classList.remove('open'); detail.innerHTML=''; }
+  AWARD_OPEN=-1;
+}
+let AWARD_OPEN=-1;
+function awardsToggle(i){
+  const detail=document.getElementById('award-detail');
+  document.querySelectorAll('.award-card').forEach(el=>el.classList.remove('sel'));
+  if(AWARD_OPEN===i){ AWARD_OPEN=-1; detail.classList.remove('open'); detail.innerHTML=''; return; }
+  AWARD_OPEN=i;
+  document.getElementById('aw-card-'+i).classList.add('sel');
+  const a=(window.AW_CURRENT||[])[i];
+  if(!a) return;
+  const rows=a.top.length
+    ? a.top.map(t=>`<div>🏅 <b>第${t.rank}名｜${t.name}</b>　${t.count}次　<span style="color:var(--text3);">(${t.detail})</span></div>`).join('')
+    : '<div style="color:var(--text3);">目前還沒有場次符合這個項目</div>';
+  detail.innerHTML=`${rows}<div class="aw-note">${a.note}</div>`;
+  detail.classList.add('open');
+}
 
 pdRebuildAndRender();
 pdLoadCloudGames();
