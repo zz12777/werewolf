@@ -118,14 +118,15 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .comp-count{font-size:26px;font-weight:800;}
 .comp-label{font-size:11px;color:var(--text2);margin-top:3px;}
 
-/* ── AWARDS STRIP ── */
-.awards-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin:8px 0 4px;}
-.award-card{background:var(--bg3);border:1px solid transparent;border-radius:var(--r-sm);padding:10px 6px 9px;text-align:center;cursor:pointer;-webkit-user-select:none;}
+/* ── AWARDS STRIP ── 全部橫排一列，放不下用左右滑動（拉桿）瀏覽，不換行 */
+.awards-strip{display:flex;gap:10px;overflow-x:auto;margin:8px 0 4px;padding:2px 2px 10px;scrollbar-width:thin;-webkit-overflow-scrolling:touch;}
+.award-card{flex:0 0 112px;background:var(--bg3);border:1px solid transparent;border-radius:var(--r-sm);padding:12px 8px 10px;text-align:center;cursor:pointer;-webkit-user-select:none;}
 .award-card:active{opacity:0.7;}
 .award-card.sel{border-color:var(--accent);}
-.award-card .aw-icon{font-size:17px;}
-.award-card .aw-title{font-size:10px;color:var(--text2);margin-top:2px;line-height:1.25;min-height:24px;}
-.award-card .aw-name{font-size:12.5px;font-weight:700;color:var(--text);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.award-card .aw-icon{font-size:22px;}
+/* 獎項名稱（超強女巫／查狼專家…）是重點，字放大加粗；得獎人名字相對次要，縮小 */
+.award-card .aw-title{font-size:13.5px;font-weight:800;color:var(--text);margin-top:6px;line-height:1.3;}
+.award-card .aw-name{font-size:11px;font-weight:600;color:var(--text2);margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .award-card .aw-count{font-size:10px;color:var(--text3);margin-top:1px;}
 .award-detail{display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:11px 13px;margin:6px 0 16px;font-size:12.5px;color:var(--text2);line-height:1.85;}
 .award-detail.open{display:block;}
@@ -200,15 +201,24 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rp.rp-dead .rp-num{text-decoration:line-through;color:var(--text3);}
 .rp .rp-name{font-size:10px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px;}
 .rp .rp-role{font-size:9px;font-weight:700;margin-top:3px;padding:1px 5px;border-radius:8px;display:inline-block;}
-.rp-wolf .rp-role{background:rgba(184,56,40,0.1);color:#922418;}
-.rp-villager .rp-role{background:rgba(58,122,42,0.1);color:#2a601c;}
-.rp-seer .rp-role{background:rgba(42,101,168,0.1);color:#1a4e88;}
+/* 狼隊角色（含血月使者、機械狼、夢魘、狼兄狼弟……）全部統一同一種紅色，方便法官一眼認出敵我 */
+.rp-wolf .rp-role,.rp-wolfking .rp-role,.rp-whitewolf .rp-role,.rp-wolfbeauty .rp-role,.rp-evilknight .rp-role,.rp-gargoyle .rp-role,.rp-bloodmoon .rp-role,.rp-mechanicalwolf .rp-role,.rp-nightmare .rp-role,.rp-wolfbrother_e .rp-role,.rp-wolfbrother_y .rp-role{background:rgba(184,56,40,0.1);color:#922418;}
+/* 平民／混血兒全部維持同一種綠色（混血兒陣營未知，好人視角一律當平民看待） */
+.rp-villager .rp-role,.rp-hybrid .rp-role{background:rgba(58,122,42,0.1);color:#2a601c;}
+/* 女巫刻意避開紅色，其餘神職彼此也各自分開一個顏色，方便快速辨識 */
 .rp-witch .rp-role{background:rgba(168,94,16,0.1);color:#864a08;}
+.rp-seer .rp-role{background:rgba(42,101,168,0.1);color:#1a4e88;}
 .rp-hunter .rp-role{background:rgba(95,62,150,0.1);color:#4a2e80;}
 .rp-guard .rp-role{background:rgba(30,136,122,0.1);color:#0e6a5e;}
-.rp-wolfking .rp-role,.rp-whitewolf .rp-role,.rp-wolfbeauty .rp-role,.rp-evilknight .rp-role,.rp-gargoyle .rp-role,.rp-mechanicalwolf .rp-role,.rp-nightmare .rp-role{background:rgba(184,56,40,0.07);color:#922418;}
-.rp-dreamcatcher .rp-role,.rp-knight .rp-role,.rp-magician .rp-role,.rp-demonhunter .rp-role,.rp-gravkeeper .rp-role,.rp-medium .rp-role,.rp-blackmarket .rp-role{background:rgba(42,101,168,0.07);color:#1a4e88;}
+.rp-medium .rp-role{background:rgba(61,58,138,0.1);color:#332f80;}
+.rp-demonhunter .rp-role{background:rgba(138,42,110,0.1);color:#7e195f;}
+.rp-gravkeeper .rp-role{background:rgba(90,74,58,0.12);color:#4a3a2a;}
+.rp-dreamcatcher .rp-role{background:rgba(26,110,136,0.1);color:#0f5c74;}
+.rp-knight .rp-role{background:rgba(122,106,26,0.12);color:#5f5110;}
+.rp-magician .rp-role{background:rgba(106,58,154,0.1);color:#582e88;}
+.rp-blackmarket .rp-role{background:rgba(122,74,26,0.12);color:#5e3810;}
 .rp-unknown .rp-role{background:var(--bg3);color:var(--text3);}
+.rp-tag-lucky{display:inline-block;margin-left:3px;font-size:8px;font-weight:800;padding:0 3px;border-radius:5px;background:rgba(154,124,40,0.18);color:var(--gold);vertical-align:1px;}
 #jg-p-main{display:none;flex-direction:column;min-height:calc(100vh - 52px);padding:0;}
 #jg-p-main.on{display:flex;}
 #jg-main-scroll{flex:1;overflow-y:auto;padding:14px 16px 16px;max-width:540px;margin:0 auto;width:100%;}
@@ -341,6 +351,15 @@ h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;}
 .chip{font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px;background:var(--bg3);color:var(--text2);}
 .chip.evil{background:rgba(184,56,40,0.1);color:#922418;}
 .chip.good{background:rgba(58,122,42,0.1);color:#2a601c;}
+.chip.clickable{cursor:pointer;-webkit-user-select:none;user-select:none;border:1px solid transparent;}
+.chip.clickable.active{border-color:currentColor;}
+
+/* ── GUIDE ARTICLE TAGS ── */
+.guide-hd-main{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
+.guide-tag{font-size:9px;font-weight:800;padding:1px 6px;border-radius:6px;line-height:1.5;white-space:nowrap;}
+.guide-tag-general{background:rgba(58,122,42,0.12);color:#2a601c;}
+.guide-tag-ocw{background:rgba(42,101,168,0.12);color:#1a4e88;}
+.guide-tag-y{background:rgba(168,94,16,0.12);color:#864a08;}
 .hist{display:flex;flex-direction:column;gap:6px;}
 .hist-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);padding:7px 10px;background:var(--bg);border-radius:var(--r-sm);border:1px solid var(--border);}
 .hist-res{width:18px;height:18px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;}
@@ -449,7 +468,7 @@ select{
     <div class="rcol-body">
       <span class="board-role">夢魘</span>：在狼人行動前搶先發動技能，恐懼一名玩家使其當晚技能失效（若恐懼到隊友，狼人當晚就無法殺人）。<br><span class="role-link" onclick="jumpToRole('nightmare')">→ 查看夢魘完整規則</span>
       <br><br>
-      <span class="board-role">攝夢人</span>：每晚指定一名「夢遊者」使其免疫傷害；但攝夢人一旦死亡，夢遊者會一起陪葬，連續兩晚攝夢同一人對方也會死亡，是這個板子中攻守都很吃技巧的一組神狼對抗。<br><span class="role-link" onclick="jumpToRole('dreamcatcher')">→ 查看攝夢人完整規則</span>
+      <span class="board-role">攝夢人</span>：每晚指定一名「夢遊者」使其免疫當晚傷害；但攝夢人一旦死亡，夢遊者會一起陪葬，連續兩晚攝夢同一人對方也會死亡。<br><span class="role-link" onclick="jumpToRole('dreamcatcher')">→ 查看攝夢人完整規則</span>
     </div>
   </div>
 
@@ -726,11 +745,6 @@ select{
   <div class="bar"><span class="g" id="ov-bar-g"></span><span class="e" id="ov-bar-e"></span></div>
   <div class="chip-row" id="ov-boards" style="margin-top:14px;"></div>
 
-  <!-- 特別獎項（小分隊限定成就） -->
-  <div class="big-section-title">🏆 特別獎項</div>
-  <div class="awards-strip" id="awards-strip"></div>
-  <div class="award-detail" id="award-detail"></div>
-
   <!-- 排行榜 -->
   <div class="big-section-title" style="display:flex;align-items:center;justify-content:space-between;">
     <span>狼人殺小達人排行榜</span>
@@ -757,6 +771,11 @@ select{
   <div class="gcount" id="gcount"></div>
   <div id="game-list" class="card-grid"></div>
 
+  <!-- 特別獎項（小分隊限定成就）：放在整頁最下面，橫向一排、放不下可以左右滑 -->
+  <div class="big-section-title">🏆 特別獎項</div>
+  <div class="awards-strip" id="awards-strip"></div>
+  <div class="award-detail" id="award-detail"></div>
+
 </div>
 
 <!-- ══════════════════════════════════════
@@ -771,6 +790,7 @@ select{
 
   <div id="guide-loading" class="empty">載入攻略中…</div>
   <div id="guide-empty" class="empty" style="display:none;">目前還沒有收錄文章，之後會陸續新增。</div>
+  <div class="chip-row" id="guide-tag-filter" style="display:none;"></div>
   <div id="guide-list" class="card-grid"></div>
 </div>
 
@@ -880,7 +900,7 @@ function jgAutoGameTitle(){
 // 整理成分組後的「**警長競選」區塊文字，跟白天流水帳分開、獨立輸出。
 function jgFormatSheriffBlock(){
   if(!jgSheriffCampaignHappened && !jgSheriffSelfDestruct) return ''; // 沒有人上警，不輸出這個區塊
-  let candidatesNums=null, startNum=null, dirLabel=null, withdrawals=[];
+  let candidatesNums=null, startNum=null, dirLabel=null, withdrawals=[], hanTiaoNotes=[];
   const round1Votes=[], pkVotes=[];
   let round1Abstain=null, pkAbstain=null, noSheriffNote=null;
   jgSheriffLogLines.forEach(l=>{
@@ -888,6 +908,7 @@ function jgFormatSheriffBlock(){
     if((m=l.match(/^候選人：(.+)號$/))) candidatesNums=m[1];
     else if((m=l.match(/發言順序：.*（(逆時針|順時針)，從\s*(\d+)\s*號開始）/))){ dirLabel=m[1]; startNum=m[2]; }
     else if((m=l.match(/^退水：(\d+)號$/))) withdrawals.push(m[1]);
+    else if((m=l.match(/^悍跳號碼（排除詐身分）：(.+)$/))) hanTiaoNotes.push(m[1]);
     else if((m=l.match(/^PK警長票(\d+)：(.+)$/))) pkVotes.push([m[1],m[2]]);
     else if((m=l.match(/^警長票(\d+)：(.+)$/))) round1Votes.push([m[1],m[2]]);
     else if((m=l.match(/^PK棄票：(.+)$/))) pkAbstain=m[1];
@@ -901,6 +922,7 @@ function jgFormatSheriffBlock(){
     out+=head+'\n';
   }
   if(withdrawals.length>0) out+='>退水：'+withdrawals.join('、')+'號\n';
+  if(hanTiaoNotes.length>0) hanTiaoNotes.forEach(note=>{ out+='>悍跳號碼：'+note+'\n'; });
   if(round1Votes.length>0){
     out+='>投票\n';
     round1Votes.forEach(([t,vs])=>{
@@ -1285,6 +1307,12 @@ let jgSheriffSelfDestructNum=null; // 自爆吞警徽的玩家號碼，供文字
 let jgEvilKnightRevengeUsed=false; // 惡靈騎士反傷整局限一次，成功反傷一次後永久失效
 let jgLastVoteOutPlayer=null; // 前一個白天投票處死的玩家號碼（守墓人用，獨立變數不受每夜 jgRecord 重置影響）
 let jgSheriffLogLines=[]; // 警長競選的候選人／發言順序／退水／各輪投票票型，依序累積，供文字紀錄匯出使用
+// 悍跳號碼記錄（排除詐身分）：警上（競選政見發表）跟警下（一般發言討論）都可以選填，
+// 不強制填寫；有填的話才會計入文字紀錄，法官不需要就直接留空即可。
+let jgHanTiaoSheriffNote='';       // 警上競選期間的悍跳號碼記錄（整場競選共用一欄）
+let jgHanTiaoSheriffCommitted=false; // 是否已經把警上悍跳記錄寫進 jgSheriffLogLines（避免 PK 重進畫面時重複寫入）
+let jgHanTiaoDiscussNotes={};      // 警下一般發言討論的悍跳號碼記錄，依 jgNight 分開存
+let jgHanTiaoDiscussCommitted={};  // 對應天數是否已經寫進 jgDayLog（避免同一天重複寫入）
 let jgSheriffElectedNum=null; // 競選當選的警長號碼，當選後固定不變（jgSheriff 之後可能因交接警徽而改變，這個只記錄最初當選者，供文字紀錄使用）
 let jgSheriffTransferPending=false; // 警長剛陣亡、尚待法官選擇交接對象（或撕毀警徽）
 let jgSheriffTransferDeadNum=null;  // 剛陣亡的警長號碼，供交接畫面與文字紀錄使用
@@ -1680,6 +1708,10 @@ function jgStart(){
   jgLastVoteOutPlayer=null;
   jgLastNightPeaceful=false;
   jgSpeakDirection=null;
+  jgHanTiaoSheriffNote='';
+  jgHanTiaoSheriffCommitted=false;
+  jgHanTiaoDiscussNotes={};
+  jgHanTiaoDiscussCommitted={};
   jgNightLog={};
   jgDayLog={};
   jgDayMeta={};
@@ -1871,8 +1903,11 @@ function jgSaveSheriffSelfDestruct(){
     jgSheriffPostponedToDay2=true;
     jgPushDayLog(p.num+'號 自爆（雙爆吞警徽・第一爆，警徽保留，競選延到隔天繼續）');
     jgRenderRoster();
-    const win=jgCheckWin();
-    if(win){ jgShowWin(win); return; }
+    // 注意：這裡「不」提前呼叫 jgCheckWin()！自爆只是死了一個人，跟其他死法（狼刀、投票、
+    // 開槍……）一樣，都要等進到「天亮」流程、走過死訊公告與遺言之後，才由 dawn 步驟統一判斷
+    // 勝負（見下方 jgGoStep('dawn') 對應的畫面，會把 jgRecord._selfDestructNum 併入死亡名單，
+    // 一起跑公告／遺言／勝負判定）。之前在這裡提前判斷會導致自爆一結束就直接跳到「狼人勝利」，
+    // 整個天亮公告、候選人遺言全部被跳過，玩家一頭霧水看不到自己自爆之後發生了什麼事。
     alert('💥 '+p.num+'號 自爆，警徽暫不流失，隔天將重新競選警長。');
     jgGoStep('dawn');
     return;
@@ -1884,8 +1919,8 @@ function jgSaveSheriffSelfDestruct(){
   jgSheriffSelfDestruct=true;
   jgSheriffSelfDestructNum=p.num;
   jgRenderRoster();
-  const win=jgCheckWin();
-  if(win){ jgShowWin(win); return; }
+  // 同上：勝負判定一律交給「天亮」流程統一處理（見 jgGoStep('dawn') 對應畫面），
+  // 不要在這裡提前呼叫 jgCheckWin()，否則會跳過天亮公告與自爆者的遺言，直接結束遊戲。
   alert('💥 '+p.num+'號 自爆，本局不再有警長。');
   jgGoStep('dawn');
 }
@@ -1946,6 +1981,44 @@ function jgSheriffSpeechOrderList(){
   }
   return ordered;
 }
+// 悍跳號碼記錄小工具：警上（競選發言）跟警下（一般發言討論）共用同一種輸入框 HTML，
+// 選填、不強制，法官若真的看到有人悍跳（在別人已經跳過同一個神職身分後，還搶著跳同一個身分）
+// 才需要記，純粹的「詐身分」（一開始就打算悍跳、佈局好的假跳）不算，留空即可。
+function jgHanTiaoInputHtml(id, value, updateFn){
+  return '<div class="info" style="margin-top:10px;padding:10px 14px;">'
+    +'<label style="margin:0 0 6px;">🎭 悍跳號碼（排除詐身分・非必填）</label>'
+    +'<input type="text" id="'+id+'" placeholder="例如：3號 悍跳女巫（留空表示沒有）" value="'+(value||'').replace(/"/g,'&quot;')+'" '
+    +'oninput="'+updateFn+'(this.value)" style="margin:0;">'
+    +'</div>';
+}
+function jgUpdateHanTiaoSheriff(v){ jgHanTiaoSheriffNote=v; jgHanTiaoSheriffCommitted=false; }
+function jgCommitHanTiaoSheriff(){
+  const v=(jgHanTiaoSheriffNote||'').trim();
+  if(v&&!jgHanTiaoSheriffCommitted){
+    jgSheriffLogLines.push('悍跳號碼（排除詐身分）：'+v);
+    jgHanTiaoSheriffCommitted=true;
+  }
+}
+function jgUpdateHanTiaoDiscuss(v){ jgHanTiaoDiscussNotes[jgNight]=v; jgHanTiaoDiscussCommitted[jgNight]=false; }
+function jgCommitHanTiaoDiscuss(){
+  const v=(jgHanTiaoDiscussNotes[jgNight]||'').trim();
+  if(v&&!jgHanTiaoDiscussCommitted[jgNight]){
+    jgPushDayLog('悍跳號碼（排除詐身分）：'+v);
+    jgHanTiaoDiscussCommitted[jgNight]=true;
+  }
+}
+function jgSheriffSpeechGoVote(){
+  jgCommitHanTiaoSheriff();
+  jgGoStep('sheriff-vote');
+}
+function jgSheriffSpeechSelfDestruct(){
+  jgCommitHanTiaoSheriff();
+  jgSheriffSelfDestructPrompt();
+}
+function jgDiscussGoVote(){
+  jgCommitHanTiaoDiscuss();
+  jgGoStep('vote');
+}
 function jgRenderSheriffSpeech(){
   const ordered=jgSheriffSpeechOrderList();
   const rows=ordered.map(n=>{
@@ -1965,8 +2038,9 @@ function jgRenderSheriffSpeech(){
     <div style="margin-top:10px;">${rows}</div>
     ${jgSheriffPkRound?'<div class="info-warn" style="font-size:12px;">平票 PK 回合中，此輪不可退水</div>'
       :'<div class="speech" style="margin-top:8px;">「<em>要退水的玩家請坐下。</em>」</div><div class="info" style="font-size:12px;">全部候選人發言結束後宣布上面這句話，想退出競選的候選人這時點選對應「退水」即可</div>'}
-    <button class="danger" style="margin-top:12px;" onclick="jgSheriffSelfDestructPrompt()">${jgSelfDestructBtnLabel()}</button>
-    <button class="primary" style="margin-top:10px;" onclick="jgGoStep('sheriff-vote')">${jgSheriffPkRound?'PK 發言結束，重新投票 →':'要退水的都退水了，進入投票 →'}</button>
+    ${jgHanTiaoInputHtml('jg-hantiao-sheriff-input', jgHanTiaoSheriffNote, 'jgUpdateHanTiaoSheriff')}
+    <button class="danger" style="margin-top:12px;" onclick="jgSheriffSpeechSelfDestruct()">${jgSelfDestructBtnLabel()}</button>
+    <button class="primary" style="margin-top:10px;" onclick="jgSheriffSpeechGoVote()">${jgSheriffPkRound?'PK 發言結束，重新投票 →':'要退水的都退水了，進入投票 →'}</button>
   `,'🎖️ 警長競選');
 }
 function jgSheriffWithdraw(n){
@@ -2464,7 +2538,9 @@ function jgRenderRoster(){
         +'<div class="rp-role"'+(id2Dead?' style="'+grayStyle+'"':'')+'>'+jgFullRoleName(id2Role)+'</div>';
     } else {
       const rname=p.role?jgRoleDisplayName(p):'?';
-      bodyHtml=`<div class="rp-role">${rname}</div>`;
+      // 黑市商人板：這位玩家是黑市交易產生的「幸運兒」時，角色後面加註一個小標籤 [幸]
+      const luckyTag=(jgLuckyOne&&jgLuckyOne.num===p.num)?'<span class="rp-tag-lucky" title="幸運兒">幸</span>':'';
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <div class="rp-num">${p.num}${jgSheriff===p.num?'<span title="警長" style="margin-left:2px;">🎖️</span>':''}</div>
@@ -2493,7 +2569,8 @@ function jgCaptureState(){
     jgEvilKnightRevengeUsed, jgLastVoteOutPlayer, jgAbstainVoters,
     jgSheriffLogLines, jgSheriffElectedNum, jgSheriffTransferPending, jgSheriffTransferDeadNum, jgSheriffTransferNextStep,
     jgVotePkRound, jgVotePkCandidates,
-    jgBadgeMode, jgSheriffFirstBlowDone, jgSheriffFirstBlowNum, jgSheriffPostponedToDay2, jgSheriffDay2CandidatesAsked, jgSheriffFinalNight
+    jgBadgeMode, jgSheriffFirstBlowDone, jgSheriffFirstBlowNum, jgSheriffPostponedToDay2, jgSheriffDay2CandidatesAsked, jgSheriffFinalNight,
+    jgHanTiaoSheriffNote, jgHanTiaoSheriffCommitted, jgHanTiaoDiscussNotes, jgHanTiaoDiscussCommitted
   }));
 }
 
@@ -2565,6 +2642,10 @@ function jgRestoreState(snap){
   jgSheriffFinalNight=snap.jgSheriffFinalNight;
   jgVotePkRound=!!snap.jgVotePkRound;
   jgVotePkCandidates=snap.jgVotePkCandidates||[];
+  jgHanTiaoSheriffNote=snap.jgHanTiaoSheriffNote||'';
+  jgHanTiaoSheriffCommitted=!!snap.jgHanTiaoSheriffCommitted;
+  jgHanTiaoDiscussNotes=snap.jgHanTiaoDiscussNotes||{};
+  jgHanTiaoDiscussCommitted=snap.jgHanTiaoDiscussCommitted||{};
 }
 
 function jgBack(){
@@ -3862,7 +3943,8 @@ function jgRenderStep(step){
           ${jgFirstDayCompCheckHtml()}
           <div class="speech">「<em>從 ${dm.start} 號開始，${dirLabel2}依序發言。</em>」</div>
           ${jgDiscussExtraButtonsHtml()}
-          <button class="primary" onclick="jgGoStep('vote')" style="margin-top:8px;">發言結束，進入投票 →</button>
+          ${jgHanTiaoInputHtml('jg-hantiao-discuss-input', jgHanTiaoDiscussNotes[jgNight], 'jgUpdateHanTiaoDiscuss')}
+          <button class="primary" onclick="jgDiscussGoVote()" style="margin-top:8px;">發言結束，進入投票 →</button>
         `,'💬 發言');
         return;
       }
@@ -3877,7 +3959,8 @@ function jgRenderStep(step){
         <label>警長選警左還是警右？（點選對應號碼，方向自動判定）</label>
         <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:4px;">${jgSheriffLRButtonsHtml(curStart,'jgSetDiscussStart')}</div>
         ${jgDiscussExtraButtonsHtml()}
-        <button class="primary" onclick="jgGoStep('vote')" style="margin-top:8px;">發言結束，進入投票 →</button>
+        ${jgHanTiaoInputHtml('jg-hantiao-discuss-input', jgHanTiaoDiscussNotes[jgNight], 'jgUpdateHanTiaoDiscuss')}
+        <button class="primary" onclick="jgDiscussGoVote()" style="margin-top:8px;">發言結束，進入投票 →</button>
       `,'💬 發言');
       return;
     }
@@ -3891,7 +3974,8 @@ function jgRenderStep(step){
         ${jgNight===1?jgFirstDayCompCheckHtml():''}
         <div class="speech">「<em>從 ${dmToday.start} 號開始，${dirLabel3}依序發言。</em>」</div>
         ${jgDiscussExtraButtonsHtml()}
-        <button class="primary" onclick="jgGoStep('vote')" style="margin-top:8px;">發言結束，進入投票 →</button>
+        ${jgHanTiaoInputHtml('jg-hantiao-discuss-input', jgHanTiaoDiscussNotes[jgNight], 'jgUpdateHanTiaoDiscuss')}
+        <button class="primary" onclick="jgDiscussGoVote()" style="margin-top:8px;">發言結束，進入投票 →</button>
       `,'💬 發言');
       return;
     }
@@ -3906,7 +3990,8 @@ function jgRenderStep(step){
       ${jgLastNightPeaceful?'<div class="info" id="jg-wheel-wrap"><button onclick="jgSpinWheel()">🎡 轉動轉盤</button><div id="jg-wheel-result"></div></div>':''}
       ${needDirection?'<div class="info" id="jg-wheel-wrap"><button onclick="jgSpinDirectionOnly()">🎡 轉動轉盤（決定順/逆）</button><div id="jg-wheel-result"></div></div>':''}
       ${jgDiscussExtraButtonsHtml()}
-      <button class="primary" onclick="jgGoStep('vote')" style="margin-top:8px;">發言結束，進入投票 →</button>
+      ${jgHanTiaoInputHtml('jg-hantiao-discuss-input', jgHanTiaoDiscussNotes[jgNight], 'jgUpdateHanTiaoDiscuss')}
+      <button class="primary" onclick="jgDiscussGoVote()" style="margin-top:8px;">發言結束，進入投票 →</button>
     `,'💬 發言');
   }
   else if(step==='vote'){
@@ -6104,7 +6189,7 @@ const ALL_ROLES = {
   witch:    {icon:'🧪', name:'女巫',   team:'good', teamLabel:'神職', desc:'<strong>解藥：</strong>救活當晚被狼殺的玩家（整局限一次）。<br><strong>毒藥：</strong>毒殺任意玩家（整局限一次）。<br>兩瓶藥沒有時間限制，整局中任何一晚都能使用；但同一晚只能擇一使用，不能同時用解藥又用毒藥，且不能自救。'},
   hunter:   {icon:'🔫', name:'獵人',   team:'good', teamLabel:'神職', desc:'被狼刀淘汰（夜槍）或被投票淘汰（白天槍）時，都可以開槍帶走一名玩家（留空不帶）。<strong>被女巫毒殺時無法發動。</strong>'},
   guard:    {icon:'🛡️', name:'守衛',   team:'good', teamLabel:'神職', desc:'每晚可以選擇一名玩家守護（也可以空守），守過的號碼可以再次守，但不能連續兩晚守同一人。<br>守衛擋得住狼刀，也擋得住當晚的夜槍（獵人／狼王被狼刀淘汰後開槍帶人）——同一個盾只能擋下一刀或一槍。<br>守衛無法阻擋女巫毒藥。<br><strong>奶穿：</strong>若同一晚守衛的守護與女巫的解藥同時作用在同一名玩家身上，該玩家仍會死亡（雙重保護互相抵銷）。'},
-  dreamcatcher:{icon:'🌙',name:'攝夢人',team:'good',teamLabel:'神職', desc:'<strong>守護/擊殺：</strong>指定一名「夢遊者」，當晚免疫傷害。若攝夢人死亡，夢遊者同死；連續兩晚攝夢同一人，該人死亡。'},
+  dreamcatcher:{icon:'🌙',name:'攝夢人',team:'good',teamLabel:'神職', desc:'<strong>守護/擊殺：</strong>主動技:每晚都必須選擇一位玩家成為夢遊者使其進入夢遊狀態。夢遊者將不會死於攝夢人以外的夜間技能(狼刀、巫毒、夜槍)，若攝夢人連續兩晚夢同一位玩家，則夢遊者會因此死於夢裡。<br>被動技:若攝夢人在夜裡死亡，則夢遊者會一同死去。'},
   knight:   {icon:'⚔️', name:'騎士',   team:'good', teamLabel:'神職', desc:'<strong>決鬥：</strong>白天發言階段可隨時翻牌宣告決鬥，指定一名玩家對決。<br>對方是狼→法官宣布「X號是狼人，X號淘汰」，對方直接出局，跳過投票直接進入黑夜。<br>對方是好人→法官宣布「X號是好人，騎士以死謝罪」，騎士淘汰，白天繼續發言與投票。<br><strong>限制：</strong>若決鬥對象是狼王／狼美人／白狼王，因決鬥出局不會發動其技能（不能開槍帶人、魅惑對象不會殉情）。'},
   magician: {icon:'🎩', name:'魔術師', team:'good', teamLabel:'神職', desc:'<strong>交換號碼：</strong>每晚睜眼後最早行動，交換兩個號碼牌（也可以不換）。已交換過的號碼不能再被交換，不能交換已死亡的號碼。<br><strong>換流效果：</strong>當晚所有以「號碼」為目標的夜間技能，實際作用對象都會被改成對方號碼——換 A、B 後，狼刀A會刀到B、女巫毒A會毒到B、預言家查A會查到B、守衛守A會守到B……以此類推。<br><strong>夜槍例外：</strong>獵人被狼刀（夜槍）帶走的目標仍屬於夜間作用、一樣會被換流影響；但若獵人是白天被投票出局（白天槍），此時已經是白天，換流只對夜間作用有效，不受影響。'},
   demonhunter:{icon:'🗡️',name:'獵魔人',team:'good',teamLabel:'神職', desc:'<strong>狩獵：</strong>第二晚起狩獵一名玩家，對方是狼則狼死，對方是好人則自己死。<strong>免疫女巫毒藥。</strong>'},
@@ -6598,10 +6683,12 @@ function jgLoadReportForm(){
 // 攻略參考 (Guide articles)
 // ═══════════════════════════════════
 // 設定方式（跟「遊玩數據」抓雲端場次紀錄是同一套 Google 試算表 + 發布成 CSV 的做法）：
-// 1. 開一份新的 Google 試算表，A／B 兩欄放「標題」「內文」，C 欄開始放「參考網址」，
-//    可以有多個參考來源：C＝參考網址1、D＝參考網址2、E＝參考網址3……往右加多少欄都可以，
-//    程式會自動把 C 欄之後每一個有填值的欄位都當成一個參考來源依序顯示（參考來源1、參考來源2…）。
-//    第一列可以放「標題／內文／參考網址」當表頭（程式會自動偵測並跳過，不放表頭也沒關係）。
+// 1. 開一份新的 Google 試算表，A／B 兩欄放「標題」「內文」，C 欄放「標籤」，
+//    D 欄開始才放「參考網址」：C＝標籤、D＝參考網址1、E＝參考網址2、F＝參考網址3……
+//    往右加多少欄都可以，程式會自動把 D 欄之後每一個有填值的欄位都當成一個參考來源依序顯示
+//    （參考來源1、參考來源2…）。C 欄「標籤」目前支援三種文字（打錯字或留空就不會顯示標籤）：
+//    一般攻略／OCW／Y向推理。
+//    第一列可以放「標題／內文／標籤／參考網址」當表頭（程式會自動偵測並跳過，不放表頭也沒關係）。
 //    每一列 = 一篇文章，之後看到不錯的文章，就直接在試算表最下面新增一列即可。
 // 2. 檔案 → 共用 → 發布到網路（File → Share → Publish to web），來源選「該工作表」、
 //    格式選「逗號分隔值 (.csv)」，按發布，把產生的網址整段複製起來。
@@ -6643,17 +6730,29 @@ function parseGuideCsv(text){
   return rows.filter(r=>r.some(c=>c&&c.trim()));
 }
 
+// 標籤欄目前只認得這三種文字（其餘文字或留空一律視為沒有標籤，卡片上就不顯示標籤徽章）
+const GUIDE_TAGS=['一般攻略','OCW','Y向推理'];
 function guideRowsToArticles(rows){
   if(!rows.length) return [];
   let start=0;
   const first=(rows[0][0]||'').trim().toLowerCase();
   if(first==='標題'||first==='title'||first==='') start=1; // 跳過標題列
-  return rows.slice(start).map(r=>({
-    title:(r[0]||'').trim(),
-    content:(r[1]||'').trim(),
-    // C 欄開始每一欄都是一個參考網址，有填值的依序收集成陣列（可以有 1 個、3 個、10 個都行）
-    urls:r.slice(2).map(u=>(u||'').trim()).filter(Boolean),
-  })).filter(a=>a.title);
+  return rows.slice(start).map(r=>{
+    const rawTag=(r[2]||'').trim();
+    return {
+      title:(r[0]||'').trim(),
+      content:(r[1]||'').trim(),
+      tag:GUIDE_TAGS.includes(rawTag)?rawTag:'',
+      // D 欄開始每一欄都是一個參考網址，有填值的依序收集成陣列（可以有 1 個、3 個、10 個都行）
+      urls:r.slice(3).map(u=>(u||'').trim()).filter(Boolean),
+    };
+  }).filter(a=>a.title);
+}
+function guideTagClass(tag){
+  if(tag==='OCW') return 'guide-tag-ocw';
+  if(tag==='Y向推理') return 'guide-tag-y';
+  if(tag==='一般攻略') return 'guide-tag-general';
+  return '';
 }
 
 // 把試算表打進來的純文字轉成安全的 HTML：先跳脫尖括號等符號避免版面跑掉，
@@ -6668,19 +6767,41 @@ function formatGuideText(raw){
     .replace(/\n/g,'<br>');
 }
 
+let GUIDE_ALL_ARTICLES=[];
+let guideActiveTag='';
+function renderGuideTagFilter(articles){
+  const filterEl=document.getElementById('guide-tag-filter');
+  if(!filterEl) return;
+  const usedTags=GUIDE_TAGS.filter(t=>articles.some(a=>a.tag===t));
+  if(!usedTags.length){ filterEl.style.display='none'; filterEl.innerHTML=''; return; }
+  filterEl.style.display='';
+  const chip=(label,val)=>{
+    const cls=val?guideTagClass(val):'';
+    const active=guideActiveTag===val?' active':'';
+    return `<span class="chip clickable ${cls}${active}" onclick="guideFilterByTag('${val}')">${label}</span>`;
+  };
+  filterEl.innerHTML=chip('全部','')+usedTags.map(t=>chip(t,t)).join('');
+}
+function guideFilterByTag(tag){
+  guideActiveTag=tag;
+  renderGuideArticles(GUIDE_ALL_ARTICLES);
+}
 function renderGuideArticles(articles){
   const listEl=document.getElementById('guide-list');
   const emptyEl=document.getElementById('guide-empty');
   const loadingEl=document.getElementById('guide-loading');
   if(loadingEl) loadingEl.style.display='none';
   if(!listEl) return;
-  if(!articles||!articles.length){
+  GUIDE_ALL_ARTICLES=articles||[];
+  renderGuideTagFilter(GUIDE_ALL_ARTICLES);
+  const shown=guideActiveTag?GUIDE_ALL_ARTICLES.filter(a=>a.tag===guideActiveTag):GUIDE_ALL_ARTICLES;
+  if(!shown||!shown.length){
     listEl.innerHTML='';
     if(emptyEl) emptyEl.style.display='';
     return;
   }
   if(emptyEl) emptyEl.style.display='none';
-  listEl.innerHTML=articles.map(a=>{
+  listEl.innerHTML=shown.map(a=>{
     // 相容舊格式的單一 url 欄位，同時支援新的多網址 urls 陣列
     const urls=(a.urls&&a.urls.length)?a.urls:(a.url?[a.url]:[]);
     const linkHtml=urls.length?'<br><br>'+urls.map((u,i)=>{
@@ -6688,9 +6809,10 @@ function renderGuideArticles(articles){
       const label=urls.length>1?`參考來源${i+1}`:'參考來源';
       return `<a class="role-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:4px;">→ ${label}</a>`;
     }).join(''):'';
+    const tagHtml=a.tag?`<span class="guide-tag ${guideTagClass(a.tag)}">${a.tag}</span>`:'';
     return `<div class="rcol">
       <div class="rcol-hd" onclick="toggleRcol(this)">
-        <span class="rcol-icon">📝</span>
+        <span class="guide-hd-main"><span class="rcol-icon">📝</span>${tagHtml}</span>
         <span class="rcol-name">${formatGuideText(a.title)}</span>
         <span class="rcol-arrow">▶</span>
       </div>
