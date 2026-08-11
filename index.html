@@ -546,6 +546,18 @@ select{
       <span class="board-role">狼王／血月使者</span>：這個板子把混血兒和兩個狼隊技能（狼王的開槍帶人、血月使者的自爆封技與屠邊絕殺）放在一起，讓好人陣營在推理和投票上都要更小心。<br><span class="role-link" onclick="jumpToRole('wolfking')">→ 查看狼王完整規則</span>　<span class="role-link" onclick="jumpToRole('bloodmoon')">→ 查看血月使者完整規則</span>
     </div>
   </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🖤</span>
+      <span class="rcol-name">惡靈騎士＋守衛</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">惡靈騎士</span>：夜間免疫狼殺、女巫毒與夜槍，但被預言家查驗或被女巫毒殺後，隔天會反傷對方（預言家／女巫）死亡，是很容易讓神職誤觸的陷阱狼。<br><span class="role-link" onclick="jumpToRole('evilknight')">→ 查看惡靈騎士完整規則</span>
+      <br><br>
+      <span class="board-role">守衛</span>：每晚守護一名玩家使其免疫狼刀，不能連續兩晚守同一人；若與女巫同晚救同一人會「奶穿」，對方仍會死亡。<br><span class="role-link" onclick="jumpToRole('guard')">→ 查看守衛完整規則</span>
+    </div>
+  </div>
   </div>
   </div>
 
@@ -664,6 +676,7 @@ select{
       <option value="bloodmoon_demonhunter">血月使者+獵魔人</option>
       <option value="magician_wolfking">魔術師+狼王</option>
       <option value="hybrid_wolfking_bloodmoon">混血兒+狼王+血月</option>
+      <option value="evilknight_guard">惡靈騎士+守衛</option>
     </select>
   </div>
   <div class="info" id="jg-comp-desc" style="text-align:center;font-size:13px;margin-bottom:4px;"></div>
@@ -849,7 +862,7 @@ function switchTab(id){
 // ═══════════════════════════════════
 let jgTotal=6, jgComp={};
 // Preset name pool for quick player-roster setup (judge can still type a custom name for anyone)
-const JG_NAME_PRESET=['陳冠竹','巫嘉軒','鄭文奇','李法順','李想成','陳冠彣','陳玉堂','黃家珮','黃柏寰','何冠岳','謝子凡','王悅謙','孫揚和','蘇祐樂','許逸凡','林芸竹','吳柏霖','陳詩涵','劉謙叡','龔則乾','洪梓睿','黃禹勛','蘇奕安','郭展吟','許綺文','林均豪','潘彥誠','曾冠學'];
+const JG_NAME_PRESET=['陳冠竹','巫嘉軒','鄭文奇','李法順','李想成','陳冠彣','陳玉堂','黃家珮','黃柏寰','何冠岳','謝子凡','王悅謙','孫揚和','蘇祐樂','許逸凡','林芸竹','吳柏霖','陳詩涵','劉謙叡','龔則乾','洪梓睿','黃禹勛','蘇奕安','郭展吟','許綺文','林均豪','潘彥誠','曾冠學','謝伊晨','陳芯錞'];
 let jgPlayerNames={}; // num -> name, set via the roster setup page before jgStart()
 
 // ── 文字紀錄匯出 ──
@@ -905,7 +918,7 @@ function jgFormatSheriffBlock(){
     if((m=l.match(/^候選人：(.+)號$/))) candidatesNums=m[1];
     else if((m=l.match(/發言順序：.*（(逆時針|順時針)，從\s*(\d+)\s*號開始）/))){ dirLabel=m[1]; startNum=m[2]; }
     else if((m=l.match(/^退水：(\d+)號$/))) withdrawals.push(m[1]);
-    else if((m=l.match(/^悍跳號碼（排除詐身分）：(.+)$/))) hanTiaoNotes.push(m[1]);
+    else if((m=l.match(/^悍跳預言家號碼：(.+)$/))) hanTiaoNotes.push(m[1]);
     else if((m=l.match(/^PK警長票(\d+)：(.+)$/))) pkVotes.push([m[1],m[2]]);
     else if((m=l.match(/^警長票(\d+)：(.+)$/))) round1Votes.push([m[1],m[2]]);
     else if((m=l.match(/^PK棄票：(.+)$/))) pkAbstain=m[1];
@@ -919,7 +932,7 @@ function jgFormatSheriffBlock(){
     out+=head+'\n';
   }
   if(withdrawals.length>0) out+='>退水：'+withdrawals.join('、')+'號\n';
-  if(hanTiaoNotes.length>0) hanTiaoNotes.forEach(note=>{ out+='>悍跳號碼：'+note+'\n'; });
+  if(hanTiaoNotes.length>0) hanTiaoNotes.forEach(note=>{ out+='>悍跳預言家號碼：'+note+'\n'; });
   if(round1Votes.length>0){
     out+='>投票\n';
     round1Votes.forEach(([t,vs])=>{
@@ -1190,7 +1203,7 @@ function jgFormatNightLog(){
   if(dcP&&dcP.alive) lines.push('夢 '+(jgRecord.dreamcatcherTarget||'x')+(jgRecord.dreamcatcherKillTarget?'(連續兩晚致死)':''));
   const wbyP=jgPlayers.find(p=>p.role==='wolfbrother_y');
   if(wbyP&&wbyP.alive&&jgWolfBrotherAwakened&&jgWolfBrotherAwakenedNight===jgNight){
-    lines.push('覺醒刀 '+(jgRecord.wolfBrotherAwakenKill||'x'));
+    lines.push('狼弟復仇刀 '+(jgRecord.wolfBrotherAwakenKill||'x'));
   }
   // 守墓人／石像鬼現在排在狼人睜眼之前（見 jgAfterWolfBrotherStep），文字紀錄的順序也跟著調整。
   const gkP=jgPlayers.find(p=>p.role==='gravkeeper');
@@ -1306,9 +1319,9 @@ let jgLastVoteOutPlayer=null; // 前一個白天投票處死的玩家號碼（�
 let jgSheriffLogLines=[]; // 警長競選的候選人／發言順序／退水／各輪投票票型，依序累積，供文字紀錄匯出使用
 // 悍跳號碼記錄（排除詐身分）：警上（競選政見發表）跟警下（一般發言討論）都可以選填，
 // 不強制填寫；有填的話才會計入文字紀錄，法官不需要就直接留空即可。
-let jgHanTiaoSheriffNote='';       // 警上競選期間的悍跳號碼記錄（整場競選共用一欄）
+let jgHanTiaoSheriffNote='';       // 警上競選期間的悍跳預言家號碼記錄（整場競選共用一欄）
 let jgHanTiaoSheriffCommitted=false; // 是否已經把警上悍跳記錄寫進 jgSheriffLogLines（避免 PK 重進畫面時重複寫入）
-let jgHanTiaoDiscussNotes={};      // 警下一般發言討論的悍跳號碼記錄，依 jgNight 分開存
+let jgHanTiaoDiscussNotes={};      // 警下一般發言討論的悍跳預言家號碼記錄，依 jgNight 分開存
 let jgHanTiaoDiscussCommitted={};  // 對應天數是否已經寫進 jgDayLog（避免同一天重複寫入）
 let jgSheriffElectedNum=null; // 競選當選的警長號碼，當選後固定不變（jgSheriff 之後可能因交接警徽而改變，這個只記錄最初當選者，供文字紀錄使用）
 let jgSheriffTransferPending=false; // 警長剛陣亡、尚待法官選擇交接對象（或撕毀警徽）
@@ -1986,8 +1999,8 @@ function jgSheriffSpeechOrderList(){
 // 才需要記，純粹的「詐身分」（一開始就打算悍跳、佈局好的假跳）不算，留空即可。
 function jgHanTiaoInputHtml(id, value, updateFn){
   return '<div class="info" style="margin-top:10px;padding:10px 14px;">'
-    +'<label style="margin:0 0 6px;">🎭 悍跳號碼（排除詐身分・非必填）</label>'
-    +'<input type="text" id="'+id+'" placeholder="例如：3號 悍跳女巫（留空表示沒有）" value="'+(value||'').replace(/"/g,'&quot;')+'" '
+    +'<label style="margin:0 0 6px;">🎭 悍跳預言家號碼（排除詐身分・非必填）</label>'
+    +'<input type="text" id="'+id+'" placeholder="例如：3 （留空表示沒有）" value="'+(value||'').replace(/"/g,'&quot;')+'" '
     +'oninput="'+updateFn+'(this.value)" style="margin:0;">'
     +'</div>';
 }
@@ -1995,7 +2008,7 @@ function jgUpdateHanTiaoSheriff(v){ jgHanTiaoSheriffNote=v; jgHanTiaoSheriffComm
 function jgCommitHanTiaoSheriff(){
   const v=(jgHanTiaoSheriffNote||'').trim();
   if(v&&!jgHanTiaoSheriffCommitted){
-    jgSheriffLogLines.push('悍跳號碼（排除詐身分）：'+v);
+    jgSheriffLogLines.push('悍跳預言家號碼：'+v);
     jgHanTiaoSheriffCommitted=true;
   }
 }
@@ -2003,7 +2016,7 @@ function jgUpdateHanTiaoDiscuss(v){ jgHanTiaoDiscussNotes[jgNight]=v; jgHanTiaoD
 function jgCommitHanTiaoDiscuss(){
   const v=(jgHanTiaoDiscussNotes[jgNight]||'').trim();
   if(v&&!jgHanTiaoDiscussCommitted[jgNight]){
-    jgPushDayLog('悍跳號碼（排除詐身分）：'+v);
+    jgPushDayLog('悍跳預言家號碼：'+v);
     jgHanTiaoDiscussCommitted[jgNight]=true;
   }
 }
@@ -3112,7 +3125,7 @@ function jgRenderStep(step){
       <div class="speech">「<em>惡靈騎士請睜眼。</em>」</div>
       ${idHtml}
       ${dead?'<div class="info-warn">惡靈騎士已出局，仍需走完流程</div>':''}
-      <div class="info" style="font-size:13px;">夜間免疫狼殺與毒藥。被查驗或被毒殺，次日對應者死亡（目前需法官手動處理）</div>
+      <div class="info" style="font-size:13px;">夜間免疫狼殺、女巫毒與夜槍。被預言家查驗或被女巫毒殺後，隔天會自動反傷（預言家／女巫死亡），系統會自動結算，不需法官手動處理</div>
       <div class="speech" style="margin-top:10px;">「<em>惡靈騎士請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveSubWolf('evilknight-wake')">下一步 →</button>
     `,'🖤 惡靈騎士');
@@ -3553,7 +3566,7 @@ function jgRenderStep(step){
       const gv=jgRecord.luckyoneCheck||'';
       jgShowPg(`
         <h2>幸運兒睜眼</h2>
-        <div class="speech">「<em>幸運兒請睜眼，你要查驗嗎？</em>」</div>
+        <div class="speech">「<em>幸運兒請睜眼，你要使用技能嗎？</em>」</div>
         ${dead?'<div class="info-warn">幸運兒已出局，仍需走完流程</div>':''}
         <div id="jg-luckyone-feared-note" class="info-warn" style="${feared&&!dead?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
         ${skillDone&&!dead&&!feared?'<div class="info" style="font-size:12px;color:var(--text2);">查驗技能已使用過（整局限一次）</div>':''}
@@ -3566,7 +3579,7 @@ function jgRenderStep(step){
       const pv=jgRecord.luckyonePoison||'';
       jgShowPg(`
         <h2>幸運兒睜眼</h2>
-        <div class="speech">「<em>幸運兒請睜眼，你要使用毒藥嗎？你要毒誰呢？</em>」</div>
+        <div class="speech">「<em>幸運兒請睜眼，你要使用技能嗎？</em>」</div>
         ${dead?'<div class="info-warn">幸運兒已出局，仍需走完流程</div>':''}
         <div id="jg-luckyone-feared-note2" class="info-warn" style="${feared&&!dead?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
         ${skillDone&&!dead&&!feared?'<div class="info" style="font-size:12px;color:var(--text2);">毒藥已使用過（整局限一次）</div>':''}
@@ -3722,6 +3735,15 @@ function jgRenderStep(step){
     jgRecord.luckyonePoison=null;
 
     const pname=p=>p?p.num+'號':'';
+    // 若有多人死亡，「死亡」二字只講一次就好（例：「昨晚 3號、7號、1號死亡。」），
+    // 不用每個號碼後面都重複一次「死亡」。換牌（雙身分卡1陣亡但卡2還在）的公告文字不同，
+    // 所以跟真正死亡的號碼分開兩組講，各自的字尾只出現一次。
+    const jgBuildDawnMsg=(deadNames,swapNames)=>{
+      const parts=[];
+      if(deadNames.length) parts.push(deadNames.join('、')+'死亡');
+      if(swapNames.length) parts.push(swapNames.join('、')+'死亡，請使用第二身分');
+      return parts.length===0?'昨晚是平安夜。':'昨晚 '+parts.join('、')+'。';
+    };
     let dawnMsg=''; // computed below, after revenge deaths are resolved
     // 自爆者的淘汰公告，跟「昨晚死亡／平安夜」是兩句獨立的話，畫面上會分開顯示
     const sdMsg=selfDestructDawnNum?(selfDestructDawnNum+'號淘汰，請發表遺言。'):'';
@@ -3743,8 +3765,7 @@ function jgRenderStep(step){
     // 又被誤講成「昨晚死亡」。
     const deadNames2=trulyDiedNums.filter(n=>n!==selfDestructDawnNum).map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
     const swapNames2=swappedNums.map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
-    const dawnMsgParts=[...deadNames2.map(nm=>nm+'死亡'), ...swapNames2.map(nm=>nm+'死亡，請使用第二身分')];
-    dawnMsg=dawnMsgParts.length===0?'昨晚是平安夜。':'昨晚 '+dawnMsgParts.join('、')+'。';
+    dawnMsg=jgBuildDawnMsg(deadNames2,swapNames2);
     jgLastNightPeaceful=(deadNames2.length===0&&swapNames2.length===0);
     jgRenderRoster();
     const dawnWin=jgCheckWin();
@@ -3805,8 +3826,7 @@ function jgRenderStep(step){
     if(lateDeadAdded){
       const deadNames3=trulyDiedNums.filter(n=>n!==selfDestructDawnNum).map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
       const swapNames3=swappedNums.map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
-      const dawnMsgParts3=[...deadNames3.map(nm=>nm+'死亡'), ...swapNames3.map(nm=>nm+'死亡，請使用第二身分')];
-      dawnMsg=dawnMsgParts3.length===0?'昨晚是平安夜。':'昨晚 '+dawnMsgParts3.join('、')+'。';
+      dawnMsg=jgBuildDawnMsg(deadNames3,swapNames3);
       jgLastNightPeaceful=(deadNames3.length===0&&swapNames3.length===0);
       jgRenderRoster();
       const lateWin=jgCheckWin();
@@ -5170,7 +5190,10 @@ function jgSaveBlackMarket(){
         const bmP=jgPlayers.find(p=>p.role==='blackmarket');
         jgRecord._blackmarketDealerNum=bmP?bmP.num:null;
       } else {
-        jgLuckyOne={num:t.num, gift:skill, startNight:jgNight+1, used:false};
+        // 獵人獵槍是被動技能（被票出局／被刀時才觸發），拿到當下就要立刻生效，
+        // 不能像查驗／毒藥那樣延後到下一晚才能用——否則交易當天若馬上被投票出局，
+        // 幸運兒會因為 startNight 還沒到而無法開槍。查驗／毒藥則維持原本「下一晚才能用」的設計。
+        jgLuckyOne={num:t.num, gift:skill, startNight:(skill==='hunter'?jgNight:jgNight+1), used:false};
         jgRecord.blackmarketSuccess=true;
       }
     }
@@ -6091,6 +6114,14 @@ function jgTryEarlyEnd(){
   const witchCanStillAct=!witchFearedForEarlyEnd&&!witchStepDoneThisNight&&
     (witchSaveCouldStillMatter||witchPoisonCouldStillMatter);
   if(witchCanStillAct) return false; // witch hasn't decided yet this night — outcome not certain
+  // 狼刀目標若具備開槍資格（真獵人／已學獵人的機械狼／獲得獵槍的幸運兒），死亡不是最終結果——
+  // 天亮時他還有機會開槍帶走一名狼人，可能反過來扭轉場面（例如把「狼人已達多數」的假象打破）。
+  // 這種情況下不能提前判定勝負、跳過女巫／預言家的睜眼流程，必須照正常順序走完整個黑夜，
+  // 讓天亮結算時再依照實際開槍結果決定勝負。
+  if(jgRecord.wolfKill&&!wolfKillIsEK){
+    const wolfKillVictim=jgFind(jgRecord.wolfKill);
+    if(wolfKillVictim&&wolfKillVictim.alive&&jgIsHunterCapable(wolfKillVictim)) return false;
+  }
 
   let deads=[];
   const _dcImmune2=jgRecord.dreamcatcherImmune;
@@ -6112,6 +6143,11 @@ function jgTryEarlyEnd(){
       else { const dhp=jgPlayers.find(p=>p.role==='demonhunter'); if(dhp) deads.push(dhp.num); }
     }
   }
+  // 惡靈騎士夜間免疫所有夜殺手段（狼刀、女巫毒、狼弟覺醒刀、機械狼額外擊殺等），
+  // 這裡的死亡清單只是用來「提前試算」勝負，若把惡靈騎士也算進去，會誤判狼隊已經死了一個人，
+  // 導致錯誤地提前跳到天亮、跳過還沒行動的女巫／預言家（例如女巫這一晚毒的正好是惡靈騎士，
+  // 毒藥本身對他無效，不該被算作一次真正的擊殺）。跟天亮結算時的過濾邏輯保持一致。
+  if(ekNum) deads=deads.filter(d=>d.toString()!==ekNum.toString());
   deads=[...new Set(deads)];
   if(deads.length===0) return false;
   // Simulate applying these deaths without permanently mutating state
@@ -6228,7 +6264,7 @@ const ALL_ROLES = {
   wolfking: {icon:'👑', name:'狼王',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>帶人能力：</strong>被狼刀（夜槍）或被票（白天槍）淘汰時可開槍帶走一名玩家；就算是守衛與女巫解藥同時作用而「奶穿」致死，仍然可以帶人。<br><strong>限制：</strong>若白天自爆、被獵魔人獵出局、被女巫毒殺時皆無法開槍帶人。'},
   whitewolf:{icon:'🤍', name:'白狼王', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>自爆帶人：</strong>白天警上競選、玩家發言等階段可宣告自爆，帶走場上一名玩家，接著直接進入夜晚。'},
   wolfbeauty:{icon:'💋',name:'狼美人', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>魅惑連結：</strong>每晚必須魅惑一名玩家（不能連續兩晚魅惑同一人，不能自刀自爆，不能魅惑自己）。<br><strong>殉情：</strong>狼美人出局（被票、獵人射殺）或夜間被毒，魅惑對象殉情。<br><strong>限制：</strong>被騎士決鬥出局時技能無法發動。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與騎士搭配出現</span>'},
-  evilknight:{icon:'🖤',name:'惡靈騎士',team:'wolf',teamLabel:'狼人陣營', desc:'<strong>被動防禦：</strong>夜間免疫狼殺、女巫毒、以及夜槍（獵人/狼王被狼刀淘汰後開槍帶人）（但預言家查驗仍顯示狼人）。<br><strong>反傷：</strong>被預言家查驗→次日預言家死亡；被女巫毒殺→次日女巫死亡。<br><strong>限制：</strong>不可自刀自爆。'},
+  evilknight:{icon:'🖤',name:'惡靈騎士',team:'wolf',teamLabel:'狼人陣營', desc:'<strong>被動防禦：</strong>夜間免疫狼殺、女巫毒、以及夜槍（獵人/狼王被狼刀淘汰後開槍帶人）（但預言家查驗仍顯示狼人）。<br><strong>反傷：</strong>被預言家查驗→次日預言家死亡；被女巫毒殺→次日女巫死亡。但反傷效果整局限一次。<br><strong>限制：</strong>不可自刀自爆。'},
   bloodmoon: {icon:'🌑', name:'血月使者', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>主動技：</strong>白天自己發言階段可自爆後直接進入黑夜，當晚所有神牌技能封印。<br><strong>被動技：</strong>若為最後一個被放逐的狼人，可暫時存活進入黑夜，夜晚再擊殺一名玩家，達屠邊則狼人勝利。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與獵魔人搭配出現</span>'},
     gargoyle: {icon:'🗿', name:'石像鬼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>查驗牌面：</strong>每晚查驗一名玩家的具體角色。<br><strong>限制：</strong>不與狼隊見面，隊友全滅前不能殺人；隊友全滅後可在查驗之外，額外選擇今晚的帶刀對象殺人。不可自爆，可自刀。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與守墓人搭配出現</span>'},
   mechanicalwolf:{icon:'🤖',name:'機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊相認：</strong>與其他狼人互不相認，全程不可自爆。<br><strong>學習技能：</strong>任一晚可選擇一名玩家並「學習」其身份技能，次晚起可使用該技能：<br>‧ 學到狼人／狼王：接下來夜晚可選一晚多開一刀（整局限一次）；學到狼王額外還多了「被狼刀或被票出局時可以開槍帶人（被毒則不行）」。<br>‧ 學到平民：沒有主動技能。<br>‧ 學到女巫：只有一瓶毒藥（沒有解藥），整局限一次。<br>‧ 學到通靈師：每晚可查驗一名玩家的具體身份。<br>‧ 學到獵人：出局（夜槍或白天槍）時可開槍帶人。<br>‧ 學到守衛：除一般守衛功能之外，還能抵擋女巫毒與夜槍（獵人/狼王被狼刀淘汰後開槍帶人）；但守護與真守衛一樣仍會跟女巫同守同救「奶穿」死亡，而且只要成功擋到任一種傷害（無論最終是否因奶穿而死），這個技能就視為用畢，之後不能再守。<br><strong>帶刀手勢：</strong>當其餘狼人同伴全部出局時，機械狼開始獨自帶刀殺人。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與通靈師搭配出現</span>'},
@@ -6278,6 +6314,7 @@ const JG_BOARD_PRESETS = {
   bloodmoon_demonhunter:   {label:'血月使者+獵魔人', fixed:{bloodmoon:1, demonhunter:1}},
   magician_wolfking:       {label:'魔術師+狼王',     fixed:{magician:1, wolfking:1}},
   hybrid_wolfking_bloodmoon:{label:'混血兒+狼王+血月', fixed:{hybrid:1, wolfking:1, bloodmoon:1}},
+  evilknight_guard:        {label:'惡靈騎士+守衛',   fixed:{evilknight:1, guard:1}},
 };
 // 板子的基本角色只開放這兩組：狼隊（不限一個）、神職＋混血兒（各自最多一個）
 const JG_PRESET_WOLF_BASE=['wolf','wolfking'];
