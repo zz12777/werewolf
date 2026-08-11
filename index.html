@@ -357,9 +357,6 @@ h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;}
 /* ── GUIDE ARTICLE TAGS ── */
 .guide-hd-main{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
 .guide-tag{font-size:9px;font-weight:800;padding:1px 6px;border-radius:6px;line-height:1.5;white-space:nowrap;}
-.guide-tag-general{background:rgba(58,122,42,0.12);color:#2a601c;}
-.guide-tag-ocw{background:rgba(42,101,168,0.12);color:#1a4e88;}
-.guide-tag-y{background:rgba(168,94,16,0.12);color:#864a08;}
 .hist{display:flex;flex-direction:column;gap:6px;}
 .hist-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);padding:7px 10px;background:var(--bg);border-radius:var(--r-sm);border:1px solid var(--border);}
 .hist-res{width:18px;height:18px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;}
@@ -1833,9 +1830,10 @@ function jgRenderSheriffCandidates(){
     return '<button type="button" onclick="jgToggleSheriffCandidate('+n+')" style="width:44px;height:44px;border-radius:50%;padding:0;font-size:14px;font-weight:700;'
       +(sel?'background:var(--accent);color:#fff;border-color:transparent;':'')+'">'+n+'</button>';
   }).join('');
-  const badgeBanner = (jgBadgeMode==='double'&&jgSheriffPostponedToDay2)
-    ? '<div class="info-warn" style="font-size:12px;">💥 雙爆吞警徽：昨天 '+jgSheriffFirstBlowNum+' 號已先自爆（警徽保留），今天重新競選；過程中若再有狼人自爆，警徽才會真正流失。</div>'
-    : (jgBadgeMode==='double' ? '<div class="info" style="font-size:12px;">💥 本局採雙爆吞警徽規則：第一次自爆警徽保留、競選延到隔天；再次自爆警徽才會流失。</div>' : '');
+  // 這個畫面現在只會在第一天（jgSheriffPostponedToDay2 一定還是 false）出現一次；
+  // 雙爆吞警徽規則的隔天續選改走 jgRenderSheriffDay2Resume()，不會再回到這裡問候選人起立。
+  const badgeBanner = jgBadgeMode==='double'
+    ? '<div class="info" style="font-size:12px;">💥 本局採雙爆吞警徽規則：第一次自爆警徽保留、競選延到隔天；再次自爆警徽才會流失。</div>' : '';
   jgShowPg(`
     <h2>警長競選・候選人</h2>
     <div class="speech" style="font-size:16px;">「<em>現在開始競選警長，候選人請起立。</em>」</div>
@@ -1891,6 +1889,8 @@ function jgSaveSheriffSelfDestruct(){
   const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
   jgApplyDeath(p);
   jgRecord._selfDestructNum=p.num;
+  // 自爆的人退出候選名單（跟退水一樣，不會再出現在後續的發言／投票名單裡）
+  jgSheriffCandidates=jgSheriffCandidates.filter(x=>x!==p.num);
   // 只標記「這一天」問過候選人，不能兩個 flag 一起設——雙爆模式下，第一天候選人確定時若
   // 連隔天（day2）的 flag 都一起設成 true，會導致隔天重新競選的畫面永遠不會出現。
   if(jgNight===1) jgSheriffCandidatesAsked=true;
@@ -1908,7 +1908,6 @@ function jgSaveSheriffSelfDestruct(){
     // 勝負（見下方 jgGoStep('dawn') 對應的畫面，會把 jgRecord._selfDestructNum 併入死亡名單，
     // 一起跑公告／遺言／勝負判定）。之前在這裡提前判斷會導致自爆一結束就直接跳到「狼人勝利」，
     // 整個天亮公告、候選人遺言全部被跳過，玩家一頭霧水看不到自己自爆之後發生了什麼事。
-    alert('💥 '+p.num+'號 自爆，警徽暫不流失，隔天將重新競選警長。');
     jgGoStep('dawn');
     return;
   }
@@ -1921,7 +1920,8 @@ function jgSaveSheriffSelfDestruct(){
   jgRenderRoster();
   // 同上：勝負判定一律交給「天亮」流程統一處理（見 jgGoStep('dawn') 對應畫面），
   // 不要在這裡提前呼叫 jgCheckWin()，否則會跳過天亮公告與自爆者的遺言，直接結束遊戲。
-  alert('💥 '+p.num+'號 自爆，本局不再有警長。');
+  // 雙爆吞警徽的第二爆也是同一套：這一晚（第二夜）的死訊本來就還沒公布過，跟第一爆時一樣，
+  // 交給 'dawn' 大 step 把「這次自爆」跟「昨晚死訊／平安夜」一起公告清楚、發表遺言後再天黑。
   jgGoStep('dawn');
 }
 
@@ -2050,6 +2050,42 @@ function jgSheriffWithdraw(n){
   jgSheriffWithdrawn.push(n);
   jgSheriffLogLines.push('退水：'+n+'號');
   jgRenderSheriffSpeech();
+}
+
+// ── 雙爆吞警徽・隔天續選 ──
+// 第一爆已經發生、警徽保留到隔天；隔天不重新問候選人起立、也不用再發言一次（政見昨天已經
+// 講過了），直接沿用第一天還活著、還沒退水的候選人，進到「要退水的玩家請坐下」這一步，
+// 畫面只留 [有狼人自爆] 跟 [進入投票] 兩顆按鈕。
+function jgRenderSheriffDay2Resume(){
+  const cands=jgSheriffCandidates.slice().sort((a,b)=>a-b);
+  const rows=cands.map(n=>{
+    const p=jgFind(n);
+    const withdrawn=jgSheriffWithdrawn.includes(n);
+    const nm=p&&p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:n+'號';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:6px;'
+      +(withdrawn?'opacity:0.5;':'')+'">'
+      +'<span style="flex:1;'+(withdrawn?'text-decoration:line-through;':'')+'">'+nm+'</span>'
+      +(withdrawn?'<span style="font-size:12px;color:var(--text2);">已退水</span>'
+        :'<button type="button" style="width:auto;margin:0;padding:6px 12px;font-size:12px;" onclick="jgSheriffDay2Withdraw('+n+')">退水</button>')
+      +'</div>';
+  }).join('');
+  jgShowPg(`
+    <h2>警長競選・續選</h2>
+    <div class="speech" style="font-size:16px;">「<em>天亮請睜眼。</em>」</div>
+    <div class="info-warn" style="font-size:12px;margin-top:8px;">💥 雙爆吞警徽：昨天 ${jgSheriffFirstBlowNum} 號已先自爆（警徽保留），今天重新競選；過程中若再有狼人自爆，警徽才會真正流失。</div>
+    <div class="speech" style="margin-top:8px;">「<em>要退水的玩家請坐下。</em>」</div>
+    <div class="info" style="font-size:12px;">政見昨天已經發表過，今天不再重複發言，想退出競選的候選人直接坐下即可；昨晚的死訊要等這輪續選結束才會公布。</div>
+    <div style="margin-top:10px;">${rows||'<div class="info" style="font-size:12px;">候選人都已經退水或陣亡，本局沒有警長。</div>'}</div>
+    <button class="danger" style="margin-top:12px;" onclick="jgSheriffSelfDestructPrompt()">${jgSelfDestructBtnLabel()}</button>
+    <button class="primary" style="margin-top:10px;" onclick="jgGoStep('sheriff-vote')">進入投票 →</button>
+  `,'🎖️ 警長競選');
+}
+function jgSheriffDay2Withdraw(n){
+  if(!confirm(n+'號 確定要退水嗎？')) return;
+  jgSheriffCandidates=jgSheriffCandidates.filter(x=>x!==n);
+  jgSheriffWithdrawn.push(n);
+  jgSheriffLogLines.push('退水：'+n+'號');
+  jgRenderSheriffDay2Resume();
 }
 
 // Step 4：無上警的人投票；重用跟放逐投票類似的計票 UI
@@ -3555,13 +3591,18 @@ function jgRenderStep(step){
     `,'🍀 幸運兒');
   }
   else if(step==='dawn'){
-    // 有開警長競選的話，第一夜結束、天亮公布死訊之前，先問候選人要不要上警
-    // （這樣候選人站起來的時候還不知道昨晚誰死了，跟真實遊戲流程一致）。
+    // 有開警長競選的話，天亮公布死訊之前，先讓警長競選這一輪完全跑完（候選人／發言／投票或
+    // 自爆），死訊要等競選整個結束才公布——這樣候選人站起來的時候還不知道昨晚誰死了，
+    // 跟真實遊戲流程一致。
+    // 雙爆吞警徽規則的隔天（第二天）：不重新問一次候選人起立、也不重新發言——直接沿用第一天
+    // 已經站起來、還活著、也還沒退水的那批候選人續選（只保留退水／自爆／投票），一樣要等這輪
+    // 續選整個結束（第二次自爆，或投票分出結果）才公布昨晚（第二夜）的死訊。
     if(jgSheriffEnabled&&!jgSheriffElectionDone&&(
       (jgNight===1&&!jgSheriffCandidatesAsked) ||
       (jgBadgeMode==='double'&&jgSheriffPostponedToDay2&&jgNight===2&&!jgSheriffDay2CandidatesAsked)
     )){
-      jgRenderSheriffCandidates();
+      if(jgNight===1){ jgRenderSheriffCandidates(); }
+      else { jgSheriffDay2CandidatesAsked=true; jgRenderSheriffDay2Resume(); }
       return;
     }
     // First night: seal remaining unassigned players as villagers
@@ -3660,10 +3701,13 @@ function jgRenderStep(step){
     deads.forEach(d=>{ const p=jgFind(d); if(p){ const trulyDied=jgApplyDeath(p); if(trulyDied){ p._diedThisDawn=true; trulyDiedNums.push(p.num); } else { swappedNums.push(p.num); } } });
     // 警上競選過程中若有狼人自爆（雙爆的第一爆、或最終真的流失警徽的一爆），他的死亡在進
     // 這個 dawn 步驟之前就已經用 jgApplyDeath 另外處理過了，不會出現在上面的 deads 清單裡；
-    // 這裡把他併入遺言名單，讓自爆的人跟一般死亡玩家一樣可以發表遺言。
+    // 這裡把他併入遺言名單，讓自爆的人跟一般死亡玩家一樣可以發表遺言。注意：自爆是白天當場
+    // 發生的事，不是「昨晚」發生的，所以號碼另外用 selfDestructDawnNum 記著，公告文字要跟
+    // 「昨晚死亡／平安夜」分開講，不能把兩件事混在同一句「昨晚 X 死亡」裡面。
+    let selfDestructDawnNum=null;
     if(jgRecord._selfDestructNum){
       const sdp=jgFind(jgRecord._selfDestructNum);
-      if(sdp&&!trulyDiedNums.includes(sdp.num)){ sdp._diedThisDawn=true; trulyDiedNums.push(sdp.num); }
+      if(sdp){ selfDestructDawnNum=sdp.num; if(!trulyDiedNums.includes(sdp.num)){ sdp._diedThisDawn=true; trulyDiedNums.push(sdp.num); } }
     }
     if(swappedNums.length&&jgNightLog[jgNight]) jgNightLog[jgNight].push('換牌 '+swappedNums.join(','));
     jgPlayers.forEach(p=>{ if(p._diedThisDawn&&!trulyDiedNums.includes(p.num)) delete p._diedThisDawn; });
@@ -3679,6 +3723,8 @@ function jgRenderStep(step){
 
     const pname=p=>p?p.num+'號':'';
     let dawnMsg=''; // computed below, after revenge deaths are resolved
+    // 自爆者的淘汰公告，跟「昨晚死亡／平安夜」是兩句獨立的話，畫面上會分開顯示
+    const sdMsg=selfDestructDawnNum?(selfDestructDawnNum+'號淘汰，請發表遺言。'):'';
 
     // Evilknight revenge: seer or witch dies at dawn
     if(jgRecord.evilknightRevengeSeer){
@@ -3693,7 +3739,9 @@ function jgRenderStep(step){
     }
     // 雙身分模式：卡1陣亡但還有卡2的玩家不是「真的死了」，要公告「X號死亡，請使用第二身分」
     // 並繼續遊戲；只有卡2也陣亡（或單身分模式）才是真正的「X號死亡」。完全沒有事發生才是平安夜。
-    const deadNames2=trulyDiedNums.map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
+    // 自爆者已經用 sdMsg 單獨公告過了，這裡的「昨晚」死訊要把他排除掉，避免同一個人被講兩次、
+    // 又被誤講成「昨晚死亡」。
+    const deadNames2=trulyDiedNums.filter(n=>n!==selfDestructDawnNum).map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
     const swapNames2=swappedNums.map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
     const dawnMsgParts=[...deadNames2.map(nm=>nm+'死亡'), ...swapNames2.map(nm=>nm+'死亡，請使用第二身分')];
     dawnMsg=dawnMsgParts.length===0?'昨晚是平安夜。':'昨晚 '+dawnMsgParts.join('、')+'。';
@@ -3755,7 +3803,7 @@ function jgRenderStep(step){
       }
     });
     if(lateDeadAdded){
-      const deadNames3=trulyDiedNums.map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
+      const deadNames3=trulyDiedNums.filter(n=>n!==selfDestructDawnNum).map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
       const swapNames3=swappedNums.map(n=>{ const p=jgFind(n); return p?p.num+'號':n+'號'; });
       const dawnMsgParts3=[...deadNames3.map(nm=>nm+'死亡'), ...swapNames3.map(nm=>nm+'死亡，請使用第二身分')];
       dawnMsg=dawnMsgParts3.length===0?'昨晚是平安夜。':'昨晚 '+dawnMsgParts3.join('、')+'。';
@@ -3831,10 +3879,12 @@ function jgRenderStep(step){
       });
     }
     jgDawnDeaths[jgNight]={died:[...trulyDiedNums], swapped:[...swappedNums], notes:{}};
-    // 若是走過警長競選流程才走到這裡（候選人真的有上警競選），「天亮請睜眼」已經在競選一開始就
-    // 說過了，這裡不再重複；改成先公布警長結果，再公布平安夜／死亡消息、遺言，最後（若當選了）
-    // 讓警長當場決定警左警右，全部整合在同一個畫面，不用另外切換頁面。
-    const sheriffJustResolved=jgSheriffEnabled&&jgSheriffCampaignHappened&&
+    // 若是走過警長競選流程才走到這裡（候選人真的有上警競選，而且競選已經「真正結束」——
+    // 雙爆吞警徽規則下，第一爆只是保留警徽、延到隔天，還沒真正結束，不能算），改成先公布警長
+    // 結果，再公布平安夜／死亡消息、遺言，最後（若當選了）讓警長當場決定警左警右，全部整合在
+    // 同一個畫面，不用另外切換頁面。雙爆模式隔天續選（不論是第二次自爆流失警徽、投票選出
+    // 警長、還是流局無警長）也會繞回這裡的死亡結算，一樣要等到 jgNight===2 這次才算數。
+    const sheriffJustResolved=jgSheriffEnabled&&jgSheriffCampaignHappened&&jgSheriffElectionDone&&
       (jgNight===1||(jgBadgeMode==='double'&&jgSheriffPostponedToDay2&&jgNight===2));
     let sheriffBannerHtml='';
     if(sheriffJustResolved){
@@ -3890,6 +3940,7 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>天亮了！</h2>
       ${sheriffJustResolved?sheriffBannerHtml:'<div class="speech" style="font-size:16px;">「<em>天亮請睜眼。</em>」</div>'}
+      ${sdMsg?'<div class="speech" style="font-size:16px;">「<em>'+sdMsg+'</em>」</div>':''}
       <div class="speech" style="font-size:16px;">「<em>${dawnMsg}</em>」</div>
       ${bloodmoonEndgameHtml}
       ${hunterShotHtml}
@@ -3900,13 +3951,13 @@ function jgRenderStep(step){
     if(!dawnHunterShoot){
       const ph=document.getElementById('jg-dawn-discuss-placeholder');
       if(ph){
-        const skipToNight=jgAfterDawn()==='next-night';
+        const afterDawn=jgAfterDawn();
         const btn=document.createElement('button');
         btn.className='primary';
         btn.style.marginTop='12px';
         btn.style.width='100%';
-        btn.textContent=(showLastWords?'遺言發表完，':'')+(skipToNight?'天黑 →':'開始發言 →');
-        btn.onclick=()=>jgGoStep(skipToNight?'next-night':'discuss');
+        btn.textContent=(showLastWords?'遺言發表完，':'')+(afterDawn==='next-night'?'天黑 →':'開始發言 →');
+        btn.onclick=()=>jgGoStep(afterDawn);
         ph.replaceWith(btn);
       }
     }
@@ -3923,6 +3974,9 @@ function jgRenderStep(step){
   }
   else if(step==='sheriff-speech'){
     jgRenderSheriffSpeech();
+  }
+  else if(step==='sheriff-day2-resume'){
+    jgRenderSheriffDay2Resume();
   }
   else if(step==='sheriff-vote'){
     jgRenderSheriffVote();
@@ -6686,8 +6740,8 @@ function jgLoadReportForm(){
 // 1. 開一份新的 Google 試算表，A／B 兩欄放「標題」「內文」，C 欄放「標籤」，
 //    D 欄開始才放「參考網址」：C＝標籤、D＝參考網址1、E＝參考網址2、F＝參考網址3……
 //    往右加多少欄都可以，程式會自動把 D 欄之後每一個有填值的欄位都當成一個參考來源依序顯示
-//    （參考來源1、參考來源2…）。C 欄「標籤」目前支援三種文字（打錯字或留空就不會顯示標籤）：
-//    一般攻略／OCW／Y向推理。
+//    （參考來源1、參考來源2…）。C 欄「標籤」沒有固定選項，打什麼字就顯示什麼字（同一個標籤
+//    文字每次顏色都一樣，不同標籤文字會自動配不同顏色），留空就不會顯示標籤徽章。
 //    第一列可以放「標題／內文／標籤／參考網址」當表頭（程式會自動偵測並跳過，不放表頭也沒關係）。
 //    每一列 = 一篇文章，之後看到不錯的文章，就直接在試算表最下面新增一列即可。
 // 2. 檔案 → 共用 → 發布到網路（File → Share → Publish to web），來源選「該工作表」、
@@ -6730,29 +6784,28 @@ function parseGuideCsv(text){
   return rows.filter(r=>r.some(c=>c&&c.trim()));
 }
 
-// 標籤欄目前只認得這三種文字（其餘文字或留空一律視為沒有標籤，卡片上就不顯示標籤徽章）
-const GUIDE_TAGS=['一般攻略','OCW','Y向推理'];
+// 標籤欄直接照打了什麼字顯示什麼字（不限定固定選項），留空就不顯示標籤徽章
 function guideRowsToArticles(rows){
   if(!rows.length) return [];
   let start=0;
   const first=(rows[0][0]||'').trim().toLowerCase();
   if(first==='標題'||first==='title'||first==='') start=1; // 跳過標題列
   return rows.slice(start).map(r=>{
-    const rawTag=(r[2]||'').trim();
     return {
       title:(r[0]||'').trim(),
       content:(r[1]||'').trim(),
-      tag:GUIDE_TAGS.includes(rawTag)?rawTag:'',
+      tag:(r[2]||'').trim(),
       // D 欄開始每一欄都是一個參考網址，有填值的依序收集成陣列（可以有 1 個、3 個、10 個都行）
       urls:r.slice(3).map(u=>(u||'').trim()).filter(Boolean),
     };
   }).filter(a=>a.title);
 }
-function guideTagClass(tag){
-  if(tag==='OCW') return 'guide-tag-ocw';
-  if(tag==='Y向推理') return 'guide-tag-y';
-  if(tag==='一般攻略') return 'guide-tag-general';
-  return '';
+// 用標籤文字本身簡單算出一個固定色相，讓不同標籤有不同顏色，但同一個標籤永遠同一個顏色
+function guideTagColorStyle(tag){
+  let hash=0;
+  for(let i=0;i<tag.length;i++){ hash=(hash*31+tag.charCodeAt(i))>>>0; }
+  const hue=hash%360;
+  return `background:hsla(${hue},55%,45%,0.12);color:hsl(${hue},55%,32%);`;
 }
 
 // 把試算表打進來的純文字轉成安全的 HTML：先跳脫尖括號等符號避免版面跑掉，
@@ -6772,13 +6825,15 @@ let guideActiveTag='';
 function renderGuideTagFilter(articles){
   const filterEl=document.getElementById('guide-tag-filter');
   if(!filterEl) return;
-  const usedTags=GUIDE_TAGS.filter(t=>articles.some(a=>a.tag===t));
+  // 標籤沒有固定選項，直接從目前抓到的文章裡收集有出現過的標籤文字（依第一次出現的順序）
+  const usedTags=[];
+  articles.forEach(a=>{ if(a.tag&&!usedTags.includes(a.tag)) usedTags.push(a.tag); });
   if(!usedTags.length){ filterEl.style.display='none'; filterEl.innerHTML=''; return; }
   filterEl.style.display='';
   const chip=(label,val)=>{
-    const cls=val?guideTagClass(val):'';
+    const style=val?guideTagColorStyle(val):'';
     const active=guideActiveTag===val?' active':'';
-    return `<span class="chip clickable ${cls}${active}" onclick="guideFilterByTag('${val}')">${label}</span>`;
+    return `<span class="chip clickable${active}" style="${style}" onclick="guideFilterByTag('${val.replace(/'/g,"\\'")}')">${label}</span>`;
   };
   filterEl.innerHTML=chip('全部','')+usedTags.map(t=>chip(t,t)).join('');
 }
@@ -6809,7 +6864,7 @@ function renderGuideArticles(articles){
       const label=urls.length>1?`參考來源${i+1}`:'參考來源';
       return `<a class="role-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:4px;">→ ${label}</a>`;
     }).join(''):'';
-    const tagHtml=a.tag?`<span class="guide-tag ${guideTagClass(a.tag)}">${a.tag}</span>`:'';
+    const tagHtml=a.tag?`<span class="guide-tag" style="${guideTagColorStyle(a.tag)}">${formatGuideText(a.tag)}</span>`:'';
     return `<div class="rcol">
       <div class="rcol-hd" onclick="toggleRcol(this)">
         <span class="guide-hd-main"><span class="rcol-icon">📝</span>${tagHtml}</span>
@@ -8034,15 +8089,15 @@ function computeAwards(){
 
   return [
     {icon:'🧪',title:'超強女巫',top:awTopTiers(poisonHits),
-      note:'女巫毒藥使用對象，該局實際屬於狼隊（含機械狼）即算1次。'},
+      note:'女巫毒藥使用對象，該局實際屬於狼隊（含機械狼）即算命中1次。'},
     {icon:'🔮',title:'查狼專家',top:awTopTiers(seerHits),
-      note:'僅計「預言家／通靈師」的查驗結果，查到邪惡陣營（含機械狼）即算命中；雙身分板若牌面顯示為好人則不算。'},
+      note:'僅計「預言家／通靈師」的查驗結果（守墓人、石像鬼、機械狼自己偷學到的查驗不算），查到邪惡陣營（含機械狼）即算命中；雙身分板若牌面顯示為好人則不算。'},
     {icon:'🔪',title:'自刀專家',top:awTopTiers(selfKillDict),
-      note:'首夜狼隊「刀」的目標本身也是同隊狼人（機械狼等不見面角色不算），不論當晚是否被女巫救下都算1次。'},
+      note:'首夜狼隊「刀」的目標本身也是同隊狼人／狼王（機械狼不與其他狼人相認、石像鬼等不見面角色不算），不論當晚是否被女巫救下都算1次。'},
     {icon:'🛡️',title:'鋼鐵守衛',top:awTopTiers(guardHits),
-      note:'守到刀口算1次。'},
+      note:'逐晚比對「守X」與「刀X」，號碼相同才算守到刀口。'},
     {icon:'🤐',title:'抿女巫專家',top:awTopTiers(minWitchCredit),
-      note:'女巫若中首刀，該局所有見面狼隊成員（不含機械狼）都算1次。'},
+      note:'女巫座位號碼剛好等於首夜被狼刀的號碼，該局所有正牌狼隊成員（不含機械狼）都算1次。'},
   ];
 }
 
