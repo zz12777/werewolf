@@ -759,6 +759,14 @@ select{
   </div>
 </div>
 
+<!-- 即時票型紀錄（公開，任何人打開這個頁面都看得到；資料來自法官端同步過去的 Google 試算表） -->
+<div class="card" style="margin:16px 0;">
+  <div class="section-title">📡 即時票型紀錄</div>
+  <div class="info" style="font-size:12px;">法官記完一輪投票會自動同步到這裡；點選場次即可查看目前為止的票型，畫面每幾秒會自動更新。悍跳號碼、開槍者實際身分（一律顯示「槍」）都不會出現在這裡。</div>
+  <div id="jg-live-session-btns" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;"></div>
+  <div id="jg-live-session-view" style="margin-top:10px;"></div>
+</div>
+
 </div><!-- /t-judge -->
 
 <!-- ══════════════════════════════════════
@@ -857,8 +865,8 @@ select{
 // SHARED DATA
 // ═══════════════════════════════════
 const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',villager:'平民',hybrid:'混血兒',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',sheriff:'警長',luckyone:'幸運兒'};
-const BADGE={wolf:'bw',villager:'bv',hybrid:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',medium:'bs',blackmarket:'bwt'};
-const AV={wolf:'av-wolf',villager:'av-vil',hybrid:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',medium:'av-seer',blackmarket:'av-witch'};
+const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',medium:'bs',blackmarket:'bwt'};
+const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',medium:'av-seer',blackmarket:'av-witch'};
 
 function getComp(n){
   const t={
@@ -891,6 +899,116 @@ function switchTab(id){
 // TAB 3: 人工法官
 // ═══════════════════════════════════
 let jgTotal=6, jgComp={};
+
+// ── 即時票型紀錄（公開同步到 Google 試算表，讓玩家在遊戲進行中就能看到票型） ──
+// 部署好 Google Apps Script 網頁應用程式後，把拿到的網址貼在這裡（結尾通常是 /exec）。
+// 留空的話，同步功能整個不會執行（不會出現任何錯誤，只是安靜地跳過），公開票型區塊也
+// 會提示還沒設定。部署步驟請見對話中法官給的教學。
+const JG_LIVE_SYNC_URL = 'https://script.google.com/macros/s/AKfycbwdf-Pbgz06eo9k_1dcaPEI9isosZcL6_0eH3sGuoOLu5T7JZHz06exEbDCmq67veQArQ/exec';
+let jgLiveSessionId=null; // 這一場遊戲的場次代碼（例如 0813_1），開局時產生一次、整場固定不變
+let jgLivePollTimer=null; // 目前正在自動輪詢的計時器（切換場次/離開畫面時要記得清掉，避免重複輪詢）
+
+// 產生本場的場次代碼：日期(MMDD) + 這個瀏覽器分頁「今天第幾場」，跟文字紀錄匯出標題共用同一套邏輯，
+// 兩邊看到的代碼會一致（例如 0813_1）。
+function jgLiveMakeSessionId(){
+  const d=new Date();
+  return String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'_'+jgGameCount;
+}
+
+// 即時票型的「公開過濾版」文字處理：
+// 1) 整行拿掉悍跳號碼（悍跳的人可能就是預言家本人假裝的，即時公開會直接暴露誰在悍跳）
+// 2) 開槍帶人一律寫成「X號槍帶Y」，不管實際是獵人／黑狼王／機械狼／幸運兒中的哪一個，
+//    因為看的人這時候還不知道 X 號是什麼身分，寫出「獵」或「王」等於直接洩漏身分。
+//    比對順序刻意把較長的縮寫（幸獵、機獵）放前面，避免被單字的「獵」提前吃掉比對錯誤。
+function jgPublicRedact(text){
+  return (text||'')
+    .split('\n')
+    .filter(l=>l.indexOf('悍跳')===-1)
+    .join('\n')
+    .replace(/(\d+)(?:幸獵|機獵|獵|王)帶/g,'$1槍帶');
+}
+
+// 組出目前為止的票型摘要（警長票型 + 每天白天投票），純文字版本，供同步到試算表使用；
+// 跟畫面上「投票紀錄」側欄用的是同一份資料來源（jgFormatSheriffBlock／jgFormatDayVoteBlock）。
+function jgBuildLiveVoteText(){
+  let out='';
+  if(jgSheriffCampaignHappened||jgSheriffSelfDestruct){
+    const sb=(jgFormatSheriffBlock()||'').replace(/^\*\*警長競選\n/,'').replace(/^>/,'').replace(/\n>/g,'\n');
+    if(sb) out+='🎖️ 警長票型\n'+sb+'\n\n';
+  }
+  const nightNums=Object.keys(jgDayLog).map(Number).sort((a,b)=>a-b);
+  nightNums.forEach(n=>{
+    const block=jgFormatDayVoteBlock(n);
+    if(block) out+='☀️ 第'+n+'天白天投票\n'+block+'\n\n';
+  });
+  return out.trim();
+}
+
+// 同步到試算表：法官端每次投票確認後呼叫。用 text/plain 送出去是刻意的——瀏覽器對
+// application/json 的跨網域 POST 會先送一次 OPTIONS 預檢請求，Apps Script 常常接不好；
+// 用 text/plain 可以避開預檢，Apps Script 那邊自己把內容當 JSON 字串解析就好。
+// mode:'no-cors' 代表我們不讀取、也讀不到回應內容，純粹「送出去、盡量成功」，
+// 同步失敗也不影響法官原本的操作，所以刻意不彈任何錯誤視窗打斷法官。
+function jgLiveSyncPush(){
+  if(!JG_LIVE_SYNC_URL) return;
+  if(!jgLiveSessionId) jgLiveSessionId=jgLiveMakeSessionId();
+  const text=jgPublicRedact(jgBuildLiveVoteText());
+  fetch(JG_LIVE_SYNC_URL,{
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({session:jgLiveSessionId,text:text})
+  }).catch(err=>console.error('即時票型同步失敗（不影響遊戲繼續進行）',err));
+}
+
+// ── 公開票型區塊：任何人打開這個網頁都看得到，不需要法官權限 ──
+function jgLiveRenderConfigMissing(){
+  const el=document.getElementById('jg-live-session-btns');
+  if(el) el.innerHTML='<div class="info" style="font-size:12px;">法官還沒設定即時同步網址，暫時看不到即時票型。</div>';
+}
+async function jgLiveLoadSessions(){
+  if(!JG_LIVE_SYNC_URL){ jgLiveRenderConfigMissing(); return; }
+  try{
+    const res=await fetch(JG_LIVE_SYNC_URL+'?action=sessions');
+    const data=await res.json();
+    const sessions=(data.sessions||[]).sort();
+    const el=document.getElementById('jg-live-session-btns');
+    if(!el) return;
+    if(sessions.length===0){ el.innerHTML='<div class="info" style="font-size:12px;">目前還沒有任何場次的票型。</div>'; return; }
+    el.innerHTML=sessions.map(s=>'<button type="button" onclick="jgLiveViewSession(\''+s+'\')" id="jg-live-btn-'+s+'">'+s+'</button>').join('');
+  }catch(err){
+    const el=document.getElementById('jg-live-session-btns');
+    if(el) el.innerHTML='<div class="info" style="font-size:12px;">讀取失敗，稍後會自動重試。</div>';
+  }
+}
+async function jgLiveViewSession(sessionId){
+  document.querySelectorAll('#jg-live-session-btns button').forEach(b=>b.classList.remove('primary'));
+  const btn=document.getElementById('jg-live-btn-'+sessionId);
+  if(btn) btn.classList.add('primary');
+  if(jgLivePollTimer){ clearInterval(jgLivePollTimer); jgLivePollTimer=null; }
+  await jgLiveFetchAndShow(sessionId);
+  // 每 8 秒自動重新讀取一次，讓觀眾的畫面能跟上法官那邊最新的票型進度
+  jgLivePollTimer=setInterval(()=>jgLiveFetchAndShow(sessionId),8000);
+}
+async function jgLiveFetchAndShow(sessionId){
+  const el=document.getElementById('jg-live-session-view');
+  if(!el) return;
+  try{
+    const res=await fetch(JG_LIVE_SYNC_URL+'?action=view&session='+encodeURIComponent(sessionId));
+    const data=await res.json();
+    const text=data.text||'（這場還沒有票型紀錄）';
+    el.innerHTML='<pre style="white-space:pre-wrap;font-size:12.5px;line-height:1.7;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:0;font-family:inherit;">'+text.replace(/</g,'&lt;')+'</pre>';
+  }catch(err){
+    el.innerHTML='<div class="info" style="font-size:12px;">讀取失敗，稍後會自動重試。</div>';
+  }
+}
+// 頁面一打開就先試著載入場次清單（不管使用者現在是不是法官、有沒有在主持遊戲）
+document.addEventListener('DOMContentLoaded',()=>{
+  jgLiveLoadSessions();
+  if(JG_LIVE_SYNC_URL) setInterval(jgLiveLoadSessions,15000); // 場次清單本身也定期刷新，才看得到新開的場次
+});
+
+
 // Preset name pool for quick player-roster setup (judge can still type a custom name for anyone)
 const JG_NAME_PRESET=['陳冠竹','巫嘉軒','鄭文奇','李法順','李想成','陳冠彣','陳玉堂','黃家珮','黃柏寰','何冠岳','謝子凡','王悅謙','孫揚和','蘇祐樂','許逸凡','林芸竹','吳柏霖','陳詩涵','劉謙叡','龔則乾','洪梓睿','黃禹勛','蘇奕安','郭展吟','許綺文','林均豪','潘彥誠','曾冠學','謝伊晨','陳芯錞','劉欣融'];
 let jgPlayerNames={}; // num -> name, set via the roster setup page before jgStart()
@@ -977,7 +1095,7 @@ function jgFormatSheriffBlock(){
     });
     if(pkAbstain) out+='--棄票：'+pkAbstain+'\n';
   }
-  if(jgSheriffSelfDestruct) out+='>'+(jgSheriffSelfDestructNum||'x')+'號 自爆吞警徽，本局無警長\n';
+  if(jgSheriffSelfDestruct) out+='>'+(jgSheriffSelfDestructNum||'x')+'號 自爆'+(jgSheriffSelfDestructBroughtNum?'帶'+jgSheriffSelfDestructBroughtNum:'')+'吞警徽，本局無警長\n';
   else if(!jgSheriffElectedNum && noSheriffNote) out+='>'+noSheriffNote+'\n';
   else if(!jgSheriffElectedNum && jgSheriffElectionDone && round1Votes.length===0 && pkVotes.length===0) out+='>平票或全數退水，本局無警長\n';
   return out;
@@ -1344,6 +1462,7 @@ let jgSheriffVoteTally={};    // 警長投票：{candidateNum:{voterNum:true}}
 let jgSheriffPkRound=false;   // 是否正處於平票 PK 重新發言／投票的回合（PK 回合中不可退水）
 let jgSheriffSelfDestruct=false; // 競選過程中是否有狼人自爆（本局不再有警長）
 let jgSheriffSelfDestructNum=null; // 自爆吞警徽的玩家號碼，供文字紀錄使用
+let jgSheriffSelfDestructBroughtNum=null; // 若自爆的是白狼王，這裡記他帶走的號碼（沒帶人則為 null）
 let jgEvilKnightRevengeUsed=false; // 惡靈騎士反傷整局限一次，成功反傷一次後永久失效
 let jgLastVoteOutPlayer=null; // 前一個白天投票處死的玩家號碼（守墓人用，獨立變數不受每夜 jgRecord 重置影響）
 let jgSheriffLogLines=[]; // 警長競選的候選人／發言順序／退水／各輪投票票型，依序累積，供文字紀錄匯出使用
@@ -1791,6 +1910,7 @@ function jgStart(){
   jgSheriffPkRound=false;
   jgSheriffSelfDestruct=false;
   jgSheriffSelfDestructNum=null;
+  jgSheriffSelfDestructBroughtNum=null;
   jgBadgeMode=jgSetupBadgeMode;
   jgSheriffFirstBlowDone=false;
   jgSheriffFirstBlowNum=null;
@@ -1820,6 +1940,7 @@ function jgStart(){
   jgSheriffTransferNextStep=null;
   if(jgHasStartedBefore) jgGameCount++;
   jgHasStartedBefore=true;
+  jgLiveSessionId=null; // 新的一場遊戲，場次代碼下次同步時會重新產生（例如從 0813_1 變 0813_2）
   jgStepHistory=[];
   jgStateHistory=[];
   // Pre-fill all players as unknown role (null = unconfirmed, will become villager if never woke)
@@ -1973,16 +2094,40 @@ function jgSaveSheriffSelfDestruct(){
   const val=(document.getElementById('jg-sheriff-blow-rec')||{}).value?.trim()||'';
   if(!val){ alert('⚠️ 請選擇自爆的玩家號碼！'); return; }
   const p=jgFind(val);
-  if(!p||!p.alive||!(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon')){
-    alert('⚠️ 這個號碼目前不是存活的狼人／黑狼王／血月使者，不能自爆！');
+  if(!p||!p.alive||!jgSheriffCandidates.includes(p.num)||!(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon')){
+    alert('⚠️ 這個號碼目前不是仍在競選中、存活的狼人／黑狼王／白狼王／血月使者，不能自爆！');
     return;
   }
   if(jgPendingNightDeadNums().includes(p.num)){
     alert('⚠️ '+p.num+'號昨晚已經死亡（等一下天亮就會公布），不能自爆！');
     return;
   }
-  const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
+  if(p.role==='whitewolf'){
+    // 白狼王自爆可以帶人：先進到帶人選號畫面，選完（jgSaveSheriffSelfDestructWhiteWolfBring）
+    // 才真正套用死亡、繼續走下面 jgFinishSheriffSelfDestruct 的吞警徽既有流程。
+    jgRecord._sheriffSelfDestructWhiteWolfNum=p.num;
+    jgGoStep('sheriff-selfdestruct-whitewolf-bring');
+    return;
+  }
   jgApplyDeath(p);
+  jgFinishSheriffSelfDestruct(p, null);
+}
+// 白狼王在吞警徽情境下選完帶走的對象後，套用雙方死亡，再走跟其他角色共用的吞警徽收尾流程
+function jgSaveSheriffSelfDestructWhiteWolfBring(){
+  const num=jgRecord._sheriffSelfDestructWhiteWolfNum;
+  const p=jgFind(num);
+  if(!p){ jgGoStep('sheriff-selfdestruct-pick'); return; }
+  jgApplyDeath(p);
+  const val=(document.getElementById('jg-sheriff-whitewolf-blow-rec')||{}).value?.trim()||'';
+  let broughtNum=null;
+  if(val){ const t=jgFind(val); if(t&&t.alive){ jgApplyDeath(t); broughtNum=val; } }
+  jgRecord._sheriffSelfDestructWhiteWolfNum=null;
+  jgFinishSheriffSelfDestruct(p, broughtNum);
+}
+// 吞警徽收尾：不管自爆的是一般狼人／黑狼王／血月使者，還是剛選完帶人對象的白狼王，
+// 單爆／雙爆的規則跟後續流程都一樣，共用這一份，broughtNum 只有白狼王才可能非 null。
+function jgFinishSheriffSelfDestruct(p, broughtNum){
+  const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
   jgRecord._selfDestructNum=p.num;
   // 自爆的人退出候選名單（跟退水一樣，不會再出現在後續的發言／投票名單裡）
   jgSheriffCandidates=jgSheriffCandidates.filter(x=>x!==p.num);
@@ -1996,7 +2141,7 @@ function jgSaveSheriffSelfDestruct(){
     jgSheriffFirstBlowDone=true;
     jgSheriffFirstBlowNum=p.num;
     jgSheriffPostponedToDay2=true;
-    jgPushDayLog(p.num+'號 自爆（雙爆吞警徽・第一爆，警徽保留，競選延到隔天繼續）');
+    jgPushDayLog(p.num+'號 自爆'+(broughtNum?'帶'+broughtNum:'')+'（雙爆吞警徽・第一爆，警徽保留，競選延到隔天繼續）');
     jgRenderRoster();
     // 注意：這裡「不」提前呼叫 jgCheckWin()！自爆只是死了一個人，跟其他死法（狼刀、投票、
     // 開槍……）一樣，都要等進到「天亮」流程、走過死訊公告與遺言之後，才由 dawn 步驟統一判斷
@@ -2012,6 +2157,7 @@ function jgSaveSheriffSelfDestruct(){
   jgSheriffFinalNight=jgNight;
   jgSheriffSelfDestruct=true;
   jgSheriffSelfDestructNum=p.num;
+  jgSheriffSelfDestructBroughtNum=broughtNum||null;
   jgRenderRoster();
   // 同上：勝負判定一律交給「天亮」流程統一處理（見 jgGoStep('dawn') 對應畫面），
   // 不要在這裡提前呼叫 jgCheckWin()，否則會跳過天亮公告與自爆者的遺言，直接結束遊戲。
@@ -2199,7 +2345,7 @@ function jgRenderSheriffVote(){
   const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&!jgSheriffWithdrawn.includes(n)).sort((a,b)=>a-b);
   jgShowPg(`
     <h2>警長競選・投票</h2>
-    <div class="speech">「<em>沒有上警的玩家，請投票選出警長。</em>」</div>
+    <div class="speech">「<em>沒有上警的玩家，請投票選出警長，3、2、1，請投票。</em>」</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">候選人：${cands.join('、')}號；只有從未上警的玩家（${voters.join('、')||'無'}）有投票權</div>
     ${jgSheriffVoteQuickInputHtml()}
     <div id="jg-sheriff-vote-tally"></div>
@@ -2350,7 +2496,8 @@ function jgUpdateSheriffVoteTallySummary(){
   }
   box.innerHTML='<div style="font-size:12px;color:var(--text2);">'+summaryText+'</div>'+extra;
 }
-function jgSaveSheriffVote(){
+function jgSaveSheriffVote(){ jgSaveSheriffVoteInner(); jgLiveSyncPush(); }
+function jgSaveSheriffVoteInner(){
   const cands=jgSheriffCandidates.slice();
   const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&!jgSheriffWithdrawn.includes(n));
   const counts=cands.map(t=>[t,Object.values(jgSheriffVoteTally[t]||{}).filter(Boolean).length]);
@@ -2827,7 +2974,7 @@ function jgCaptureState(){
     jgVoteTally, jgLastWinResult, jgRoleCounts, jgMechAssign, jgMechAssignDone,
     jgDualIdentityMode, jgDualAssign, jgDualAssignDone, jgHybridChosen, jgHybridTarget,
     jgSheriffEnabled, jgSheriff, jgSheriffElectionDone, jgSheriffCandidatesAsked, jgSheriffCampaignHappened, jgSheriffCandidates, jgSheriffWithdrawn,
-    jgSheriffSpeakStart, jgSheriffSpeakDir, jgSheriffVoteTally, jgSheriffPkRound, jgSheriffSelfDestruct, jgSheriffSelfDestructNum,
+    jgSheriffSpeakStart, jgSheriffSpeakDir, jgSheriffVoteTally, jgSheriffPkRound, jgSheriffSelfDestruct, jgSheriffSelfDestructNum, jgSheriffSelfDestructBroughtNum,
     jgEvilKnightRevengeUsed, jgLastVoteOutPlayer, jgAbstainVoters,
     jgSheriffLogLines, jgSheriffElectedNum, jgSheriffTransferPending, jgSheriffTransferDeadNum, jgSheriffTransferNextStep,
     jgVotePkRound, jgVotePkCandidates,
@@ -2888,6 +3035,7 @@ function jgRestoreState(snap){
   jgSheriffPkRound=snap.jgSheriffPkRound;
   jgSheriffSelfDestruct=snap.jgSheriffSelfDestruct;
   jgSheriffSelfDestructNum=snap.jgSheriffSelfDestructNum;
+  jgSheriffSelfDestructBroughtNum=snap.jgSheriffSelfDestructBroughtNum||null;
   jgEvilKnightRevengeUsed=snap.jgEvilKnightRevengeUsed;
   jgLastVoteOutPlayer=snap.jgLastVoteOutPlayer;
   jgAbstainVoters=snap.jgAbstainVoters||{};
@@ -2948,7 +3096,7 @@ function jgIsFirstNight(){ return jgNight===1; }
 // 這些步驟本身就是某次死亡「直接連動」而來的下一步（開槍帶人、決鬥、殉情……），
 // 必須讓它們照原本順序先跑完，警徽交接不能卡在半路打斷，否則會漏掉開槍等技能發動。
 // 等這條連動鏈跑到下一個「塵埃落定」的步驟（天亮／發言／投票／下一夜……）時，才攔截去交接警徽。
-const JG_SHERIFF_NO_INTERRUPT_STEPS=['hunter-shot','wolfking-shot','whitewolf-selfblow','wolfbeauty-charm-kill',
+const JG_SHERIFF_NO_INTERRUPT_STEPS=['hunter-shot','wolfking-shot','whitewolf-selfblow','sheriff-selfdestruct-whitewolf-bring','wolfbeauty-charm-kill',
   'bloodmoon-last-night','bloodmoon-selfblow','luckyone-hunter-shot','mechhunter-chain-shot','knight-duel','sheriff-transfer'];
 function jgGoStep(step){
   // 每次切換步驟前都先確認警長是否還活著（不論死因為何），確保交接警徽一定不會被漏掉。
@@ -4347,16 +4495,31 @@ function jgRenderStep(step){
   else if(step==='sheriff-selfdestruct-pick'){
     const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
     const pendingDead=jgPendingNightDeadNums();
-    const eligible=jgPlayers.filter(p=>p.alive&&!pendingDead.includes(p.num)&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon')).map(p=>p.num);
+    const eligible=jgPlayers.filter(p=>p.alive&&!pendingDead.includes(p.num)&&jgSheriffCandidates.includes(p.num)&&(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
     jgShowPg(`
       <h2>狼人自爆（吞警徽）</h2>
-      <div class="speech">「<em>請選擇宣告自爆的玩家號碼。</em>」</div>
-      <label>自爆的玩家號碼（只能選存活的狼人／黑狼王／血月使者；惡靈騎士、石像鬼、狼美人、機械狼、夢魘都不能自爆，昨晚已經死亡的狼也不能選）</label>
-      ${jgNumSelectHtml('jg-sheriff-blow-rec', '', null, null, exclude, '這個角色不能自爆，或昨晚已經死亡，不可選取')}
+      <div class="info" style="font-size:12px;">請選擇宣告自爆的玩家號碼（只有仍在競選中的候選人才能選）</div>
+      <label>自爆的玩家號碼（惡靈騎士、石像鬼、狼美人、機械狼、夢魘都不能自爆，昨晚已經死亡的狼也不能選）</label>
+      ${jgNumSelectHtml('jg-sheriff-blow-rec', '', null, null, exclude, '這個角色不能自爆、不是候選人，或昨晚已經死亡，不可選取')}
       <div class="info" style="font-size:12px;margin-top:6px;">${isFirstBlow?'雙爆吞警徽規則：這是第一次自爆，警徽暫不流失，競選會延到隔天繼續。':'本局將不再有警長，該玩家會被淘汰。'}</div>
       <button class="danger" onclick="jgSaveSheriffSelfDestruct()" style="margin-top:10px;">確認自爆 →</button>
     `,'💥 自爆吞警徽');
+  }
+  // 白狼王在「警上吞警徽」情境下自爆：跟一般白天自爆一樣可以帶人，先選帶走的對象，
+  // 選完才真正套用死亡、繼續走吞警徽的既有流程（單爆／雙爆規則不變）。
+  else if(step==='sheriff-selfdestruct-whitewolf-bring'){
+    const num=jgRecord._sheriffSelfDestructWhiteWolfNum;
+    const wwp=jgFind(num);
+    const wwname=wwp&&wwp.name!==wwp.num+'號'?wwp.num+'號 '+wwp.name:(wwp?wwp.num+'號':'白狼王');
+    jgShowPg(`
+      <h2>白狼王自爆（吞警徽）</h2>
+      <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${wwname} 宣告自爆！</div>
+      <div class="speech">「<em>白狼王自爆，請選擇你要帶走的號碼。</em>」</div>
+      <label>帶走的玩家號碼（留空=不帶）</label>
+      ${jgNumSelectHtml('jg-sheriff-whitewolf-blow-rec', '')}
+      <button class="danger" onclick="jgSaveSheriffSelfDestructWhiteWolfBring()" style="margin-top:10px;">確認自爆 →</button>
+    `,'🤍 白狼王');
   }
   else if(step==='knight-duel'){
     const knP=jgPlayers.find(p=>p.role==='knight');
@@ -6092,7 +6255,8 @@ function jgUpdateVoteTallySummary(){
   box.innerHTML='<div style="font-size:13px;">'+summaryText+'</div>'+extra;
 }
 
-function jgSaveVote(){
+function jgSaveVote(){ jgSaveVoteInner(); jgLiveSyncPush(); }
+function jgSaveVoteInner(){
   const targets=jgVoteTargets();
   const voters=jgVoteVoters();
   const fmt=w=>Number.isInteger(w)?String(w):w.toFixed(1);
@@ -6264,7 +6428,7 @@ function jgCheckBloodMoonFinalWin(){
 
 function jgSaveBloodMoonBlow(){
   const bm=jgPlayers.find(p=>p.role==='bloodmoon');
-  if(bm&&bm.alive){jgApplyDeath(bm);jgPushDayLog('自爆'+bm.num);}
+  if(bm&&bm.alive){jgApplyDeath(bm);jgPushDayLog(bm.num+'自爆');}
   jgRecord.bloodmoonSealNight=true;
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}
@@ -6297,7 +6461,7 @@ function jgSaveWolfSelfBlow(){
   // 併進這顆按鈕的選號只是共用入口，實際規則仍照血月使者專屬流程走。
   if(p.role==='bloodmoon'){ jgGoStep('bloodmoon-selfblow'); return; }
   jgApplyDeath(p);
-  jgPushDayLog('自爆'+p.num);
+  jgPushDayLog(p.num+'自爆');
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}
   // 自爆：不能開槍帶人，跳過投票，直接進入夜晚
@@ -6574,7 +6738,7 @@ const ALL_ROLES = {
   // Good - gods
   seer:     {icon:'🔮', name:'預言家', team:'good', teamLabel:'神職', desc:'每晚查驗一名玩家，得知「好人」或「狼人」。<br>可以重複查驗已經查過的號碼；不能查驗已經死亡的號碼。'},
   witch:    {icon:'🧪', name:'女巫',   team:'good', teamLabel:'神職', desc:'<strong>解藥：</strong>救活當晚被狼殺的玩家（整局限一次）。<br><strong>毒藥：</strong>毒殺任意玩家（整局限一次）。<br>兩瓶藥沒有時間限制，整局中任何一晚都能使用；但同一晚只能擇一使用，不能同時用解藥又用毒藥，且不能自救。'},
-  hunter:   {icon:'🔫', name:'獵人',   team:'good', teamLabel:'神職', desc:'被狼刀淘汰（夜槍）或被投票淘汰（白天槍）時，都可以開槍帶走一名玩家（留空不帶）。<strong>被女巫毒殺時無法發動。</strong>'},
+  hunter:   {icon:'🔫', name:'獵人',   team:'good', teamLabel:'神職', desc:'被狼刀淘汰（夜槍）或被投票淘汰（白天槍）時，都可以開槍帶走一名玩家（留空不帶）。<strong>以下情況無法發動：被女巫毒殺；被狼美人發動技能殉情帶走；被白狼王發動自爆技能帶走。</strong>'},
   guard:    {icon:'🛡️', name:'守衛',   team:'good', teamLabel:'神職', desc:'每晚可以選擇一名玩家守護（也可以空守），守過的號碼可以再次守，但不能連續兩晚守同一人。<br>守衛擋得住狼刀，也擋得住當晚的夜槍（獵人／黑狼王被狼刀淘汰後開槍帶人）——同一個盾只能擋下一刀或一槍。<br>守衛無法阻擋女巫毒藥。<br><strong>奶穿：</strong>若同一晚守衛的守護與女巫的解藥同時作用在同一名玩家身上，該玩家仍會死亡（雙重保護互相抵銷）。'},
   dreamcatcher:{icon:'🌙',name:'攝夢人',team:'good',teamLabel:'神職', desc:'<strong>守護/擊殺：</strong>主動技:每晚都必須選擇一位玩家成為夢遊者使其進入夢遊狀態。夢遊者將不會死於攝夢人以外的夜間技能(狼刀、巫毒、夜槍)，若攝夢人連續兩晚夢同一位玩家，則夢遊者會因此死於夢裡。<br>被動技:若攝夢人在夜裡死亡，則夢遊者會一同死去。'},
   knight:   {icon:'⚔️', name:'騎士',   team:'good', teamLabel:'神職', desc:'<strong>決鬥：</strong>白天發言階段可隨時翻牌宣告決鬥，指定一名玩家對決。<br>對方是狼→法官宣布「X號是狼人，X號淘汰」，對方直接出局，跳過投票直接進入黑夜。<br>對方是好人→法官宣布「X號是好人，騎士以死謝罪」，騎士淘汰，白天繼續發言與投票。<br><strong>限制：</strong>若決鬥對象是黑狼王／狼美人／白狼王，因決鬥出局不會發動其技能（不能開槍帶人、魅惑對象不會殉情）。'},
