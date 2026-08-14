@@ -58,6 +58,9 @@ h3{font-size:16px;font-weight:700;color:var(--text);}
 .bh{background:rgba(95,62,150,0.1);color:#4a2e80;}.bg2{background:rgba(30,136,122,0.1);color:#0e6a5e;}
 .bcupid{background:rgba(194,59,122,0.1);color:#8f2a5e;}
 .rp-tag-lover{display:inline-block;margin-left:4px;font-size:11px;}
+.rp-tag-lover-good{filter:saturate(1.3);}
+.rp-tag-lover-wolf{filter:saturate(1.3) hue-rotate(-15deg);}
+.rp-tag-lover-third{filter:saturate(1.4) brightness(1.05);}
 
 /* ── INPUTS ── */
 label{font-size:13px;color:var(--text2);display:block;margin:12px 0 5px;}
@@ -1267,6 +1270,16 @@ function jgIsWolfPackMember(p){
   if(!p) return false;
   if(WOLF_ROLES.includes(p.role)) return true;
   return !!(jgDualIdentityMode&&p.role2==='wolfking');
+}
+// 專門給「人數統計／勝負判定」使用的狼隊歸屬判斷：情侶若配成「狼狼鏈」，邱比特的勝負
+// 跟著狼隊走——好人陣營要獲勝，除了原本的條件，也要連邱比特一起淘汰。但邱比特本人
+// 「永遠不會帶狼刀」，不參與狼人殺人決策、不與狼隊一起睜眼，所以只有這個「算不算輸贏」
+// 的判定會把他算進狼隊，其餘所有狼隊行動（睡眠順序、殺人目標選擇、陣營顏色顯示、
+// 預言家查驗結果——邱比特永遠查出金水——等）完全不受影響，一律照 jgIsWolfPackMember
+// 原本的判斷，不要在那些地方誤用這個函式。
+function jgIsWolfForWin(p){
+  if(jgIsWolfPackMember(p)) return true;
+  return !!(p&&p.role==='cupid'&&jgLoverPairType()==='wolf');
 }
 
 function jgIsHunterCapable(p){
@@ -2920,6 +2933,9 @@ function jgRenderRoster(){
   jgCheckSheriffDeath();
   const el=document.getElementById('jg-roster');
   if(!el){ jgRenderVoteHistory(); return; }
+  // 情侶配對類型（只算一次，避免每個玩家都重算）：'good'=人人鏈、'wolf'=狼狼鏈、'third'=人狼鏈（第三方）
+  const _loverPairType=jgLovers?jgLoverPairType():null;
+  const _loverTagInfo={good:{e:'💗',t:'情侶（人人鏈，勝負跟好人陣營）'},wolf:{e:'💔',t:'情侶（狼狼鏈，勝負跟狼人陣營）'},third:{e:'💜',t:'情侶（人狼鏈，獨立第三方陣營）'}}[_loverPairType]||{e:'💘',t:'情侶'};
   el.innerHTML=jgPlayers.map(p=>{
     const role=p.role||'villager';
     let bodyHtml;
@@ -2937,9 +2953,13 @@ function jgRenderRoster(){
       const rname=p.role?jgRoleDisplayName(p):'?';
       // 黑市商人板：這位玩家是黑市交易產生的「幸運兒」時，角色後面加註一個小標籤 [幸]
       const luckyTag=(jgLuckyOne&&jgLuckyOne.num===p.num)?'<span class="rp-tag-lucky" title="幸運兒">幸</span>':'';
-      // 邱比特配對的情侶，法官自己視角加註一個小愛心方便對照（玩家看不到這個標籤）
-      const loverTag=(jgLovers&&jgLovers.map(String).includes(p.num.toString()))?'<span class="rp-tag-lover" title="情侶">💘</span>':'';
-      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}</div>`;
+      // 邱比特配對的情侶，法官自己視角加註一個小愛心方便對照（玩家看不到這個標籤）；
+      // 依人人鏈／狼狼鏈／人狼鏈（第三方）顯示不同顏色與符號，滑鼠移上去（或長按）可看說明。
+      const loverTag=(jgLovers&&jgLovers.map(String).includes(p.num.toString()))
+        ?'<span class="rp-tag-lover rp-tag-lover-'+(_loverPairType||'unk')+'" title="'+_loverTagInfo.t+'">'+_loverTagInfo.e+'</span>':'';
+      // 邱比特本人：若情侶配成人狼鏈，邱比特也是第三方一員，額外加註標示
+      const cupidThirdTag=(role==='cupid'&&_loverPairType==='third')?'<span class="rp-tag-lover rp-tag-lover-third" title="邱比特也是第三方一員">🔮</span>':'';
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${cupidThirdTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <div class="rp-num">${p.num}${jgSheriff===p.num?'<span title="警長" style="margin-left:2px;">🎖️</span>':''}</div>
@@ -4386,8 +4406,8 @@ function jgRenderStep(step){
     let bloodmoonEndgameHtml='';
     {
       const _beAlive=jgAlive();
-      const _beWolves=_beAlive.filter(p=>jgIsWolfPackMember(p));
-      const _beGood=_beAlive.filter(p=>!jgIsWolfPackMember(p));
+      const _beWolves=_beAlive.filter(p=>jgIsWolfForWin(p));
+      const _beGood=_beAlive.filter(p=>!jgIsWolfForWin(p));
       const _beAllGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
       const _beGods=_beGood.filter(p=>_beAllGods.includes(p.role));
       const _beVils=_beGood.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
@@ -4636,7 +4656,7 @@ function jgRenderStep(step){
     // 這一步只是在記錄他刀了誰、走完流程，勝負其實已經注定，先跟法官說清楚以免誤會成
     // 「還要看刀到誰才知道輸贏」。
     const _blmA=jgAlive();
-    const _blmAg=_blmA.filter(p=>!jgIsWolfPackMember(p));
+    const _blmAg=_blmA.filter(p=>!jgIsWolfForWin(p));
     const _blmAllGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
     const _blmGodCnt=_blmAg.filter(p=>_blmAllGods.includes(p.role)).length;
     const _blmVilCnt=_blmAg.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid').length;
@@ -5135,8 +5155,13 @@ function jgLoverPairType(){
 }
 
 // 人狼鏈成立時，第三方陣營的完整成員名單（string[] 號碼）：兩位情侶＋邱比特本人
-// （若邱比特剛好鏈自己，會自動去重，變成只有 2 人）。其餘情形（人人鏈／狼狼鏈／尚未配對）
-// 回傳空陣列，代表沒有獨立第三方，勝負照一般好人 vs 狼人規則判定。
+// （若邱比特剛好鏈自己，會自動去重，變成只有 2 人）。
+// 只要「人狼鏈」配對成立，邱比特本人就永遠是第三方的一員——好人／狼人陣營要獲勝，
+// 除了原本各自的勝利條件，也必須連邱比特一起淘汰，不是只淘汰兩位情侶就算數。
+// 這個名單本身不看存活狀態（回傳固定的三人／兩人清單），存活與否交給呼叫端
+// （jgCheckWin／jgCheckWinThirdParty）用 jgAlive() 去判斷；只有第三方全滅
+// （情侶兩人 + 邱比特都已出局）之後，才會改用一般好人 vs 狼人規則判定。
+// 其餘情形（人人鏈／狼狼鏈／尚未配對）回傳空陣列，代表沒有獨立第三方。
 function jgLoverThirdPartyMembers(){
   if(jgLoverPairType()!=='third') return [];
   const set=new Set(jgLovers.map(n=>n.toString()));
@@ -6601,7 +6626,7 @@ function jgSaveBloodMoonLastNight(){
 // 不能沿用一般的 jgCheckWin()（它的「狼隊全滅→好人勝利」規則會搶在屠邊判定之前生效）。
 function jgCheckBloodMoonFinalWin(){
   const a=jgAlive();
-  const ag=a.filter(p=>!jgIsWolfPackMember(p));
+  const ag=a.filter(p=>!jgIsWolfForWin(p));
   const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
   const aGod=ag.filter(p=>allGods.includes(p.role));
   const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
@@ -6802,43 +6827,41 @@ function jgTryEarlyEnd(){
 }
 
 // 有邱比特時的勝負判定入口：若情侶配成「人狼鏈」，邱比特＋這對情侶會獨立成第三方陣營，
-// 勝負規則跟一般好人 vs 狼人完全不同（見 jgCheckWinThirdParty）；其餘情形（人人鏈／狼狼鏈／
-// 沒有邱比特／第三方已經全滅）維持原本的判定邏輯不變，直接呼叫 jgCheckWinNormal。
+// 只要第三方（情侶兩人＋邱比特）還有人存活，就先走 jgCheckWinThirdParty 判定
+// （邱比特本人也算第三方一員，好人／狼人要獲勝必須連他一起淘汰，不是只淘汰兩位情侶）；
+// 一旦第三方全滅，才會改用一般好人 vs 狼人規則（jgCheckWinNormal）判定剩下的人。
+// 其餘情形（人人鏈／狼狼鏈／沒有邱比特）本來就不會有非空的第三方名單，直接走一般規則。
 function jgCheckWin(){
   const tp=jgLoverThirdPartyMembers();
   if(tp.length>0){
     const tpAlive=tp.filter(n=>{ const p=jgFind(n); return p&&p.alive; });
-    if(tpAlive.length>0) return jgCheckWinThirdParty(tp);
+    if(tpAlive.length>0) return jgCheckWinThirdParty(tp, tpAlive);
   }
   return jgCheckWinNormal();
 }
 
-// 人狼鏈成立時的專用勝負判定：third＝third-party 成員（情侶兩人＋邱比特）。
-// 第三方勝利：除第三方以外的好人與狼人都已屠光。
-// 狼人勝利：好人（不含第三方）與第三方都已屠光，狼人仍存活。
-// 好人勝利：狼人與第三方都已屠光，好人仍存活。
-// 三方都還有人存活時，遊戲繼續（回傳 null）。
-function jgCheckWinThirdParty(tp){
+// 人狼鏈成立時的專用勝負判定：tp＝third-party 完整名單（情侶兩人＋邱比特），
+// tpAlive＝目前還存活的第三方成員號碼。這個函式只會在第三方仍有人存活時被呼叫。
+// (1) 第三方屠光其餘所有玩家（others 清空）→ 第三方獲勝。
+// (2) 第三方存活人數 與 場上其餘（非第三方）存活人數 相同時，直接判定第三方獲勝。
+// 其餘情況遊戲繼續（回傳 null）——不管狼人或好人是否已經死絕，只要第三方還在場，
+// 就不能提前判定狼人或好人獲勝；必須等第三方（含邱比特）全滅後，才會改用一般規則。
+function jgCheckWinThirdParty(tp, tpAlive){
   const a=jgAlive();
   const others=a.filter(p=>!tp.includes(p.num.toString()));
-  const othersWolf=others.filter(p=>jgIsWolfPackMember(p));
-  const othersGood=others.filter(p=>!jgIsWolfPackMember(p));
-  if(othersWolf.length===0&&othersGood.length===0){
+  if(others.length===0){
     return{winner:'third',msg:'邱比特與情侶（第三方陣營）已將其餘玩家屠光',icon:'💘'};
   }
-  if(othersWolf.length>0&&othersGood.length===0){
-    return{winner:'wolf',msg:'好人與第三方（邱比特／情侶）皆已淘汰',icon:'🐺'};
-  }
-  if(othersGood.length>0&&othersWolf.length===0){
-    return{winner:'good',msg:'狼人與第三方（邱比特／情侶）皆已淘汰',icon:'🎉'};
+  if(tpAlive.length===others.length){
+    return{winner:'third',msg:'第三方陣營（邱比特／情侶）存活人數與其餘玩家相同，直接判定第三方獲勝',icon:'💘'};
   }
   return null;
 }
 
 function jgCheckWinNormal(){
   const a=jgAlive();
-  const aw=a.filter(p=>jgIsWolfPackMember(p)); // all wolf-team alive (incl. hidden 黑狼王 second-card in dual mode)
-  const ag=a.filter(p=>!jgIsWolfPackMember(p)); // all good-team alive
+  const aw=a.filter(p=>jgIsWolfForWin(p)); // all wolf-team alive (incl. hidden 黑狼王 second-card in dual mode; 狼狼鏈時邱比特也算入)
+  const ag=a.filter(p=>!jgIsWolfForWin(p)); // all good-team alive
   if(aw.length===0) return{winner:'good',msg:'所有狼人已被淘汰',icon:'🎉'};
   // 機械狼板：機械狼與其餘狼人互不相認、不碰面，狼隊無法憑人數優勢確認勝利，
   // 就算「狼人+機械狼」人數已達多數，仍必須屠民或屠神才算獲勝。
@@ -6883,8 +6906,8 @@ let jgLastWinResult=null;
 // 避免畫面顯示之後場上人數又有變動（理論上不太會發生，但保險起見還是重新檢查一次）。
 function jgDeclareBloodmoonWin(){
   const alive=jgAlive();
-  const wolves=alive.filter(p=>jgIsWolfPackMember(p));
-  const good=alive.filter(p=>!jgIsWolfPackMember(p));
+  const wolves=alive.filter(p=>jgIsWolfForWin(p));
+  const good=alive.filter(p=>!jgIsWolfForWin(p));
   const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
   const gods=good.filter(p=>allGods.includes(p.role));
   const vils=good.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
@@ -6950,8 +6973,8 @@ function jgShowWin(res){
     ${cupidHtml}
     <div class="section-title" style="margin-top:16px;">勝負判定依據</div>
     <div class="win-bar">
-      <div class="win-side win-wolf"><div class="win-count">${jgAlive().filter(p=>WOLF_ROLES.includes(p.role)).length}</div><div class="win-label">存活狼人</div></div>
-      <div class="win-side win-good"><div class="win-count">${jgAlive().filter(p=>!WOLF_ROLES.includes(p.role)).length}</div><div class="win-label">存活好人</div></div>
+      <div class="win-side win-wolf"><div class="win-count">${jgAlive().filter(p=>jgIsWolfForWin(p)).length}</div><div class="win-label">存活狼人</div></div>
+      <div class="win-side win-good"><div class="win-count">${jgAlive().filter(p=>!jgIsWolfForWin(p)).length}</div><div class="win-label">存活好人</div></div>
     </div>
     <button onclick="jgShowExportModal()" style="margin-top:14px;">📋 匯出文字紀錄</button>
     <button onclick="pdSubmitGameRecord()" style="margin-top:8px;">🔒 送出到遊玩數據</button>
@@ -7120,7 +7143,8 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   const godCount=Object.entries(pickState).filter(([k])=>gods.includes(k)).reduce((s,[,v])=>s+v,0);
   const vilCount=pickState.villager||0;
   const hybridCount=isDual?0:(pickState.hybrid||0); // 混血兒不開放雙身分模式選用
-  const totalPicked=wolfCount+godCount+vilCount+hybridCount;
+  const cupidCount=isDual?0:(pickState.cupid||0); // 邱比特不開放雙身分模式選用
+  const totalPicked=wolfCount+godCount+vilCount+hybridCount+cupidCount;
 
   let html=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">
     目前：${totalPicked}/${total} ${unitLabel}
@@ -7148,15 +7172,21 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   html+=`<button onclick="rpickAdj('${containerId}','villager',1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">＋</button>`;
   html+=`<span style="font-size:13px;color:var(--text2);">平民</span></div>`;
 
-  // 混血兒（特殊身分，視為平民陣營；不開放雙身分模式）
+  // 混血兒／邱比特（特殊身分；不開放雙身分模式）
   if(!isDual){
     const hy=ALL_ROLES.hybrid;
-    html+='<div style="font-size:11px;font-weight:700;color:var(--vil);margin:6px 0 4px;letter-spacing:0.5px;">特殊身分</div>';
+    const cp=ALL_ROLES.cupid;
+    html+='<div style="font-size:11px;font-weight:700;color:var(--cupid);margin:6px 0 4px;letter-spacing:0.5px;">特殊身分</div>';
     html+='<div class="rpick-grid">';
     html+=`<div class="rpick${hybridCount>0?' sel':''}" onclick="rpickTap('${containerId}','hybrid')">
       <span class="rp-ico">${hy.icon}</span>
       <div class="rp-nm">${hy.name}</div>
       ${hybridCount>0?'<span class="rp-cnt">✓</span>':''}
+    </div>`;
+    html+=`<div class="rpick${cupidCount>0?' sel':''}" onclick="rpickTap('${containerId}','cupid')">
+      <span class="rp-ico">${cp.icon}</span>
+      <div class="rp-nm">${cp.name}</div>
+      ${cupidCount>0?'<span class="rp-cnt">✓</span>':''}
     </div>`;
     html+='</div>';
   }
@@ -7200,8 +7230,8 @@ function rpickTap(cid, id){
   const state=jgRolePick;
   const isWolf=WOLF_ROLES.includes(id);
   const isGod=GOD_ROLES.includes(id);
-  if(id==='hybrid'){
-    // 混血兒：toggle（max 1，不開放雙身分模式）
+  if(id==='hybrid'||id==='cupid'){
+    // 混血兒／邱比特：toggle（max 1，不開放雙身分模式）
     state[id]=(state[id]||0)>0?0:1;
   } else if(isGod){
     // gods: toggle (max 1)
