@@ -139,6 +139,9 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .award-detail.open{display:block;}
 .award-detail b{color:var(--text);}
 .award-detail .aw-note{font-size:11px;color:var(--text3);margin-top:6px;}
+.guide-tag-card{flex:0 0 240px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;}
+.guide-tag-card .gt-title{font-size:14px;font-weight:800;color:var(--text);}
+.guide-tag-card .gt-desc{font-size:12.5px;color:var(--text2);line-height:1.7;margin-top:6px;white-space:normal;}
 
 /* ── TAP GRID ── */
 .tap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin:12px 0;}
@@ -857,18 +860,9 @@ select{
     <p class="sub" style="text-align:center;margin-top:8px;">不定期更新狼人殺攻略文章</p>
   </div>
 
-  <div class="card" style="margin-bottom:14px;">
-    <h3 style="margin-bottom:10px;">🏷️ 標籤說明</h3>
-    <div class="info" style="margin-top:0;line-height:1.7;">
-      <strong>📖 一般攻略</strong>：就是一般的攻略，主要針對各角色或操作。
-    </div>
-    <div class="info-warn" style="line-height:1.7;">
-      <strong>🔎 Y向推理</strong>：可能會有 💥 暴雷，若不想被暴雷，請先到 YouTube 搜尋該集數，在資訊欄找到本集討論的場次，先看完該場次再看 Y向推理影片＆文字整理。
-    </div>
-    <div class="info-success" style="line-height:1.7;">
-      <strong>⭐ OCW</strong>：我看完覺得很精彩的場次，值得一看，可以直接到參考來源點選 YouTube 超連結收看。
-    </div>
-  </div>
+  <!-- 標籤說明：橫向一排、放不下可以左右滑，說明文字直接顯示在方塊裡，不用點擊 -->
+  <div class="big-section-title">標籤說明</div>
+  <div class="awards-strip" id="guide-tag-strip"></div>
 
   <div id="guide-loading" class="empty">載入攻略中…</div>
   <div id="guide-empty" class="empty" style="display:none;">目前還沒有收錄文章，之後會陸續新增。</div>
@@ -7561,6 +7555,23 @@ const GUIDE_ARTICLES_LOCAL=[
 ];
 let guideLoaded=false;
 
+// 標籤說明橫向方塊：外觀沿用「遊玩數據」頁特別獎項的橫向排列（awards-strip，放不下可左右滑），
+// 但說明文字直接顯示在方塊裡，不需要點擊展開；純文字、不使用 emoji。這裡是純靜態內容，
+// 不用等抓試算表資料。
+const GUIDE_TAG_INFO=[
+  {title:'一般攻略', desc:'就是一般的攻略，主要針對各角色或操作。'},
+  {title:'Y向推理', desc:'可能會有暴雷，若不想被暴雷，請先到 YouTube 搜尋該集數，在資訊欄找到本集討論的場次，先看完該場次再看 Y向推理影片＆文字整理。'},
+  {title:'OCW', desc:'我看完覺得很精彩的場次，值得一看，可以直接到參考來源點選 YouTube 超連結收看。'},
+];
+function renderGuideTagInfo(){
+  const strip=document.getElementById('guide-tag-strip');
+  if(!strip) return;
+  strip.innerHTML=GUIDE_TAG_INFO.map(t=>`<div class="guide-tag-card">
+    <div class="gt-title">${t.title}</div>
+    <div class="gt-desc">${t.desc}</div>
+  </div>`).join('');
+}
+
 // 簡易 CSV 解析：處理雙引號欄位、欄位內逗號與換行
 function parseGuideCsv(text){
   const rows=[]; let row=[]; let field=''; let inQuotes=false;
@@ -7708,6 +7719,7 @@ document.getElementById('jg-count').addEventListener('input',()=>{
 });
 renderRulesCards();
 renderGlossary();
+renderGuideTagInfo();
 
 
 // ══════════════════════════════════════
