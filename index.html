@@ -12,6 +12,7 @@
   --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);
   --wolf:#b83828;--vil:#3a7a2a;--seer:#2a65a8;
   --witch:#a85e10;--hunter:#5f3e96;--guard:#1e887a;
+  --cupid:#c23b7a;
   --accent:#b83828;--gold:#9a7c28;
   --r:12px;--r-sm:8px;
 }
@@ -47,6 +48,7 @@ h3{font-size:16px;font-weight:700;color:var(--text);}
 .av-witch{background:rgba(168,94,16,0.12);color:var(--witch);}
 .av-hunter{background:rgba(95,62,150,0.12);color:var(--hunter);}
 .av-guard{background:rgba(30,136,122,0.12);color:var(--guard);}
+.av-cupid{background:rgba(194,59,122,0.12);color:var(--cupid);}
 .av-dead{background:rgba(0,0,0,0.06);color:var(--text3);}
 .nm{flex:1;font-size:15px;color:var(--text);}
 .dead-nm{text-decoration:line-through;color:var(--text3);}
@@ -54,6 +56,8 @@ h3{font-size:16px;font-weight:700;color:var(--text);}
 .bw{background:rgba(184,56,40,0.1);color:#922418;}.bv{background:rgba(58,122,42,0.1);color:#2a601c;}
 .bs{background:rgba(42,101,168,0.1);color:#1a4e88;}.bwt{background:rgba(168,94,16,0.1);color:#864a08;}
 .bh{background:rgba(95,62,150,0.1);color:#4a2e80;}.bg2{background:rgba(30,136,122,0.1);color:#0e6a5e;}
+.bcupid{background:rgba(194,59,122,0.1);color:#8f2a5e;}
+.rp-tag-lover{display:inline-block;margin-left:4px;font-size:11px;}
 
 /* ── INPUTS ── */
 label{font-size:13px;color:var(--text2);display:block;margin:12px 0 5px;}
@@ -216,6 +220,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rp-dreamcatcher .rp-role{background:rgba(26,110,136,0.1);color:#0f5c74;}
 .rp-knight .rp-role{background:rgba(122,106,26,0.12);color:#5f5110;}
 .rp-magician .rp-role{background:rgba(106,58,154,0.1);color:#582e88;}
+.rp-cupid .rp-role{background:rgba(194,59,122,0.1);color:#8f2a5e;}
 .rp-blackmarket .rp-role{background:rgba(122,74,26,0.12);color:#5e3810;}
 .rp-unknown .rp-role{background:var(--bg3);color:var(--text3);}
 .rp-tag-lucky{display:inline-block;margin-left:3px;font-size:8px;font-weight:800;padding:0 3px;border-radius:5px;background:rgba(154,124,40,0.18);color:var(--gold);vertical-align:1px;}
@@ -327,6 +332,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
   --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);
   --wolf:#b83828;--vil:#3a7a2a;--seer:#2a65a8;
   --witch:#a85e10;--hunter:#5f3e96;--guard:#1e887a;
+  --cupid:#c23b7a;
   --accent:#b83828;--gold:#9a7c28;
   --r:12px;--r-sm:8px;
 }
@@ -578,6 +584,16 @@ select{
       <span class="board-role">守衛</span>：每晚守護一名玩家使其免疫狼刀，不能連續兩晚守同一人；若與女巫同晚救同一人會「奶穿」，對方仍會死亡。<br><span class="role-link" onclick="jumpToRole('guard')">→ 查看守衛完整規則</span>
     </div>
   </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">💘</span>
+      <span class="rcol-name">邱比特（情侶板）</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">邱比特</span>：全場第一個睜眼的角色，第一夜指定兩名玩家（可以鏈自己）成為情侶；兩人隨後互相確認彼此，但不知道誰是邱比特、也不知道對方陣營。若兩人陣營相同（人人鏈／狼狼鏈），邱比特的勝負跟著那個陣營走；若一人好人一人狼人（人狼鏈），邱比特與這對情侶會獨立成為第三方陣營，勝負規則完全不同（見下方「勝利條件」）。情侶其中一人死亡，另一人會立刻殉情，殉情時原本的技能仍正常觸發。建議搭配 10 人（3神3民3狼+邱比特）或 13 人（4神4民4狼+邱比特）板子使用；本板狼隊刀人需刀型一致，不一致視為空刀。<br><span class="role-link" onclick="jumpToRole('cupid')">→ 查看邱比特完整規則</span>
+    </div>
+  </div>
   </div>
   </div>
 
@@ -585,7 +601,8 @@ select{
   <div class="rules-section" id="sec-win">
   <div class="rules-h1">🏆 勝利條件</div>
   <div class="info-danger" style="margin-bottom:8px;">🐺 狼人勝利：存活狼人數 ≥ 存活好人數，或所有神職死亡，或所有平民死亡</div>
-  <div class="info-success">✓ 好人勝利：所有狼人被淘汰</div>
+  <div class="info-success" style="margin-bottom:8px;">✓ 好人勝利：所有狼人被淘汰</div>
+  <div class="info" style="margin-bottom:8px;">💘 邱比特板（人狼鏈成立時）：邱比特＋情侶獨立成第三方陣營，三方勝負改為「屠光其餘兩方」——第三方需屠光好人與狼人；狼人需屠光好人與第三方；好人需屠光狼人與第三方，才算獲勝。若情侶是人人鏈或狼狼鏈，邱比特的勝負仍跟著好人／狼人原本的條件走，不受影響。</div>
   </div>
 
   <!-- 狼人陣營 -->
@@ -697,6 +714,7 @@ select{
       <option value="magician_wolfking">魔術師+黑/白狼王</option>
       <option value="hybrid_wolfking_bloodmoon">混血兒+黑/白狼王+血月</option>
       <option value="evilknight_guard">惡靈騎士+守衛</option>
+      <option value="cupid_board">邱比特（情侶板，建議10或13人）</option>
     </select>
   </div>
   <div class="info" id="jg-comp-desc" style="text-align:center;font-size:13px;margin-bottom:4px;"></div>
@@ -864,9 +882,9 @@ select{
 // ═══════════════════════════════════
 // SHARED DATA
 // ═══════════════════════════════════
-const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',villager:'平民',hybrid:'混血兒',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',sheriff:'警長',luckyone:'幸運兒'};
-const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',medium:'bs',blackmarket:'bwt'};
-const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',medium:'av-seer',blackmarket:'av-witch'};
+const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',villager:'平民',hybrid:'混血兒',cupid:'邱比特',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',sheriff:'警長',luckyone:'幸運兒'};
+const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',medium:'bs',blackmarket:'bwt'};
+const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',medium:'av-seer',blackmarket:'av-witch'};
 
 function getComp(n){
   const t={
@@ -1021,7 +1039,7 @@ let jgDawnDeaths={}; // night number -> {died:[nums truly eliminated], swapped:[
 let jgGameCount=1; // increments each new game this session, used in the export section label
 let jgHasStartedBefore=false;
 const ROLE_ABBR={
-  villager:'民', hybrid:'混血', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
+  villager:'民', hybrid:'混血', cupid:'邱比特', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
   gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟',
   mechanicalwolf:'機', seer:'預', witch:'巫', hunter:'獵', guard:'守', dreamcatcher:'攝夢', knight:'騎士', magician:'魔術',
   demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', sheriff:'警長', luckyone:'幸運'
@@ -1035,6 +1053,7 @@ const ROLE_ABBR={
 // 警長、幸運兒）沒有既定順序可以照抄，就近安插在概念相近的角色旁邊；
 // 之後如果排出來的順序覺得怪怪的，直接調整這個陣列裡任兩個角色的先後位置就好。
 const GAME_TITLE_ROLE_ORDER=[
+  'cupid',
   'mechanicalwolf','medium',
   'dreamcatcher','nightmare',
   'blackmarket','wolfbrother_e','wolfbrother_y',
@@ -1319,6 +1338,10 @@ function jgRoleAbbr(p){
 // the actions shown in the requested export format.
 function jgFormatNightLog(){
   const lines=[];
+  // 邱比特是整局第一個睜眼的角色（僅第一夜），配對結果只記錄這一次
+  if(jgNight===1 && jgCupidChosen && jgLovers && jgLovers.length===2){
+    lines.push('配 '+jgLovers.join('-'));
+  }
   const guardP=jgPlayers.find(p=>p.role==='guard');
   const mwP=jgPlayers.find(p=>p.role==='mechanicalwolf');
   const seerP=jgPlayers.find(p=>p.role==='seer');
@@ -1447,6 +1470,9 @@ let jgLuckyOne=null; // {num, gift} created by black market dealer
 // ── 混血兒：第一夜選擇一位支持對象，勝利條件與支持對象相同（自己不知道對方陣營） ──
 let jgHybridChosen=false; // 本局是否已完成第一夜的支持對象選擇
 let jgHybridTarget=null;  // 支持對象號碼（string）
+// ── 邱比特：第一夜指定兩名玩家成為情侶（可鏈自己），整局僅此一次行動 ──
+let jgCupidChosen=false;   // 本局是否已完成第一夜的情侶指定
+let jgLovers=null;         // [num1, num2]（string 或 number 皆可），未指定則為 null
 
 // ── 警長競選 ──
 let jgSheriffEnabled=false;   // 本局是否開放上警競選（設定頁勾選）
@@ -1576,12 +1602,13 @@ function jgUpdateComp(){
   const gods=Object.entries(comp).filter(([k])=>GOD_ROLES.includes(k)).reduce((s,[,v])=>s+v,0);
   const vils=comp.villager||0;
   const hybrids=comp.hybrid||0;
+  const cupids=comp.cupid||0;
   const target=isDual?n*2:n;
   const el=document.getElementById('jg-comp-desc');
   if(el){
     el.textContent=isDual
       ? '共 '+total+' 個角色'+(total!==target?' ⚠️ 需選滿 '+target+' 個角色':'')
-      : '共 '+total+' 人 · 狼人 '+wolves+' · 神職 '+gods+' · 平民 '+vils+(hybrids>0?' · 混血兒 '+hybrids:'')+(total!==target?' ⚠️ 需選滿 '+target+' 人':'');
+      : '共 '+total+' 人 · 狼人 '+wolves+' · 神職 '+gods+' · 平民 '+vils+(hybrids>0?' · 混血兒 '+hybrids:'')+(cupids>0?' · 邱比特 '+cupids:'')+(total!==target?' ⚠️ 需選滿 '+target+' 人':'');
   }
   const usePreset=!isDual&&jgBoardPreset!=='custom';
   const pickerEl=document.getElementById('jg-role-picker');
@@ -1897,6 +1924,8 @@ function jgStart(){
   jgLuckyOne=null;
   jgHybridChosen=false;
   jgHybridTarget=null;
+  jgCupidChosen=false;
+  jgLovers=null;
   jgSheriffEnabled=!!(document.getElementById('jg-sheriff-enabled')||{}).checked;
   jgSheriff=null;
   jgSheriffElectionDone=false;
@@ -2908,7 +2937,9 @@ function jgRenderRoster(){
       const rname=p.role?jgRoleDisplayName(p):'?';
       // 黑市商人板：這位玩家是黑市交易產生的「幸運兒」時，角色後面加註一個小標籤 [幸]
       const luckyTag=(jgLuckyOne&&jgLuckyOne.num===p.num)?'<span class="rp-tag-lucky" title="幸運兒">幸</span>':'';
-      bodyHtml=`<div class="rp-role">${rname}${luckyTag}</div>`;
+      // 邱比特配對的情侶，法官自己視角加註一個小愛心方便對照（玩家看不到這個標籤）
+      const loverTag=(jgLovers&&jgLovers.map(String).includes(p.num.toString()))?'<span class="rp-tag-lover" title="情侶">💘</span>':'';
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <div class="rp-num">${p.num}${jgSheriff===p.num?'<span title="警長" style="margin-left:2px;">🎖️</span>':''}</div>
@@ -2972,7 +3003,7 @@ function jgCaptureState(){
     jgMechWolfLearnedNight, jgWolfBrotherIdDone, jgWolfBrotherAwakened, jgWolfBrotherAwakenedNight, jgLastNightPeaceful,
     jgSpeakDirection, jgBlackMarketUsed, jgLuckyOne, jgNightLog, jgDayLog, jgDayMeta, jgDawnDeaths,
     jgVoteTally, jgLastWinResult, jgRoleCounts, jgMechAssign, jgMechAssignDone,
-    jgDualIdentityMode, jgDualAssign, jgDualAssignDone, jgHybridChosen, jgHybridTarget,
+    jgDualIdentityMode, jgDualAssign, jgDualAssignDone, jgHybridChosen, jgHybridTarget, jgCupidChosen, jgLovers,
     jgSheriffEnabled, jgSheriff, jgSheriffElectionDone, jgSheriffCandidatesAsked, jgSheriffCampaignHappened, jgSheriffCandidates, jgSheriffWithdrawn,
     jgSheriffSpeakStart, jgSheriffSpeakDir, jgSheriffVoteTally, jgSheriffPkRound, jgSheriffSelfDestruct, jgSheriffSelfDestructNum, jgSheriffSelfDestructBroughtNum,
     jgEvilKnightRevengeUsed, jgLastVoteOutPlayer, jgAbstainVoters,
@@ -3022,6 +3053,8 @@ function jgRestoreState(snap){
   jgDualAssignDone=snap.jgDualAssignDone;
   jgHybridChosen=snap.jgHybridChosen;
   jgHybridTarget=snap.jgHybridTarget;
+  jgCupidChosen=!!snap.jgCupidChosen;
+  jgLovers=snap.jgLovers||null;
   jgSheriffEnabled=snap.jgSheriffEnabled;
   jgSheriff=snap.jgSheriff;
   jgSheriffElectionDone=snap.jgSheriffElectionDone;
@@ -3159,6 +3192,38 @@ function jgRenderStep(step){
       ${isSealNight?'<div class="info-danger" style="margin-top:4px;">⚠️ 血月封印：本夜神職技能全封，只有狼人殺人</div>':''}
       <button class="primary" style="margin-top:14px;" onclick="jgGoStep(jgNightStartNext())">所有人已閉眼 →</button>
     `,'🌙 天黑');
+  }
+  // ── 邱比特：整局唯一一次行動，第一夜最先睜眼，指定兩名玩家（可含自己）成為情侶 ──
+  else if(step==='cupid-wake'){
+    const cpP=jgPlayers.find(p=>p.role==='cupid');
+    const idHtml=jgGodIdHtml('cupid',cpP);
+    const cur1=(jgLovers&&jgLovers[0])||'';
+    const cur2=(jgLovers&&jgLovers[1])||'';
+    jgShowPg(`
+      <h2>💘 邱比特睜眼</h2>
+      <div class="speech">「<em>邱比特請睜眼，這是全場第一個睜眼的角色。今晚要指定哪兩位玩家成為情侶？</em>」</div>
+      ${idHtml}
+      <label style="margin-top:12px;">情侶 A（可以是邱比特自己）</label>
+      ${jgNumSelectHtml('jg-cupid-target1', cur1)}
+      <label style="margin-top:12px;">情侶 B</label>
+      ${jgNumSelectHtml('jg-cupid-target2', cur2)}
+      <div class="info" style="font-size:12px;margin-top:8px;">情侶不會被告知誰是邱比特，也不會知道對方的陣營（好人／狼人）。若兩人陣營相同（人人鏈／狼狼鏈），邱比特的勝負跟著這個陣營走；若一人好人一人狼人（人狼鏈），邱比特與這對情侶會獨立成為第三方陣營。此步驟整局僅此一次。</div>
+      <div class="speech" style="margin-top:10px;">「<em>邱比特請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveCupid()">已紀錄，下一步 →</button>
+    `,'💘 邱比特');
+  }
+  // ── 邱比特指定完成後：情侶兩人一起睜眼互相確認彼此（不知道誰是邱比特、也不知道對方陣營）──
+  else if(step==='lovers-wake'){
+    const l1=jgLovers?jgFind(jgLovers[0]):null;
+    const l2=jgLovers?jgFind(jgLovers[1]):null;
+    const n1=l1?l1.num:(jgLovers?jgLovers[0]:'?');
+    const n2=l2?l2.num:(jgLovers?jgLovers[1]:'?');
+    jgShowPg(`
+      <h2>💘 情侶確認彼此</h2>
+      <div class="speech">「<em>${n1}號、${n2}號請睜眼，互相確認彼此的身份，然後請閉眼。</em>」</div>
+      <div class="info" style="font-size:12px;margin-top:8px;">兩人只會知道對方是誰，不會知道誰是邱比特，也不會知道對方是好人陣營還是狼人陣營。之後若其中一人死亡，另一人會立刻跟著殉情，殉情時原本的技能正常觸發。</div>
+      <button class="primary" onclick="jgSaveLoversWake()">兩人已閉眼，下一步 →</button>
+    `,'💘 情侶');
   }
   else if(step==='nightmare-wake'){
     const isFirst=jgIsFirstNight();
@@ -4178,6 +4243,17 @@ function jgRenderStep(step){
         if(ct&&ct.alive){ct.alive=false;if(!deads.includes(ct.num))deads.push(ct.num);}
       }
     }
+    // 邱比特情侶殉情：上面這一整晚（狼刀／女巫毒／狼弟覺醒刀／機械狼／獵魔人夜擊／攝夢人…）
+    // 任何一種死法，只要讓情侶其中一人死亡，另一人都要立刻跟著殉情死亡（不論死因為何）。
+    if(jgLovers&&jgLovers.length===2){
+      const lv1=jgFind(jgLovers[0]), lv2=jgFind(jgLovers[1]);
+      if(lv1&&lv2){
+        if(!lv1.alive&&lv2.alive){ lv2.alive=false; if(!deads.includes(lv2.num)) deads.push(lv2.num);
+          if(jgIsHunterCapable(lv2)) jgRecord._loverCascadeHunterAlert=lv2.num; }
+        else if(!lv2.alive&&lv1.alive){ lv1.alive=false; if(!deads.includes(lv1.num)) deads.push(lv1.num);
+          if(jgIsHunterCapable(lv1)) jgRecord._loverCascadeHunterAlert=lv1.num; }
+      }
+    }
     // 上面幾個天亮連動死亡（獵魔人夜擊、攝夢人連續兩晚夢同一人致死、攝夢人陣亡連動夢遊對象死亡、
     // 狼美人中毒殉情）都是直接設定 alive=false、把號碼塞進 deads，而不是走 jgApplyDeath；
     // 這些號碼在上面組 dawnMsg／trulyDiedNums 的時候都還沒發生，所以要在這裡補回死亡清單，
@@ -4199,6 +4275,12 @@ function jgRenderStep(step){
       jgRenderRoster();
       const lateWin=jgCheckWin();
       if(lateWin){ jgShowWin(lateWin); return; }
+    }
+    // 情侶殉情時，若跟著死掉的那一位剛好具有獵人開槍資格，這裡的批次死亡流程不會自動跳出
+    // 開槍畫面（避免與既有的夜槍／女巫毒等既有分支互相打架），提醒法官另外照獵人開槍規則處理。
+    if(jgRecord._loverCascadeHunterAlert){
+      alert('💘 情侶殉情：'+jgRecord._loverCascadeHunterAlert+'號 具有開槍資格，請照獵人開槍規則另外處理（此連鎖需法官手動主持開槍）。');
+      jgRecord._loverCascadeHunterAlert=null;
     }
 
     // Check if wolf-killed hunter can activate skill at dawn
@@ -4308,7 +4390,7 @@ function jgRenderStep(step){
       const _beGood=_beAlive.filter(p=>!jgIsWolfPackMember(p));
       const _beAllGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
       const _beGods=_beGood.filter(p=>_beAllGods.includes(p.role));
-      const _beVils=_beGood.filter(p=>p.role==='villager'||p.role==='hybrid');
+      const _beVils=_beGood.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
       if(_beWolves.length===1&&_beWolves[0].role==='bloodmoon'&&_beGods.length===1&&_beVils.length===1){
         const godRole=_beGods[0].role;
         // 這個殘局的白天投票只有三種結果，而且每一種都在「投票當下」或「當晚被血月封印」就
@@ -4557,7 +4639,7 @@ function jgRenderStep(step){
     const _blmAg=_blmA.filter(p=>!jgIsWolfPackMember(p));
     const _blmAllGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
     const _blmGodCnt=_blmAg.filter(p=>_blmAllGods.includes(p.role)).length;
-    const _blmVilCnt=_blmAg.filter(p=>p.role==='villager'||p.role==='hybrid').length;
+    const _blmVilCnt=_blmAg.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid').length;
     const _blmGuaranteed=_blmGodCnt===1&&_blmVilCnt===1;
     jgShowPg(`
       <h2>血月使者・最後一擊</h2>
@@ -4664,6 +4746,12 @@ function jgSaveDawnHunterShot(){
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
+        if(loverDeadNum){
+          const loverP=jgFind(loverDeadNum);
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+        }
+      }
       // 被夜槍／王槍帶走的對象，如果本身也具備獵人開槍資格（真獵人／已學得獵人的機械狼／
       // 得到獵槍技能的幸運兒），也要能連鎖啟動自己的技能帶人
       const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
@@ -4736,6 +4824,12 @@ function jgSaveMechHunterChainShot(){
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum2=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
+        if(loverDeadNum){
+          const loverP=jgFind(loverDeadNum);
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+        }
+      }
       if(wbCharmNum2){
         jgRecord._chainShotWbCharmNote='（'+val+'狼美，魅惑對象'+wbCharmNum2+'一同出局）';
         alert('💋 '+val+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+val+'號、'+wbCharmNum2+'號 淘汰。」');
@@ -4786,7 +4880,7 @@ function jgIdFieldHtml(rn, existingP, whoId, nameId, onChangeFn){
 
 function jgGodIdHtml(roleId,existingP){
   if(jgNight!==1) return '';
-  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人'};
+  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特'};
   const rn=RZHMAP[roleId]||roleId;
   return jgIdFieldHtml(rn, existingP, 'jg-god-who-'+roleId, 'jg-god-name-'+roleId);
 }
@@ -4807,7 +4901,7 @@ function jgRequireFirstId(elId, label){
 
 function jgSaveGodId(roleId){
   if(jgNight!==1) return true;
-  const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒'};
+  const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特'};
   if(!jgRequireFirstId('jg-god-who-'+roleId, RZHMAP2[roleId]||roleId)) return false;
   const whoNum=parseInt((document.getElementById('jg-god-who-'+roleId)||{}).value||'0');
   const name=(document.getElementById('jg-god-name-'+roleId)||{}).value?.trim()||'';
@@ -4998,6 +5092,72 @@ function jgSaveHybrid(){
   jgHybridTarget=val||null;
   jgHybridChosen=true;
   jgGoStep(jgAfterHybridStep());
+}
+
+// 邱比特：整局唯一一次行動，第一夜最先睜眼，指定兩名玩家（可包含自己）成為情侶。
+// 指定完成後接著走 'lovers-wake'，讓這兩位情侶睜眼互相確認彼此身份，之後才照正常順序
+// （夢魘→…）繼續走這一夜剩下的流程。
+function jgSaveCupid(){
+  if(!jgSaveGodId('cupid')) return;
+  const v1=(document.getElementById('jg-cupid-target1')||{}).value?.trim()||'';
+  const v2=(document.getElementById('jg-cupid-target2')||{}).value?.trim()||'';
+  if(!v1||!v2){
+    alert('⚠️ 請選擇兩位玩家作為情侶（可以包含邱比特自己）！');
+    return;
+  }
+  if(v1===v2){
+    alert('⚠️ 請選擇兩位「不同」的玩家作為情侶！');
+    return;
+  }
+  jgLovers=[v1,v2];
+  jgCupidChosen=true;
+  jgGoStep('lovers-wake');
+}
+
+// 情侶配對後的第二步：兩位情侶（不含邱比特）一起睜眼，互相確認對方是誰——但不知道誰是
+// 邱比特、也不知道對方的陣營（好人／狼人）。這只是一句口白提示，法官按下一步後即回到
+// 正常的夜晚睜眼順序（jgNightStartNext 這次會因為 jgCupidChosen 已是 true 而跳過邱比特）。
+function jgSaveLoversWake(){
+  jgGoStep(jgNightStartNext());
+}
+
+// 兩名情侶目前分別是「人」還是「狼」陣營，用來判斷這對情侶＋邱比特要如何影響勝負：
+// 'good'＝人人鏈（都不是狼）、'wolf'＝狼狼鏈（都是狼）、'third'＝人狼鏈（一人一狼，獨立第三方）。
+// 情侶其中一人已找不到玩家資料（理論上不該發生）時回傳 null，視同沒有配對。
+function jgLoverPairType(){
+  if(!jgLovers||jgLovers.length!==2) return null;
+  const p1=jgFind(jgLovers[0]), p2=jgFind(jgLovers[1]);
+  if(!p1||!p2) return null;
+  const w1=jgIsWolfPackMember(p1), w2=jgIsWolfPackMember(p2);
+  if(w1&&w2) return 'wolf';
+  if(!w1&&!w2) return 'good';
+  return 'third';
+}
+
+// 人狼鏈成立時，第三方陣營的完整成員名單（string[] 號碼）：兩位情侶＋邱比特本人
+// （若邱比特剛好鏈自己，會自動去重，變成只有 2 人）。其餘情形（人人鏈／狼狼鏈／尚未配對）
+// 回傳空陣列，代表沒有獨立第三方，勝負照一般好人 vs 狼人規則判定。
+function jgLoverThirdPartyMembers(){
+  if(jgLoverPairType()!=='third') return [];
+  const set=new Set(jgLovers.map(n=>n.toString()));
+  const cp=jgPlayers.find(p=>p.role==='cupid');
+  if(cp) set.add(cp.num.toString());
+  return [...set];
+}
+
+// 情侶殉情：其中一人以任何方式死亡（trulyDied=true，不是雙身分換牌）時，另一人立刻跟著
+// 殉情死亡，死亡時原本的技能正常觸發（呼叫端沿用既有的 jgHunterCapableTag／連鎖開槍機制）。
+// wasNum 是剛剛死亡那個人的號碼（string 或 number 皆可）。回傳跟著殉情的對象號碼（number），
+// 沒有觸發則回傳 null。
+function jgCascadeLoverDeath(wasNum, trulyDied){
+  if(!trulyDied||!jgLovers||jgLovers.length!==2||wasNum===undefined||wasNum===null) return null;
+  const wasStr=wasNum.toString();
+  const loverStrs=jgLovers.map(n=>n.toString());
+  if(!loverStrs.includes(wasStr)) return null;
+  const otherStr=loverStrs.find(n=>n!==wasStr);
+  const other=jgFind(otherStr);
+  if(other&&other.alive){ jgApplyDeath(other); return other.num; }
+  return null;
 }
 
 function jgSaveWolfBrotherIntro(){
@@ -5622,6 +5782,12 @@ function jgSaveLuckyoneHunterShot(){
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum3=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
+        if(loverDeadNum){
+          const loverP=jgFind(loverDeadNum);
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+        }
+      }
       let wbNote3='';
       if(wbCharmNum3){
         wbNote3='（'+val+'狼美，魅惑對象'+wbCharmNum3+'一同出局）';
@@ -5787,6 +5953,11 @@ function jgHasRoleAny(roles){ return roles.some(r=>jgPlayers.some(p=>p.role===r)
 // 都應該基於交換後的座位號碼進行，所以必須排在幾乎所有人之前。
 // 守衛再其次（不管板子為何，只要有守衛，除了夢魘、魔術師以外都排在守衛之後）。
 function jgNightStartNext(){
+  // 邱比特永遠是整局第一個睜眼的角色（僅第一夜、僅一次）：必須在夢魘等所有人之前就
+  // 決定好情侶配對，之後才輪到其他神職／狼隊依序睜眼。
+  if(jgNight===1 && jgComp.cupid>0 && !jgCupidChosen){
+    return 'cupid-wake';
+  }
   const hasNightmare = jgNight===1 ? (jgComp.nightmare>0) : jgHasRoleAny(['nightmare']);
   if(hasNightmare) return 'nightmare-wake';
   return jgAfterNightmareStep();
@@ -6322,6 +6493,13 @@ function jgSaveVoteInner(){
     const eliminatedRole=found.role; // capture BEFORE any dual-identity card-swap
     const trulyDied=jgApplyDeath(found);
     jgRecord._voteOutTrulyDied=trulyDied;
+    // 邱比特情侶殉情：被投票出局的人如果是情侶其中一人，另一人立刻跟著殉情
+    { const loverDeadNum=jgCascadeLoverDeath(found.num, trulyDied);
+      if(loverDeadNum){
+        const loverP=jgFind(loverDeadNum);
+        alert('💘 '+found.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+      }
+    }
     // Record wolfbeauty charm kill if wolfbeauty was voted out
     if(eliminatedRole==='wolfbeauty'&&jgRecord.wolfbeautyCharm){
       jgRecord._wolfbeautyKillCharm=jgRecord.wolfbeautyCharm;
@@ -6370,6 +6548,12 @@ function jgSaveWolfKingShot(){
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum4=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
+        if(loverDeadNum){
+          const loverP=jgFind(loverDeadNum);
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+        }
+      }
       let wbNote4='';
       if(wbCharmNum4){
         wbNote4='（'+val+'狼美，魅惑對象'+wbCharmNum4+'一同出局）';
@@ -6420,7 +6604,7 @@ function jgCheckBloodMoonFinalWin(){
   const ag=a.filter(p=>!jgIsWolfPackMember(p));
   const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
   const aGod=ag.filter(p=>allGods.includes(p.role));
-  const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid');
+  const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
   if(aVil.length===0&&aGod.length>0) return{winner:'wolf',msg:'血月使者屠邊：所有平民已被淘汰',icon:'🐺'};
   if(aGod.length===0&&aVil.length>0) return{winner:'wolf',msg:'血月使者屠邊：所有神職已被淘汰',icon:'🐺'};
   return{winner:'good',msg:'所有狼人已被淘汰，血月使者最後一擊未能屠邊',icon:'🎉'};
@@ -6514,6 +6698,12 @@ function jgSaveHunter(){
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum5=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
+        if(loverDeadNum){
+          const loverP=jgFind(loverDeadNum);
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+        }
+      }
       let wbNote5='';
       if(wbCharmNum5){
         wbNote5='（'+val+'狼美，魅惑對象'+wbCharmNum5+'一同出局）';
@@ -6611,7 +6801,41 @@ function jgTryEarlyEnd(){
   return false;
 }
 
+// 有邱比特時的勝負判定入口：若情侶配成「人狼鏈」，邱比特＋這對情侶會獨立成第三方陣營，
+// 勝負規則跟一般好人 vs 狼人完全不同（見 jgCheckWinThirdParty）；其餘情形（人人鏈／狼狼鏈／
+// 沒有邱比特／第三方已經全滅）維持原本的判定邏輯不變，直接呼叫 jgCheckWinNormal。
 function jgCheckWin(){
+  const tp=jgLoverThirdPartyMembers();
+  if(tp.length>0){
+    const tpAlive=tp.filter(n=>{ const p=jgFind(n); return p&&p.alive; });
+    if(tpAlive.length>0) return jgCheckWinThirdParty(tp);
+  }
+  return jgCheckWinNormal();
+}
+
+// 人狼鏈成立時的專用勝負判定：third＝third-party 成員（情侶兩人＋邱比特）。
+// 第三方勝利：除第三方以外的好人與狼人都已屠光。
+// 狼人勝利：好人（不含第三方）與第三方都已屠光，狼人仍存活。
+// 好人勝利：狼人與第三方都已屠光，好人仍存活。
+// 三方都還有人存活時，遊戲繼續（回傳 null）。
+function jgCheckWinThirdParty(tp){
+  const a=jgAlive();
+  const others=a.filter(p=>!tp.includes(p.num.toString()));
+  const othersWolf=others.filter(p=>jgIsWolfPackMember(p));
+  const othersGood=others.filter(p=>!jgIsWolfPackMember(p));
+  if(othersWolf.length===0&&othersGood.length===0){
+    return{winner:'third',msg:'邱比特與情侶（第三方陣營）已將其餘玩家屠光',icon:'💘'};
+  }
+  if(othersWolf.length>0&&othersGood.length===0){
+    return{winner:'wolf',msg:'好人與第三方（邱比特／情侶）皆已淘汰',icon:'🐺'};
+  }
+  if(othersGood.length>0&&othersWolf.length===0){
+    return{winner:'good',msg:'狼人與第三方（邱比特／情侶）皆已淘汰',icon:'🎉'};
+  }
+  return null;
+}
+
+function jgCheckWinNormal(){
   const a=jgAlive();
   const aw=a.filter(p=>jgIsWolfPackMember(p)); // all wolf-team alive (incl. hidden 黑狼王 second-card in dual mode)
   const ag=a.filter(p=>!jgIsWolfPackMember(p)); // all good-team alive
@@ -6647,7 +6871,7 @@ function jgCheckWin(){
   // Wolf wins if all villagers dead or all gods dead
   const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
   const aGod=ag.filter(p=>allGods.includes(p.role));
-  const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid'); // 混血兒視為平民，狼隊屠民也必須刀死他
+  const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid'); // 混血兒視為平民，狼隊屠民也必須刀死他
   if(aVil.length===0&&aGod.length>0) return{winner:'wolf',msg:'所有平民已被淘汰',icon:'🐺'};
   if(aGod.length===0&&aVil.length>0) return{winner:'wolf',msg:'所有神職已被淘汰',icon:'🐺'};
   return null;
@@ -6663,7 +6887,7 @@ function jgDeclareBloodmoonWin(){
   const good=alive.filter(p=>!jgIsWolfPackMember(p));
   const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
   const gods=good.filter(p=>allGods.includes(p.role));
-  const vils=good.filter(p=>p.role==='villager'||p.role==='hybrid');
+  const vils=good.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
   const ok=wolves.length===1&&wolves[0].role==='bloodmoon'&&gods.length===1&&gods[0].role!=='knight'&&vils.length===1;
   if(!ok){ alert('⚠️ 場上狀態已經不符合「血月＋1神（非騎士）＋1民」的殘局條件，請照正常流程繼續走。'); return; }
   jgShowWin({winner:'wolf', msg:'血月殘局：場上僅剩血月＋'+jgFullRoleName(gods[0].role)+'＋1民，好人已無翻盤機會，法官直接公布狼人獲勝', icon:'🌑'});
@@ -6671,6 +6895,8 @@ function jgDeclareBloodmoonWin(){
 function jgShowWin(res){
   jgLastWinResult=res;
   const isGood=res.winner==='good';
+  const isThird=res.winner==='third';
+  const winTitle=isThird?'第三方勝利！':(isGood?'好人勝利！':'狼人勝利！');
   const allRows=jgPlayers.map(p=>{
     const role=p.role||'villager';
     return `<div class="row"><div class="av ${p.alive?AV[role]:'av-dead'}">${p.num}</div><div class="nm ${p.alive?'':'dead-nm'}">${p.name}</div><span class="badge ${BADGE[role]}">${jgRoleDisplayName(p)}</span></div>`;
@@ -6692,11 +6918,36 @@ function jgShowWin(res){
         +'<div class="info-warn" style="font-size:14px;">'+hyP.num+'號 混血兒 沒有選擇支持對象（或對象已不明），視同未跟到任何一邊。</div>';
     }
   }
+  // 邱比特／情侶：揭曉配對結果（人人鏈／狼狼鏈／人狼鏈）以及是否跟著獲勝
+  let cupidHtml='';
+  if(jgLovers&&jgLovers.length===2){
+    const cpP=jgPlayers.find(p=>p.role==='cupid');
+    const l1=jgFind(jgLovers[0]), l2=jgFind(jgLovers[1]);
+    const pairType=jgLoverPairType();
+    const pairLabel=pairType==='third'?'人狼鏈（獨立第三方）':(pairType==='wolf'?'狼狼鏈':(pairType==='good'?'人人鏈':'未知'));
+    let followMsg;
+    if(pairType==='third'){
+      followMsg=(res.winner==='third')?'第三方陣營跟著獲勝 🎉':'第三方陣營並未獲勝';
+    } else if(pairType==='wolf'){
+      followMsg=(res.winner==='wolf')?'情侶（狼狼鏈）跟著狼人陣營獲勝 🎉':'情侶（狼狼鏈）並未獲勝';
+    } else if(pairType==='good'){
+      followMsg=(res.winner==='good')?'情侶（人人鏈）跟著好人陣營獲勝 🎉':'情侶（人人鏈）並未獲勝';
+    } else {
+      followMsg='配對狀態不明，無法判定是否跟著獲勝。';
+    }
+    const bothAlive=l1&&l2&&l1.alive&&l2.alive;
+    const success=(pairType==='third'&&res.winner==='third')||(pairType==='wolf'&&res.winner==='wolf')||(pairType==='good'&&res.winner==='good');
+    cupidHtml='<div class="section-title" style="margin-top:16px;">💘 邱比特與情侶</div>'
+      +'<div class="'+(success?'info-success':'info-warn')+'" style="font-size:14px;">'
+      +(cpP?cpP.num+'號 邱比特　':'')
+      +'情侶：'+(l1?l1.num:jgLovers[0])+'號、'+(l2?l2.num:jgLovers[1])+'號（'+pairLabel+'，目前'+(bothAlive?'兩人皆存活':'至少一人已殉情出局')+'）<br>'+followMsg+'</div>';
+  }
   document.getElementById('jg-content').innerHTML=`
-    <div class="nbanner"><div class="nicon">${res.icon}</div><div class="ntitle">${isGood?'好人勝利！':'狼人勝利！'}</div><p class="sub" style="text-align:center;">${res.msg}</p></div>
+    <div class="nbanner"><div class="nicon">${res.icon}</div><div class="ntitle">${winTitle}</div><p class="sub" style="text-align:center;">${res.msg}</p></div>
     <div class="section-title">全體身分</div>
     <div class="card">${allRows}</div>
     ${hybridHtml}
+    ${cupidHtml}
     <div class="section-title" style="margin-top:16px;">勝負判定依據</div>
     <div class="win-bar">
       <div class="win-side win-wolf"><div class="win-count">${jgAlive().filter(p=>WOLF_ROLES.includes(p.role)).length}</div><div class="win-label">存活狼人</div></div>
@@ -6735,6 +6986,7 @@ const ALL_ROLES = {
   // Good - villager
   villager: {icon:'🧑‍🌾',name:'平民',  team:'good', teamLabel:'好人陣營', desc:'沒有特殊技能，靠發言與推理找出狼人。白天投票是唯一武器。'},
   hybrid:   {icon:'🧬', name:'混血兒', team:'good', teamLabel:'好人陣營（特殊）', desc:'<strong>選擇支持對象：</strong>第一晚睜眼選擇一位玩家作為支持對象（不能選自己），此後不再有夜間動作。<br><strong>勝利條件：</strong>與支持對象的勝利陣營相同，但混血兒自己不會被告知對方是好人還是狼人，需自行從發言判斷。<br><strong>對外表現：</strong>被預言家查驗永遠顯示為好人（金水）；在人數統計與「屠民」判定上視為一般平民——狼隊若要屠民，仍必須刀死混血兒，就算他其實支持狼隊也一樣。'},
+  cupid:    {icon:'💘', name:'邱比特', team:'good', teamLabel:'特殊（陣營依情侶配對而定）', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營；第三方需屠光除自己以外的好人與狼人才算獲勝，狼人與好人則要連同第三方一起屠光對方才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，死亡時原本的技能正常觸發（例如殉情者是獵人可以開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致視為空刀（建議討論時間約20秒）。'},
   // Good - gods
   seer:     {icon:'🔮', name:'預言家', team:'good', teamLabel:'神職', desc:'每晚查驗一名玩家，得知「好人」或「狼人」。<br>可以重複查驗已經查過的號碼；不能查驗已經死亡的號碼。'},
   witch:    {icon:'🧪', name:'女巫',   team:'good', teamLabel:'神職', desc:'<strong>解藥：</strong>救活當晚被狼殺的玩家（整局限一次）。<br><strong>毒藥：</strong>毒殺任意玩家（整局限一次）。<br>兩瓶藥沒有時間限制，整局中任何一晚都能使用；但同一晚只能擇一使用，不能同時用解藥又用毒藥，且不能自救。'},
@@ -6761,7 +7013,7 @@ const ALL_ROLES = {
 const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y'];
 const VIL_ROLES  = ['villager','hybrid'];
 const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
-const SPECIAL_ROLES = ['sheriff','luckyone'];
+const SPECIAL_ROLES = ['sheriff','luckyone','cupid'];
 
 // 單身分限定的「板子」預設：每個板子固定包含一組常見搭配的特殊角色（狼隊或神職），
 // 選定板子後，法官還能依人數自由調整基本角色：
@@ -6776,6 +7028,7 @@ const JG_BOARD_PRESETS = {
   magician_wolfking:       {label:'魔術師+黑/白狼王',     fixed:{magician:1}, wolfkingDefault:'wolfking'},
   hybrid_wolfking_bloodmoon:{label:'混血兒+黑/白狼王+血月', fixed:{hybrid:1, bloodmoon:1}, wolfkingDefault:'wolfking'},
   evilknight_guard:        {label:'惡靈騎士+守衛',   fixed:{evilknight:1, guard:1}},
+  cupid_board:             {label:'邱比特（情侶板，建議10或13人）', fixed:{cupid:1}},
 };
 // 板子的基本角色只開放這兩組：狼隊（不限一個，黑狼王／白狼王彈性二選一）、神職＋混血兒（各自最多一個）
 const JG_PRESET_WOLF_BASE=['wolf','wolfking','whitewolf'];
