@@ -594,7 +594,7 @@ select{
       <span class="rcol-arrow">▶</span>
     </div>
     <div class="rcol-body">
-      <span class="board-role">邱比特</span>：全場第一個睜眼的角色，第一夜指定兩名玩家（可以鏈自己）成為情侶；兩人隨後互相確認彼此，但不知道誰是邱比特、也不知道對方陣營。若兩人陣營相同（人人鏈／狼狼鏈），邱比特的勝負跟著那個陣營走；若一人好人一人狼人（人狼鏈），邱比特與這對情侶會獨立成為第三方陣營，勝負規則完全不同（見下方「勝利條件」）。情侶其中一人死亡，另一人會立刻殉情，殉情時原本的技能仍正常觸發。建議搭配 10 人（3神3民3狼+邱比特）或 13 人（4神4民4狼+邱比特）板子使用；本板狼隊刀人需刀型一致，不一致視為空刀。<br><span class="role-link" onclick="jumpToRole('cupid')">→ 查看邱比特完整規則</span>
+      <span class="board-role">邱比特</span>：全場第一個睜眼的角色，第一夜指定兩名玩家（可以鏈自己）成為情侶；兩人隨後互相確認彼此，但不知道誰是邱比特、也不知道對方陣營。若兩人陣營相同（人人鏈／狼狼鏈），邱比特的勝負跟著那個陣營走；若一人好人一人狼人（人狼鏈），邱比特與這對情侶會獨立成為第三方陣營，勝負規則完全不同（見下方「勝利條件」）。情侶其中一人死亡，另一人會立刻殉情，殉情者原本的技能不會發動。建議搭配 10 人（3神3民3狼+邱比特）或 13 人（4神4民4狼+邱比特）板子使用；本板狼隊刀人需刀型一致，不一致視為空刀。<br><span class="role-link" onclick="jumpToRole('cupid')">→ 查看邱比特完整規則</span>
     </div>
   </div>
   </div>
@@ -605,7 +605,7 @@ select{
   <div class="rules-h1">🏆 勝利條件</div>
   <div class="info-danger" style="margin-bottom:8px;">🐺 狼人勝利：存活狼人數 ≥ 存活好人數，或所有神職死亡，或所有平民死亡</div>
   <div class="info-success" style="margin-bottom:8px;">✓ 好人勝利：所有狼人被淘汰</div>
-  <div class="info" style="margin-bottom:8px;">💘 邱比特板（人狼鏈成立時）：邱比特＋情侶獨立成第三方陣營，三方勝負改為「屠光其餘兩方」——第三方需屠光好人與狼人；狼人需屠光好人與第三方；好人需屠光狼人與第三方，才算獲勝。若情侶是人人鏈或狼狼鏈，邱比特的勝負仍跟著好人／狼人原本的條件走，不受影響。</div>
+  <div class="info" style="margin-bottom:8px;">💘 邱比特板（人狼鏈成立時）：邱比特＋情侶獨立成第三方陣營（邱比特本人也永遠是第三方一員）。第三方需屠光其餘所有玩家（屠城）才算獲勝；若第三方存活人數與場上其餘存活人數相同，直接判定第三方獲勝。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝——不是只淘汰兩位情侶就算數。若情侶是人人鏈或狼狼鏈，邱比特的勝負跟著好人／狼人原本的條件走（狼狼鏈時，好人也必須連邱比特一起淘汰才算獲勝）。情侶殉情時不會觸發任何技能。</div>
   </div>
 
   <!-- 狼人陣營 -->
@@ -855,6 +855,19 @@ select{
     <div class="nicon">🧭</div>
     <h1>攻略參考</h1>
     <p class="sub" style="text-align:center;margin-top:8px;">不定期更新狼人殺攻略文章</p>
+  </div>
+
+  <div class="card" style="margin-bottom:14px;">
+    <h3 style="margin-bottom:10px;">🏷️ 標籤說明</h3>
+    <div class="info" style="margin-top:0;line-height:1.7;">
+      <strong>📖 一般攻略</strong>：就是一般的攻略，主要針對各角色或操作。
+    </div>
+    <div class="info-warn" style="line-height:1.7;">
+      <strong>🔎 Y向推理</strong>：可能會有 💥 暴雷，若不想被暴雷，請先到 YouTube 搜尋該集數，在資訊欄找到本集討論的場次，先看完該場次再看 Y向推理影片＆文字整理。
+    </div>
+    <div class="info-success" style="line-height:1.7;">
+      <strong>⭐ OCW</strong>：我看完覺得很精彩的場次，值得一看，可以直接到參考來源點選 YouTube 超連結收看。
+    </div>
   </div>
 
   <div id="guide-loading" class="empty">載入攻略中…</div>
@@ -3241,7 +3254,7 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>💘 情侶確認彼此</h2>
       <div class="speech">「<em>${n1}號、${n2}號請睜眼，互相確認彼此的身份，然後請閉眼。</em>」</div>
-      <div class="info" style="font-size:12px;margin-top:8px;">兩人只會知道對方是誰，不會知道誰是邱比特，也不會知道對方是好人陣營還是狼人陣營。之後若其中一人死亡，另一人會立刻跟著殉情，殉情時原本的技能正常觸發。</div>
+      <div class="info" style="font-size:12px;margin-top:8px;">兩人只會知道對方是誰，不會知道誰是邱比特，也不會知道對方是好人陣營還是狼人陣營。之後若其中一人死亡，另一人會立刻跟著殉情，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。</div>
       <button class="primary" onclick="jgSaveLoversWake()">兩人已閉眼，下一步 →</button>
     `,'💘 情侶');
   }
@@ -4265,13 +4278,13 @@ function jgRenderStep(step){
     }
     // 邱比特情侶殉情：上面這一整晚（狼刀／女巫毒／狼弟覺醒刀／機械狼／獵魔人夜擊／攝夢人…）
     // 任何一種死法，只要讓情侶其中一人死亡，另一人都要立刻跟著殉情死亡（不論死因為何）。
+    // 殉情死亡不會觸發任何技能——就算殉情者原本是獵人／黑狼王等具開槍資格的身分，也不能
+    // 開槍帶人，這裡只是單純把號碼加進死亡清單，不做任何連鎖開槍判斷。
     if(jgLovers&&jgLovers.length===2){
       const lv1=jgFind(jgLovers[0]), lv2=jgFind(jgLovers[1]);
       if(lv1&&lv2){
-        if(!lv1.alive&&lv2.alive){ lv2.alive=false; if(!deads.includes(lv2.num)) deads.push(lv2.num);
-          if(jgIsHunterCapable(lv2)) jgRecord._loverCascadeHunterAlert=lv2.num; }
-        else if(!lv2.alive&&lv1.alive){ lv1.alive=false; if(!deads.includes(lv1.num)) deads.push(lv1.num);
-          if(jgIsHunterCapable(lv1)) jgRecord._loverCascadeHunterAlert=lv1.num; }
+        if(!lv1.alive&&lv2.alive){ lv2.alive=false; if(!deads.includes(lv2.num)) deads.push(lv2.num); }
+        else if(!lv2.alive&&lv1.alive){ lv1.alive=false; if(!deads.includes(lv1.num)) deads.push(lv1.num); }
       }
     }
     // 上面幾個天亮連動死亡（獵魔人夜擊、攝夢人連續兩晚夢同一人致死、攝夢人陣亡連動夢遊對象死亡、
@@ -4295,12 +4308,6 @@ function jgRenderStep(step){
       jgRenderRoster();
       const lateWin=jgCheckWin();
       if(lateWin){ jgShowWin(lateWin); return; }
-    }
-    // 情侶殉情時，若跟著死掉的那一位剛好具有獵人開槍資格，這裡的批次死亡流程不會自動跳出
-    // 開槍畫面（避免與既有的夜槍／女巫毒等既有分支互相打架），提醒法官另外照獵人開槍規則處理。
-    if(jgRecord._loverCascadeHunterAlert){
-      alert('💘 情侶殉情：'+jgRecord._loverCascadeHunterAlert+'號 具有開槍資格，請照獵人開槍規則另外處理（此連鎖需法官手動主持開槍）。');
-      jgRecord._loverCascadeHunterAlert=null;
     }
 
     // Check if wolf-killed hunter can activate skill at dawn
@@ -4768,8 +4775,7 @@ function jgSaveDawnHunterShot(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          const loverP=jgFind(loverDeadNum);
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
         }
       }
       // 被夜槍／王槍帶走的對象，如果本身也具備獵人開槍資格（真獵人／已學得獵人的機械狼／
@@ -4846,8 +4852,7 @@ function jgSaveMechHunterChainShot(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          const loverP=jgFind(loverDeadNum);
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
         }
       }
       if(wbCharmNum2){
@@ -5171,7 +5176,9 @@ function jgLoverThirdPartyMembers(){
 }
 
 // 情侶殉情：其中一人以任何方式死亡（trulyDied=true，不是雙身分換牌）時，另一人立刻跟著
-// 殉情死亡，死亡時原本的技能正常觸發（呼叫端沿用既有的 jgHunterCapableTag／連鎖開槍機制）。
+// 殉情死亡。殉情死亡不會觸發任何技能（就算殉情者原本是獵人／黑狼王等具開槍資格的身分，
+// 也不能開槍帶人）——這裡只單純套用死亡，呼叫端只需要另外提醒法官「誰跟著殉情了」，
+// 不需要、也不應該接到任何連鎖開槍流程。
 // wasNum 是剛剛死亡那個人的號碼（string 或 number 皆可）。回傳跟著殉情的對象號碼（number），
 // 沒有觸發則回傳 null。
 function jgCascadeLoverDeath(wasNum, trulyDied){
@@ -5809,8 +5816,7 @@ function jgSaveLuckyoneHunterShot(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          const loverP=jgFind(loverDeadNum);
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
         }
       }
       let wbNote3='';
@@ -6521,8 +6527,7 @@ function jgSaveVoteInner(){
     // 邱比特情侶殉情：被投票出局的人如果是情侶其中一人，另一人立刻跟著殉情
     { const loverDeadNum=jgCascadeLoverDeath(found.num, trulyDied);
       if(loverDeadNum){
-        const loverP=jgFind(loverDeadNum);
-        alert('💘 '+found.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+        alert('💘 '+found.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
       }
     }
     // Record wolfbeauty charm kill if wolfbeauty was voted out
@@ -6575,8 +6580,7 @@ function jgSaveWolfKingShot(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          const loverP=jgFind(loverDeadNum);
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
         }
       }
       let wbNote4='';
@@ -6725,8 +6729,7 @@ function jgSaveHunter(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          const loverP=jgFind(loverDeadNum);
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！'+((loverP&&jgIsHunterCapable(loverP))?'\n⚠️ 該情侶具有開槍資格，請照獵人開槍規則另外處理。':''));
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
         }
       }
       let wbNote5='';
@@ -7009,7 +7012,7 @@ const ALL_ROLES = {
   // Good - villager
   villager: {icon:'🧑‍🌾',name:'平民',  team:'good', teamLabel:'好人陣營', desc:'沒有特殊技能，靠發言與推理找出狼人。白天投票是唯一武器。'},
   hybrid:   {icon:'🧬', name:'混血兒', team:'good', teamLabel:'好人陣營（特殊）', desc:'<strong>選擇支持對象：</strong>第一晚睜眼選擇一位玩家作為支持對象（不能選自己），此後不再有夜間動作。<br><strong>勝利條件：</strong>與支持對象的勝利陣營相同，但混血兒自己不會被告知對方是好人還是狼人，需自行從發言判斷。<br><strong>對外表現：</strong>被預言家查驗永遠顯示為好人（金水）；在人數統計與「屠民」判定上視為一般平民——狼隊若要屠民，仍必須刀死混血兒，就算他其實支持狼隊也一樣。'},
-  cupid:    {icon:'💘', name:'邱比特', team:'good', teamLabel:'特殊（陣營依情侶配對而定）', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營；第三方需屠光除自己以外的好人與狼人才算獲勝，狼人與好人則要連同第三方一起屠光對方才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，死亡時原本的技能正常觸發（例如殉情者是獵人可以開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致視為空刀（建議討論時間約20秒）。'},
+  cupid:    {icon:'💘', name:'邱比特', team:'good', teamLabel:'特殊（陣營依情侶配對而定，不屬於神職也不屬於平民）', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>查驗：</strong>被預言家查驗永遠顯示為好人（金水）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同——但邱比特永遠不會帶狼刀、不參與狼人殺人決策，好人陣營要獲勝，除了原本的條件，也必須連邱比特一起淘汰。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營，邱比特本人也永遠是第三方一員。第三方需屠光除自己以外的所有玩家才算獲勝；若第三方存活人數與場上其餘存活人數相同，直接判定第三方獲勝。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致則當晚強制變成平安夜（建議討論時間約20秒）。'},
   // Good - gods
   seer:     {icon:'🔮', name:'預言家', team:'good', teamLabel:'神職', desc:'每晚查驗一名玩家，得知「好人」或「狼人」。<br>可以重複查驗已經查過的號碼；不能查驗已經死亡的號碼。'},
   witch:    {icon:'🧪', name:'女巫',   team:'good', teamLabel:'神職', desc:'<strong>解藥：</strong>救活當晚被狼殺的玩家（整局限一次）。<br><strong>毒藥：</strong>毒殺任意玩家（整局限一次）。<br>兩瓶藥沒有時間限制，整局中任何一晚都能使用；但同一晚只能擇一使用，不能同時用解藥又用毒藥，且不能自救。'},
