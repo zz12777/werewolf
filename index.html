@@ -3507,14 +3507,12 @@ function jgRenderStep(step){
     const cur2=(jgLovers&&jgLovers[1])||'';
     jgShowPg(`
       <h2>💘 邱比特睜眼</h2>
-      <div class="speech">「<em>邱比特請睜眼，這是全場第一個睜眼的角色。今晚要指定哪兩位玩家成為情侶？</em>」</div>
+      <div class="speech">「<em>邱比特請睜眼。今晚要指定哪兩位玩家成為情侶？</em>」</div>
       ${idHtml}
       <label style="margin-top:12px;">情侶 A（可以是邱比特自己）</label>
       ${jgNumSelectHtml('jg-cupid-target1', cur1)}
       <label style="margin-top:12px;">情侶 B</label>
       ${jgNumSelectHtml('jg-cupid-target2', cur2)}
-      <div class="info" style="font-size:12px;margin-top:8px;">情侶不會被告知誰是邱比特，也不會知道對方的陣營（好人／狼人）。若兩人陣營相同（人人鏈／狼狼鏈），邱比特的勝負跟著這個陣營走；若一人好人一人狼人（人狼鏈），邱比特與這對情侶會獨立成為第三方陣營。此步驟整局僅此一次。</div>
-      <div class="speech" style="margin-top:10px;">「<em>邱比特請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveCupid()">已紀錄，下一步 →</button>
     `,'💘 邱比特');
   }
@@ -3543,8 +3541,7 @@ function jgRenderStep(step){
     const n2=l2?l2.num:(jgLovers?jgLovers[1]:'?');
     jgShowPg(`
       <h2>💘 情侶確認彼此</h2>
-      <div class="speech">「<em>${n1}號、${n2}號請睜眼，互相確認彼此的身份，然後請閉眼。</em>」</div>
-      <div class="info" style="font-size:12px;margin-top:8px;">兩人只會知道對方是誰，不會知道誰是邱比特，也不會知道對方是好人陣營還是狼人陣營。之後若其中一人死亡，另一人會立刻跟著殉情，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。</div>
+      <div class="speech">「情侶請睜眼，互相確認彼此的身份，然後請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveLoversWake()">兩人已閉眼，下一步 →</button>
     `,'💘 情侶');
   }
