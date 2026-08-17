@@ -388,6 +388,7 @@ h1{font-size:26px;font-weight:800;letter-spacing:-0.5px;}
 .chip{font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px;background:var(--bg3);color:var(--text2);}
 .chip.evil{background:rgba(184,56,40,0.1);color:#922418;}
 .chip.good{background:rgba(58,122,42,0.1);color:#2a601c;}
+.chip.third{background:rgba(194,59,122,0.1);color:#8f2a5e;}
 .chip.clickable{cursor:pointer;-webkit-user-select:none;user-select:none;border:1px solid transparent;}
 .chip.clickable.active{border-color:currentColor;}
 
@@ -817,7 +818,7 @@ select{
 <!-- 即時票型紀錄（公開，任何人打開這個頁面都看得到；資料來自法官端同步過去的 Google 試算表） -->
 <div class="card" style="margin:16px 0;">
   <div class="section-title">📡 即時票型紀錄</div>
-  <div class="info" style="font-size:12px;">法官記完一輪投票會自動同步到這裡，畫面每幾秒會自動更新；只顯示今天最新一場的票型，不會列出以前的場次。</div>
+  <div class="info" style="font-size:12px;">法官記完一輪投票會自動同步到這裡，畫面每幾秒會自動更新，若還沒出來請等他一下或問法官，法官告訴你票型；</div>
   <div id="jg-live-session-view" style="margin-top:10px;"></div>
 </div>
 
@@ -854,6 +855,7 @@ select{
       <div class="pd-seg" id="pd-seg">
         <button type="button" class="pd-seg-btn active" id="pd-sort-simple" onclick="pdSetSortMode('simple')">簡單勝率</button>
         <button type="button" class="pd-seg-btn" id="pd-sort-bayes" onclick="pdSetSortMode('bayes')">Bayesian Score</button>
+        <button type="button" class="pd-seg-btn" id="pd-sort-points" onclick="pdSetSortMode('points')">積分</button>
       </div>
     </div>
   </div>
@@ -1226,7 +1228,7 @@ function jgExportGameLog(){
       jgDayLog[n].forEach(l=>{ out+='>'+l+'\n'; });
     }
   });
-  const resultLabel=jgLastWinResult?(jgLastWinResult.winner==='good'?'好人陣營獲勝':'邪惡陣營獲勝'):'遊戲結束';
+  const resultLabel=jgLastWinResult?(jgLastWinResult.winner==='good'?'好人陣營獲勝':(jgLastWinResult.winner==='third'?'第三方獲勝':'邪惡陣營獲勝')):'遊戲結束';
   out+='====='+resultLabel+'=====';
   return out;
 }
@@ -1434,7 +1436,7 @@ function jgFormatNightLog(){
   }
   // 邱比特是整局第一個睜眼的角色（僅第一夜），配對結果只記錄這一次
   if(jgNight===1 && jgCupidChosen && jgLovers && jgLovers.length===2){
-    lines.push('配 '+jgLovers.join('-'));
+    lines.push('邱 '+jgLovers.join('-'));
   }
   const guardP=jgPlayers.find(p=>p.role==='guard');
   const mwP=jgPlayers.find(p=>p.role==='mechanicalwolf');
@@ -3360,6 +3362,7 @@ const THIEF_BURIED_STEP_INFO={
   hunter:         {step:'hunter-wake',         next:()=>jgNextGodStep('hunter-wake')},
   knight:         {step:'knight-wake',         next:()=>jgNextGodStep('knight-wake')},
   demonhunter:    {step:'demonhunter-wake',    next:()=>jgNextGodStep('demonhunter-wake')},
+  fool:           {step:'fool-wake',           next:()=>jgNextGodStep('fool-wake')},
 };
 
 function jgRenderStep(step){
@@ -3513,6 +3516,7 @@ function jgRenderStep(step){
       ${jgNumSelectHtml('jg-cupid-target1', cur1)}
       <label style="margin-top:12px;">情侶 B</label>
       ${jgNumSelectHtml('jg-cupid-target2', cur2)}
+      <div class="speech" style="margin-top:10px;">「<em>邱比特請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveCupid()">已紀錄，下一步 →</button>
     `,'💘 邱比特');
   }
@@ -3541,7 +3545,9 @@ function jgRenderStep(step){
     const n2=l2?l2.num:(jgLovers?jgLovers[1]:'?');
     jgShowPg(`
       <h2>💘 情侶確認彼此</h2>
-      <div class="speech">「情侶請睜眼，互相確認彼此的身份，然後請閉眼。</em>」</div>
+      <div class="speech">「<em>被拍到的兩位為情侶，先不要睜眼。</em>」</div>
+      <div class="info-warn" style="font-size:13px;">📋 法官需走一圈拍情侶（輕拍 ${n1}號、${n2}號 兩人示意），確認兩人都被拍到後再繼續</div>
+      <div class="speech" style="margin-top:10px;">「<em>情侶請睜眼，互相確認彼此的身份，不能溝通，情侶請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveLoversWake()">兩人已閉眼，下一步 →</button>
     `,'💘 情侶');
   }
@@ -4196,6 +4202,21 @@ function jgRenderStep(step){
       <div class="speech" style="margin-top:10px;">「<em>騎士請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveSimpleGod('knight','knight-wake')">下一步 →</button>
     `,'⚔️ 騎士');
+  }
+  else if(step==='fool-wake'){
+    const isFirst=jgIsFirstNight();
+    const flP=jgPlayers.find(p=>p.role==='fool');
+    let idHtml=jgGodIdHtml('fool',flP);
+    const dead=flP&&!flP.alive;
+    jgShowPg(`
+      <h2>傻瓜睜眼</h2>
+      ${dead?'<div class="info-warn">傻瓜已出局，仍需走完流程</div>':''}
+      <div class="speech">「<em>傻瓜請睜眼。</em>」</div>
+      ${idHtml}
+      <div class="info" style="font-size:13px;">僅第一晚睜眼供法官紀錄號碼，今晚無動作，之後每晚都不用再睜眼。</div>
+      <div class="speech" style="margin-top:10px;">「<em>傻瓜請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveSimpleGod('fool','fool-wake')">下一步 →</button>
+    `,'🃏 傻瓜');
   }
   else if(step==='magician-wake'){
     const isFirst=jgIsFirstNight();
@@ -5203,7 +5224,7 @@ function jgIdFieldHtml(rn, existingP, whoId, nameId, onChangeFn){
 
 function jgGodIdHtml(roleId,existingP){
   if(jgNight!==1) return '';
-  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊'};
+  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜'};
   const rn=RZHMAP[roleId]||roleId;
   return jgIdFieldHtml(rn, existingP, 'jg-god-who-'+roleId, 'jg-god-name-'+roleId);
 }
@@ -5224,7 +5245,7 @@ function jgRequireFirstId(elId, label){
 
 function jgSaveGodId(roleId){
   if(jgNight!==1) return true;
-  const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊'};
+  const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜'};
   if(!jgRequireFirstId('jg-god-who-'+roleId, RZHMAP2[roleId]||roleId)) return false;
   const whoNum=parseInt((document.getElementById('jg-god-who-'+roleId)||{}).value||'0');
   const name=(document.getElementById('jg-god-name-'+roleId)||{}).value?.trim()||'';
@@ -6577,7 +6598,7 @@ function jgHasRoleAny(roles){ return roles.some(r=>jgPlayers.some(p=>p.role===r)
 // 被埋掉的版本比照辦理，只在第一夜代喊一次，之後不再出現。
 function jgThiefBuriedActiveTonight(roleId){
   if(!jgThiefChosen||jgThiefBuriedRole!==roleId) return false;
-  const nightOneOnly=['cupid','hybrid','knight'];
+  const nightOneOnly=['cupid','hybrid','knight','fool'];
   if(nightOneOnly.includes(roleId)) return jgNight===1;
   return true;
 }
@@ -6780,6 +6801,7 @@ const GOD_CHAIN=[
   {step:'hunter-wake',      role:'hunter',       check:(n,c)=>(n===1?(c.hunter>0):jgHasRoleAny(['hunter']))||jgMechWolfHunterActive()||jgThiefBuriedActiveTonight('hunter')},
   {step:'knight-wake',      role:'knight',       check:(n,c)=>(n===1&&c.knight>0)||jgThiefBuriedActiveTonight('knight')},
   {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>(n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter']))||jgThiefBuriedActiveTonight('demonhunter')},
+  {step:'fool-wake',        role:'fool',         check:(n,c)=>(n===1&&c.fool>0)||jgThiefBuriedActiveTonight('fool')},
 ];
 // 黑市商人已移到狼人（含狼美人）睜眼之後、女巫之前——見 jgBlackMarketPending / jgNextWolfStep / jgNextAfterSubWolf
 function jgBlackMarketPending(){
@@ -7585,6 +7607,7 @@ function jgShowWin(res){
     const l1=jgFind(jgLovers[0]), l2=jgFind(jgLovers[1]);
     const pairType=jgLoverPairType();
     const pairLabel=pairType==='third'?'人狼鏈（獨立第三方）':(pairType==='wolf'?'狼狼鏈':(pairType==='good'?'人人鏈':'未知'));
+    const pairArrowLabel=pairType==='third'?'獨立第三方':(pairType==='wolf'?'邪惡陣營':(pairType==='good'?'好人陣營':'未知'));
     let followMsg;
     if(pairType==='third'){
       followMsg=(res.winner==='third')?'第三方陣營跟著獲勝 🎉':'第三方陣營並未獲勝';
@@ -7599,8 +7622,8 @@ function jgShowWin(res){
     const success=(pairType==='third'&&res.winner==='third')||(pairType==='wolf'&&res.winner==='wolf')||(pairType==='good'&&res.winner==='good');
     cupidHtml='<div class="section-title" style="margin-top:16px;">💘 邱比特與情侶</div>'
       +'<div class="'+(success?'info-success':'info-warn')+'" style="font-size:14px;">'
-      +(cpP?cpP.num+'號 邱比特　':'')
-      +'情侶：'+(l1?l1.num:jgLovers[0])+'號、'+(l2?l2.num:jgLovers[1])+'號（'+pairLabel+'，目前'+(bothAlive?'兩人皆存活':'至少一人已殉情出局')+'）<br>'+followMsg+'</div>';
+      +'【邱比特: '+(cpP?cpP.num:'?')+'號、情侶: '+(l1?l1.num:jgLovers[0])+'號、'+(l2?l2.num:jgLovers[1])+'號 -> '+pairArrowLabel+'】'
+      +'（目前'+(bothAlive?'兩人皆存活':'至少一人已殉情出局')+'）<br>'+followMsg+'</div>';
   }
   // 盜賊：遊戲結束時揭曉最終選擇與被埋掉的身分
   let thiefHtml='';
@@ -9143,7 +9166,7 @@ function pdCloudGameFromRow(cols){
     return {
       id, date, board,
       resultText: unclear ? '不記勝敗' : resultTextRaw,
-      winner: unclear ? null : (winnerRaw==='evil'?'evil':'good'),
+      winner: unclear ? null : (winnerRaw==='evil'?'evil':(winnerRaw==='third'?'third':'good')),
       unclear,
       time: time||undefined,
       players: JSON.parse(playersJson),
@@ -9181,16 +9204,19 @@ function pdSubmitGameRecord(){
   const id=mmdd+'_'+jgGameCount;
   const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const players=[];
+  const thirdPartyNums=jgLoverThirdPartyMembers(); // 人狼鏈成立時才有值：兩位情侶＋邱比特的座號清單
   for(let i=1;i<=jgTotal;i++){
     const p=jgByNum(i);
     if(!p) continue;
-    players.push({num:i, name:jgPlayerNames[i]||p.name, role:jgRoleDisplayName(p)});
+    const entry={num:i, name:jgPlayerNames[i]||p.name, role:jgRoleDisplayName(p)};
+    if(thirdPartyNums.includes(i.toString())) entry.third=true; // 標記這場「成為過第三方」，跟輸贏無關
+    players.push(entry);
   }
   const fullLog=jgExportGameLog();
   const cut=fullLog.indexOf('**夜晚');
   const log=cut>=0?fullLog.slice(cut):fullLog;
-  const winner=jgLastWinResult.winner==='good'?'good':'evil';
-  const resultText=winner==='good'?'好人陣營獲勝':'邪惡陣營獲勝';
+  const winner=jgLastWinResult.winner==='good'?'good':(jgLastWinResult.winner==='third'?'third':'evil');
+  const resultText=winner==='good'?'好人陣營獲勝':(winner==='third'?'第三方獲勝':'邪惡陣營獲勝');
   const body=new URLSearchParams();
   body.append(PD_FORM_ENTRIES.id, id);
   body.append(PD_FORM_ENTRIES.date, iso);
@@ -9215,6 +9241,7 @@ function pdSetSortMode(mode){
   PD_SORT_MODE=mode;
   document.getElementById('pd-sort-simple').classList.toggle('active', mode==='simple');
   document.getElementById('pd-sort-bayes').classList.toggle('active', mode==='bayes');
+  document.getElementById('pd-sort-points').classList.toggle('active', mode==='points');
   pdRebuildAndRender();
 }
 
@@ -9252,20 +9279,30 @@ function pdRebuildAndRender(){
 
   const players={};
   function getP(name){
-    if(!players[name]) players[name]={name,games:0,wins:0,unclearGames:0,roleCounts:{},camp:{good:0,evil:0},campWins:{good:0,evil:0},history:[]};
+    if(!players[name]) players[name]={name,games:0,wins:0,unclearGames:0,thirdGames:0,thirdWins:0,points:0,totalGames:0,roleCounts:{},camp:{good:0,evil:0},campWins:{good:0,evil:0},history:[]};
     return players[name];
   }
   GAMES.forEach(g=>{
     g.players.forEach(pl=>{
       const p=getP(pl.name);
       const roleDisp=pdDisplayRole(pl.role);
+      p.totalGames++;
       let result='unclear', camp=null;
       if(!g.unclear){
-        camp=classify(roleDisp);
-        result = (camp===g.winner) ? 'win':'lose';
-        p.games++;
-        p.camp[camp]++;
-        if(result==='win'){ p.wins++; p.campWins[camp]++; }
+        if(pl.third){
+          // 這場配成人狼鏈、成為第三方陣營一員：勝負跟著第三方走，不算進原本陣營的好人/邪惡勝率，
+          // 免得該局明明是靠第三方輸贏，卻被誤記到玩家原本身分（例如狼人、平民）的陣營戰績裡。
+          camp='third';
+          result=(g.winner==='third')?'win':'lose';
+          p.thirdGames++;
+          if(result==='win'){ p.thirdWins++; p.points+=3; } // 基本1分 + 第三方加成2分
+        } else {
+          camp=classify(roleDisp);
+          result = (camp===g.winner) ? 'win':'lose';
+          p.games++;
+          p.camp[camp]++;
+          if(result==='win'){ p.wins++; p.campWins[camp]++; p.points+=1; }
+        }
       } else {
         p.unclearGames++;
       }
@@ -9300,6 +9337,10 @@ function pdRebuildAndRender(){
       if(b.bayesScore!==a.bayesScore) return b.bayesScore-a.bayesScore;
       return b.games-a.games;
     }
+    if(PD_SORT_MODE==='points'){
+      if(b.points!==a.points) return b.points-a.points;
+      return b.games-a.games;
+    }
     const wa=a.games?a.wins/a.games:0, wb=b.games?b.wins/b.games:0;
     if(wb!==wa) return wb-wa;
     return b.games-a.games;
@@ -9307,8 +9348,8 @@ function pdRebuildAndRender(){
   // 場次太少（少於全站總場次的十分之一）的玩家，勝率參考價值不高（一兩場全勝/全輸就能把
   // 排名衝到很前面），所以還是照樣顯示勝率跟對局紀錄，但不排進正式名次，統一放到排行榜最下面。
   const pdRankThreshold=GAMES.length/10;
-  const pdRankedList=playerList.filter(p=>p.games>=pdRankThreshold);
-  const pdUnrankedList=playerList.filter(p=>p.games<pdRankThreshold);
+  const pdRankedList=playerList.filter(p=>p.totalGames>=pdRankThreshold);
+  const pdUnrankedList=playerList.filter(p=>p.totalGames<pdRankThreshold);
 
   // ── 總覽 ──
   document.getElementById('ov-games').textContent=GAMES.length;
@@ -9328,6 +9369,13 @@ function pdRebuildAndRender(){
     formulaBox.innerHTML=`
       <b>簡單勝率</b>：直接用「勝場 ÷ 總場數」排序。勝率相同時則場次多者排前面。
       <code>勝率 ＝ 勝場數 ／ 總場數</code>`;
+  } else if(PD_SORT_MODE==='points'){
+    formulaBox.innerHTML=`
+      <b>積分</b>：改用「累積分數」排序，不受場次多寡稀釋，用來額外肯定「成為第三方並獲勝」這種機率極低、光看勝率看不出來的成就。分數相同時則場次多者排前面。
+      <code>每贏一場好人／邪惡陣營　＝　1 分
+每贏一場第三方陣營（人狼鏈成立且第三方獲勝）　＝　3 分（基本 1 分 ＋ 第三方加成 2 分）
+輸的場次　＝　0 分</code>
+      注意：積分是「累積總分」，不是平均值，打得越多、贏得越多分數自然越高，適合看「這個人整體貢獻／成就」，不適合拿來跟簡單勝率／Bayesian Score 這種「比率」類指標直接比較高低。`;
   } else {
     formulaBox.innerHTML=`
       <b>Bayesian Score</b>：把「場次多寡」也算進去，場次太少時分數會被拉回陣營平均值，場次越多就越接近真實勝率。
@@ -9357,8 +9405,8 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
     const isRanked=i<pdRankedList.length;
     const wr=p.games?Math.round(p.wins/p.games*100):0;
     const bayesPct=Math.round(p.bayesScore*100);
-    const scoreLabel=PD_SORT_MODE==='bayes'?'Bayesian Score':'勝率';
-    const scoreVal=p.games?(PD_SORT_MODE==='bayes'?bayesPct+'%':wr+'%'):'–';
+    const scoreLabel=PD_SORT_MODE==='bayes'?'Bayesian Score':(PD_SORT_MODE==='points'?'積分':'勝率');
+    const scoreVal=PD_SORT_MODE==='points'?(p.points+' 分'):(p.games?(PD_SORT_MODE==='bayes'?bayesPct+'%':wr+'%'):'–');
     const topRoles=Object.entries(p.roleCounts).sort((a,b)=>b[1]-a[1])
       .map(([r,c])=>`<span class="chip">${r} ×${c}</span>`).join('');
     const histSorted=[...p.history].sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
@@ -9388,6 +9436,7 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
       <div class="chip-row">
         <span class="chip good">好人 ${p.camp.good} 場・${p.camp.good?Math.round(p.campWins.good/p.camp.good*100):0}% 勝率</span>
         <span class="chip evil">邪惡 ${p.camp.evil} 場・${p.camp.evil?Math.round(p.campWins.evil/p.camp.evil*100):0}% 勝率</span>
+        ${p.thirdGames?`<span class="chip third" title="人狼鏈成立、成為第三方陣營的場次；分母是「成為第三方」的總場次，跟輸贏無關">💘 第三方 ${p.thirdGames} 場・${Math.round(p.thirdWins/p.thirdGames*100)}% 勝率</span>`:''}
         ${p.unclearGames?`<span class="chip">和局 ${p.unclearGames} 場</span>`:''}
       </div>
       <div class="chip-row">${topRoles}</div>
@@ -9537,7 +9586,14 @@ function awTopTiers(dict, maxTiers){
 }
 
 function computeAwards(){
-  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={};
+  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={}, thirdPartyWins={};
+
+  // 💘 邱比特傳說：人狼鏈成立、成為第三方陣營，且該局第三方獲勝——不需要解析 g.log，
+  // 直接看送出紀錄時標記在 g.players[].third 上的旗標（見 pdSubmitGameRecord）即可。
+  (GAMES||[]).forEach(g=>{
+    if(!g.players||g.winner!=='third') return;
+    g.players.forEach(pl=>{ if(pl.third) awAddCredit(thirdPartyWins, pl.name, g.id); });
+  });
 
   (GAMES||[]).forEach(g=>{
     if(!g.players||!g.log) return;
@@ -9596,6 +9652,8 @@ function computeAwards(){
       note:'【守到狼刀】:逐晚比對「守X」與「刀X」，號碼相同才算守到刀口。'},
     {icon:'🤐',title:'抿女巫專家',top:awTopTiers(minWitchCredit),
       note:'【首刀女巫】:女巫首夜被狼刀，該局所有見面狼隊友（不含機械狼）都算1次。'},
+    {icon:'💘',title:'邱比特傳說',top:awTopTiers(thirdPartyWins),
+      note:'【第三方獲勝】:邱比特與情侶配成人狼鏈、獨立成第三方陣營，該局由第三方獲勝時，三人都算1次。'},
   ];
 }
 
