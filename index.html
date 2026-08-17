@@ -437,19 +437,19 @@ select{
 .empty{text-align:center;color:var(--text3);font-size:13px;padding:24px 0;}
 
 /* ── 盜賊候選身分大字報：左右兩張卡牌，點擊挑選、動畫收合 ── */
-.jg-thief-cards-wrap{display:flex;gap:4vw;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;}
-.jg-thief-card{width:34vw;max-width:180px;max-height:34vh;border:3px solid rgba(255,255,255,0.65);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 6px;background:rgba(255,255,255,0.04);cursor:pointer;transition:transform 0.45s cubic-bezier(.22,.8,.32,1),opacity 0.4s ease,filter 0.4s ease,flex-basis 0.45s ease,width 0.45s ease,margin 0.45s ease,border-width 0.3s ease;flex:0 0 auto;box-sizing:border-box;}
-.jg-thief-card .jg-tc-num{font-size:clamp(13px,3.2vw,18px);opacity:0.55;font-weight:800;}
-.jg-thief-card .jg-tc-icon{font-size:clamp(38px,9vw,64px);max-width:100%;margin:4px 0;line-height:1;}
-.jg-thief-card .jg-tc-name{font-size:clamp(17px,4.6vw,26px);font-weight:900;word-break:break-word;}
-.jg-thief-card.picked{transform:scale(1.1);border-color:#ffd166;box-shadow:0 0 20px rgba(255,209,102,0.35);}
+.jg-thief-cards-wrap{display:flex;gap:5vw;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;}
+.jg-thief-card{width:44vw;max-width:300px;max-height:48vh;border:3px solid rgba(255,255,255,0.65);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 8px;background:rgba(255,255,255,0.04);cursor:pointer;transition:transform 0.45s cubic-bezier(.22,.8,.32,1),opacity 0.4s ease,filter 0.4s ease,flex-basis 0.45s ease,width 0.45s ease,margin 0.45s ease,border-width 0.3s ease;flex:0 0 auto;box-sizing:border-box;}
+.jg-thief-card .jg-tc-num{font-size:clamp(16px,4vw,26px);opacity:0.55;font-weight:800;}
+.jg-thief-card .jg-tc-icon{font-size:clamp(56px,15vw,120px);max-width:100%;margin:8px 0;line-height:1;}
+.jg-thief-card .jg-tc-name{font-size:clamp(24px,7vw,42px);font-weight:900;word-break:break-word;}
+.jg-thief-card.picked{transform:scale(1.08);border-color:#ffd166;box-shadow:0 0 24px rgba(255,209,102,0.35);}
 .jg-thief-card.faded{transform:scale(0.6);opacity:0;width:0;max-width:0;min-height:0;padding:0;margin:0;border-width:0;pointer-events:none;overflow:hidden;}
 .jg-thief-card.jtc-disabled{opacity:0.32;filter:grayscale(1);cursor:default;}
-.jg-thief-bigcard-bottom{margin-top:16px;min-height:1px;}
-.jg-thief-bigcard-bottom .jtc-picked-label{font-size:clamp(15px,4vw,22px);color:#ffd166;font-weight:800;}
-.jg-thief-bigcard-bottom .jtc-forced-warn{font-size:clamp(13px,3.2vw,17px);color:#ff7a7a;font-weight:700;}
-.jg-thief-bigcard-bottom .jtc-btn-row{display:flex;gap:12px;margin-top:14px;justify-content:center;}
-.jg-thief-bigcard-bottom .jtc-btn-row button{width:auto;margin:0;padding:11px 20px;font-size:14px;border-radius:12px;}
+.jg-thief-bigcard-bottom{margin-top:20px;min-height:1px;}
+.jg-thief-bigcard-bottom .jtc-picked-label{font-size:clamp(18px,5vw,28px);color:#ffd166;font-weight:800;}
+.jg-thief-bigcard-bottom .jtc-forced-warn{font-size:clamp(15px,3.6vw,20px);color:#ff7a7a;font-weight:700;}
+.jg-thief-bigcard-bottom .jtc-btn-row{display:flex;gap:14px;margin-top:16px;justify-content:center;}
+.jg-thief-bigcard-bottom .jtc-btn-row button{width:auto;margin:0;padding:13px 24px;font-size:16px;border-radius:12px;}
 
 </style>
 </head>
@@ -741,6 +741,7 @@ select{
       <option value="hybrid_wolfking_bloodmoon">混血兒+黑/白狼王+血月</option>
       <option value="evilknight_guard">惡靈騎士+守衛</option>
       <option value="cupid_board">邱比特（建議10或13人）</option>
+      <option value="cupid_thief_board">邱比特+盜賊（不含傻瓜）</option>
       <option value="thief_board">盜賊</option>
       <option value="thief_cupid_board">盜賊+邱比特+傻瓜（建議12人警長局）</option>
     </select>
@@ -748,6 +749,14 @@ select{
   <div class="info" id="jg-comp-desc" style="text-align:center;font-size:13px;margin-bottom:4px;"></div>
   <div id="jg-role-picker"></div>
   <div id="jg-preset-picker" style="display:none;"></div>
+  <div id="jg-fool-mode-row" style="display:none;margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">🃏 傻瓜規則</div>
+    <div class="pd-seg" id="jg-fool-mode-seg">
+      <button type="button" class="pd-seg-btn" id="jg-fool-mode-chase" onclick="jgSetFoolChaseMode('chase')">要追刀</button>
+      <button type="button" class="pd-seg-btn" id="jg-fool-mode-nochase" onclick="jgSetFoolChaseMode('nochase')">不需追刀</button>
+    </div>
+    <div class="info" id="jg-fool-mode-desc" style="font-size:12px;margin-top:8px;"></div>
+  </div>
   <div class="big-section-title">警長設定（選填）</div>
   <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:0;padding:14px 16px;border-radius:12px;border:2px solid var(--accent,#2e7d32);background:rgba(46,125,50,0.08);cursor:pointer;transition:background .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
     <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
@@ -1361,6 +1370,12 @@ function jgHunterCapableTag(role, num){
 // learned 獵人), since both use the exact same wolf-kill/guard/poison rules to decide the gesture.
 function jgBuildHunterStatusHtml(p){
   if(!p) return '';
+  if(p.diedByCascade){
+    // 情侶殉情死亡：殉情不會觸發任何技能（即使殉情者是獵人），要照 THIEF_BURIED_STEP_INFO
+    // 同一套精神走完流程，但手勢要誠實顯示「倒讚」，不能套用一般「已出局」預設的比讚。
+    return '<div class="info-warn">已因情侶殉情出局，技能不會發動，仍需走完流程避免洩露身分</div>'
+      +'<div class="speech">「<em>你的技能使用狀況是 👎</em>」</div>';
+  }
   const gsKill=jgRecord.guardTarget&&jgRecord.wolfKill&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
   const mgsKill=jgRecord.mechWolfGuardTarget&&jgRecord.wolfKill&&(jgRecord.mechWolfGuardTarget.toString()===jgRecord.wolfKill.toString());
   const wsKill=jgRecord.witchSave;
@@ -1720,6 +1735,29 @@ function jgUpdateComp(){
     if(presetEl) presetEl.style.display='none';
     renderRolePicker('jg-role-picker', jgRolePick, target, null);
   }
+  jgRenderFoolModeUI();
+}
+
+// 傻瓜規則切換（要追刀／不需追刀）：只有這場板子有選傻瓜時才顯示這個切換鈕；
+// 選擇會存進 jgFoolChaseMode，實際規則差異見 jgAllGodsForWin() 與投票出局判定那裡的判斷。
+function jgSetFoolChaseMode(mode){
+  jgFoolChaseMode=mode;
+  jgRenderFoolModeUI();
+}
+function jgRenderFoolModeUI(){
+  const row=document.getElementById('jg-fool-mode-row');
+  if(!row) return;
+  const hasFool=(jgRolePick.fool||0)>0;
+  row.style.display=hasFool?'':'none';
+  if(!hasFool) return;
+  const chaseBtn=document.getElementById('jg-fool-mode-chase');
+  const nochaseBtn=document.getElementById('jg-fool-mode-nochase');
+  if(chaseBtn) chaseBtn.classList.toggle('active', jgFoolChaseMode==='chase');
+  if(nochaseBtn) nochaseBtn.classList.toggle('active', jgFoolChaseMode==='nochase');
+  const desc=document.getElementById('jg-fool-mode-desc');
+  if(desc) desc.textContent = jgFoolChaseMode==='chase'
+    ? '傻瓜被放逐後可翻牌免死、留場發言但不能再投票；狼隊「屠神」時必須在夜裡額外補刀殺死傻瓜才算數。'
+    : '傻瓜被放逐時直接出局，沒有翻牌留場的機制；狼隊「屠神」不需要另外刀死傻瓜。';
 }
 
 // ── 玩家名單設定：讓法官在開局前先指定每個號碼是誰 ──
@@ -3037,6 +3075,9 @@ function jgComputeSpeakStart(){
 
 function jgRenderRoster(){
   jgCheckSheriffDeath();
+  // 遊戲結束畫面（jgShowWin）會把玩家狀態面板藏起來；如果法官事後按「上一步」回到還在
+  // 進行中的步驟，這裡要記得把面板重新顯示回來，不然「玩家狀態」欄位會整個消失不見。
+  const rw=document.getElementById('jg-roster-wrap'); if(rw) rw.style.display='';
   const el=document.getElementById('jg-roster');
   if(!el){ jgRenderVoteHistory(); return; }
   // 情侶配對類型（只算一次，避免每個玩家都重算）：'good'=人人鏈、'wolf'=狼狼鏈、'third'=人狼鏈（第三方）
@@ -3489,6 +3530,7 @@ function jgRenderStep(step){
         <p class="sub" style="text-align:center;font-size:26px;font-weight:800;color:var(--thief);margin-top:6px;">${finalName}</p>
       </div>
       <div class="info" style="font-size:13px;text-align:center;">被埋掉的身分是：<strong>${buriedName}</strong></div>
+      <div class="info-warn" style="font-size:13px;text-align:center;margin-top:8px;">📋 法官需走一圈給盜賊他所選的牌，並收回盜賊牌</div>
       <div class="speech" style="margin-top:14px;">「<em>盜賊請閉眼。</em>」</div>
       <button class="primary" onclick="jgGoStep(jgNightStartNext())">已紀錄，下一步 →</button>
     `,'🎴 盜賊');
@@ -5734,7 +5776,7 @@ function jgCascadeLoverDeath(wasNum, trulyDied){
   if(!loverStrs.includes(wasStr)) return null;
   const otherStr=loverStrs.find(n=>n!==wasStr);
   const other=jgFind(otherStr);
-  if(other&&other.alive){ jgApplyDeath(other); return other.num; }
+  if(other&&other.alive){ jgApplyDeath(other); other.diedByCascade=true; return other.num; }
   return null;
 }
 
@@ -7104,7 +7146,7 @@ function jgSaveVoteInner(){
   const val=String(top[0]);
   jgVotePkRound=false; jgVotePkCandidates=[];
   const found=jgFind(val);
-  if(found&&found.role==='fool'&&!found.foolRevealed){
+  if(found&&found.role==='fool'&&!found.foolRevealed&&jgFoolChaseMode!=='nochase'){
     // 傻瓜被票出局：翻牌免於淘汰（整局只能發生這一次），之後只能發言、不能再投票
     // （見 jgVoteVoters 已經把 foolRevealed 的人排除在投票資格外）。傻瓜不會真的死亡，
     // 不呼叫 jgApplyDeath、不觸發任何連鎖（狼美人殉情／情侶殉情等都不適用）。
@@ -7226,7 +7268,7 @@ function jgSaveBloodMoonLastNight(){
 function jgCheckBloodMoonFinalWin(){
   const a=jgAlive();
   const ag=a.filter(p=>!jgIsWolfForWin(p));
-  const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+  const allGods=jgAllGodsForWin();
   const aGod=ag.filter(p=>allGods.includes(p.role));
   const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
   if(aVil.length===0&&aGod.length>0) return{winner:'wolf',msg:'血月使者屠邊：所有平民已被淘汰',icon:'🐺'};
@@ -7490,7 +7532,7 @@ function jgCheckWinNormal(){
     } else if(aw.length>=ag.length) return{winner:'wolf',msg:'狼人人數已達多數',icon:'🐺'};
   }
   // Wolf wins if all villagers dead or all gods dead
-  const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+  const allGods=jgAllGodsForWin();
   const aGod=ag.filter(p=>allGods.includes(p.role));
   const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid'); // 混血兒視為平民，狼隊屠民也必須刀死他
   if(aVil.length===0&&aGod.length>0) return{winner:'wolf',msg:'所有平民已被淘汰',icon:'🐺'};
@@ -7506,7 +7548,7 @@ function jgDeclareBloodmoonWin(){
   const alive=jgAlive();
   const wolves=alive.filter(p=>jgIsWolfForWin(p));
   const good=alive.filter(p=>!jgIsWolfForWin(p));
-  const allGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+  const allGods=jgAllGodsForWin();
   const gods=good.filter(p=>allGods.includes(p.role));
   const vils=good.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
   const ok=wolves.length===1&&wolves[0].role==='bloodmoon'&&gods.length===1&&gods[0].role!=='knight'&&vils.length===1;
@@ -7617,7 +7659,10 @@ const ALL_ROLES = {
   wolfbrother_y:{icon:'👦', name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。'},
   // Good - villager
   villager: {icon:'🧑‍🌾',name:'平民',  team:'good', teamLabel:'好人陣營', desc:'沒有特殊技能，靠發言與推理找出狼人。白天投票是唯一武器。'},
-  fool:     {icon:'🃏', name:'傻瓜', team:'good', teamLabel:'好人陣營（特殊）', desc:'<strong>翻牌免死：</strong>白天被投票出局時，可以翻牌自證身分，免於淘汰（整局只能發生這一次）；翻牌之後，之後每一天都只能發言，不能再參與投票（不管一般投票還是 PK 投票）。<br><strong>對夜晚攻擊沒有免疫：</strong>被狼刀或女巫毒死時，跟一般玩家一樣立即死亡，翻牌的效果只對「白天被投票出局」有效。<br><strong>屠神判定：</strong>狼隊「屠神」（殺光所有神職才算獲勝）的判定不需要連傻瓜一起殺掉——傻瓜不算在神職人數裡。'},
+  fool:     {icon:'🃏', name:'傻瓜', team:'good', teamLabel:'神職（特殊）', desc:'<strong>本局採用哪一種規則，由法官在開局選角時用切換鈕決定：</strong><br>'
+    +'<strong>🔺 要追刀（預設）：</strong>白天被投票出局時，可以翻牌自證身分，免於淘汰、留在場上繼續發言，但翻牌之後每一天都只能發言、不能再參與投票（不管一般投票還是 PK 投票）。狼隊若想達成「屠神」勝利條件，晚上必須額外對傻瓜補刀殺死他才算數——傻瓜這時候要算進神職人數裡。<br>'
+    +'<strong>🔻 不需追刀：</strong>傻瓜被投票出局時直接淘汰、不能留在場上，沒有翻牌自證的機制；狼隊「屠神」不需要特地在夜裡殺死傻瓜。<br>'
+    +'<strong>對夜晚攻擊沒有免疫：</strong>不論哪種規則，被狼刀或女巫毒死時都跟一般玩家一樣立即死亡；翻牌留場的效果只對「要追刀」規則下的「白天被投票出局」有效。'},
   hybrid:   {icon:'🧬', name:'混血兒', team:'good', teamLabel:'好人陣營（特殊）', desc:'<strong>選擇支持對象：</strong>第一晚睜眼選擇一位玩家作為支持對象（不能選自己），此後不再有夜間動作。<br><strong>勝利條件：</strong>與支持對象的勝利陣營相同，但混血兒自己不會被告知對方是好人還是狼人，需自行從發言判斷。<br><strong>對外表現：</strong>被預言家查驗永遠顯示為好人（金水）；在人數統計與「屠民」判定上視為一般平民——狼隊若要屠民，仍必須刀死混血兒，就算他其實支持狼隊也一樣。'},
   cupid:    {icon:'💘', name:'邱比特', team:'good', teamLabel:'特殊（陣營依情侶配對而定，不屬於神職也不屬於平民）', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>查驗：</strong>被預言家查驗永遠顯示為好人（金水）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同——但邱比特永遠不會帶狼刀、不參與狼人殺人決策，好人陣營要獲勝，除了原本的條件，也必須連邱比特一起淘汰。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營，邱比特本人也永遠是第三方一員。第三方需屠光除自己以外的所有玩家才算獲勝；若第三方存活人數與場上其餘存活人數相同，直接判定第三方獲勝。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致則當晚強制變成平安夜（建議討論時間約20秒）。'},
   thief:    {icon:'🎴', name:'盜賊', team:'good', teamLabel:'特殊（最終陣營依選擇的角色而定，開局前不屬於神職也不屬於平民）', desc:'<strong>整局第一個睜眼：</strong>比邱比特、夢魘還早，是全場第一個行動的角色。遊戲開始前，會多準備兩張額外的身分牌（例如12人局準備14張牌），這兩張牌不發給任何玩家，只保留給盜賊在第一夜選擇。<br><strong>選擇身分：</strong>法官在盜賊睜眼時，把手上另外準備的兩張候選身分告訴系統，用「大字報」的方式攤開讓盜賊看到這兩個角色，盜賊選一個成為自己最終真正的身分（另一張則直接「埋」掉，整局都不會有人是這個身分）。<br><strong>強制選狼：</strong>兩張候選身分中如果有狼人陣營的角色，盜賊「一定要」選擇狼人遊玩——這也讓盜賊多了一個資訊：場上「沒有」出現另一張候選卡代表的那個身分。正常設置下不會出現「兩張候選都是狼人」的情況。<br><strong>選完之後：</strong>盜賊立刻變成所選的身分，從這一夜開始完全依照新身分的規則遊玩（若變成狼人，之後與狼隊一起睜眼殺人；若變成神職，之後在該神職的步驟行動），原本的「盜賊」身分只在選擇之前短暫存在。'},
@@ -7645,8 +7690,8 @@ const ALL_ROLES = {
 };
 
 const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y'];
-const VIL_ROLES  = ['villager','hybrid','fool'];
-const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+const VIL_ROLES  = ['villager','hybrid'];
+const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool'];
 const SPECIAL_ROLES = ['sheriff','luckyone','cupid','thief'];
 
 // 單身分限定的「板子」預設：每個板子固定包含一組常見搭配的特殊角色（狼隊或神職），
@@ -7663,6 +7708,7 @@ const JG_BOARD_PRESETS = {
   hybrid_wolfking_bloodmoon:{label:'混血兒+黑/白狼王+血月', fixed:{hybrid:1, bloodmoon:1}, wolfkingDefault:'wolfking'},
   evilknight_guard:        {label:'惡靈騎士+守衛',   fixed:{evilknight:1, guard:1}},
   cupid_board:             {label:'邱比特（情侶板，建議10或13人）', fixed:{cupid:1}},
+  cupid_thief_board:       {label:'邱比特+盜賊（不含傻瓜）', fixed:{cupid:1, thief:1}, wolfkingDefault:'wolfking'},
   thief_board:             {label:'盜賊（開局前需另外多準備2張候選身分牌）', fixed:{thief:1}},
   thief_cupid_board:       {label:'盜賊+邱比特+傻瓜（建議12人警長局）', fixed:{thief:1, cupid:1, fool:1}, wolfkingDefault:'wolfking'},
 };
@@ -7675,6 +7721,17 @@ const JG_PRESET_GOD_BASE=['seer','witch','hunter','guard'];
 // Role picker state: {roleId: count}
 let jgRolePick = {wolf:2, villager:2, seer:1, witch:1};
 let jgBoardPreset='custom'; // 'custom' = 自訂角色（原本的完整選角畫面）；其餘 = JG_BOARD_PRESETS 的 key
+// 傻瓜規則：'chase'＝要追刀（預設，翻牌留場但不能投票，狼隊屠神必須額外夜刀補殺傻瓜才算數）；
+// 'nochase'＝不需追刀（傻瓜被放逐時直接出局，沒有翻牌留場機制，屠神不需要另外殺他）。
+// 開局設定畫面選了傻瓜之後才會顯示切換用的膠囊按鈕，見 jgRenderFoolModeUI／jgSetFoolChaseMode。
+let jgFoolChaseMode='chase';
+// 「屠神」勝負判定用的神職清單：只有「要追刀」規則才把傻瓜算進去（狼隊必須連傻瓜一起殺光才算屠神）；
+// 「不需追刀」規則傻瓜被放逐就直接出局，不需要、也不會被當成屠神判定的一員。
+function jgAllGodsForWin(){
+  const base=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+  if(jgFoolChaseMode==='chase') base.push('fool');
+  return base;
+}
 
 function renderRulesCards(){
   function makeCard(id){
@@ -7758,8 +7815,9 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   const hybridCount=isDual?0:(pickState.hybrid||0); // 混血兒不開放雙身分模式選用
   const cupidCount=isDual?0:(pickState.cupid||0); // 邱比特不開放雙身分模式選用
   const thiefCount=isDual?0:(pickState.thief||0); // 盜賊不開放雙身分模式選用
-  const foolCount=isDual?0:(pickState.fool||0); // 傻瓜不開放雙身分模式選用
-  const totalPicked=wolfCount+godCount+vilCount+hybridCount+cupidCount+thiefCount+foolCount;
+  // 注意：傻瓜現在算在 GOD_ROLES 裡，godCount 已經含傻瓜的數量了，這裡不再另外加一次，
+  // 不然選了傻瓜的話，總數會被重複計算多算一個。
+  const totalPicked=wolfCount+godCount+vilCount+hybridCount+cupidCount+thiefCount;
 
   let html=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">
     目前：${totalPicked}/${total} ${unitLabel}
@@ -7787,12 +7845,12 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   html+=`<button onclick="rpickAdj('${containerId}','villager',1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">＋</button>`;
   html+=`<span style="font-size:13px;color:var(--text2);">平民</span></div>`;
 
-  // 混血兒／邱比特／盜賊／傻瓜（特殊身分；不開放雙身分模式）
+  // 混血兒／邱比特／盜賊（特殊身分；不開放雙身分模式）。傻瓜現在歸在下面的「神職」區塊裡
+  // 一起顯示（見 GOD_ROLES 加入了 fool），不再在這裡單獨列一格。
   if(!isDual){
     const hy=ALL_ROLES.hybrid;
     const cp=ALL_ROLES.cupid;
     const tf=ALL_ROLES.thief;
-    const fl=ALL_ROLES.fool;
     html+='<div style="font-size:11px;font-weight:700;color:var(--cupid);margin:6px 0 4px;letter-spacing:0.5px;">特殊身分</div>';
     html+='<div class="rpick-grid">';
     html+=`<div class="rpick${hybridCount>0?' sel':''}" onclick="rpickTap('${containerId}','hybrid')">
@@ -7809,11 +7867,6 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
       <span class="rp-ico">${tf.icon}</span>
       <div class="rp-nm">${tf.name}</div>
       ${thiefCount>0?'<span class="rp-cnt">✓</span>':''}
-    </div>`;
-    html+=`<div class="rpick${foolCount>0?' sel':''}" onclick="rpickTap('${containerId}','fool')">
-      <span class="rp-ico">${fl.icon}</span>
-      <div class="rp-nm">${fl.name}</div>
-      ${foolCount>0?'<span class="rp-cnt">✓</span>':''}
     </div>`;
     html+='</div>';
     if(thiefCount>0){
