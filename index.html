@@ -11,7 +11,7 @@
   --text:#1a1917;--text2:#5a5855;--text3:#9a9895;
   --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);
   --wolf:#b83828;--vil:#3a7a2a;--seer:#2a65a8;
-  --witch:#a85e10;--hunter:#5f3e96;--guard:#1e887a;
+  --witch:#7c3aed;--hunter:#5f3e96;--guard:#1e887a;
   --cupid:#c23b7a;
   --thief:#8a6d1f;
   --accent:#b83828;--gold:#9a7c28;
@@ -46,7 +46,7 @@ h3{font-size:16px;font-weight:700;color:var(--text);}
 .av-wolf{background:rgba(184,56,40,0.12);color:var(--wolf);}
 .av-vil{background:rgba(58,122,42,0.12);color:var(--vil);}
 .av-seer{background:rgba(42,101,168,0.12);color:var(--seer);}
-.av-witch{background:rgba(168,94,16,0.12);color:var(--witch);}
+.av-witch{background:rgba(124,58,237,0.12);color:var(--witch);}
 .av-hunter{background:rgba(95,62,150,0.12);color:var(--hunter);}
 .av-guard{background:rgba(30,136,122,0.12);color:var(--guard);}
 .av-cupid{background:rgba(194,59,122,0.12);color:var(--cupid);}
@@ -56,14 +56,11 @@ h3{font-size:16px;font-weight:700;color:var(--text);}
 .dead-nm{text-decoration:line-through;color:var(--text3);}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.3px;}
 .bw{background:rgba(184,56,40,0.1);color:#922418;}.bv{background:rgba(58,122,42,0.1);color:#2a601c;}
-.bs{background:rgba(42,101,168,0.1);color:#1a4e88;}.bwt{background:rgba(168,94,16,0.1);color:#864a08;}
+.bs{background:rgba(42,101,168,0.1);color:#1a4e88;}.bwt{background:rgba(124,58,237,0.1);color:#5b21b6;}
 .bh{background:rgba(95,62,150,0.1);color:#4a2e80;}.bg2{background:rgba(30,136,122,0.1);color:#0e6a5e;}
 .bcupid{background:rgba(194,59,122,0.1);color:#8f2a5e;}
 .bthief{background:rgba(138,109,31,0.14);color:#6b5417;}
 .rp-tag-lover{display:inline-block;margin-left:4px;font-size:11px;}
-.rp-tag-lover-good{filter:saturate(1.3);}
-.rp-tag-lover-wolf{filter:saturate(1.3) hue-rotate(-15deg);}
-.rp-tag-lover-third{filter:saturate(1.4) brightness(1.05);}
 
 /* ── INPUTS ── */
 label{font-size:13px;color:var(--text2);display:block;margin:12px 0 5px;}
@@ -111,7 +108,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .role-card-wolf{background:rgba(184,56,40,0.05);border-color:rgba(184,56,40,0.18);}
 .role-card-vil{background:rgba(58,122,42,0.05);border-color:rgba(58,122,42,0.18);}
 .role-card-seer{background:rgba(42,101,168,0.05);border-color:rgba(42,101,168,0.18);}
-.role-card-witch{background:rgba(168,94,16,0.05);border-color:rgba(168,94,16,0.18);}
+.role-card-witch{background:rgba(124,58,237,0.05);border-color:rgba(124,58,237,0.18);}
 .role-card-hunter{background:rgba(95,62,150,0.05);border-color:rgba(95,62,150,0.18);}
 .role-card-guard{background:rgba(30,136,122,0.05);border-color:rgba(30,136,122,0.18);}
 .rc-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
@@ -169,7 +166,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rv-wolf{background:rgba(184,56,40,0.07);border:1px solid rgba(184,56,40,0.2);}
 .rv-villager{background:rgba(58,122,42,0.07);border:1px solid rgba(58,122,42,0.2);}
 .rv-seer{background:rgba(42,101,168,0.07);border:1px solid rgba(42,101,168,0.2);}
-.rv-witch{background:rgba(168,94,16,0.07);border:1px solid rgba(168,94,16,0.2);}
+.rv-witch{background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);}
 .rv-hunter{background:rgba(95,62,150,0.07);border:1px solid rgba(95,62,150,0.2);}
 .rv-guard{background:rgba(30,136,122,0.07);border:1px solid rgba(30,136,122,0.2);}
 
@@ -214,12 +211,16 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rp.rp-dead .rp-num{text-decoration:line-through;color:var(--text3);}
 .rp .rp-name{font-size:10px;color:var(--text2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 2px;}
 .rp .rp-role{font-size:9px;font-weight:700;margin-top:3px;padding:1px 5px;border-radius:8px;display:inline-block;}
+/* 女巫解藥／毒藥使用狀況：兩個小圈圈，還沒用＝紫色，已經用掉＝灰色 */
+.rp-potions{display:flex;gap:4px;justify-content:center;margin-top:4px;}
+.rp-potion-dot{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;font-size:9px;font-weight:700;background:rgba(124,58,237,0.14);color:var(--witch);border:1px solid rgba(124,58,237,0.35);}
+.rp-potion-dot.used{background:rgba(0,0,0,0.05);color:var(--text3);border-color:rgba(0,0,0,0.12);}
 /* 狼隊角色（含血月使者、機械狼、夢魘、狼兄狼弟……）全部統一同一種紅色，方便法官一眼認出敵我 */
 .rp-wolf .rp-role,.rp-wolfking .rp-role,.rp-whitewolf .rp-role,.rp-wolfbeauty .rp-role,.rp-evilknight .rp-role,.rp-gargoyle .rp-role,.rp-bloodmoon .rp-role,.rp-mechanicalwolf .rp-role,.rp-nightmare .rp-role,.rp-wolfbrother_e .rp-role,.rp-wolfbrother_y .rp-role{background:rgba(184,56,40,0.1);color:#922418;}
 /* 平民／混血兒全部維持同一種綠色（混血兒陣營未知，好人視角一律當平民看待） */
 .rp-villager .rp-role,.rp-hybrid .rp-role{background:rgba(58,122,42,0.1);color:#2a601c;}
 /* 女巫刻意避開紅色，其餘神職彼此也各自分開一個顏色，方便快速辨識 */
-.rp-witch .rp-role{background:rgba(168,94,16,0.1);color:#864a08;}
+.rp-witch .rp-role{background:rgba(124,58,237,0.1);color:#5b21b6;}
 .rp-seer .rp-role{background:rgba(42,101,168,0.1);color:#1a4e88;}
 .rp-hunter .rp-role{background:rgba(95,62,150,0.1);color:#4a2e80;}
 .rp-guard .rp-role{background:rgba(30,136,122,0.1);color:#0e6a5e;}
@@ -341,7 +342,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
   --text:#1a1917;--text2:#5a5855;--text3:#9a9895;
   --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);
   --wolf:#b83828;--vil:#3a7a2a;--seer:#2a65a8;
-  --witch:#a85e10;--hunter:#5f3e96;--guard:#1e887a;
+  --witch:#7c3aed;--hunter:#5f3e96;--guard:#1e887a;
   --cupid:#c23b7a;
   --thief:#8a6d1f;
   --accent:#b83828;--gold:#9a7c28;
@@ -629,7 +630,7 @@ select{
   <div class="rules-h1">🏆 勝利條件</div>
   <div class="info-danger" style="margin-bottom:8px;">🐺 狼人勝利：存活狼人數 ≥ 存活好人數，或所有神職死亡，或所有平民死亡</div>
   <div class="info-success" style="margin-bottom:8px;">✓ 好人勝利：所有狼人被淘汰</div>
-  <div class="info" style="margin-bottom:8px;">💘 邱比特板（人狼鏈成立時）：邱比特＋情侶獨立成第三方陣營（邱比特本人也永遠是第三方一員）。第三方需屠光其餘所有玩家（屠城）才算獲勝；若第三方存活人數與場上其餘存活人數相同，直接判定第三方獲勝。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝——不是只淘汰兩位情侶就算數。若情侶是人人鏈或狼狼鏈，邱比特的勝負跟著好人／狼人原本的條件走（狼狼鏈時，好人也必須連邱比特一起淘汰才算獲勝）。情侶殉情時不會觸發任何技能。</div>
+  <div class="info" style="margin-bottom:8px;">💘 邱比特板（人狼鏈成立時）：邱比特＋情侶獨立成第三方陣營（邱比特本人也永遠是第三方一員）。第三方需屠光其餘所有玩家（屠城）才算獲勝；若第三方存活人數「多於」場上其餘存活人數，直接判定第三方獲勝（例如第三方三人都在場，需要 3:2 才算獲勝；打平，例如 3:3，遊戲尚未結束，仍須繼續進行）。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝——不是只淘汰兩位情侶就算數。若情侶是人人鏈或狼狼鏈，邱比特的勝負跟著好人／狼人原本的條件走（狼狼鏈時，好人也必須連邱比特一起淘汰才算獲勝）。情侶殉情時不會觸發任何技能。</div>
   </div>
 
   <!-- 狼人陣營 -->
@@ -1563,6 +1564,9 @@ let jgLastNightPeaceful=false; // true if the most recent night had zero deaths 
 let jgSpeakDirection=null; // '順'|'逆', established by the peaceful-night wheel, persists for the game
 let jgBlackMarketUsed=false; // one-time trade flag
 let jgLuckyOne=null; // {num, gift} created by black market dealer
+let jgBlackMarketTradeNight=null; // 交易嘗試發生的那一晚（不論成功失敗都會記錄）——決定幸運兒睜眼順序：
+// 交易當晚（＝這一晚）幸運兒緊接在黑市商人之後睜眼（走 luckyone-walk）；
+// 從下一晚起，幸運兒改成整晚最後一個睜眼（見 jgNextGodStep 尾端插入邏輯）。
 // ── 混血兒：第一夜選擇一位支持對象，勝利條件與支持對象相同（自己不知道對方陣營） ──
 let jgHybridChosen=false; // 本局是否已完成第一夜的支持對象選擇
 let jgHybridTarget=null;  // 支持對象號碼（string）
@@ -2063,6 +2067,7 @@ function jgStart(){
   jgMechAssignDone=false;
   jgBlackMarketUsed=false;
   jgLuckyOne=null;
+  jgBlackMarketTradeNight=null;
   jgHybridChosen=false;
   jgHybridTarget=null;
   jgCupidChosen=false;
@@ -3082,11 +3087,15 @@ function jgRenderRoster(){
   const rw=document.getElementById('jg-roster-wrap'); if(rw) rw.style.display='';
   const el=document.getElementById('jg-roster');
   if(!el){ jgRenderVoteHistory(); return; }
-  // 情侶配對類型（只算一次，避免每個玩家都重算）：'good'=人人鏈、'wolf'=狼狼鏈、'third'=人狼鏈（第三方）
-  const _loverPairType=jgLovers?jgLoverPairType():null;
-  const _loverTagInfo={good:{e:'💗',t:'情侶（人人鏈，勝負跟好人陣營）'},wolf:{e:'💔',t:'情侶（狼狼鏈，勝負跟狼人陣營）'},third:{e:'💜',t:'情侶（人狼鏈，獨立第三方陣營）'}}[_loverPairType]||{e:'💘',t:'情侶'};
   el.innerHTML=jgPlayers.map(p=>{
     const role=p.role||'villager';
+    // 女巫解藥／毒藥使用狀況：不管女巫死活、雙身分板與否，只要目前牌面顯示的身分是女巫，
+    // 就在她的玩家狀態卡下面加兩個小圈圈給法官自己看，用掉的變灰色
+    const potionHtml=(role==='witch')
+      ?'<div class="rp-potions">'
+        +'<span class="rp-potion-dot'+(jgWitchSaveUsed?' used':'')+'" title="解藥'+(jgWitchSaveUsed?'（已用完）':'（尚未使用）')+'">解</span>'
+        +'<span class="rp-potion-dot'+(jgWitchPoisonUsed?' used':'')+'" title="毒藥'+(jgWitchPoisonUsed?'（已用完）':'（尚未使用）')+'">毒</span>'
+      +'</div>':'';
     let bodyHtml;
     if(jgDualIdentityMode&&(p.role2||p.deadRole1)){
       // 卡1：陣亡前顯示 p.role；陣亡後顯示 p.deadRole1（轉灰）
@@ -3102,20 +3111,18 @@ function jgRenderRoster(){
       const rname=p.role?jgRoleDisplayName(p):'?';
       // 黑市商人板：這位玩家是黑市交易產生的「幸運兒」時，角色後面加註一個小標籤 [幸]
       const luckyTag=(jgLuckyOne&&jgLuckyOne.num===p.num)?'<span class="rp-tag-lucky" title="幸運兒">幸</span>':'';
-      // 邱比特配對的情侶，法官自己視角加註一個小愛心方便對照（玩家看不到這個標籤）；
-      // 依人人鏈／狼狼鏈／人狼鏈（第三方）顯示不同顏色與符號，滑鼠移上去（或長按）可看說明。
+      // 邱比特配對的情侶，法官自己視角加註一個小愛心方便對照（玩家看不到這個標籤）
       const loverTag=(jgLovers&&jgLovers.map(String).includes(p.num.toString()))
-        ?'<span class="rp-tag-lover rp-tag-lover-'+(_loverPairType||'unk')+'" title="'+_loverTagInfo.t+'">'+_loverTagInfo.e+'</span>':'';
-      // 邱比特本人：若情侶配成人狼鏈，邱比特也是第三方一員，額外加註標示
-      const cupidThirdTag=(role==='cupid'&&_loverPairType==='third')?'<span class="rp-tag-lover rp-tag-lover-third" title="邱比特也是第三方一員">🔮</span>':'';
+        ?'<span class="rp-tag-lover" title="情侶">💘</span>':'';
       // 這位玩家原本是盜賊，選完之後變成別的身分：法官視角加註小標籤方便對照
       const thiefOriginTag=(jgThiefFinalNum&&jgThiefFinalNum.toString()===p.num.toString())?'<span class="rp-tag-lover" style="color:var(--thief);" title="原本是盜賊，選完後變成現在的身分">盜</span>':'';
-      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${cupidThirdTag}${thiefOriginTag}</div>`;
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <div class="rp-num">${p.num}${jgSheriff===p.num?'<span title="警長" style="margin-left:2px;">🎖️</span>':''}</div>
       <div class="rp-name">${p.name===`${p.num}號`?'—':p.name}</div>
       ${bodyHtml}
+      ${potionHtml}
     </div>`;
   }).join('');
   jgRenderVoteHistory();
@@ -3172,7 +3179,7 @@ function jgCaptureState(){
     jgDreamcatcherEverTargeted, jgMagicianSwapped, jgMechWolfLearned, jgMechWolfBonusKillUsed,
     jgMechWolfPoisonUsed, jgMechWolfGuardUsed, jgLastMechWolfGuardTarget,
     jgMechWolfLearnedNight, jgWolfBrotherIdDone, jgWolfBrotherAwakened, jgWolfBrotherAwakenedNight, jgLastNightPeaceful,
-    jgSpeakDirection, jgBlackMarketUsed, jgLuckyOne, jgNightLog, jgDayLog, jgDayMeta, jgDawnDeaths,
+    jgSpeakDirection, jgBlackMarketUsed, jgLuckyOne, jgBlackMarketTradeNight, jgNightLog, jgDayLog, jgDayMeta, jgDawnDeaths,
     jgVoteTally, jgLastWinResult, jgRoleCounts, jgMechAssign, jgMechAssignDone,
     jgDualIdentityMode, jgDualAssign, jgDualAssignDone, jgHybridChosen, jgHybridTarget, jgCupidChosen, jgLovers,
     jgThiefWheelDone, jgThiefWheelCand1, jgThiefWheelCand2,
@@ -3212,6 +3219,7 @@ function jgRestoreState(snap){
   jgSpeakDirection=snap.jgSpeakDirection;
   jgBlackMarketUsed=snap.jgBlackMarketUsed;
   jgLuckyOne=snap.jgLuckyOne;
+  jgBlackMarketTradeNight=(snap.jgBlackMarketTradeNight!==undefined)?snap.jgBlackMarketTradeNight:null;
   jgNightLog=snap.jgNightLog;
   jgDayLog=snap.jgDayLog;
   jgDayMeta=snap.jgDayMeta;
@@ -3365,6 +3373,34 @@ const THIEF_BURIED_STEP_INFO={
   fool:           {step:'fool-wake',           next:()=>jgNextGodStep('fool-wake')},
 };
 
+// 盜賊「埋掉」的身分被代喊時，要講的台詞——跟該角色「本人已死亡、但仍要照常走完流程」時
+// 講的台詞完全一致（法官口白必須跟「這個身分還有人、只是已經死了」聽起來一模一樣，玩家才
+// 分辨不出「今晚這句話是講給死人聽」還是「這個身分打從一開始就沒人拿到」）。
+// open：睜眼時講的話（有些角色的睜眼／提問是同一句，就直接寫在一起）。
+// extra：睜眼與閉眼之間，額外要照講的提問句（例如女巫要問解藥、也要問毒藥）。
+const THIEF_BURIED_SCRIPT={
+  cupid:          {icon:'💘', open:'邱比特請睜眼。今晚要指定哪兩位玩家成為情侶？'},
+  nightmare:      {icon:'😈', open:'夢魘請睜眼，今晚要恐懼的對象是？'},
+  magician:       {icon:'🎩', open:'魔術師請睜眼，今晚要交換哪兩個號碼？'},
+  guard:          {icon:'🛡️', open:'守衛請睜眼。', extra:['請選擇你要守護的對象。']},
+  dreamcatcher:   {icon:'🌙', open:'攝夢人請睜眼，今晚夢遊的對象是？'},
+  hybrid:         {icon:'🧬', open:'混血兒請睜眼，今晚要選擇支持的對象是？'},
+  gravkeeper:     {icon:'⚰️', open:'守墓人請睜眼。'},
+  gargoyle:       {icon:'🗿', open:'石像鬼請睜眼，今晚要查驗的對象是？'},
+  mechanicalwolf: {icon:'🤖', open:'機械狼請睜眼。'},
+  wolfbeauty:     {icon:'💋', open:'狼美人請睜眼。', extra:['今晚要魅惑的對象是？']},
+  whitewolf:      {icon:'🤍', open:'白狼王請睜眼。'},
+  evilknight:     {icon:'🖤', open:'惡靈騎士請睜眼。'},
+  blackmarket:    {icon:'💰', open:'黑市商人請睜眼，今晚要交易嗎？'},
+  witch:          {icon:'🧪', open:'女巫請睜眼。', extra:['他被殺了，你要使用解藥嗎？','你要使用毒藥嗎？你要毒誰呢？']},
+  seer:           {icon:'🔮', open:'預言家請睜眼，今晚要查驗的對象是？'},
+  medium:         {icon:'👁️', open:'通靈師請睜眼，今晚要查驗的對象是？'},
+  hunter:         {icon:'🔫', open:'獵人請睜眼。', extra:['你的技能使用狀況是 👍']},
+  knight:         {icon:'⚔️', open:'騎士請睜眼。'},
+  demonhunter:    {icon:'🗡️', open:'獵魔人請睜眼。', extra:['今晚要狩獵的人是？']},
+  fool:           {icon:'🃏', open:'傻瓜請睜眼。'},
+};
+
 function jgRenderStep(step){
   // 盜賊「埋掉」的身分：整局都不會有真人持有這個身分，但法官每一夜仍然要照常喊
   // 「XX請睜眼…XX請閉眼」維持節奏（不然玩家會發現「今晚沒喊到XX」，反推出這個身分被盜賊
@@ -3372,17 +3408,23 @@ function jgRenderStep(step){
   // 不用實際操作、也不會卡在「請選擇號碼」這種永遠填不了的欄位，按一下就正常接回原本
   // 夜晚該走的下一步。只有在真的「沒有任何一個玩家持有這個身分」時才會生效——如果盜賊
   // 選的是另一張、這個角色其實仍然存在，就完全不受影響，照原本畫面正常走。
+  // 這個「代喊」畫面講的台詞，刻意跟「本人真的死掉、但仍要照常走完流程」時一模一樣
+  // （例如女巫一樣要問「他被殺了，你要使用解藥嗎？」「你要使用毒藥嗎？你要毒誰呢？」），
+  // 玩家才聽不出差別，也就猜不出這個身分到底是真的死了、還是一開始就被盜賊埋掉。
   if(jgThiefChosen && jgThiefBuriedRole && !jgPlayers.some(p=>p.role===jgThiefBuriedRole)){
     const info=THIEF_BURIED_STEP_INFO[jgThiefBuriedRole];
     if(info && info.step===step){
       const rn=jgFullRoleName(jgThiefBuriedRole);
+      const sc=THIEF_BURIED_SCRIPT[jgThiefBuriedRole]||{icon:'👁️',open:rn+'請睜眼。'};
+      const extraHtml=(sc.extra||[]).map(line=>'<div class="speech" style="margin-top:8px;">「<em>'+line+'</em>」</div>').join('');
       jgShowPg(`
         <h2>${rn}睜眼</h2>
-        <div class="speech">「<em>${rn}請睜眼。</em>」</div>
-        <div class="info-warn" style="margin-top:8px;">本局沒有人是${rn}（已在盜賊候選時被埋掉），但仍需照常走完流程</div>
-        <div class="speech" style="margin-top:10px;">「<em>${rn}請閉眼。</em>」</div>
+        <div class="speech">「<em>${sc.open}</em>」</div>
+        <div class="info-warn" style="margin-top:8px;">本局沒有人是${rn}（已在盜賊候選時被埋掉），視同已出局，仍需照常走完流程</div>
+        ${extraHtml}
+        <div class="speech" style="margin-top:12px;">「<em>${rn}請閉眼。</em>」</div>
         <button class="primary" onclick="jgGoStep(THIEF_BURIED_STEP_INFO['${jgThiefBuriedRole}'].next())">已紀錄，下一步 →</button>
-      `,'👁️ '+rn);
+      `,sc.icon+' '+rn);
       return;
     }
   }
@@ -4151,7 +4193,7 @@ function jgRenderStep(step){
     const chainName=chainP&&chainP.name&&chainP.name!==chainP.num+'號'?chainP.num+'號 '+chainP.name:(chainNum?chainNum+'號':'');
     jgShowPg(`
       <h2>${cl.title}啟動技能</h2>
-      <div class="info-warn" style="font-size:14px;">${chainName} 被開槍帶走，本身也具備獵人技能，可一併啟動！</div>
+      <div class="info-warn" style="font-size:14px;">${chainName} 被開槍帶走，本身也具備開槍技能，可一併啟動！</div>
       <div class="speech">「<em>${chainName} 啟動角色技能，請選擇你要帶走的號碼。</em>」</div>
       ${jgNumSelectHtml('jg-mechhunter-chain-shot','')}
       <button class="primary" onclick="jgSaveMechHunterChainShot()" style="margin-top:10px;">確認 →</button>
@@ -4308,7 +4350,9 @@ function jgRenderStep(step){
   else if(step==='blackmarket-wake'){
     const bmP=jgPlayers.find(p=>p.role==='blackmarket');
     if(jgBlackMarketUsed){
-      jgGoStep(jgLuckyOneWakePending()?'luckyone-wake':'witch-wake');
+      // 交易已完成：幸運兒的睜眼位置已移到整晚最後（見 jgNextGodStep 尾端插入），
+      // 這裡不再插入 luckyone-wake，直接照原本狼隊之後的流程繼續走向女巫。
+      jgGoStep('witch-wake');
       return;
     }
     const idHtml=jgGodIdHtml('blackmarket',bmP);
@@ -4343,7 +4387,7 @@ function jgRenderStep(step){
         <h2>幸運兒睜眼</h2>
         <div class="speech">「<em>幸運兒請睜眼，你要使用技能嗎？</em>」</div>
         <div class="speech" style="margin-top:10px;">「<em>幸運兒請閉眼。</em>」</div>
-        <button class="primary" onclick="jgGoStep('witch-wake')">已紀錄，下一步 →</button>
+        <button class="primary" onclick="jgGoStep('dawn')">已紀錄，下一步 →</button>
       `,'🍀 幸運兒');
       return;
     }
@@ -4386,8 +4430,9 @@ function jgRenderStep(step){
     const giftLabel=ly?({seer:'預言家查驗',witch:'女巫毒藥',hunter:'獵人獵槍'}[ly.gift]||''):'';
     jgShowPg(`
       <h2>幸運兒</h2>
+      <div class="speech" style="margin-top:10px;">「<em>被拍到肩膀的人，等一下聽到『幸運兒請睜眼』時要睜眼。</em>」</div>
       <div class="info" style="font-size:13px;">${success?'法官起身，繞場走一圈，輕拍 '+ly.num+' 號玩家的肩膀':'法官起身，繞場走一圈，不用拍肩膀'}</div>
-      <div class="speech" style="margin-top:10px;">「<em>被拍到肩膀的人，等一下聽到『幸運兒請睜眼』時要睜眼。</em>」<br>「<em>幸運兒請睜眼。</em>」</div>
+      <div class="speech" style="margin-top:10px;">「<em>幸運兒請睜眼。</em>」</div>
       ${success?'<button onclick="jgShowBigCard(\''+ly.num+'號\',\''+giftLabel+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示技能給幸運兒看</button>':'<div class="info" style="font-size:12px;">（此為掩護動作，沒有人是幸運兒，直接進行下一步）</div>'}
       <div class="speech" style="margin-top:10px;">「<em>幸運兒請閉眼。</em>」</div>
       <button class="primary" onclick="jgGoStep('witch-wake')">下一步 →</button>
@@ -4660,11 +4705,17 @@ function jgRenderStep(step){
     const dawnShoot=dawnHunterShoot||dawnWolfKingShoot;
     const dawnShootP=dawnShoot?jgFind(jgRecord.wolfKill):null;
     const dawnShootName=dawnShootP&&dawnShootP.name&&dawnShootP.name!==dawnShootP.num+'號'?dawnShootP.num+'號 '+dawnShootP.name:(dawnShootP?dawnShootP.num+'號':'');
+    // 被狼刀殺死、夜間開槍的這位若本身既是真獵人、又是黑市商人交易出來、拿到「獵人獵槍」的
+    // 幸運兒，等於身上有兩把槍，兩個技能各自獨立開一槍
+    const dawnDoubleGun=!!(dawnShoot&&dawnShootP&&dawnShootP.role==='hunter'
+      &&jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&jgLuckyOne.num===dawnShootP.num);
     const hunterShotHtml=dawnShoot
       ?'<div class="divider"></div>'
         +'<div class="speech">「<em>'+dawnShootName+' 啟動角色技能，請選擇你要帶走的號碼。</em>」</div>'
-        +'<label>帶走的玩家號碼（留空=不帶）</label>'
+        +(dawnDoubleGun?'<div class="info" style="font-size:12px;">'+dawnShootName+' 同時是獵人本身、也是黑市商人交易產生的幸運兒（拿到獵人獵槍），兩個技能各自獨立開一槍，可以分別選擇兩個要帶走的對象（都可留空）。</div>':'')
+        +'<label>'+(dawnDoubleGun?'第一槍（獵人本身）・':'')+'帶走的玩家號碼（留空=不帶）</label>'
         +jgNumSelectHtml('jg-hunter-dawn-shot', '')
+        +(dawnDoubleGun?'<label style="margin-top:8px;">第二槍（幸運兒・獵人獵槍）・帶走的玩家號碼（留空=不帶）</label>'+jgNumSelectHtml('jg-hunter-dawn-shot2', ''):'')
         +'<button class="danger" onclick="jgSaveDawnHunterShot()" style="margin-top:8px;">確認帶走 →</button>'
       :'';
 
@@ -5010,12 +5061,21 @@ function jgRenderStep(step){
   else if(step==='hunter-shot'){
     const hvp=jgRecord._voteOutNum?jgByNum(jgRecord._voteOutNum):jgPlayers.find(p=>p.role==='hunter');
     const hvname=hvp?hvp.num+'號':'獵人';
+    const doubleGun=!!jgRecord._hunterDoubleGun;
     jgShowPg(`
       <h2>獵人開槍</h2>
-      <div class="info-danger" style="font-size:15px;font-weight:700;padding:12px 14px;">${hvname} 被放逐，啟動角色技能</div>
+      ${doubleGun?`
+      <div class="info" style="font-size:12px;">${hvname} 同時是獵人本身、也是黑市商人交易產生的幸運兒（拿到獵人獵槍），兩個技能各自獨立開一槍，可以分別選擇兩個要帶走的對象（都可留空）。</div>
+      <div class="speech">「<em>${hvname} 啟動角色技能，請選擇你要帶走的號碼。</em>」</div>
+      <label>第一槍（獵人本身）・帶走的玩家號碼（留空=不帶）</label>
+      ${jgNumSelectHtml('jg-hunter-shot-rec', '')}
+      <label style="margin-top:10px;">第二槍（幸運兒・獵人獵槍）・帶走的玩家號碼（留空=不帶）</label>
+      ${jgNumSelectHtml('jg-hunter-shot-rec2', '')}
+      `:`
       <div class="speech">「<em>${hvname} 啟動角色技能，請選擇你要帶走的號碼。</em>」</div>
       <label>帶走的玩家號碼（留空=不帶）</label>
       ${jgNumSelectHtml('jg-hunter-shot-rec', '')}
+      `}
       <button class="danger" onclick="jgSaveHunter()" style="margin-top:10px;">確認 →</button>
     `,'🔫 獵人');
   }
@@ -5073,20 +5133,32 @@ function jgSaveHunterNight(){
 }
 
 function jgSaveDawnHunterShot(){
+  const shooter=jgPlayers.find(pl=>pl.role==='wolfking'&&jgRecord.wolfKill&&pl.num.toString()===jgRecord.wolfKill.toString())
+    ||jgFind(jgRecord.wolfKill);
+  // 這一槍的開槍資格是不是（也）來自黑市商人給的「獵人獵槍」幸運兒技能——不管開槍的人
+  // 本身是不是真獵人，只要他就是目前這個未使用過的幸運兒，這一槍用完都要標記成已使用。
+  const shooterIsLuckyGun=!!(shooter&&jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&jgLuckyOne.num===shooter.num);
+  // 被狼刀殺死的這位若本身「同時」是真獵人、又是這個幸運兒，等於身上有兩把槍，
+  // 各自獨立開一槍（判斷條件跟渲染畫面時的 dawnDoubleGun 一致，狀態沒變過所以重算一次沒問題）
+  const doubleGun=!!(shooterIsLuckyGun&&shooter.role==='hunter');
   const rawVal=(document.getElementById('jg-hunter-dawn-shot')||{}).value?.trim()||'';
   const val=rawVal?jgMagicSwapNum(rawVal):'';
-  let chainTarget=null;
-  if(val){
+  const rawVal2=doubleGun?((document.getElementById('jg-hunter-dawn-shot2')||{}).value?.trim()||''):'';
+  const val2=rawVal2?jgMagicSwapNum(rawVal2):'';
+  const chainQueue=[];
+  const fireDawnShot=(rv,v,abbr)=>{
+    if(!v) return;
     // 守衛（或機械狼學到守衛）當晚若守到這個號碼，同一個盾可以擋下夜槍，帶不走
-    const guardBlocked=!!((jgRecord.guardTarget&&jgRecord.guardTarget.toString()===val.toString())
-      || (jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===val.toString()));
-    const p=jgFind(val);
+    const guardBlocked=!!((jgRecord.guardTarget&&jgRecord.guardTarget.toString()===v.toString())
+      || (jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===v.toString()));
+    const p=jgFind(v);
     // 惡靈騎士夜間免疫（含夜槍）：獵人/黑狼王被狼刀後開槍，若對象是惡靈騎士，不會倒牌
     const isEvilKnightImmune=!!(p&&p.role==='evilknight');
+    let wbNote='';
     if(guardBlocked){
-      alert('🛡️ '+val+'號當晚被守衛守護，夜槍/王槍被擋下，不會被帶走！');
+      alert('🛡️ '+v+'號當晚被守衛守護，夜槍/王槍被擋下，不會被帶走！');
     } else if(isEvilKnightImmune){
-      alert('🖤 '+val+'號是惡靈騎士，夜間（含夜槍）免疫，不會倒牌！');
+      alert('🖤 '+v+'號是惡靈騎士，夜間（含夜槍）免疫，不會倒牌！');
     } else if(p&&p.alive){
       const wasRole=p.role; // 換牌前先記住原本身分，避免 jgApplyDeath 換牌後 role 已經變了
       const trulyDied=jgApplyDeath(p);
@@ -5100,28 +5172,30 @@ function jgSaveDawnHunterShot(){
       // 被夜槍／王槍帶走的對象，如果本身也具備獵人開槍資格（真獵人／已學得獵人的機械狼／
       // 得到獵槍技能的幸運兒），也要能連鎖啟動自己的技能帶人
       const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
-      if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; }
+      if(chainTag){ chainQueue.push({num:p.num, role:chainTag}); }
       if(wbCharmNum){
-        jgRecord._dawnHunterShotWbCharmNote='（'+val+'狼美，魅惑對象'+wbCharmNum+'一同出局）';
-        alert('💋 '+val+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+val+'號、'+wbCharmNum+'號 淘汰。」');
+        wbNote='（'+v+'狼美，魅惑對象'+wbCharmNum+'一同出局）';
+        alert('💋 '+v+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+v+'號、'+wbCharmNum+'號 淘汰。」');
       }
     }
     // Amend this night's death line (not the 刀 line itself) with the shooter's follow-up kill,
     // so the export shows it as "X死亡（X獵帶Y）(Y狼美，魅惑對象Z一同出局)" under 白天, not under 夜晚.
-    const shooter=jgPlayers.find(pl=>pl.role==='wolfking'&&jgRecord.wolfKill&&pl.num.toString()===jgRecord.wolfKill.toString())
-      ||jgFind(jgRecord.wolfKill);
-    if(shooter&&jgIsHunterCapable(shooter)&&jgLuckyOne&&jgLuckyOne.gift==='hunter'&&jgLuckyOne.num===shooter.num){
-      jgLuckyOne.used=true;
-    }
     if(shooter&&jgDawnDeaths[jgNight]){
-      const abbr=shooter.role==='wolfking'?'王':'獵';
       if(!jgDawnDeaths[jgNight].notes) jgDawnDeaths[jgNight].notes={};
-      const wbNote=jgRecord._dawnHunterShotWbCharmNote||'';
-      jgRecord._dawnHunterShotWbCharmNote=null;
       jgDawnDeaths[jgNight].notes[shooter.num]=(jgDawnDeaths[jgNight].notes[shooter.num]||'')
-        +'（'+shooter.num+abbr+'帶'+jgSwapDisplay(rawVal,val)+(guardBlocked?'，被守衛擋下':isEvilKnightImmune?'，惡靈騎士免疫':'')+'）'+wbNote;
+        +'（'+shooter.num+abbr+'帶'+jgSwapDisplay(rv,v)+(guardBlocked?'，被守衛擋下':isEvilKnightImmune?'，惡靈騎士免疫':'')+'）'+wbNote;
     }
+  };
+  // 這一槍的手勢／稱呼：真獵人或機械狼學到獵人＝獵、黑狼王＝王；若「唯一」的開槍資格
+  // 就是幸運兒的獵人獵槍（不是真獵人也不是黑狼王），則直接標記為幸獵，跟原本規則一致
+  const abbr1=shooter&&shooter.role==='wolfking'?'王':(shooterIsLuckyGun&&!doubleGun?'幸獵':'獵');
+  fireDawnShot(rawVal,val,abbr1);
+  if(doubleGun){
+    fireDawnShot(rawVal2,val2,'幸獵');
   }
+  // 不管開了幾槍、槍有沒有真的擊中人，只要這一槍的資格（單獨一把、或兩把當中的第二把）
+  // 來自幸運兒的獵人獵槍，這個死亡時機一過就不會再有機會用了，直接標記成已使用
+  if(shooterIsLuckyGun&&jgLuckyOne){ jgLuckyOne.used=true; }
   // 注意：這個 checkWin 一定要跑在「不管有沒有開槍」的路徑上——就算法官選擇不開槍／留空，
   // 淘汰這位獵人／黑狼王本身（狼刀致死）也可能已經達成勝負條件（例如神職剛好死絕），
   // 這裡沒有再檢查一次的話，遊戲會誤判成還沒結束，直接跳進一整個白天發言＋投票流程。
@@ -5130,8 +5204,11 @@ function jgSaveDawnHunterShot(){
   if(win){jgShowWin(win);return;}
   // Now show last words for all dead including hunter
   const dawnDeads=jgPlayers.filter(p=>!p.alive&&p._diedThisDawn);
-  if(chainTarget){
-    jgRecord._mechHunterChainNum=chainTarget;
+  if(chainQueue.length){
+    const first=chainQueue.shift();
+    jgRecord._mechHunterChainQueue=chainQueue;
+    jgRecord._mechHunterChainNum=first.num;
+    jgRecord._mechHunterChainRole=first.role;
     jgRecord._mechHunterChainNextStep=jgAfterDawn();
     jgRecord._mechHunterChainOrigin='night';
     jgGoStep('mechhunter-chain-shot');
@@ -5150,10 +5227,12 @@ function jgSaveMechHunterChainShot(){
   const nextStep=jgRecord._mechHunterChainNextStep||'dawn';
   const chainOrigin=jgRecord._mechHunterChainOrigin||'night';
   const chainRole=jgRecord._mechHunterChainRole||'hunter';
+  const pendingQueue=jgRecord._mechHunterChainQueue||[];
   jgRecord._mechHunterChainNum=null;
   jgRecord._mechHunterChainNextStep=null;
   jgRecord._mechHunterChainOrigin=null;
   jgRecord._mechHunterChainRole=null;
+  jgRecord._mechHunterChainQueue=null;
   const abbr={hunter:'獵',mechanicalwolf:'機獵',luckyone:'幸獵'}[chainRole]||'獵';
   if(val){
     const guardBlocked=!!((jgRecord.guardTarget&&jgRecord.guardTarget.toString()===val.toString())
@@ -5201,6 +5280,19 @@ function jgSaveMechHunterChainShot(){
   jgRenderRoster();
   const win=jgCheckWin();
   if(win){jgShowWin(win);return;}
+  // 若同一輪（例如獵人本身開一槍＋幸運兒獵槍再開一槍）還有排隊中、尚未處理的連鎖開槍對象，
+  // 先接著處理完，不能漏掉
+  const queue=pendingQueue;
+  if(queue&&queue.length){
+    const next=queue.shift();
+    jgRecord._mechHunterChainNum=next.num;
+    jgRecord._mechHunterChainRole=next.role;
+    jgRecord._mechHunterChainNextStep=nextStep;
+    jgRecord._mechHunterChainOrigin=chainOrigin;
+    jgRecord._mechHunterChainQueue=queue;
+    jgGoStep('mechhunter-chain-shot');
+    return;
+  }
   jgGoStep(nextStep);
 }
 
@@ -6373,6 +6465,7 @@ function jgSaveBlackMarket(){
   jgRecord.blackmarketSkill=skill;
   if(tv){
     jgBlackMarketUsed=true;
+    jgBlackMarketTradeNight=jgNight;
     const t=jgFind(tv);
     if(t){
       if(WOLF_ROLES.includes(t.role)){
@@ -6410,7 +6503,7 @@ function jgSaveLuckyoneNight(){
       }
     }
   }
-  jgGoStep('witch-wake');
+  jgGoStep('dawn');
 }
 
 function jgSaveLuckyoneHunterShot(){
@@ -6807,9 +6900,12 @@ const GOD_CHAIN=[
 function jgBlackMarketPending(){
   return !jgBlackMarketUsed && ((jgNight===1?(jgComp.blackmarket>0):jgHasRoleAny(['blackmarket']))||jgThiefBuriedActiveTonight('blackmarket'));
 }
-// 幸運兒（黑市商人交易產生）有自己獨立的睜眼步驟，緊接在黑市商人之後、女巫之前——
-// 避免跟真預言家／真女巫同一個「睜眼」時間點共用畫面而讓彼此知道對方是誰。
-// 只有查驗／毒藥技能需要每晚睜眼；獵人技能是被動的（死亡時才觸發），不需要睜眼。
+// 幸運兒（黑市商人交易產生）有自己獨立的睜眼步驟，避免跟真預言家／真女巫同一個
+// 「睜眼」時間點共用畫面而讓彼此知道對方是誰。只有查驗／毒藥技能需要每晚睜眼；
+// 獵人技能是被動的（死亡時才觸發），不需要睜眼。
+// 睜眼順序：交易發生的當晚，幸運兒緊接在黑市商人之後睜眼（見 jgSaveBlackMarket 的
+// 'luckyone-walk' 步驟，屬於交易當下的掩護動作）；從下一晚起，幸運兒改成整晚
+// 最後一個睜眼（緊接在天亮之前），見 jgNextGodStep 尾端插入的 jgLuckyOneWakeIsLast()。
 function jgLuckyOneWakePending(){
   // 幸運兒睜眼是掩護動作：只要黑市商人已經交易過（不管成功失敗、不管幸運兒拿到哪種技能），
   // 之後每一晚都要照樣走一次「幸運兒請睜眼／請閉眼」的儀式，外觀完全一致；如果只有拿到
@@ -6818,10 +6914,16 @@ function jgLuckyOneWakePending(){
   // 交易到底有沒有成功。
   return !!jgBlackMarketUsed;
 }
-// 狼人（含狼美人等）睜眼結束後的下一步：黑市商人 → 幸運兒 → 女巫，依序檢查誰該登場
+// 從交易的下一晚起（jgNight > 交易當晚），幸運兒的睜眼步驟改成整晚最後一個，
+// 由 jgNextGodStep() 在整條神職鏈都跑完、準備天亮之前插入。
+function jgLuckyOneWakeIsLast(){
+  return jgLuckyOneWakePending() && jgBlackMarketTradeNight!=null && jgNight>jgBlackMarketTradeNight;
+}
+// 狼人（含狼美人等）睜眼結束後的下一步：黑市商人 → 女巫，依序檢查誰該登場
+// （幸運兒交易當晚由 jgSaveBlackMarket→luckyone-walk 處理；交易後續夜晚已移到
+//  jgNextGodStep 尾端，不再從這裡進場）
 function jgPostWolfStep(){
   if(jgBlackMarketPending()) return 'blackmarket-wake';
-  if(jgLuckyOneWakePending()) return 'luckyone-wake';
   return 'witch-wake';
 }
 
@@ -6831,6 +6933,8 @@ function jgNextGodStep(afterStep){
     if(found && g.check(jgNight,jgComp)) return g.step;
     if(g.step===afterStep) found=true;
   }
+  // 幸運兒第二晚起（交易的下一晚起）改成整晚最後一個睜眼，插在神職鏈跑完、天亮之前
+  if(jgLuckyOneWakeIsLast()) return 'luckyone-wake';
   return 'dawn';
 }
 
@@ -7206,7 +7310,10 @@ function jgSaveVoteInner(){
     if(winCheck){jgShowWin(winCheck);return;}
     jgRecord._voteOutNum=found.num;
     jgLastVoteOutPlayer=found.num; // for gravkeeper（獨立變數，不會被夜晚重置的 jgRecord 清掉）
-    if(eliminatedRole==='hunter'){jgGoStep('hunter-shot');return;}
+    if(eliminatedRole==='hunter'){
+      jgRecord._hunterDoubleGun=!!(jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&jgLuckyOne.num===found.num);
+      jgGoStep('hunter-shot');return;
+    }
     if(eliminatedRole==='mechanicalwolf'&&jgMechWolfHunterActive()){jgGoStep('hunter-shot');return;}
     if(jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&found.num===jgLuckyOne.num&&jgNight>=jgLuckyOne.startNight){
       jgLuckyOne.used=true;
@@ -7374,34 +7481,48 @@ function jgSaveWolfBeautyCharmKill(){
 }
 
 function jgSaveHunter(){
+  // 若被票出的這個人，本身既是真獵人、又是黑市商人交易出來、拿到「獵人獵槍」的幸運兒，
+  // 等於身上有兩把槍：兩個技能各自獨立開一槍，兩個都可以留空不開。
+  const doubleGun=!!jgRecord._hunterDoubleGun;
+  jgRecord._hunterDoubleGun=null;
   const val=(document.getElementById('jg-hunter-shot-rec')||{}).value?.trim()||'';
-  let chainTarget=null;
-  if(val){
-    const p=jgFind(val);
+  const val2=doubleGun?((document.getElementById('jg-hunter-shot-rec2')||{}).value?.trim()||''):'';
+  const chainQueue=[];
+  const fireOneShot=(v, abbr)=>{
+    if(!v) return;
+    const p=jgFind(v);
     if(p&&p.alive){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
-      const wbCharmNum5=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
+      const wbCharmNum=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
         }
       }
-      let wbNote5='';
-      if(wbCharmNum5){
-        wbNote5='（'+val+'狼美，魅惑對象'+wbCharmNum5+'一同出局）';
-        alert('💋 '+val+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+val+'號、'+wbCharmNum5+'號 淘汰。」');
+      let wbNote='';
+      if(wbCharmNum){
+        wbNote='（'+v+'狼美，魅惑對象'+wbCharmNum+'一同出局）';
+        alert('💋 '+v+'號是狼美人，魅惑對象一同殉情！\n\n法官口白：「'+v+'號、'+wbCharmNum+'號 淘汰。」');
       }
-      jgAmendDayVoteLine(jgRecord._voteOutNum,'獵',val+wbNote5);
-      { const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
-        if(chainTag){ chainTarget=p.num; jgRecord._mechHunterChainRole=chainTag; } }
-      jgRenderRoster();
-      const w=jgCheckWin();if(w){jgShowWin(w);return;}
+      jgAmendDayVoteLine(jgRecord._voteOutNum,abbr,v+wbNote);
+      const chainTag=trulyDied?jgHunterCapableTag(wasRole,p.num):null;
+      if(chainTag){ chainQueue.push({num:p.num, role:chainTag}); }
     }
+  };
+  fireOneShot(val,'獵');
+  if(doubleGun){
+    fireOneShot(val2,'幸獵');
+    if(jgLuckyOne) jgLuckyOne.used=true;
   }
-  if(chainTarget){
-    jgRecord._mechHunterChainNum=chainTarget;
+  jgRenderRoster();
+  const w=jgCheckWin();if(w){jgShowWin(w);return;}
+  if(chainQueue.length){
+    const first=chainQueue.shift();
+    jgRecord._mechHunterChainQueue=chainQueue;
+    jgRecord._mechHunterChainNum=first.num;
+    jgRecord._mechHunterChainRole=first.role;
     jgRecord._mechHunterChainNextStep='next-night';
     jgRecord._mechHunterChainOrigin='day';
     jgGoStep('mechhunter-chain-shot');
@@ -7502,7 +7623,8 @@ function jgCheckWin(){
 // 人狼鏈成立時的專用勝負判定：tp＝third-party 完整名單（情侶兩人＋邱比特），
 // tpAlive＝目前還存活的第三方成員號碼。這個函式只會在第三方仍有人存活時被呼叫。
 // (1) 第三方屠光其餘所有玩家（others 清空）→ 第三方獲勝。
-// (2) 第三方存活人數 與 場上其餘（非第三方）存活人數 相同時，直接判定第三方獲勝。
+// (2) 第三方存活人數「大於」場上其餘（非第三方）存活人數時，直接判定第三方獲勝
+//     （例如第三方三人都在場，需要 3:2 才算獲勝；打平，例如 3:3，遊戲尚未結束）。
 // 其餘情況遊戲繼續（回傳 null）——不管狼人或好人是否已經死絕，只要第三方還在場，
 // 就不能提前判定狼人或好人獲勝；必須等第三方（含邱比特）全滅後，才會改用一般規則。
 function jgCheckWinThirdParty(tp, tpAlive){
@@ -7511,8 +7633,8 @@ function jgCheckWinThirdParty(tp, tpAlive){
   if(others.length===0){
     return{winner:'third',msg:'邱比特與情侶（第三方陣營）已將其餘玩家屠光',icon:'💘'};
   }
-  if(tpAlive.length===others.length){
-    return{winner:'third',msg:'第三方陣營（邱比特／情侶）存活人數與其餘玩家相同，直接判定第三方獲勝',icon:'💘'};
+  if(tpAlive.length>others.length){
+    return{winner:'third',msg:'第三方陣營（邱比特／情侶）存活人數多於其餘玩家，直接判定第三方獲勝',icon:'💘'};
   }
   return null;
 }
@@ -7673,7 +7795,7 @@ const ALL_ROLES = {
   evilknight:{icon:'🖤',name:'惡靈騎士',team:'wolf',teamLabel:'狼人陣營', desc:'<strong>被動防禦：</strong>夜間免疫狼殺、女巫毒、以及夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）（但預言家查驗仍顯示狼人）。<br><strong>反傷：</strong>被預言家查驗→次日預言家死亡；被女巫毒殺→次日女巫死亡。但反傷效果整局限一次。<br><strong>限制：</strong>不可自刀自爆。'},
   bloodmoon: {icon:'🌑', name:'血月使者', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>主動技：</strong>白天自己發言階段可自爆後直接進入黑夜，當晚所有神牌技能封印。<br><strong>被動技：</strong>若為最後一個被放逐的狼人，可暫時存活進入黑夜，夜晚再擊殺一名玩家，達屠邊則狼人勝利。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與獵魔人搭配出現</span>'},
     gargoyle: {icon:'🗿', name:'石像鬼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>查驗牌面：</strong>每晚查驗一名玩家的具體角色。<br><strong>限制：</strong>不與狼隊見面，隊友全滅前不能殺人；隊友全滅後可在查驗之外，額外選擇今晚的帶刀對象殺人。不可自爆，可自刀。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與守墓人搭配出現</span>'},
-  mechanicalwolf:{icon:'🤖',name:'機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊相認：</strong>與其他狼人互不相認，全程不可自爆。<br><strong>學習技能：</strong>任一晚可選擇一名玩家並「學習」其身份技能，次晚起可使用該技能：<br>‧ 學到狼人／黑狼王：接下來夜晚可選一晚多開一刀（整局限一次）；學到黑狼王額外還多了「被狼刀或被票出局時可以開槍帶人（被毒則不行）」。<br>‧ 學到平民：沒有主動技能。<br>‧ 學到女巫：只有一瓶毒藥（沒有解藥），整局限一次。<br>‧ 學到通靈師：每晚可查驗一名玩家的具體身份。<br>‧ 學到獵人：出局（夜槍或白天槍）時可開槍帶人。<br>‧ 學到守衛：除一般守衛功能之外，還能抵擋女巫毒與夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）；但守護與真守衛一樣仍會跟女巫同守同救「奶穿」死亡，而且只要成功擋到任一種傷害（無論最終是否因奶穿而死），這個技能就視為用畢，之後不能再守。<br><strong>帶刀手勢：</strong>當其餘狼人同伴全部出局時，機械狼開始獨自帶刀殺人。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與通靈師搭配出現</span>'},
+  mechanicalwolf:{icon:'🤖',name:'機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊相認：</strong>與其他狼人互不相認，全程不可自爆。<br><strong>學習技能：</strong>任一晚可選擇一名玩家並「學習」其身份技能，次晚起可使用該技能：<br>‧ 學到狼人／黑狼王：接下來夜晚可選一晚多開一刀（整局限一次），這一刀不可被守衛（含機械狼學到的守衛）或女巫解藥阻擋；一般守衛每晚只能擋下一刀，若這一刀與狼隊當晚的正常狼刀同時命中同一人，守衛只能擋住其中一刀，該玩家仍會因為另一刀死亡，隔天公布死亡。學到黑狼王額外還多了「被狼刀或被票出局時可以開槍帶人（被毒則不行）」。<br>‧ 學到平民：沒有主動技能。<br>‧ 學到女巫：只有一瓶毒藥（沒有解藥），整局限一次。<br>‧ 學到通靈師：每晚可查驗一名玩家的具體身份。<br>‧ 學到獵人：出局（夜槍或白天槍）時可開槍帶人。<br>‧ 學到守衛：除一般守衛功能之外，還能抵擋女巫毒與夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）；但守護與真守衛一樣仍會跟女巫同守同救「奶穿」死亡，而且只要成功擋到任一種傷害（無論最終是否因奶穿而死），這個技能就視為用畢，之後不能再守。<br><strong>帶刀手勢：</strong>當其餘狼人同伴全部出局時，機械狼開始獨自帶刀殺人。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與通靈師搭配出現</span>'},
   nightmare: {icon:'😈', name:'夢魘',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>恐懼：</strong>每晚在狼人行動前先發動技能，恐懼一名玩家，使其當晚無法發動夜間技能。若恐懼到狼隊友，狼人當晚不得殺人。<br><strong>限制：</strong>不能連續兩晚恐懼同一人，不可自爆、自刀。首夜與狼隊互不見面，可能誤恐懼到隊友。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與攝夢人搭配出現</span>'},
   wolfbrother_e:{icon:'👴', name:'狼兄', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>首夜相認：</strong>與狼弟優先睜眼互相確認身份，隨後狼弟先閉眼，狼兄再與其餘狼人一同睜眼執行狼刀。<br><strong>陣亡效果：</strong>狼兄以任何方式（票出、毒殺、被殺等）陣亡後，下一晚狼弟將「覺醒」，必須殺一人復仇。<br><span style="color:var(--seer);font-size:12px;">⚡ 常見板子搭配：黑市商人＋狼兄狼弟——狼弟覺醒前形同隱狼，黑市商人若誤與其交易會直接失敗身亡</span>'},
   wolfbrother_y:{icon:'👦', name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。'},
@@ -7684,13 +7806,13 @@ const ALL_ROLES = {
     +'<strong>🔻 不需追刀：</strong>傻瓜被投票出局時直接淘汰、不能留在場上，沒有翻牌自證的機制；狼隊「屠神」不需要特地在夜裡殺死傻瓜。<br>'
     +'<strong>對夜晚攻擊沒有免疫：</strong>不論哪種規則，被狼刀或女巫毒死時都跟一般玩家一樣立即死亡；翻牌留場的效果只對「要追刀」規則下的「白天被投票出局」有效。'},
   hybrid:   {icon:'🧬', name:'混血兒', team:'good', teamLabel:'好人陣營（特殊）', desc:'<strong>選擇支持對象：</strong>第一晚睜眼選擇一位玩家作為支持對象（不能選自己），此後不再有夜間動作。<br><strong>勝利條件：</strong>與支持對象的勝利陣營相同，但混血兒自己不會被告知對方是好人還是狼人，需自行從發言判斷。<br><strong>對外表現：</strong>被預言家查驗永遠顯示為好人（金水）；在人數統計與「屠民」判定上視為一般平民——狼隊若要屠民，仍必須刀死混血兒，就算他其實支持狼隊也一樣。'},
-  cupid:    {icon:'💘', name:'邱比特', team:'good', teamLabel:'特殊（陣營依情侶配對而定，不屬於神職也不屬於平民）', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>查驗：</strong>被預言家查驗永遠顯示為好人（金水）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同——但邱比特永遠不會帶狼刀、不參與狼人殺人決策，好人陣營要獲勝，除了原本的條件，也必須連邱比特一起淘汰。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營，邱比特本人也永遠是第三方一員。第三方需屠光除自己以外的所有玩家才算獲勝；若第三方存活人數與場上其餘存活人數相同，直接判定第三方獲勝。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致則當晚強制變成平安夜（建議討論時間約20秒）。'},
+  cupid:    {icon:'💘', name:'邱比特', team:'good', teamLabel:'特殊（陣營依情侶配對而定，不屬於神職也不屬於平民）', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>查驗：</strong>被預言家查驗永遠顯示為好人（金水）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同——但邱比特永遠不會帶狼刀、不參與狼人殺人決策，好人陣營要獲勝，除了原本的條件，也必須連邱比特一起淘汰。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營，邱比特本人也永遠是第三方一員。第三方需屠光除自己以外的所有玩家才算獲勝；若第三方存活人數「多於」場上其餘存活人數，直接判定第三方獲勝（例如第三方三人都在場，需要 3:2 才算獲勝；打平，例如 3:3，遊戲尚未結束）。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致則當晚強制變成平安夜（建議討論時間約20秒）。'},
   thief:    {icon:'🎴', name:'盜賊', team:'good', teamLabel:'特殊（最終陣營依選擇的角色而定，開局前不屬於神職也不屬於平民）', desc:'<strong>整局第一個睜眼：</strong>比邱比特、夢魘還早，是全場第一個行動的角色。遊戲開始前，會多準備兩張額外的身分牌（例如12人局準備14張牌），這兩張牌不發給任何玩家，只保留給盜賊在第一夜選擇。<br><strong>選擇身分：</strong>法官在盜賊睜眼時，把手上另外準備的兩張候選身分告訴系統，用「大字報」的方式攤開讓盜賊看到這兩個角色，盜賊選一個成為自己最終真正的身分（另一張則直接「埋」掉，整局都不會有人是這個身分）。<br><strong>強制選狼：</strong>兩張候選身分中如果有狼人陣營的角色，盜賊「一定要」選擇狼人遊玩——這也讓盜賊多了一個資訊：場上「沒有」出現另一張候選卡代表的那個身分。正常設置下不會出現「兩張候選都是狼人」的情況。<br><strong>選完之後：</strong>盜賊立刻變成所選的身分，從這一夜開始完全依照新身分的規則遊玩（若變成狼人，之後與狼隊一起睜眼殺人；若變成神職，之後在該神職的步驟行動），原本的「盜賊」身分只在選擇之前短暫存在。'},
   // Good - gods
   seer:     {icon:'🔮', name:'預言家', team:'good', teamLabel:'神職', desc:'每晚查驗一名玩家，得知「好人」或「狼人」。<br>可以重複查驗已經查過的號碼；不能查驗已經死亡的號碼。'},
   witch:    {icon:'🧪', name:'女巫',   team:'good', teamLabel:'神職', desc:'<strong>解藥：</strong>救活當晚被狼殺的玩家（整局限一次）。<br><strong>毒藥：</strong>毒殺任意玩家（整局限一次）。<br>兩瓶藥沒有時間限制，整局中任何一晚都能使用；但同一晚只能擇一使用，不能同時用解藥又用毒藥，且不能自救。'},
   hunter:   {icon:'🔫', name:'獵人',   team:'good', teamLabel:'神職', desc:'被狼刀淘汰（夜槍）或被投票淘汰（白天槍）時，都可以開槍帶走一名玩家（留空不帶）。<strong>以下情況無法發動：被女巫毒殺；被狼美人發動技能殉情帶走；被白狼王發動自爆技能帶走。</strong>'},
-  guard:    {icon:'🛡️', name:'守衛',   team:'good', teamLabel:'神職', desc:'每晚可以選擇一名玩家守護（也可以空守），守過的號碼可以再次守，但不能連續兩晚守同一人。<br>守衛擋得住狼刀，也擋得住當晚的夜槍（獵人／黑狼王被狼刀淘汰後開槍帶人）——同一個盾只能擋下一刀或一槍。<br>守衛無法阻擋女巫毒藥。<br><strong>奶穿：</strong>若同一晚守衛的守護與女巫的解藥同時作用在同一名玩家身上，該玩家仍會死亡（雙重保護互相抵銷）。'},
+  guard:    {icon:'🛡️', name:'守衛',   team:'good', teamLabel:'神職', desc:'每晚可以選擇一名玩家守護（也可以空守），守過的號碼可以再次守，但不能連續兩晚守同一人。<br>守衛擋得住狼刀，也擋得住當晚的夜槍（獵人／黑狼王被狼刀淘汰後開槍帶人）——同一個盾只能擋下一刀或一槍。<br>守衛無法阻擋女巫毒藥。<br><strong>奶穿：</strong>若同一晚守衛的守護與女巫的解藥同時作用在同一名玩家身上，該玩家仍會死亡（雙重保護互相抵銷）。<br><strong>機械狼額外一刀：</strong>一般守衛每晚只能擋下一刀狼刀；若機械狼「學到狼人／黑狼王」後開出的額外一刀，跟狼隊當晚的正常狼刀同時命中同一人，守衛守不住（額外一刀本來就不可被守護阻擋），該玩家隔天仍會死亡。'},
   dreamcatcher:{icon:'🌙',name:'攝夢人',team:'good',teamLabel:'神職', desc:'<strong>守護/擊殺：</strong>主動技:每晚都必須選擇一位玩家成為夢遊者使其進入夢遊狀態。夢遊者將不會死於攝夢人以外的夜間技能(狼刀、巫毒、夜槍)，若攝夢人連續兩晚夢同一位玩家，則夢遊者會因此死於夢裡。<br>被動技:若攝夢人在夜裡死亡，則夢遊者會一同死去。'},
   knight:   {icon:'⚔️', name:'騎士',   team:'good', teamLabel:'神職', desc:'<strong>決鬥：</strong>白天發言階段可隨時翻牌宣告決鬥，指定一名玩家對決。<br>對方是狼→法官宣布「X號是狼人，X號淘汰」，對方直接出局，跳過投票直接進入黑夜。<br>對方是好人→法官宣布「X號是好人，騎士以死謝罪」，騎士淘汰，白天繼續發言與投票。<br><strong>限制：</strong>若決鬥對象是黑狼王／狼美人／白狼王，因決鬥出局不會發動其技能（不能開槍帶人、魅惑對象不會殉情）。'},
   magician: {icon:'🎩', name:'魔術師', team:'good', teamLabel:'神職', desc:'<strong>交換號碼：</strong>每晚睜眼後最早行動，交換兩個號碼牌（也可以不換）。已交換過的號碼不能再被交換，不能交換已死亡的號碼。<br><strong>換流效果：</strong>當晚所有以「號碼」為目標的夜間技能，實際作用對象都會被改成對方號碼——換 A、B 後，狼刀A會刀到B、女巫毒A會毒到B、預言家查A會查到B、守衛守A會守到B……以此類推。<br><strong>夜槍例外：</strong>獵人被狼刀（夜槍）帶走的目標仍屬於夜間作用、一樣會被換流影響；但若獵人是白天被投票出局（白天槍），此時已經是白天，換流只對夜間作用有效，不受影響。'},
@@ -7706,7 +7828,7 @@ const ALL_ROLES = {
     +'<li>如果最高票是非 0 的平票，平票的玩家進行新一輪發言 PK，然後重新投票，得票較多者當選警長；如果 PK 之後再度平票，本局不再有警長。</li>'
     +'<li>狼人可以在競選環節的任何時間點自爆；狼人自爆會直接吞掉警徽，本局不再有警長。</li></ul>'
     +'<strong>PK 平票後還能退水嗎？</strong> 原則上不行——進入投票環節、出現平票之後，參與 PK 的候選人不能再退水。'},
-  luckyone: {icon:'🍀', name:'幸運兒', team:'special', teamLabel:'附加身分', desc:'由黑市商人交易產生，並非開局直接分配的身分。獲得預言家查驗、女巫毒藥或獵人獵槍其中一項技能，自取得的下個夜晚（查驗／毒藥）或下個白天（獵槍）起可以使用。'},
+  luckyone: {icon:'🍀', name:'幸運兒', team:'special', teamLabel:'附加身分', desc:'由黑市商人交易產生，並非開局直接分配的身分。獲得預言家查驗、女巫毒藥或獵人獵槍其中一項技能，自取得的下個夜晚（查驗／毒藥）或下個白天（獵槍）起可以使用。<br>若獲得查驗，每晚都可查；若獲得巫毒及獵槍，只能使用一次。'},
 };
 
 const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y'];
