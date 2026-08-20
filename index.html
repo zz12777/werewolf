@@ -968,6 +968,21 @@ function switchTab(id){
 // TAB 3: 人工法官
 // ═══════════════════════════════════
 let jgTotal=6, jgComp={};
+// 「現在開始競選警長」音檔的播放／暫停／重播——共用同一個 Audio 物件，
+// 這樣暫停後再按播放才會從暫停的地方接著播，而不是每次都從頭建立新的音檔重播。
+let jgSheriffAudioEl=null;
+function jgSheriffAudioPlay(){
+  if(!jgSheriffAudioEl) jgSheriffAudioEl=new Audio('sheriff_start.mp3');
+  jgSheriffAudioEl.play();
+}
+function jgSheriffAudioPause(){
+  if(jgSheriffAudioEl) jgSheriffAudioEl.pause();
+}
+function jgSheriffAudioReplay(){
+  if(!jgSheriffAudioEl) jgSheriffAudioEl=new Audio('sheriff_start.mp3');
+  jgSheriffAudioEl.currentTime=0;
+  jgSheriffAudioEl.play();
+}
 
 // ── 即時票型紀錄（公開同步到 Google 試算表，讓玩家在遊戲進行中就能看到票型） ──
 // 部署好 Google Apps Script 網頁應用程式後，把拿到的網址貼在這裡（結尾通常是 /exec）。
@@ -2276,7 +2291,11 @@ function jgRenderSheriffCandidates(){
     ? '<div class="info" style="font-size:12px;">💥 本局採雙爆吞警徽規則：第一次自爆警徽保留、競選延到隔天；再次自爆警徽才會流失。</div>' : '';
   jgShowPg(`
     <h2>警長競選・候選人</h2>
-    <div class="speech" style="font-size:16px;display:flex;align-items:center;gap:8px;">「<em>現在開始競選警長，候選人請起立。</em>」<button type="button" onclick="new Audio('sheriff_start.mp3').play()" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">🔊</button></div>
+    <div class="speech" style="font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">「<em>現在開始競選警長，候選人請起立。</em>」<span style="display:inline-flex;gap:6px;">
+      <button type="button" onclick="jgSheriffAudioPlay()" title="播放" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">▶️</button>
+      <button type="button" onclick="jgSheriffAudioPause()" title="暫停" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">⏸️</button>
+      <button type="button" onclick="jgSheriffAudioReplay()" title="重播" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">🔁</button>
+    </span></div>
     <div class="info" style="font-size:12px;">（等候約 5 秒，讓想上警的玩家站起來，再點選以下號碼記錄候選人）</div>
     ${badgeBanner}
     <label>候選人（點選起立的號碼，可複選）</label>
@@ -2571,7 +2590,7 @@ function jgRenderSheriffVote(){
     <h2>警長競選・投票</h2>
     <div class="speech">「<em>沒有上警的玩家，請投票選出警長，3、2、1，請投票。</em>」</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">候選人：${cands.join('、')}號；只有從未上警的玩家（${voters.join('、')||'無'}）有投票權</div>
-    ${jgSheriffVoteQuickInputHtml()}
+    <!-- 快速輸入投票已停用，改用下方「N號投給」逐一點選 -->
     <div id="jg-sheriff-vote-tally"></div>
     <div id="jg-sheriff-vote-summary" style="margin-top:6px;"></div>
     <button class="danger" style="margin-top:10px;" onclick="jgSheriffSelfDestructPrompt()">${jgSelfDestructBtnLabel()}</button>
@@ -2665,22 +2684,24 @@ function jgApplySheriffQuickVote(){
   jgSheriffVoteTally=newTally;
   jgRenderSheriffVoteTally();
 }
+// 改成以「投票者」為主，跟白天放逐投票同一種畫面：一行一個投票玩家，點選他投給哪位候選人。
+// 沒有點任何候選人＝棄票（跟原本邏輯一致，這裡不用另外標記）。
 function jgRenderSheriffVoteTally(){
   const box=document.getElementById('jg-sheriff-vote-tally');
   if(!box) return;
   const cands=jgSheriffCandidates.slice().sort((a,b)=>a-b);
   const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&!jgSheriffWithdrawn.includes(n)).sort((a,b)=>a-b);
   let html='';
-  cands.forEach(target=>{
-    const marks=jgSheriffVoteTally[target]||{};
+  voters.forEach(voter=>{
+    const votedFor=cands.find(t=>jgSheriffVoteTally[t]&&jgSheriffVoteTally[t][voter]);
     html+='<div style="margin-bottom:10px;">'
-      +'<div style="font-weight:700;font-size:13px;margin-bottom:4px;">'+target+' 號 被誰投</div>'
+      +'<div style="font-weight:700;font-size:13px;margin-bottom:4px;">'+voter+' 號 投給</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
-      +voters.map(voter=>{
-        const sel=!!marks[voter];
+      +cands.map(target=>{
+        const sel=votedFor===target;
         return '<button type="button" onclick="jgToggleSheriffVote('+target+','+voter+')" style="width:34px;height:34px;border-radius:50%;padding:0;font-size:12px;margin:0;'
           +(sel?'background:var(--danger,#c0392b);color:#fff;border-color:transparent;':'')
-          +'">'+voter+'</button>';
+          +'">'+target+'</button>';
       }).join('')
       +'</div></div>';
   });
@@ -5146,10 +5167,11 @@ function jgRenderStep(step){
   else if(step==='vote-last-words'){
     const p=jgRecord._voteOutNum?jgByNum(jgRecord._voteOutNum):null;
     const name=p?(p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p.num+'號'):'被放逐玩家';
+    const isFoolReveal=!!jgRecord._voteOutFoolReveal;
     jgShowPg(`
       <h2>遺言</h2>
       <div class="info" style="display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 14px;">
-        <span style="font-size:18px;">💬</span><span>${name} 發表遺言</span>
+        <span style="font-size:18px;">💬</span><span>${name} 發表遺言${isFoolReveal?'<span style="display:block;font-size:11px;color:var(--text2);margin-top:2px;">（翻牌為傻瓜，免於淘汰，可留在場上，但之後不能再投票）</span>':''}</span>
       </div>
       <button class="primary" onclick="jgGoStep('next-night')">遺言結束，天黑 →</button>
     `,'💬 遺言');
@@ -5218,7 +5240,7 @@ function jgSaveDawnHunterShot(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
         }
       }
       // 被夜槍／王槍帶走的對象，如果本身也具備獵人開槍資格（真獵人／已學得獵人的機械狼／
@@ -5302,7 +5324,7 @@ function jgSaveMechHunterChainShot(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
         }
       }
       if(wbCharmNum2){
@@ -6570,7 +6592,7 @@ function jgSaveLuckyoneHunterShot(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
         }
       }
       let wbNote3='';
@@ -7324,8 +7346,10 @@ function jgSaveVoteInner(){
     found.foolRevealed=true;
     jgDayLog[jgNight]=(jgDayLog[jgNight]||[]).concat([found.num+'號翻牌是傻瓜！免於淘汰，之後只能發言、不能再投票']);
     alert('🃏 '+found.num+'號翻牌是傻瓜！免於淘汰，但之後整局只能發言、不能再參與投票。');
+    jgRecord._voteOutNum=found.num;
+    jgRecord._voteOutFoolReveal=true;
     jgRenderRoster();
-    jgGoStep('next-night');
+    jgGoStep('vote-last-words');
     return;
   }
   if(found){
@@ -7335,7 +7359,7 @@ function jgSaveVoteInner(){
     // 邱比特情侶殉情：被投票出局的人如果是情侶其中一人，另一人立刻跟著殉情
     { const loverDeadNum=jgCascadeLoverDeath(found.num, trulyDied);
       if(loverDeadNum){
-        alert('💘 '+found.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
+        alert('💘 '+found.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+found.num+'號、'+loverDeadNum+'號 淘汰。」');
       }
     }
     // Record wolfbeauty charm kill if wolfbeauty was voted out
@@ -7391,7 +7415,7 @@ function jgSaveWolfKingShot(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
         }
       }
       let wbNote4='';
@@ -7546,7 +7570,7 @@ function jgSaveHunter(){
       jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
-          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）');
+          alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
         }
       }
       let wbNote='';
