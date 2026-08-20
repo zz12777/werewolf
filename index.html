@@ -759,6 +759,14 @@ select{
     </div>
     <div class="info" id="jg-fool-mode-desc" style="font-size:12px;margin-top:8px;"></div>
   </div>
+  <div id="jg-nightmare-mode-row" style="display:none;margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);">
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">😈 夢魘規則・是否每晚強制恐懼</div>
+    <div class="pd-seg" id="jg-nightmare-mode-seg">
+      <button type="button" class="pd-seg-btn" id="jg-nightmare-mode-force" onclick="jgSetNightmareForceMode('force')">強制恐懼</button>
+      <button type="button" class="pd-seg-btn" id="jg-nightmare-mode-optional" onclick="jgSetNightmareForceMode('optional')">可不恐懼</button>
+    </div>
+    <div class="info" id="jg-nightmare-mode-desc" style="font-size:12px;margin-top:8px;"></div>
+  </div>
   <div class="big-section-title">警長設定（選填）</div>
   <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:0;padding:14px 16px;border-radius:12px;border:2px solid var(--accent,#2e7d32);background:rgba(46,125,50,0.08);cursor:pointer;transition:background .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
     <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
@@ -1742,6 +1750,37 @@ function jgUpdateComp(){
     renderRolePicker('jg-role-picker', jgRolePick, target, null);
   }
   jgRenderFoolModeUI();
+  jgRenderNightmareModeUI();
+}
+
+// 夢魘規則切換（每晚強制恐懼／可以不恐懼）：只有這場板子有選夢魘才顯示。
+// 12 人以上局預設「可不恐懼」，12 人以下維持傳統「強制恐懼」；法官手動切過之後
+// 就不再依人數自動覆蓋，直到重新整理／重選板子。實際規則差異見 jgSaveNightmare()。
+let jgNightmareForceMode='force';
+let jgNightmareModeManual=false;
+function jgSetNightmareForceMode(mode){
+  jgNightmareForceMode=mode;
+  jgNightmareModeManual=true;
+  jgRenderNightmareModeUI();
+}
+function jgRenderNightmareModeUI(){
+  const row=document.getElementById('jg-nightmare-mode-row');
+  if(!row) return;
+  const hasNightmare=(jgRolePick.nightmare||0)>0;
+  row.style.display=hasNightmare?'':'none';
+  if(!hasNightmare) return;
+  if(!jgNightmareModeManual){
+    const n=parseInt(document.getElementById('jg-count')?.value)||jgTotal||6;
+    jgNightmareForceMode = n>=12 ? 'optional' : 'force';
+  }
+  const forceBtn=document.getElementById('jg-nightmare-mode-force');
+  const optBtn=document.getElementById('jg-nightmare-mode-optional');
+  if(forceBtn) forceBtn.classList.toggle('active', jgNightmareForceMode==='force');
+  if(optBtn) optBtn.classList.toggle('active', jgNightmareForceMode==='optional');
+  const desc=document.getElementById('jg-nightmare-mode-desc');
+  if(desc) desc.textContent = jgNightmareForceMode==='force'
+    ? '每晚必須恐懼一人，不能留空跳過。'
+    : '可以留空跳過，今晚選擇不恐懼任何人也合法（12人以上局預設採用這個模式）。';
 }
 
 // 傻瓜規則切換（要追刀／不需追刀）：只有這場板子有選傻瓜時才顯示這個切換鈕；
@@ -2237,7 +2276,7 @@ function jgRenderSheriffCandidates(){
     ? '<div class="info" style="font-size:12px;">💥 本局採雙爆吞警徽規則：第一次自爆警徽保留、競選延到隔天；再次自爆警徽才會流失。</div>' : '';
   jgShowPg(`
     <h2>警長競選・候選人</h2>
-    <div class="speech" style="font-size:16px;">「<em>現在開始競選警長，候選人請起立。</em>」</div>
+    <div class="speech" style="font-size:16px;display:flex;align-items:center;gap:8px;">「<em>現在開始競選警長，候選人請起立。</em>」<button type="button" onclick="new Audio('sheriff_start.mp3').play()" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">🔊</button></div>
     <div class="info" style="font-size:12px;">（等候約 5 秒，讓想上警的玩家站起來，再點選以下號碼記錄候選人）</div>
     ${badgeBanner}
     <label>候選人（點選起立的號碼，可複選）</label>
@@ -3116,7 +3155,10 @@ function jgRenderRoster(){
         ?'<span class="rp-tag-lover" title="情侶">💘</span>':'';
       // 這位玩家原本是盜賊，選完之後變成別的身分：法官視角加註小標籤方便對照
       const thiefOriginTag=(jgThiefFinalNum&&jgThiefFinalNum.toString()===p.num.toString())?'<span class="rp-tag-lover" style="color:var(--thief);" title="原本是盜賊，選完後變成現在的身分">盜</span>':'';
-      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}</div>`;
+      // 傻瓜被票出局翻牌自證：不算真正死亡，但用一個顯眼的標籤跟一般存活玩家區分開來，
+      // 提醒法官這位玩家只能發言、不能再投票，要等被刀/毒/開槍等「補刀」才會真正出局。
+      const foolRevealedTag=p.foolRevealed?'<span class="rp-tag-lover" style="color:var(--gold);" title="傻瓜已翻牌：免於淘汰，但不能再投票，需再被補刀才會真正死亡">🃏已翻牌</span>':'';
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <div class="rp-num">${p.num}${jgSheriff===p.num?'<span title="警長" style="margin-left:2px;">🎖️</span>':''}</div>
@@ -3190,7 +3232,7 @@ function jgCaptureState(){
     jgSheriffLogLines, jgSheriffElectedNum, jgSheriffTransferPending, jgSheriffTransferDeadNum, jgSheriffTransferNextStep,
     jgVotePkRound, jgVotePkCandidates,
     jgBadgeMode, jgSheriffFirstBlowDone, jgSheriffFirstBlowNum, jgSheriffPostponedToDay2, jgSheriffDay2CandidatesAsked, jgSheriffFinalNight,
-    jgHanTiaoSheriffNote, jgHanTiaoDiscussNotes, jgHanTiaoCommitted
+    jgHanTiaoSheriffNote, jgHanTiaoDiscussNotes, jgHanTiaoCommitted, jgNightmareForceMode
   }));
 }
 
@@ -3276,6 +3318,7 @@ function jgRestoreState(snap){
   jgHanTiaoSheriffNote=snap.jgHanTiaoSheriffNote||'';
   jgHanTiaoDiscussNotes=snap.jgHanTiaoDiscussNotes||{};
   jgHanTiaoCommitted=!!snap.jgHanTiaoCommitted;
+  jgNightmareForceMode=snap.jgNightmareForceMode||jgNightmareForceMode||'force';
 }
 
 function jgBack(){
@@ -3604,7 +3647,7 @@ function jgRenderStep(step){
       <div class="speech">「<em>夢魘請睜眼${needId?'':'，今晚要恐懼的對象是？'}</em>」</div>
       ${needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>夢魘</strong>號碼</label>${jgNumSelectHtml('jg-nightmare-who','')}</div><div class="divider"></div><div class="speech">「<em>今晚要恐懼的對象是？</em>」</div>`:''}
       ${dead?'<div class="info-warn">夢魘已出局，仍需走完流程</div>':''}
-      ${dead?'':`<label>恐懼的對象（一定要恐，不能恐自己）</label>
+      ${dead?'':`<label>恐懼的對象（${jgNightmareForceMode==='optional'?'可留空跳過本晚，不能恐自己':'一定要恐，不能恐自己'}）</label>
       ${jgNumSelectHtml('jg-nightmare-target', cur, 'jgNightmareCheckRepeat')}
       <div id="jg-nightmare-warn"></div>`}
       <div class="speech" style="margin-top:10px;">「<em>夢魘請閉眼。</em>」</div>
@@ -4364,7 +4407,7 @@ function jgRenderStep(step){
       ${dead?'<div class="info-warn">黑市商人已出局，仍需走完流程</div>':''}
       ${dead?'':`<div class="info" style="font-size:12px;">整局限一次交易。若對象是好人，成為「幸運兒」並獲得指定技能；若對象是狼人，交易失敗，商人將於次日死亡，該狼人不會知道自己曾被選中。</div>
       <label>交易對象號碼（留空=本晚不交易）</label>
-      ${jgNumSelectHtml('jg-bm-target', jgRecord.blackmarketTarget||'')}
+      ${jgNumSelectHtml('jg-bm-target', jgRecord.blackmarketTarget||'', null, null, bmP?[bmP.num]:[], '黑市商人不能與自己交易，不可選取')}
       <label style="margin-top:8px;">給予的技能</label>
       <select id="jg-bm-skill">
         <option value="seer">預言家查驗</option>
@@ -4644,11 +4687,12 @@ function jgRenderStep(step){
     // 任何一種死法，只要讓情侶其中一人死亡，另一人都要立刻跟著殉情死亡（不論死因為何）。
     // 殉情死亡不會觸發任何技能——就算殉情者原本是獵人／黑狼王等具開槍資格的身分，也不能
     // 開槍帶人，這裡只是單純把號碼加進死亡清單，不做任何連鎖開槍判斷。
+    let heartbreakDawnNum=null;
     if(jgLovers&&jgLovers.length===2){
       const lv1=jgFind(jgLovers[0]), lv2=jgFind(jgLovers[1]);
       if(lv1&&lv2){
-        if(!lv1.alive&&lv2.alive){ lv2.alive=false; if(!deads.includes(lv2.num)) deads.push(lv2.num); }
-        else if(!lv2.alive&&lv1.alive){ lv1.alive=false; if(!deads.includes(lv1.num)) deads.push(lv1.num); }
+        if(!lv1.alive&&lv2.alive){ lv2.alive=false; if(!deads.includes(lv2.num)) deads.push(lv2.num); heartbreakDawnNum=lv2.num; }
+        else if(!lv2.alive&&lv1.alive){ lv1.alive=false; if(!deads.includes(lv1.num)) deads.push(lv1.num); heartbreakDawnNum=lv1.num; }
       }
     }
     // 上面幾個天亮連動死亡（獵魔人夜擊、攝夢人連續兩晚夢同一人致死、攝夢人陣亡連動夢遊對象死亡、
@@ -4730,13 +4774,21 @@ function jgRenderStep(step){
     if(showLastWords){
       lwHtml='<div class="divider"></div>'
         +'<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">發表遺言（依序進行）</div>';
-      trulyDiedNums.forEach(d=>{
+      // 情侶殉情者不算「真正淘汰」發表遺言的對象——殉情不觸發任何技能，也不留遺言
+      trulyDiedNums.filter(d=>heartbreakDawnNum===null||d.toString()!==heartbreakDawnNum.toString()).forEach(d=>{
         const p=jgFind(d);
         if(p) lwHtml+='<div class="info" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:10px 14px;">'
           +'<span style="font-size:18px;">💬</span>'
           +'<span style="flex:1;">'+(p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p.num+'號')+'</span>'
           +'</div>';
       });
+      if(heartbreakDawnNum!==null&&trulyDiedNums.some(d=>d.toString()===heartbreakDawnNum.toString())){
+        const hbP=jgFind(heartbreakDawnNum);
+        if(hbP) lwHtml+='<div class="info" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:10px 14px;opacity:.7;">'
+          +'<span style="font-size:18px;">💘</span>'
+          +'<span style="flex:1;">'+(hbP.name&&hbP.name!==hbP.num+'號'?hbP.num+'號 '+hbP.name:hbP.num+'號')+'（情侶殉情，不發表遺言）</span>'
+          +'</div>';
+      }
       swappedNums.forEach(d=>{
         const p=jgFind(d);
         if(p) lwHtml+='<div class="info" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:10px 14px;">'
@@ -4926,7 +4978,7 @@ function jgRenderStep(step){
       ${pk?'<div class="info-warn" style="font-size:12px;">PK 回合：只有 '+pkCandLabel+' 號以外的玩家可以投票，票投給 '+pkCandLabel+' 號其中一人</div>'
         :''}
       ${jgSheriff&&jgFind(jgSheriff)&&jgFind(jgSheriff).alive?'<div style="font-size:12px;color:var(--text2);margin-top:4px;">🎖️ '+jgSheriff+'號 警長投票算 1.5 票</div>':''}
-      ${jgVoteQuickInputHtml()}
+      <!-- 快速輸入投票已停用，改用下方「N號投給」逐一點選 -->
       <div id="jg-vote-tally"></div>
       <div id="jg-vote-tally-summary" style="margin-top:6px;"></div>
       <button class="danger" onclick="jgSaveVote()" style="margin-top:10px;">確認投票結果 →</button>
@@ -6840,7 +6892,7 @@ function jgSaveNightmare(){
   const nmP2=jgPlayers.find(p=>p.role==='nightmare');
   const nmDead=nmP2&&!nmP2.alive;
   if(!nmDead){
-    if(!val){
+    if(!val&&jgNightmareForceMode!=='optional'){
       alert('⚠️ 夢魘每晚必須恐懼一人，請輸入號碼！');
       return;
     }
@@ -7115,35 +7167,31 @@ function jgVoteWeight(voter){
   return (jgSheriff&&Number(voter)===jgSheriff)?1.5:1;
 }
 
+// 改成以「投票者」為主：一行一個投票玩家，點選他投給誰（或棄票），
+// 比原本「被誰投」的目標分組畫面更直覺，法官照座位順序一路點下去就好。
 function jgRenderVoteTally(){
   const box=document.getElementById('jg-vote-tally');
   if(!box) return;
   const targets=jgVoteTargets();
   const voters=jgVoteVoters();
   let html='';
-  targets.forEach(target=>{
-    const marks=jgVoteTally[target]||{};
+  voters.forEach(voter=>{
+    const votedFor=targets.find(t=>jgVoteTally[t]&&jgVoteTally[t][voter]);
+    const abst=!!jgAbstainVoters[voter];
     html+='<div style="margin-bottom:10px;">'
-      +'<div style="font-weight:700;font-size:13px;margin-bottom:4px;">'+target+' 號 被誰投</div>'
+      +'<div style="font-weight:700;font-size:13px;margin-bottom:4px;">'+voter+' 號 投給'+(jgSheriff&&Number(voter)===jgSheriff?' <span style="color:var(--gold);">🎖️(1.5票)</span>':'')+'</div>'
       +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
-      +voters.map(voter=>{
-        const sel=!!marks[voter];
+      +targets.map(target=>{
+        const sel=votedFor===target;
         return '<button type="button" onclick="jgToggleVote('+target+','+voter+')" style="width:34px;height:34px;border-radius:50%;padding:0;font-size:12px;margin:0;'
           +(sel?'background:var(--danger,#c0392b);color:#fff;border-color:transparent;':'')
-          +'">'+voter+'</button>';
+          +'">'+target+'</button>';
       }).join('')
+      +'<button type="button" onclick="jgToggleAbstain('+voter+')" style="width:34px;height:34px;border-radius:50%;padding:0;font-size:11px;margin:0;'
+        +(abst?'background:var(--text3,#888);color:#fff;border-color:transparent;':'')
+        +'">棄票</button>'
       +'</div></div>';
   });
-  html+='<div style="margin-top:4px;">'
-    +'<div style="font-weight:700;font-size:13px;margin-bottom:4px;">🙅 棄票（不投給任何人）</div>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:6px;">'
-    +voters.map(voter=>{
-      const sel=!!jgAbstainVoters[voter];
-      return '<button type="button" onclick="jgToggleAbstain('+voter+')" style="width:34px;height:34px;border-radius:50%;padding:0;font-size:12px;margin:0;'
-        +(sel?'background:var(--text3,#888);color:#fff;border-color:transparent;':'')
-        +'">'+voter+'</button>';
-    }).join('')
-    +'</div></div>';
   box.innerHTML=html||'<div class="info" style="font-size:12px;">目前沒有可投票的玩家。</div>';
   jgUpdateVoteTallySummary();
 }
@@ -7740,12 +7788,12 @@ function jgShowWin(res){
     } else {
       followMsg='配對狀態不明，無法判定是否跟著獲勝。';
     }
-    const bothAlive=l1&&l2&&l1.alive&&l2.alive;
+    // 情侶其中一人死亡，另一人一定會跟著殉情（見 jgCascadeLoverDeath／天亮情侶殉情連動），
+    // 不會有「一人死、一人還活著」的中間狀態，所以這裡不再另外標注存活狀態。
     const success=(pairType==='third'&&res.winner==='third')||(pairType==='wolf'&&res.winner==='wolf')||(pairType==='good'&&res.winner==='good');
     cupidHtml='<div class="section-title" style="margin-top:16px;">💘 邱比特與情侶</div>'
       +'<div class="'+(success?'info-success':'info-warn')+'" style="font-size:14px;">'
-      +'【邱比特: '+(cpP?cpP.num:'?')+'號、情侶: '+(l1?l1.num:jgLovers[0])+'號、'+(l2?l2.num:jgLovers[1])+'號 -> '+pairArrowLabel+'】'
-      +'（目前'+(bothAlive?'兩人皆存活':'至少一人已殉情出局')+'）<br>'+followMsg+'</div>';
+      +'【邱比特: '+(cpP?cpP.num:'?')+'號、情侶: '+(l1?l1.num:jgLovers[0])+'號、'+(l2?l2.num:jgLovers[1])+'號 -> '+pairArrowLabel+'】<br>'+followMsg+'</div>';
   }
   // 盜賊：遊戲結束時揭曉最終選擇與被埋掉的身分
   let thiefHtml='';
@@ -7775,6 +7823,25 @@ function jgShowWin(res){
   document.getElementById('jg-phase-badge').innerHTML='🏁 遊戲結束';
   const rw=document.getElementById('jg-roster-wrap'); if(rw) rw.style.display='none';
   jgLiveSyncMarkEnded();
+  jgShowJudgeEndModal(isThird?'第三方':(isGood?'好人':'狼人'));
+}
+
+// 遊戲結束時跳出的法官提醒大框：公布結果＋提醒法官匯出紀錄、上傳遊玩數據
+function jgShowJudgeEndModal(winnerLabel){
+  let modal=document.getElementById('jg-judge-end-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='jg-judge-end-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML='<div style="background:var(--bg1,#fff);border-radius:16px;padding:24px 20px;max-width:420px;width:100%;text-align:center;">'
+    +'<div style="font-size:17px;font-weight:800;line-height:1.9;">法官公布: 遊戲結束，「'+winnerLabel+'」獲勝<br>'
+    +'<div style="font-size:14px;font-weight:600;color:var(--text2);margin-top:10px;line-height:1.9;text-align:left;">'
+    +'給法官的提醒:<br>1. 匯出文字紀錄到群組<br>2. 找冠竹或嘉軒以輸入密碼上傳本場記錄到遊玩數據<br>'
+    +'</div><div style="margin-top:10px;">法官辛苦了!!</div></div>'
+    +'<button class="primary" style="margin-top:16px;" onclick="document.getElementById(\'jg-judge-end-modal\').remove()">我知道了</button>'
+    +'</div>';
 }
 
 function jgReset(){
