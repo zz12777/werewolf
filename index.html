@@ -855,7 +855,6 @@ select{
     <div class="stat-card evil"><div class="stat-num" id="ov-evil">–</div><div class="stat-lbl">邪惡陣營勝率</div></div>
   </div>
   <div class="bar"><span class="g" id="ov-bar-g"></span><span class="e" id="ov-bar-e"></span></div>
-  <div class="chip-row" id="ov-boards" style="margin-top:14px;"></div>
 
   <!-- 排行榜 -->
   <div class="big-section-title" style="display:flex;align-items:center;justify-content:space-between;">
@@ -863,7 +862,9 @@ select{
     <div style="display:flex;align-items:center;gap:10px;">
       <div class="pd-seg" id="pd-seg">
         <button type="button" class="pd-seg-btn active" id="pd-sort-simple" onclick="pdSetSortMode('simple')">簡單勝率</button>
+        <!-- 積分系統重新設計中，Bayesian Score 先隱藏／停用，公式與計算邏輯保留在 JS 裡沒刪，之後要恢復只要把這顆按鈕註解拿掉即可
         <button type="button" class="pd-seg-btn" id="pd-sort-bayes" onclick="pdSetSortMode('bayes')">Bayesian Score</button>
+        -->
         <button type="button" class="pd-seg-btn" id="pd-sort-points" onclick="pdSetSortMode('points')">積分</button>
       </div>
     </div>
@@ -1648,6 +1649,10 @@ let jgSheriffFinalNight=null; // 警長競選真正塵埃落定（選出警長�
 // ── 白天投票放逐：平票 PK ──
 let jgVotePkRound=false;    // 是否正處於白天投票平票後的 PK 重新投票回合
 let jgVotePkCandidates=[];  // PK 回合中僅平票玩家可被投票（其餘玩家才有投票權）
+// PK 發言順序規則：前一輪（一般發言／政見發表）越晚發言的玩家，PK 時越早發言——
+// 取前一輪的完整發言順序，篩出這次平票的人，再整個反過來，存成明確的順序陣列。
+let jgVotePkOrder=[];       // 白天放逐票 PK 的明確發言順序（number[]）
+let jgSheriffPkOrder=[];    // 警長競選票 PK 的明確發言順序（number[]）
 // ── 雙身分模式：每位玩家 2 張牌，一次只有一張生效；第一張陣亡才換上第二張 ──
 let jgDualIdentityMode=false;
 let jgDualAssign={};      // num -> [roleA, roleB], chosen by judge on the assignment page
@@ -1956,7 +1961,7 @@ function jgCancelRosterSetup(){
 
 // Renders a <select> of all seat numbers (showing preset/自訂 name if known) for choosing
 // who holds a role, instead of typing a bare number blind.
-function jgNumSelectHtml(id, curVal, onChangeFn, extraAttr, excludeNums, excludeTitle){
+function jgNumSelectHtml(id, curVal, onChangeFn, extraAttr, excludeNums, excludeTitle, excludeTitleFn){
   const cur=curVal?curVal.toString():'';
   const excl=excludeNums?excludeNums.map(n=>n.toString()):[];
   const exclTitle=excludeTitle||'此號碼不能自刀，不可選取';
@@ -1968,8 +1973,11 @@ function jgNumSelectHtml(id, curVal, onChangeFn, extraAttr, excludeNums, exclude
     const pl=jgPlayers.find(p=>p.num===i);
     const dead=!!(pl&&!pl.alive);
     const excluded=!dead&&excl.includes(i.toString());
+    // 每個被排除的號碼可以各自顯示不同原因（例如「3號 狼兄（本場不能自爆的狼）不能自爆」），
+    // 沒提供 excludeTitleFn 時退回原本全部共用同一句話的舊行為。
+    const thisTitle=excluded?(excludeTitleFn?excludeTitleFn(i):exclTitle):'';
     html+='<button type="button" data-num="'+i+'"'+((dead||excluded)?' disabled':'')+' onclick="jgNumGridPick(\''+id+'\','+i+(onChangeFn?",'"+onChangeFn+"'":'')+')" '
-      +(excluded?'title="'+exclTitle+'" ':'')
+      +(excluded?'title="'+thisTitle.replace(/"/g,'&quot;')+'" ':'')
       +'style="width:auto;min-width:38px;height:38px;padding:0 8px;margin:0;border-radius:10px;font-size:13px;font-weight:700;'
       +(dead?'background:var(--bg4);color:var(--text3);text-decoration:line-through;':(excluded?'background:var(--bg4);color:var(--text3);opacity:.5;':(sel?'background:var(--success,#2e7d32);color:#fff;border-color:transparent;':'')))+'">'+label+'</button>';
   }
@@ -1979,6 +1987,133 @@ function jgNumSelectHtml(id, curVal, onChangeFn, extraAttr, excludeNums, exclude
 
 // 「不能自刀」的狼隊角色（惡靈騎士、狼美人、夢魘——三者的角色說明都寫明「不可自刀」）：
 // 狼人／機械狼／石像鬼帶刀選人時，這些號碼一律不能被點選。
+// 依號碼給「不能自爆」的具體原因（狼隊角色寫角色名＋原因，非狼隊角色寫另一種提示），
+// 讓法官點到鎖住的按鈕時，看到的是「3號 狼兄（本場不能自爆的狼）不能自爆」這種明確訊息，
+// 而不是每個號碼都顯示同一句籠統的話。
+function jgSelfBlowExcludeReason(num){
+  const p=jgFind(num);
+  if(!p) return '不可選取';
+  const roleName=RNAME[p.role]||p.role;
+  const nm=p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p.num+'號';
+  if(WOLF_ROLES.includes(p.role)) return nm+'　'+roleName+'（本場不能自爆的狼）不能自爆';
+  return nm+'　不是狼人陣營，不能自爆';
+}
+
+// ═══════════════════════════════════════════
+// 發言 90 秒倒數計時器（含警上）：法官畫面上顯示目前輪到誰發言、倒數時間，
+// 時間到會播放提示音效（音檔請放在跟 index.html 同一個 GitHub repo 目錄下，
+// 檔名 speak time's up.mp3），並提供暫停／開始、重播音效、「過」（換下一位）幾個按鈕。
+// 這組變數是純畫面用的暫存狀態，不需要跟著存讀檔存進 jgCaptureState（法官重新整理／
+// 上一步的話，重新按「開始」繼續即可，不影響任何遊戲判定邏輯）。
+// ═══════════════════════════════════════════
+const JG_SPEAK_SECONDS=90;
+const JG_SPEAK_AUDIO_SRC="speak_time's_up.mp3";
+let jgSpeakTimerOrderKey='';
+let jgSpeakTimerIdx=0;
+let jgSpeakTimerSec=JG_SPEAK_SECONDS;
+let jgSpeakTimerRunning=false;
+let jgSpeakTimerHandle=null;
+let jgSpeakTimerDone=false;
+
+// 換一批新的發言順序（例如今天的一般發言 vs 警上政見發表 vs PK 發言）時，自動歸零重來；
+// 同一批順序內（只是重新 render 同一個畫面）則保留目前進度，不會每次都被重置。
+function jgSpeakTimerEnsureOrder(order){
+  const key=(order||[]).join(',');
+  if(key!==jgSpeakTimerOrderKey){
+    jgSpeakTimerOrderKey=key;
+    jgSpeakTimerIdx=0;
+    jgSpeakTimerSec=JG_SPEAK_SECONDS;
+    jgSpeakTimerRunning=false;
+    jgSpeakTimerDone=false;
+    if(jgSpeakTimerHandle){ clearInterval(jgSpeakTimerHandle); jgSpeakTimerHandle=null; }
+  }
+}
+function jgSpeakTimerFmt(sec){
+  const mm=String(Math.floor(sec/60)).padStart(2,'0');
+  const ss=String(sec%60).padStart(2,'0');
+  return mm+':'+ss;
+}
+// 產生計時器卡片 HTML，塞進發言／警上政見發表／PK 發言三個畫面的最上方。
+// order 是「這一輪」的發言順序（number[]，已經照座位／PK 反轉排好）；沒有人可發言時回傳空字串。
+function jgSpeakTimerWidgetHtml(order){
+  jgSpeakTimerEnsureOrder(order||[]);
+  if(!order||!order.length) return '';
+  if(jgSpeakTimerIdx>=order.length) jgSpeakTimerIdx=order.length-1;
+  const cur=order[jgSpeakTimerIdx];
+  const p=jgFind(cur);
+  const nm=p&&p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:cur+'號';
+  const upcoming=order.slice(jgSpeakTimerIdx+1).map(n=>n+'號').join('、');
+  return `
+    <div class="card" style="text-align:center;padding:16px 14px;margin-bottom:14px;">
+      <div style="font-size:12px;color:var(--text2);">⏱️ 目前發言（90 秒倒數）</div>
+      <div style="font-size:24px;font-weight:800;margin:4px 0;">${nm}</div>
+      <div id="jg-speak-timer-clock" style="font-size:42px;font-weight:800;font-variant-numeric:tabular-nums;color:${jgSpeakTimerDone?'var(--wolf)':'var(--text)'};">${jgSpeakTimerFmt(jgSpeakTimerSec)}</div>
+      <div id="jg-speak-timer-uptxt" style="font-size:12px;color:${jgSpeakTimerDone?'#922418':'var(--text3)'};min-height:16px;margin-top:2px;">${jgSpeakTimerDone?'⏰ 時間到':''}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button type="button" id="jg-speak-timer-toggle-btn" onclick="jgSpeakTimerToggle()" style="flex:1;margin:0;">${jgSpeakTimerRunning?'⏸ 暫停':'▶️ 開始'}</button>
+        <button type="button" onclick="jgSpeakTimerReplayAudio()" style="flex:1;margin:0;">🔁 重播音效</button>
+        <button type="button" class="primary" onclick="jgSpeakTimerNext()" style="flex:1;margin:0;">過，下一位 →</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;">${upcoming?'接下來：'+upcoming:'（最後一位）'}</div>
+      <audio id="jg-speak-timer-audio" src="${JG_SPEAK_AUDIO_SRC}" preload="auto"></audio>
+    </div>`;
+}
+function jgSpeakTimerTick(){
+  if(jgSpeakTimerSec>0){
+    jgSpeakTimerSec--;
+    const clock=document.getElementById('jg-speak-timer-clock');
+    if(clock) clock.textContent=jgSpeakTimerFmt(jgSpeakTimerSec);
+  }
+  if(jgSpeakTimerSec<=0){
+    clearInterval(jgSpeakTimerHandle);
+    jgSpeakTimerHandle=null;
+    jgSpeakTimerRunning=false;
+    jgSpeakTimerDone=true;
+    jgSpeakTimerReplayAudio();
+    const clock=document.getElementById('jg-speak-timer-clock');
+    if(clock) clock.style.color='var(--wolf)';
+    const uptxt=document.getElementById('jg-speak-timer-uptxt');
+    if(uptxt){ uptxt.textContent='⏰ 時間到'; uptxt.style.color='#922418'; }
+    const btn=document.getElementById('jg-speak-timer-toggle-btn');
+    if(btn) btn.textContent='▶️ 開始';
+  }
+}
+// 開始／暫停倒數（不影響音效播放狀態）；時間已經到 0 時按「開始」＝重新倒數 90 秒。
+function jgSpeakTimerToggle(){
+  if(jgSpeakTimerRunning){
+    clearInterval(jgSpeakTimerHandle);
+    jgSpeakTimerHandle=null;
+    jgSpeakTimerRunning=false;
+  } else {
+    if(jgSpeakTimerSec<=0){
+      jgSpeakTimerSec=JG_SPEAK_SECONDS;
+      jgSpeakTimerDone=false;
+      const clock=document.getElementById('jg-speak-timer-clock');
+      if(clock){ clock.style.color='var(--text)'; clock.textContent=jgSpeakTimerFmt(jgSpeakTimerSec); }
+      const uptxt=document.getElementById('jg-speak-timer-uptxt');
+      if(uptxt) uptxt.textContent='';
+    }
+    jgSpeakTimerRunning=true;
+    jgSpeakTimerHandle=setInterval(jgSpeakTimerTick,1000);
+  }
+  const btn=document.getElementById('jg-speak-timer-toggle-btn');
+  if(btn) btn.textContent=jgSpeakTimerRunning?'⏸ 暫停':'▶️ 開始';
+}
+// 重播提示音效：只重播聲音，不會重置或影響倒數本身。
+function jgSpeakTimerReplayAudio(){
+  const audio=document.getElementById('jg-speak-timer-audio');
+  if(audio){ try{ audio.currentTime=0; audio.play().catch(()=>{}); }catch(e){} }
+}
+// 「過」：這位發言結束，換下一位，計時器歸零重新倒數（需要法官再按一次開始）。
+function jgSpeakTimerNext(){
+  if(jgSpeakTimerHandle){ clearInterval(jgSpeakTimerHandle); jgSpeakTimerHandle=null; }
+  jgSpeakTimerRunning=false;
+  jgSpeakTimerDone=false;
+  jgSpeakTimerIdx++;
+  jgSpeakTimerSec=JG_SPEAK_SECONDS;
+  jgRenderStep(jgCurrentStep);
+}
+
 function jgNoSelfCutNums(){
   return jgPlayers.filter(p=>p.alive&&(p.role==='evilknight'||p.role==='wolfbeauty'||p.role==='nightmare')).map(p=>p.num);
 }
@@ -2169,6 +2304,8 @@ function jgStart(){
   jgAbstainVoters={};
   jgVotePkRound=false;
   jgVotePkCandidates=[];
+  jgVotePkOrder=[];
+  jgSheriffPkOrder=[];
   jgSheriffLogLines=[];
   jgSheriffElectedNum=null;
   jgSheriffTransferPending=false;
@@ -2337,8 +2474,8 @@ function jgSaveSheriffSelfDestruct(){
   const val=(document.getElementById('jg-sheriff-blow-rec')||{}).value?.trim()||'';
   if(!val){ alert('⚠️ 請選擇自爆的玩家號碼！'); return; }
   const p=jgFind(val);
-  if(!p||!p.alive||!jgSheriffCandidates.includes(p.num)||!(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon')){
-    alert('⚠️ 這個號碼目前不是仍在競選中、存活的狼人／黑狼王／白狼王／血月使者，不能自爆！');
+  if(!p||!p.alive||!jgSheriffCandidates.includes(p.num)||!(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y')){
+    alert('⚠️ 這個號碼目前不是仍在競選中、存活的狼人／黑狼王／白狼王／血月使者／狼弟，不能自爆！');
     return;
   }
   if(jgPendingNightDeadNums().includes(p.num)){
@@ -2452,18 +2589,36 @@ function jgConfirmSheriffSpeechOrder(){
   jgGoStep('sheriff-speech');
 }
 
-// Step 3：依序政見發表，發表完可以退水
-function jgSheriffSpeechOrderList(){
-  const cands=jgSheriffCandidates.slice().sort((a,b)=>a-b);
-  if(!cands.length||jgSheriffSpeakStart==null) return cands;
-  let startIdx=cands.indexOf(jgSheriffSpeakStart);
+// 共用：給一份號碼清單、一個起始號碼、一個方向（'順'／'逆'），排出繞圈發言順序。
+// 政見發表、平安夜／一般發言都是用同一套「從某號開始，順/逆時針繞一圈」的邏輯，抽出來共用。
+function jgOrderFromStart(list, start, dir){
+  const arr=list.slice().sort((a,b)=>a-b);
+  if(!arr.length||start==null) return arr;
+  let startIdx=arr.indexOf(start);
   if(startIdx<0) startIdx=0;
   const ordered=[];
-  for(let i=0;i<cands.length;i++){
-    const idx=jgSheriffSpeakDir==='逆'?(startIdx-i+cands.length*10)%cands.length:(startIdx+i)%cands.length;
-    ordered.push(cands[idx]);
+  for(let i=0;i<arr.length;i++){
+    const idx=dir==='逆'?(startIdx-i+arr.length*10)%arr.length:(startIdx+i)%arr.length;
+    ordered.push(arr[idx]);
   }
   return ordered;
+}
+// Step 3：依序政見發表，發表完可以退水
+// PK 回合（jgSheriffPkRound 為 true）時直接回傳 jgSheriffPkOrder——這是進 PK 那一刻，
+// 依照「前一輪發言順序，越晚發言者這輪越早發言」算好、明確存下來的順序，不再用起點/方向繞圈，
+// 因為 PK 候選人是原本整圈裡挑出來的一部分，繞圈邏輯無法呈現「整個反過來」的順序。
+function jgSheriffSpeechOrderList(){
+  if(jgSheriffPkRound && jgSheriffPkOrder.length) return jgSheriffPkOrder.slice();
+  const cands=jgSheriffCandidates.slice().sort((a,b)=>a-b);
+  return jgOrderFromStart(cands, jgSheriffSpeakStart, jgSheriffSpeakDir);
+}
+// 當天一般發言討論的完整順序（政見發表之外的白天發言），供白天投票平票進 PK 時
+// 回頭算「前一輪發言順序」使用。
+function jgDaySpeechOrderList(night){
+  const aliveNums=jgAlive().map(p=>p.num);
+  const dm=jgDayMeta[night];
+  if(!dm||dm.start==null||!dm.dir) return aliveNums.sort((a,b)=>a-b);
+  return jgOrderFromStart(aliveNums, dm.start, dm.dir);
 }
 // 悍跳號碼記錄小工具：警上（競選發言）跟警下（一般發言討論）共用同一種輸入框 HTML，
 // 選填、不強制，法官若真的看到有人悍跳（在別人已經跳過同一個神職身分後，還搶著跳同一個身分）
@@ -2520,6 +2675,7 @@ function jgRenderSheriffSpeech(){
   }).join('');
   jgShowPg(`
     <h2>警長競選・${jgSheriffPkRound?'平票 PK 發言':'政見發表'}</h2>
+    ${jgSpeakTimerWidgetHtml(ordered)}
     <div class="speech">「<em>${jgSheriffPkRound?'平票玩家請再次發言 PK。':'請依序發表警長政見。'}</em>」</div>
     <div style="margin-top:10px;">${rows}</div>
     ${jgSheriffPkRound?'<div class="info-warn" style="font-size:12px;">平票 PK 回合中，此輪不可退水</div>'
@@ -2780,10 +2936,16 @@ function jgSaveSheriffVoteInner(){
     return;
   }
   // 第一次平票：進入 PK，候選人限縮為平票者，重新發言（不可退水）後再投一次票
-  jgSheriffLogLines.push('平票：'+top.join('、')+'號，進入 PK');
+  // PK 發言順序：前一輪（這次政見發表）越晚發言的人，PK 時越早發言——取這一輪的完整發言順序，
+  // 篩出平票的人，再整個反過來。
+  {
+    const prevOrder=jgSheriffSpeechOrderList();
+    jgSheriffPkOrder=prevOrder.filter(n=>top.includes(n)).reverse();
+  }
+  jgSheriffLogLines.push('平票：'+top.join('、')+'號，進入 PK（PK 發言順序：'+jgSheriffPkOrder.join('→')+'）');
   jgSheriffPkRound=true;
   jgSheriffCandidates=top;
-  alert('⚠️ 平票：'+top.join('、')+'號，進入 PK 重新發言，PK 期間不可退水。');
+  alert('⚠️ 平票：'+top.join('、')+'號，進入 PK。PK 發言順序：'+jgSheriffPkOrder.join('→')+'（前一輪越晚發言者，PK 越早發言），期間不可退水。');
   jgGoStep('sheriff-speech');
 }
 
@@ -2995,7 +3157,8 @@ function jgDiscussExtraButtonsHtml(){
   if(knP) html+='<button class="danger" onclick="jgGoStep(\'knight-duel\')" style="margin-top:4px;">'+knP.num+'號 騎士翻牌決鬥 →</button>';
   // 血月使者的自爆併進「狼人自爆」這顆按鈕：點進去選號碼，選到血月使者會自動導去血月專屬流程
   // （封印當晚神職技能），選到一般狼人／黑狼王則走一般自爆流程，不用另外分開兩顆按鈕。
-  const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'));
+  // 自刀自爆規則：狼兄不可自爆（可自刀）、狼弟可自爆（可自刀），一併算進「狼人自爆」這顆按鈕的資格判斷
+  const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'));
   if(canWolfBlow) html+='<button class="danger" onclick="jgGoStep(\'wolf-selfblow\')" style="margin-top:4px;">🐺 狼人自爆 →</button>';
   return html;
 }
@@ -3251,7 +3414,7 @@ function jgCaptureState(){
     jgSheriffSpeakStart, jgSheriffSpeakDir, jgSheriffVoteTally, jgSheriffPkRound, jgSheriffSelfDestruct, jgSheriffSelfDestructNum, jgSheriffSelfDestructBroughtNum,
     jgEvilKnightRevengeUsed, jgLastVoteOutPlayer, jgAbstainVoters,
     jgSheriffLogLines, jgSheriffElectedNum, jgSheriffTransferPending, jgSheriffTransferDeadNum, jgSheriffTransferNextStep,
-    jgVotePkRound, jgVotePkCandidates,
+    jgVotePkRound, jgVotePkCandidates, jgVotePkOrder, jgSheriffPkOrder,
     jgBadgeMode, jgSheriffFirstBlowDone, jgSheriffFirstBlowNum, jgSheriffPostponedToDay2, jgSheriffDay2CandidatesAsked, jgSheriffFinalNight,
     jgHanTiaoSheriffNote, jgHanTiaoDiscussNotes, jgHanTiaoCommitted, jgNightmareForceMode
   }));
@@ -3336,6 +3499,8 @@ function jgRestoreState(snap){
   jgSheriffFinalNight=snap.jgSheriffFinalNight;
   jgVotePkRound=!!snap.jgVotePkRound;
   jgVotePkCandidates=snap.jgVotePkCandidates||[];
+  jgVotePkOrder=snap.jgVotePkOrder||[];
+  jgSheriffPkOrder=snap.jgSheriffPkOrder||[];
   jgHanTiaoSheriffNote=snap.jgHanTiaoSheriffNote||'';
   jgHanTiaoDiscussNotes=snap.jgHanTiaoDiscussNotes||{};
   jgHanTiaoCommitted=!!snap.jgHanTiaoCommitted;
@@ -3343,6 +3508,7 @@ function jgRestoreState(snap){
 }
 
 function jgBack(){
+  if(jgSpeakTimerHandle){ clearInterval(jgSpeakTimerHandle); jgSpeakTimerHandle=null; jgSpeakTimerRunning=false; }
   if(jgStepHistory.length<=1) return;
   // Drop the step/state we're currently viewing.
   jgStepHistory.pop();
@@ -3384,6 +3550,10 @@ function jgIsFirstNight(){ return jgNight===1; }
 const JG_SHERIFF_NO_INTERRUPT_STEPS=['hunter-shot','wolfking-shot','whitewolf-selfblow','sheriff-selfdestruct-whitewolf-bring','wolfbeauty-charm-kill',
   'bloodmoon-last-night','bloodmoon-selfblow','luckyone-hunter-shot','mechhunter-chain-shot','knight-duel','sheriff-transfer'];
 function jgGoStep(step){
+  // 切換畫面前先停掉發言計時器的倒數（避免離開發言/警上畫面後，計時器還在背景跑、
+  // 時間到還在別的畫面偷偷播音效）；進度（第幾位、剩幾秒）保留，回到同一輪發言時還在，
+  // 法官只需要重新按一次「開始」繼續倒數。
+  if(jgSpeakTimerHandle){ clearInterval(jgSpeakTimerHandle); jgSpeakTimerHandle=null; jgSpeakTimerRunning=false; }
   // 每次切換步驟前都先確認警長是否還活著（不論死因為何），確保交接警徽一定不會被漏掉。
   jgCheckSheriffDeath();
   // 警長剛陣亡、還沒交接警徽：把原本要去的步驟記下來，先攔截去交接警徽畫面，
@@ -3779,13 +3949,42 @@ function jgRenderStep(step){
     // Routine night: either 狼兄 still alive (pre-awaken, doesn't join the den) or the
     // one-time revenge kill has already been used (post-awaken, now joins the den at wolf-wake).
     const preAwaken=wbE&&wbE.alive&&!jgWolfBrotherAwakened;
-    const noteText=preAwaken?'（狼兄尚存活，復仇刀尚不能使用）':'（復仇刀已使用過，整局限一次，稍後與其餘狼人一同睜眼殺人）';
+    if(preAwaken){
+      jgShowPg(`
+        <h2>狼弟睜眼</h2>
+        <div class="speech">「<em>狼弟請睜眼，你的技能使用狀況是 👎</em>」</div>
+        <div class="info" style="font-size:12px;">（狼兄尚存活，復仇刀尚不能使用）</div>
+        <div class="speech" style="margin-top:10px;">「<em>狼弟請閉眼。</em>」</div>
+        <button class="primary" onclick="jgGoStep(jgAfterWolfBrotherStep())">下一步 →</button>
+      `,'👬 狼弟');
+      return;
+    }
+    // 已覺醒、已加入狼窩：狼弟平常跟其餘狼人一起在「狼人睜眼」步驟殺人；但如果此時其餘
+    // 狼隊成員（黑狼王／白狼王／狼美人／惡靈騎士／血月使者／機械狼／石像鬼／夢魘…）都已
+    // 死光，只剩狼弟一人，這晚就換狼弟自己「帶刀」——比讚，且可以當下直接選人殺，或是
+    // 留到等一下「狼人睜眼」步驟再殺（兩者擇一，不會殺兩次；當下殺了的話，狼人睜眼步驟
+    // 那顆選人按鈕會被鎖住，避免法官重複點兩次殺人對象）。
+    const otherWolvesAliveWby=jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='wolfbrother_y'&&p.alive);
+    if(otherWolvesAliveWby){
+      jgShowPg(`
+        <h2>狼弟睜眼</h2>
+        <div class="speech">「<em>狼弟請睜眼，你的技能使用狀況是 👎</em>」</div>
+        <div class="info" style="font-size:12px;">（復仇刀已使用過，整局限一次，稍後與其餘狼人一同睜眼殺人）</div>
+        <div class="speech" style="margin-top:10px;">「<em>狼弟請閉眼。</em>」</div>
+        <button class="primary" onclick="jgGoStep(jgAfterWolfBrotherStep())">下一步 →</button>
+      `,'👬 狼弟');
+      return;
+    }
+    const wbyKv=jgRecord.wolfBrotherKillTarget||jgRecord.wolfKill||'';
     jgShowPg(`
       <h2>狼弟睜眼</h2>
-      <div class="speech">「<em>狼弟請睜眼，你的技能使用狀況是 👎</em>」</div>
-      <div class="info" style="font-size:12px;">${noteText}</div>
+      <div class="speech">「<em>狼弟請睜眼，你的技能使用狀況是 👍</em>」（其他狼隊友已全滅，狼弟可以帶刀殺人）</div>
+      <div class="info" style="font-size:12px;">今晚的帶刀手勢：👍 讚。可以現在直接選殺人對象，或留空、等一下在「狼人睜眼」步驟再殺——兩者擇一，不會殺兩次。</div>
+      <label>狼弟今晚要殺的對象（留空＝晚點在「狼人睜眼」步驟再殺）</label>
+      ${jgNoSelfCutNoticeHtml()}
+      ${jgNumSelectHtml('jg-wby-kill', wbyKv, null, null, jgNoSelfCutNums())}
       <div class="speech" style="margin-top:10px;">「<em>狼弟請閉眼。</em>」</div>
-      <button class="primary" onclick="jgGoStep(jgAfterWolfBrotherStep())">下一步 →</button>
+      <button class="primary" onclick="jgSaveWolfBrotherKillGesture()">已紀錄，下一步 →</button>
     `,'👬 狼弟');
   }
   else if(step==='wolf-wake'){
@@ -3844,6 +4043,15 @@ function jgRenderStep(step){
         wbNote='<div class="info" style="font-size:12px;">👬 狼弟（'+wbY.num+'號）已覺醒，本回合與其餘狼人一同睜眼殺人。</div>';
       }
     }
+    // 若狼弟已經在自己「帶刀」的睜眼步驟選過殺人對象（jgRecord.wolfBrotherKillTarget），
+    // 這裡改成鎖定顯示，不給法官重複點選、誤改殺人對象。
+    const wbyLockedKill=jgRecord.wolfBrotherKillTarget||null;
+    const wolfKillSectionHtml=wbyLockedKill
+      ?'<label>今晚獵殺的對象</label><input type="hidden" id="jg-wolf-rec" value="'+wbyLockedKill+'">'
+        +'<div class="info-success" style="font-size:14px;font-weight:700;padding:10px 14px;">🔒 '+wbyLockedKill+'號（狼弟已在自己睜眼步驟帶刀選定，本回合鎖定不可更改）</div>'
+      :'<label>今晚獵殺的對象</label>'
+        +'<div id="jg-wolf-selfcut-notice">'+jgWolfWakeSelfCutNoticeHtml()+'</div>'
+        +'<div id="jg-wolf-rec-wrap">'+jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgWolfWakeSelfCutInfo().nums)+'</div>';
     jgShowPg(`
       <h2>狼人睜眼</h2>
       <div class="speech">「<em>狼人請睜眼。</em>」</div>
@@ -3852,9 +4060,7 @@ function jgRenderStep(step){
       ${compatNote}
       <div id="jg-wolf-blocked-msg" style="${jgRecord.nightmareBlocksWolf?'':'display:none;'}"><div class="info-danger">⚠️ 夢魘恐懼到狼隊友，狼人今晚不得殺人</div></div>
       ${wbNote}
-      <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}"><label>今晚獵殺的對象</label>
-      <div id="jg-wolf-selfcut-notice">${jgWolfWakeSelfCutNoticeHtml()}</div>
-      <div id="jg-wolf-rec-wrap">${jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgWolfWakeSelfCutInfo().nums)}</div></div>`
+      <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}">${wolfKillSectionHtml}</div>`
       :'<div class="info-warn">狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程</div>'}
       <div class="speech" style="margin-top:12px;">「<em>狼人請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
@@ -4934,6 +5140,7 @@ function jgRenderStep(step){
         const dirLabel2=dm.dir==='逆'?'逆時針':'順時針';
         jgShowPg(`
           <h2>發言討論</h2>
+          ${jgSpeakTimerWidgetHtml(jgDaySpeechOrderList(jgNight))}
           ${jgFirstDayCompCheckHtml()}
           <div class="speech">「<em>從 ${dm.start} 號開始，${dirLabel2}依序發言。</em>」</div>
           ${jgDiscussExtraButtonsHtml()}
@@ -4965,6 +5172,7 @@ function jgRenderStep(step){
       const dirLabel3=dmToday.dir==='逆'?'逆時針':'順時針';
       jgShowPg(`
         <h2>發言討論</h2>
+        ${jgSpeakTimerWidgetHtml(jgDaySpeechOrderList(jgNight))}
         ${jgNight===1?jgFirstDayCompCheckHtml():''}
         <div class="speech">「<em>從 ${dmToday.start} 號開始，${dirLabel3}依序發言。</em>」</div>
         ${jgDiscussExtraButtonsHtml()}
@@ -4979,6 +5187,7 @@ function jgRenderStep(step){
     if(speakStart) jgDayMeta[jgNight]={start:speakStart, dir:jgSpeakDirection};
     jgShowPg(`
       <h2>發言討論</h2>
+      ${speakStart?jgSpeakTimerWidgetHtml(jgDaySpeechOrderList(jgNight)):''}
       ${jgNight===1?jgFirstDayCompCheckHtml():''}
       <div class="speech">「<em>${jgLastNightPeaceful?'今晚是平安夜，抽籤決定發言順序。':(needDirection?'請轉動轉盤決定發言方向，從死亡玩家的下一位開始發言。':(speakStartLabel||'請抽取發言順序，依序發言。'))}</em>」</div>
       ${jgLastNightPeaceful?'<div class="info" id="jg-wheel-wrap"><button onclick="jgSpinWheel()">🎡 轉動轉盤</button><div id="jg-wheel-result"></div></div>':''}
@@ -4993,10 +5202,12 @@ function jgRenderStep(step){
     jgAbstainVoters={};
     const pk=jgVotePkRound;
     const pkCandLabel=pk?jgVotePkCandidates.slice().sort((a,b)=>a-b).join('、'):'';
+    const pkOrderLabel=pk?(jgVotePkOrder&&jgVotePkOrder.length?jgVotePkOrder.join('→'):pkCandLabel):'';
     jgShowPg(`
       <h2>${pk?'投票放逐・PK':'投票放逐'}</h2>
-      <div class="speech">「<em>${pk?'平票玩家 '+pkCandLabel+' 號，請再次發言 PK。PK 結束後，其餘玩家重新投票。':'準備投票選出要放逐的玩家，3、2、1'}</em>」</div>
-      ${pk?'<div class="info-warn" style="font-size:12px;">PK 回合：只有 '+pkCandLabel+' 號以外的玩家可以投票，票投給 '+pkCandLabel+' 號其中一人</div>'
+      ${pk?jgSpeakTimerWidgetHtml(jgVotePkOrder):''}
+      <div class="speech">「<em>${pk?'平票玩家請依序發言 PK：'+pkOrderLabel+'。PK 結束後，其餘玩家重新投票。':'準備投票選出要放逐的玩家，3、2、1'}</em>」</div>
+      ${pk?'<div class="info-warn" style="font-size:12px;">PK 發言順序：'+pkOrderLabel+'（前一輪越晚發言者，PK 越早發言）。只有 '+pkCandLabel+' 號以外的玩家可以投票，票投給 '+pkCandLabel+' 號其中一人</div>'
         :''}
       ${jgSheriff&&jgFind(jgSheriff)&&jgFind(jgSheriff).alive?'<div style="font-size:12px;color:var(--text2);margin-top:4px;">🎖️ '+jgSheriff+'號 警長投票算 1.5 票</div>':''}
       <!-- 快速輸入投票已停用，改用下方「N號投給」逐一點選 -->
@@ -5031,14 +5242,16 @@ function jgRenderStep(step){
     `,'🤍 白狼王');
   }
   else if(step==='wolf-selfblow'){
-    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon')).map(p=>p.num);
+    // 自刀自爆規則：狼人／黑狼王／血月使者／狼弟可以自爆；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆
+    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
     const bmEligible=jgPlayers.find(p=>p.role==='bloodmoon'&&p.alive);
     jgShowPg(`
       <h2>狼人自爆</h2>
       <div class="speech">「<em>請選擇宣告自爆的玩家號碼。</em>」</div>
-      <label>自爆的玩家號碼（只能選存活的狼人／黑狼王／血月使者；惡靈騎士、石像鬼、狼美人、機械狼、夢魘都不能自爆）</label>
-      ${jgNumSelectHtml('jg-wolf-blow-rec', '', null, null, exclude, '這個角色不能自爆，不可選取')}
+      <label>自爆的玩家號碼（只能選存活的狼人／黑狼王／血月使者／狼弟；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆）</label>
+      <div class="info" style="font-size:11px;margin-bottom:4px;">⏱️ 除了警長競選（吞警徽）以外，自爆須在該玩家「自己發言的階段」宣告，不能搶在別人發言時自爆</div>
+      ${jgNumSelectHtml('jg-wolf-blow-rec', '', null, null, exclude, '這個角色不能自爆，不可選取', jgSelfBlowExcludeReason)}
       <div class="info" style="font-size:12px;margin-top:6px;">一般狼人／黑狼王自爆：直接淘汰，不能開槍帶人，跳過投票，直接進入夜晚。</div>
       ${bmEligible?'<div class="info" style="font-size:12px;margin-top:4px;">⚠️ 選到'+bmEligible.num+'號血月使者會走血月專屬流程：封印當晚神職技能，只能在血月使者「自己發言的階段」宣告，不能搶在別人發言時自爆。</div>':''}
       <button class="danger" onclick="jgSaveWolfSelfBlow()" style="margin-top:10px;">確認自爆 →</button>
@@ -5047,13 +5260,22 @@ function jgRenderStep(step){
   else if(step==='sheriff-selfdestruct-pick'){
     const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
     const pendingDead=jgPendingNightDeadNums();
-    const eligible=jgPlayers.filter(p=>p.alive&&!pendingDead.includes(p.num)&&jgSheriffCandidates.includes(p.num)&&(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon')).map(p=>p.num);
+    // 自刀自爆規則：狼弟可以自爆（含警上吞警徽），狼兄不行；其餘限制不變
+    const eligible=jgPlayers.filter(p=>p.alive&&!pendingDead.includes(p.num)&&jgSheriffCandidates.includes(p.num)&&(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
+    const sheriffBlowReason=(num)=>{
+      const p=jgFind(num);
+      if(!p) return '不可選取';
+      const nm=p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p.num+'號';
+      if(pendingDead.includes(p.num)) return nm+'　昨晚已經死亡，不能自爆';
+      if(!jgSheriffCandidates.includes(p.num)) return nm+'　不是本輪候選人，不能自爆';
+      return jgSelfBlowExcludeReason(num);
+    };
     jgShowPg(`
       <h2>狼人自爆（吞警徽）</h2>
       <div class="info" style="font-size:12px;">請選擇宣告自爆的玩家號碼（只有仍在競選中的候選人才能選）</div>
-      <label>自爆的玩家號碼（惡靈騎士、石像鬼、狼美人、機械狼、夢魘都不能自爆，昨晚已經死亡的狼也不能選）</label>
-      ${jgNumSelectHtml('jg-sheriff-blow-rec', '', null, null, exclude, '這個角色不能自爆、不是候選人，或昨晚已經死亡，不可選取')}
+      <label>自爆的玩家號碼（惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆，昨晚已經死亡的狼也不能選）</label>
+      ${jgNumSelectHtml('jg-sheriff-blow-rec', '', null, null, exclude, '這個角色不能自爆、不是候選人，或昨晚已經死亡，不可選取', sheriffBlowReason)}
       <div class="info" style="font-size:12px;margin-top:6px;">${isFirstBlow?'雙爆吞警徽規則：這是第一次自爆，警徽暫不流失，競選會延到隔天繼續。':'本局將不再有警長，該玩家會被淘汰。'}</div>
       <button class="danger" onclick="jgSaveSheriffSelfDestruct()" style="margin-top:10px;">確認自爆 →</button>
     `,'💥 自爆吞警徽');
@@ -5995,6 +6217,19 @@ function jgSaveWolfBrotherAwaken(){
   jgRecord.wolfBrotherAwakenKill=val;
   jgWolfBrotherAwakened=true;
   jgWolfBrotherAwakenedNight=jgNight;
+  if(jgTryEarlyEnd()) return;
+  jgGoStep(jgAfterWolfBrotherStep());
+}
+
+// 狼弟已加入狼窩、其餘狼隊成員全滅時的「帶刀」手勢：法官可以直接在這一步替狼弟選殺人對象，
+// 也可以留空、把選人留到晚一點的「狼人睜眼」步驟再做——兩者只能擇一，這裡一併存進
+// jgRecord.wolfKill，讓後續死亡結算沿用同一套邏輯；狼人睜眼步驟看到 jgRecord.wolfKill
+// 已經有值時，會把選人按鈕鎖住，避免同一晚被法官不小心重複點選、改動殺人對象。
+function jgSaveWolfBrotherKillGesture(){
+  const kv=(document.getElementById('jg-wby-kill')||{}).value?.trim()||'';
+  jgRecord.wolfBrotherKillTarget=kv||null;
+  if(kv) jgRecord.wolfKill=kv;
+  jgRenderRoster();
   if(jgTryEarlyEnd()) return;
   jgGoStep(jgAfterWolfBrotherStep());
 }
@@ -7325,12 +7560,18 @@ function jgSaveVoteInner(){
       return;
     }
     // 第一次平票：進入 PK，下一步只有平票玩家可被投票，其餘玩家重新投票
-    voteLines.push('平票：'+top.join('、')+'號，進入 PK');
+    // PK 發言順序：前一輪（今天的一般發言討論）越晚發言的人，PK 越早發言——取今天的完整發言順序，
+    // 篩出平票的人，再整個反過來。
+    {
+      const prevOrder=jgDaySpeechOrderList(jgNight);
+      jgVotePkOrder=prevOrder.filter(n=>top.includes(n)).reverse();
+    }
+    voteLines.push('平票：'+top.join('、')+'號，進入 PK（PK 發言順序：'+jgVotePkOrder.join('→')+'）');
     jgDayLog[jgNight]=(jgDayLog[jgNight]||[]).concat(voteLines);
     jgVotePkRound=true;
     jgVotePkCandidates=top;
     jgVoteTally={};
-    alert('⚠️ 平票：'+top.join('、')+'號，進入 PK，其餘玩家重新投票。');
+    alert('⚠️ 平票：'+top.join('、')+'號，進入 PK。PK 發言順序：'+jgVotePkOrder.join('→')+'（前一輪越晚發言者，PK 越早發言），請依序發言後再重新投票。');
     jgGoStep('vote');
     return;
   }
@@ -7501,8 +7742,8 @@ function jgSaveWolfSelfBlow(){
   const val=(document.getElementById('jg-wolf-blow-rec')||{}).value?.trim()||'';
   if(!val){ alert('⚠️ 請選擇自爆的玩家號碼！'); return; }
   const p=jgFind(val);
-  if(!p||!p.alive||!(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon')){
-    alert('⚠️ 這個號碼目前不是存活的狼人／黑狼王／血月使者！');
+  if(!p||!p.alive||!(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y')){
+    alert('⚠️ 這個號碼目前不是存活的狼人／黑狼王／血月使者／狼弟！');
     return;
   }
   // 血月使者的自爆有自己專屬的特殊規則（封印當晚神職技能、屠邊最後一擊等），
@@ -7879,17 +8120,17 @@ function jgReset(){
 // ═══════════════════════════════════
 const ALL_ROLES = {
   // Wolf pack
-  wolf:     {icon:'🐺', name:'狼人',   team:'wolf', teamLabel:'狼人陣營', desc:'每晚與同伴商議選擇獵殺對象。白天偽裝好人，引導投票淘汰好人。<br><strong>目標：</strong>狼人數 ≥ 好人數。'},
-  wolfking: {icon:'👑', name:'黑狼王',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>帶人能力：</strong>被狼刀（夜槍，含隊友夜間自刀選中自己）、被票出局（白天槍），或被獵人開槍帶走淘汰時，都可以開槍帶走一名玩家；就算是守衛與女巫解藥同時作用而「奶穿」致死，仍然可以帶人。<br><strong>限制：</strong>白天自爆、被獵魔人獵出局、被女巫毒殺時，都無法開槍帶人。<br><strong>跟白狼王的差別：</strong>黑狼王沒有「自爆帶人」技能，白天自爆一律不能帶人；只有在被淘汰（狼刀／被票出局／獵人帶走）的當下才能開槍反擊。'},
-  whitewolf:{icon:'🤍', name:'白狼王', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>自爆帶人：</strong>白天除了投票環節以外的任何階段，都可以主動宣告自爆，帶走場上任意一名玩家，接著直接進入夜晚。<br><strong>限制：</strong>白狼王沒有黑狼王「出局開槍」的技能——不管是白天被放逐（投票出局）、被獵人開槍帶走，還是夜間被自己隊友刀死（自刀），都不能帶人，只有「自己主動自爆」才能帶人。'},
+  wolf:     {icon:'🐺', name:'狼人',   team:'wolf', teamLabel:'狼人陣營', desc:'每晚與同伴商議選擇獵殺對象。白天偽裝好人，引導投票淘汰好人。<br><strong>目標：</strong>狼人數 ≥ 好人數。<br><strong>自刀自爆：</strong>可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。'},
+  wolfking: {icon:'👑', name:'黑狼王',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>帶人能力：</strong>被狼刀（夜槍，含隊友夜間自刀選中自己）、被票出局（白天槍），或被獵人開槍帶走淘汰時，都可以開槍帶走一名玩家；就算是守衛與女巫解藥同時作用而「奶穿」致死，仍然可以帶人。<br><strong>限制：</strong>白天自爆、被獵魔人獵出局、被女巫毒殺時，都無法開槍帶人。<br><strong>跟白狼王的差別：</strong>黑狼王沒有「自爆帶人」技能，白天自爆一律不能帶人；只有在被淘汰（狼刀／被票出局／獵人帶走）的當下才能開槍反擊。<br><strong>自刀自爆：</strong>可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽），只是自爆時不能開槍帶人。'},
+  whitewolf:{icon:'🤍', name:'白狼王', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>自爆帶人：</strong>白天除了投票環節以外的任何階段，都可以主動宣告自爆，帶走場上任意一名玩家，接著直接進入夜晚。<br><strong>限制：</strong>白狼王沒有黑狼王「出局開槍」的技能——不管是白天被放逐（投票出局）、被獵人開槍帶走，還是夜間被自己隊友刀死（自刀），都不能帶人，只有「自己主動自爆」才能帶人。<br><strong>自刀自爆：</strong>可以被隊友自刀（不能帶人）；可以自己自爆（含警長競選期間自爆吞警徽，但吞警徽時不會觸發帶人）。'},
   wolfbeauty:{icon:'💋',name:'狼美人', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>魅惑連結：</strong>每晚必須魅惑一名玩家（不能連續兩晚魅惑同一人，不能自刀自爆，不能魅惑自己）。<br><strong>殉情：</strong>狼美人出局（被票、獵人射殺）或夜間被毒，魅惑對象殉情。<br><strong>限制：</strong>被騎士決鬥出局時技能無法發動。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與騎士搭配出現</span>'},
   evilknight:{icon:'🖤',name:'惡靈騎士',team:'wolf',teamLabel:'狼人陣營', desc:'<strong>被動防禦：</strong>夜間免疫狼殺、女巫毒、以及夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）（但預言家查驗仍顯示狼人）。<br><strong>反傷：</strong>被預言家查驗→次日預言家死亡；被女巫毒殺→次日女巫死亡。但反傷效果整局限一次。<br><strong>限制：</strong>不可自刀自爆。'},
-  bloodmoon: {icon:'🌑', name:'血月使者', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>主動技：</strong>白天自己發言階段可自爆後直接進入黑夜，當晚所有神牌技能封印。<br><strong>被動技：</strong>若為最後一個被放逐的狼人，可暫時存活進入黑夜，夜晚再擊殺一名玩家，達屠邊則狼人勝利。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與獵魔人搭配出現</span>'},
+  bloodmoon: {icon:'🌑', name:'血月使者', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>主動技：</strong>白天自己發言階段可自爆後直接進入黑夜，當晚所有神牌技能封印。<br><strong>被動技：</strong>若為最後一個被放逐的狼人，可暫時存活進入黑夜，夜晚再擊殺一名玩家，達屠邊則狼人勝利。<br><strong>自刀自爆：</strong>可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽），但一般自爆須在自己發言階段宣告，不能搶在別人發言時自爆。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與獵魔人搭配出現</span>'},
     gargoyle: {icon:'🗿', name:'石像鬼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>查驗牌面：</strong>每晚查驗一名玩家的具體角色。<br><strong>限制：</strong>不與狼隊見面，隊友全滅前不能殺人；隊友全滅後可在查驗之外，額外選擇今晚的帶刀對象殺人。不可自爆，可自刀。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與守墓人搭配出現</span>'},
-  mechanicalwolf:{icon:'🤖',name:'機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊相認：</strong>與其他狼人互不相認，全程不可自爆。<br><strong>學習技能：</strong>任一晚可選擇一名玩家並「學習」其身份技能，次晚起可使用該技能：<br>‧ 學到狼人／黑狼王：接下來夜晚可選一晚多開一刀（整局限一次），這一刀不可被守衛（含機械狼學到的守衛）或女巫解藥阻擋；一般守衛每晚只能擋下一刀，若這一刀與狼隊當晚的正常狼刀同時命中同一人，守衛只能擋住其中一刀，該玩家仍會因為另一刀死亡，隔天公布死亡。學到黑狼王額外還多了「被狼刀或被票出局時可以開槍帶人（被毒則不行）」。<br>‧ 學到平民：沒有主動技能。<br>‧ 學到女巫：只有一瓶毒藥（沒有解藥），整局限一次。<br>‧ 學到通靈師：每晚可查驗一名玩家的具體身份。<br>‧ 學到獵人：出局（夜槍或白天槍）時可開槍帶人。<br>‧ 學到守衛：除一般守衛功能之外，還能抵擋女巫毒與夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）；但守護與真守衛一樣仍會跟女巫同守同救「奶穿」死亡，而且只要成功擋到任一種傷害（無論最終是否因奶穿而死），這個技能就視為用畢，之後不能再守。<br><strong>帶刀手勢：</strong>當其餘狼人同伴全部出局時，機械狼開始獨自帶刀殺人。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與通靈師搭配出現</span>'},
+  mechanicalwolf:{icon:'🤖',name:'機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊相認：</strong>與其他狼人互不相認，全程不可自爆。<br><strong>學習技能：</strong>任一晚可選擇一名玩家並「學習」其身份技能，次晚起可使用該技能：<br>‧ 學到狼人／黑狼王：接下來夜晚可選一晚多開一刀（整局限一次），這一刀不可被守衛（含機械狼學到的守衛）或女巫解藥阻擋；一般守衛每晚只能擋下一刀，若這一刀與狼隊當晚的正常狼刀同時命中同一人，守衛只能擋住其中一刀，該玩家仍會因為另一刀死亡，隔天公布死亡。學到黑狼王額外還多了「被狼刀或被票出局時可以開槍帶人（被毒則不行）」。<br>‧ 學到平民：沒有主動技能。<br>‧ 學到女巫：只有一瓶毒藥（沒有解藥），整局限一次。<br>‧ 學到通靈師：每晚可查驗一名玩家的具體身份。<br>‧ 學到獵人：出局（夜槍或白天槍）時可開槍帶人。<br>‧ 學到守衛：除一般守衛功能之外，還能抵擋女巫毒與夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）；但守護與真守衛一樣仍會跟女巫同守同救「奶穿」死亡，而且只要成功擋到任一種傷害（無論最終是否因奶穿而死），這個技能就視為用畢，之後不能再守。<br><strong>帶刀手勢：</strong>當其餘狼人同伴全部出局時，機械狼開始獨自帶刀殺人。<br><strong>自刀自爆：</strong>可以被隊友自刀；全程不可自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與通靈師搭配出現</span>'},
   nightmare: {icon:'😈', name:'夢魘',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>恐懼：</strong>每晚在狼人行動前先發動技能，恐懼一名玩家，使其當晚無法發動夜間技能。若恐懼到狼隊友，狼人當晚不得殺人。<br><strong>限制：</strong>不能連續兩晚恐懼同一人，不可自爆、自刀。首夜與狼隊互不見面，可能誤恐懼到隊友。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與攝夢人搭配出現</span>'},
-  wolfbrother_e:{icon:'👴', name:'狼兄', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>首夜相認：</strong>與狼弟優先睜眼互相確認身份，隨後狼弟先閉眼，狼兄再與其餘狼人一同睜眼執行狼刀。<br><strong>陣亡效果：</strong>狼兄以任何方式（票出、毒殺、被殺等）陣亡後，下一晚狼弟將「覺醒」，必須殺一人復仇。<br><span style="color:var(--seer);font-size:12px;">⚡ 常見板子搭配：黑市商人＋狼兄狼弟——狼弟覺醒前形同隱狼，黑市商人若誤與其交易會直接失敗身亡</span>'},
-  wolfbrother_y:{icon:'👦', name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。'},
+  wolfbrother_e:{icon:'👴', name:'狼兄', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>首夜相認：</strong>與狼弟優先睜眼互相確認身份，隨後狼弟先閉眼，狼兄再與其餘狼人一同睜眼執行狼刀。<br><strong>陣亡效果：</strong>狼兄以任何方式（票出、毒殺、被殺等）陣亡後，下一晚狼弟將「覺醒」，必須殺一人復仇。<br><strong>自刀自爆：</strong>狼兄可以被隊友自刀，但不可以自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">⚡ 常見板子搭配：黑市商人＋狼兄狼弟——狼弟覺醒前形同隱狼，黑市商人若誤與其交易會直接失敗身亡</span>'},
+  wolfbrother_y:{icon:'👦', name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。<br><strong>帶刀手勢：</strong>加入狼窩後的每一晚，狼弟睜眼時都要比出「今晚的帶刀手勢」——👍（讚）代表其餘狼隊成員已全滅、狼弟可以自己帶刀殺人，可以當下直接選人，也可以留到「狼人睜眼」步驟再殺；👎（倒讚）代表狼隊友還在，維持原本跟大家一起睜眼殺人的流程。<br><strong>自刀自爆：</strong>狼弟可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。'},
   // Good - villager
   villager: {icon:'🧑‍🌾',name:'平民',  team:'good', teamLabel:'好人陣營', desc:'沒有特殊技能，靠發言與推理找出狼人。白天投票是唯一武器。'},
   fool:     {icon:'🃏', name:'傻瓜', team:'good', teamLabel:'神職（特殊）', desc:'<strong>本局採用哪一種規則，由法官在開局選角時用切換鈕決定：</strong><br>'
@@ -9451,9 +9692,12 @@ let PD_SORT_MODE='simple';
 const PD_BAYES_C=5; // 信心場數常數：場次少於這個數字時，分數會明顯被拉向陣營平均值
 
 function pdSetSortMode(mode){
+  // Bayesian Score 按鈕先隱藏／停用（見上方 HTML 註解），這裡順便擋掉，避免舊資料或殘留呼叫把排序模式切去 'bayes' 導致找不到按鈕、畫面出錯
+  if(mode==='bayes') mode='simple';
   PD_SORT_MODE=mode;
   document.getElementById('pd-sort-simple').classList.toggle('active', mode==='simple');
-  document.getElementById('pd-sort-bayes').classList.toggle('active', mode==='bayes');
+  const bayesBtn=document.getElementById('pd-sort-bayes');
+  if(bayesBtn) bayesBtn.classList.toggle('active', mode==='bayes');
   document.getElementById('pd-sort-points').classList.toggle('active', mode==='points');
   pdRebuildAndRender();
 }
@@ -9508,13 +9752,13 @@ function pdRebuildAndRender(){
           camp='third';
           result=(g.winner==='third')?'win':'lose';
           p.thirdGames++;
-          if(result==='win'){ p.thirdWins++; p.points+=3; } // 基本1分 + 第三方加成2分
+          if(result==='win'){ p.thirdWins++; } // 積分稍後統一計算（見 mGood/mEvil 算出來之後那段）
         } else {
           camp=classify(roleDisp);
           result = (camp===g.winner) ? 'win':'lose';
           p.games++;
           p.camp[camp]++;
-          if(result==='win'){ p.wins++; p.campWins[camp]++; p.points+=1; }
+          if(result==='win'){ p.wins++; p.campWins[camp]++; } // 積分稍後統一計算
         }
       } else {
         p.unclearGames++;
@@ -9543,6 +9787,10 @@ function pdRebuildAndRender(){
     const scoreGood=(C*mGood+wg)/(C+ng);
     const scoreEvil=(C*mEvil+we)/(C+ne);
     p.bayesScore = p.games ? (scoreGood*ng + scoreEvil*ne)/p.games : 0;
+    // ── 積分（減法版）──
+    // 好人陣營每贏一場＝(1－全站好人勝率)分；邪惡陣營每贏一場＝(1－全站邪惡勝率)分；
+    // 陣營勝率越低，代表那個陣營越難贏，贏一場就補越多分；第三方獲勝固定 2 分；輸／和局 0 分。
+    p.points = wg*(1-mGood) + we*(1-mEvil) + p.thirdWins*2;
   });
 
   const playerList=Object.values(players).sort((a,b)=>{
@@ -9571,9 +9819,6 @@ function pdRebuildAndRender(){
   document.getElementById('ov-evil').textContent=clearGames.length?Math.round(evilWins/clearGames.length*100)+'%':'–';
   document.getElementById('ov-bar-g').style.width=clearGames.length?(goodWins/clearGames.length*100)+'%':'0%';
   document.getElementById('ov-bar-e').style.width=clearGames.length?(evilWins/clearGames.length*100)+'%':'0%';
-  document.getElementById('ov-boards').innerHTML=Object.entries(boardCounts)
-    .sort((a,b)=>b[1]-a[1])
-    .map(([b,c])=>`<span class="chip">${b} ×${c}</span>`).join('');
 
   // ── 排行榜排序方式說明 ──
   const mGoodPct=Math.round(mGood*100), mEvilPct=Math.round(mEvil*100);
@@ -9583,11 +9828,14 @@ function pdRebuildAndRender(){
       <b>簡單勝率</b>：直接用「勝場 ÷ 總場數」排序。勝率相同時則場次多者排前面。
       <code>勝率 ＝ 勝場數 ／ 總場數</code>`;
   } else if(PD_SORT_MODE==='points'){
+    const mGoodPctPt=Math.round(mGood*100), mEvilPctPt=Math.round(mEvil*100);
     formulaBox.innerHTML=`
-      <b>積分</b>：改用「累積分數」排序，不受場次多寡稀釋，用來額外肯定「成為第三方並獲勝」這種機率極低、光看勝率看不出來的成就。分數相同時則場次多者排前面。
-      <code>每贏一場好人／邪惡陣營　＝　1 分
-每贏一場第三方陣營（人狼鏈成立且第三方獲勝）　＝　3 分（基本 1 分 ＋ 第三方加成 2 分）
-輸的場次　＝　0 分</code>
+      <b>積分</b>：改用「累積分數」排序，不受場次多寡稀釋，並且讓贏面較低的陣營每贏一場拿到比較多分，額外肯定「成為第三方並獲勝」這種機率極低、光看勝率看不出來的成就。分數相同時則場次多者排前面。
+      <code>好人陣營每贏一場　＝　(1 － 全站好人勝率) 分
+邪惡陣營每贏一場　＝　(1 － 全站邪惡勝率) 分
+第三方陣營每贏一場（人狼鏈成立且第三方獲勝）　＝　2 分
+輸／和局的場次　＝　0 分</code>
+      其中「全站好人／邪惡勝率」依全站 ${clearGames.length} 場自動計算（目前好人 ${mGoodPctPt}%、邪惡 ${mEvilPctPt}%）：某陣營整體勝率越低，代表越難贏，每贏一場能拿到的分數就越接近 1 分；勝率越高則越接近 0 分。這樣兩邊陣營長期下來「平均每場能拿到的分數期望值」是一樣的，不會有哪個陣營天生比較好賺分。
       注意：積分是「累積總分」，不是平均值，打得越多、贏得越多分數自然越高，適合看「這個人整體貢獻／成就」，不適合拿來跟簡單勝率／Bayesian Score 這種「比率」類指標直接比較高低。`;
   } else {
     formulaBox.innerHTML=`
@@ -9619,7 +9867,7 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
     const wr=p.games?Math.round(p.wins/p.games*100):0;
     const bayesPct=Math.round(p.bayesScore*100);
     const scoreLabel=PD_SORT_MODE==='bayes'?'Bayesian Score':(PD_SORT_MODE==='points'?'積分':'勝率');
-    const scoreVal=PD_SORT_MODE==='points'?(p.points+' 分'):(p.games?(PD_SORT_MODE==='bayes'?bayesPct+'%':wr+'%'):'–');
+    const scoreVal=PD_SORT_MODE==='points'?(Math.round(p.points*10)/10+' 分'):(p.games?(PD_SORT_MODE==='bayes'?bayesPct+'%':wr+'%'):'–');
     const topRoles=Object.entries(p.roleCounts).sort((a,b)=>b[1]-a[1])
       .map(([r,c])=>`<span class="chip">${r} ×${c}</span>`).join('');
     const histSorted=[...p.history].sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
