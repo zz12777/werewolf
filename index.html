@@ -3913,21 +3913,29 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveWolfBrotherIntro()">已紀錄，下一步 →</button>
     `,'👬 狼兄狼弟');
   }
-  // ── 狼弟睜眼：第二晚起每晚獨立睜眼，回報技能使用狀況 ──
-  // 復仇刀是一次性技能，只有狼兄剛陣亡的當晚才能使用（比讚）；用完後、以及狼兄尚存活時，
-  // 其餘每一晚都是倒讚（避免洩露狼兄死活與技能剩餘狀況，法官仍照樣每晚詢問）。
+  // ── 狼弟睜眼：第二晚起每晚獨立睜眼，法官每晚都要問兩個手勢──
+  // ①「技能使用狀況」：復仇刀是一次性技能，只有狼兄剛陣亡的那一晚比讚，其餘每一晚
+  // （不管覺醒前、還是覺醒後已用過）一律倒讚，避免洩露狼兄死活與技能剩餘狀況。
+  // ②「今晚的帶刀手勢」：只有「已加入狼窩」且「其餘狼隊成員全滅」的晚上才比讚，
+  // 代表狼弟今晚要自己帶刀殺人；其餘情況（尚未加入狼窩、或狼隊友還在）一律倒讚。
   else if(step==='wolfbrother-status'){
     const wbE=jgPlayers.find(p=>p.role==='wolfbrother_e');
     const wbY=jgPlayers.find(p=>p.role==='wolfbrother_y');
     const yLabel=wbY?(wbY.name&&wbY.name!==wbY.num+'號'?wbY.num+'號 '+wbY.name:wbY.num+'號'):'狼弟';
     const yDead=wbY&&!wbY.alive;
     const elderJustDied=jgWolfBrotherAwakenPending(); // 狼兄已死、狼弟尚存活、復仇刀尚未使用
+    // 帶刀手勢只看「狼弟以外的狼隊成員是否都死光」，跟狼弟自己有沒有正式加入狼窩無關——
+    // 就算是狼兄剛陣亡、狼弟才要覺醒的那一晚，只要其餘狼隊友（不含狼兄本人，他已經死了）
+    // 也全部陣亡，帶刀手勢照樣比讚。
+    const otherWolvesAliveWby=jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='wolfbrother_y'&&p.alive);
+    const knifeGesture=otherWolvesAliveWby?'👎':'👍';
     if(yDead){
       jgShowPg(`
         <h2>狼弟睜眼</h2>
         <div class="speech">「<em>狼弟請睜眼。</em>」</div>
         <div class="info-warn">狼弟已出局，仍需走完流程避免洩露身分</div>
         <div class="speech">「<em>你的技能使用狀況是 👎</em>」</div>
+        <div class="speech" style="margin-top:6px;">「<em>今晚的帶刀手勢是 👎</em>」</div>
         <div class="speech" style="margin-top:10px;">「<em>狼弟請閉眼。</em>」</div>
         <button class="primary" onclick="jgGoStep(jgAfterWolfBrotherStep())">下一步 →</button>
       `,'👬 狼弟');
@@ -3935,6 +3943,7 @@ function jgRenderStep(step){
     }
     if(elderJustDied){
       const av=jgRecord.wolfBrotherAwakenKill||'';
+      const wbyPackKv=jgRecord.wolfBrotherKillTarget||jgRecord.wolfKill||'';
       jgShowPg(`
         <h2>狼弟睜眼</h2>
         <div class="info-danger" style="font-size:14px;font-weight:700;padding:12px 14px;">狼兄已陣亡，${yLabel} 覺醒</div>
@@ -3942,6 +3951,13 @@ function jgRenderStep(step){
         <div class="info" style="font-size:13px;">狼兄已死亡，狼弟有一刀復仇刀，不可空刀</div>
         <label>覺醒刀擊殺的對象（號碼，必填）</label>
         ${jgNumSelectHtml('jg-wby-awaken-rec', av)}
+        <div class="divider" style="margin:12px 0;"></div>
+        <div class="speech">「<em>今晚的帶刀手勢是 ${knifeGesture}</em>」</div>
+        ${otherWolvesAliveWby?'<div class="info" style="font-size:12px;">（狼隊友還在，帶刀手勢比倒讚）</div>':`
+        <div class="info" style="font-size:12px;">其餘狼隊成員已全滅，狼弟今晚可以直接帶正常狼刀（就是原本「狼人睜眼」要選的那一刀，不是額外多一刀），跟復仇刀是兩回事，兩者都可以生效（留空＝晚點在「狼人睜眼」步驟再選）</div>
+        <label>帶刀殺人的對象</label>
+        ${jgNoSelfCutNoticeHtml()}
+        ${jgNumSelectHtml('jg-wby-pack-kill', wbyPackKv, null, null, jgNoSelfCutNums())}`}
         <div class="speech" style="margin-top:10px;">「<em>狼弟請閉眼。</em>」</div>
         <button class="primary" onclick="jgSaveWolfBrotherAwaken()">已紀錄，下一步 →</button>
       `,'😱 狼弟覺醒');
@@ -3954,6 +3970,7 @@ function jgRenderStep(step){
       jgShowPg(`
         <h2>狼弟睜眼</h2>
         <div class="speech">「<em>狼弟請睜眼，你的技能使用狀況是 👎</em>」</div>
+        <div class="speech" style="margin-top:6px;">「<em>今晚的帶刀手勢是 ${knifeGesture}</em>」</div>
         <div class="info" style="font-size:12px;">（狼兄尚存活，復仇刀尚不能使用）</div>
         <div class="speech" style="margin-top:10px;">「<em>狼弟請閉眼。</em>」</div>
         <button class="primary" onclick="jgGoStep(jgAfterWolfBrotherStep())">下一步 →</button>
@@ -3962,15 +3979,15 @@ function jgRenderStep(step){
     }
     // 已覺醒、已加入狼窩：狼弟平常跟其餘狼人一起在「狼人睜眼」步驟殺人；但如果此時其餘
     // 狼隊成員（黑狼王／白狼王／狼美人／惡靈騎士／血月使者／機械狼／石像鬼／夢魘…）都已
-    // 死光，只剩狼弟一人，這晚就換狼弟自己「帶刀」——比讚，且可以當下直接選人殺，或是
-    // 留到等一下「狼人睜眼」步驟再殺（兩者擇一，不會殺兩次；當下殺了的話，狼人睜眼步驟
-    // 那顆選人按鈕會被鎖住，避免法官重複點兩次殺人對象）。
-    const otherWolvesAliveWby=jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='wolfbrother_y'&&p.alive);
+    // 死光，只剩狼弟一人，這晚就換狼弟自己「帶刀」——比讚，且可以當下直接選人殺（帶的就是
+    // 正常狼刀，不是額外多一刀），也可以留到等一下「狼人睜眼」步驟再殺；當下選了的話，
+    // 「狼人睜眼」步驟的號碼格會直接預先選好、顯示成綠色，法官仍可以改選，只是不用重選一次。
     if(otherWolvesAliveWby){
       jgShowPg(`
         <h2>狼弟睜眼</h2>
         <div class="speech">「<em>狼弟請睜眼，你的技能使用狀況是 👎</em>」</div>
-        <div class="info" style="font-size:12px;">（復仇刀已使用過，整局限一次，稍後與其餘狼人一同睜眼殺人）</div>
+        <div class="speech" style="margin-top:6px;">「<em>今晚的帶刀手勢是 👎</em>」</div>
+        <div class="info" style="font-size:12px;">（復仇刀已使用過，整局限一次；狼隊友還在，稍後與其餘狼人一同睜眼殺人）</div>
         <div class="speech" style="margin-top:10px;">「<em>狼弟請閉眼。</em>」</div>
         <button class="primary" onclick="jgGoStep(jgAfterWolfBrotherStep())">下一步 →</button>
       `,'👬 狼弟');
@@ -3979,8 +3996,9 @@ function jgRenderStep(step){
     const wbyKv=jgRecord.wolfBrotherKillTarget||jgRecord.wolfKill||'';
     jgShowPg(`
       <h2>狼弟睜眼</h2>
-      <div class="speech">「<em>狼弟請睜眼，你的技能使用狀況是 👍</em>」（其他狼隊友已全滅，狼弟可以帶刀殺人）</div>
-      <div class="info" style="font-size:12px;">今晚的帶刀手勢：👍 讚。可以現在直接選殺人對象，或留空、等一下在「狼人睜眼」步驟再殺——兩者擇一，不會殺兩次。</div>
+      <div class="speech">「<em>狼弟請睜眼，你的技能使用狀況是 👎</em>」</div>
+      <div class="speech" style="margin-top:6px;">「<em>今晚的帶刀手勢是 👍</em>」（其他狼隊友已全滅，狼弟可以帶刀殺人）</div>
+      <div class="info" style="font-size:12px;">復仇刀已使用過（整局限一次）；帶刀手勢比讚，可以現在直接選殺人對象，或留空、等一下在「狼人睜眼」步驟再殺——兩者擇一，不會殺兩次。</div>
       <label>狼弟今晚要殺的對象（留空＝晚點在「狼人睜眼」步驟再殺）</label>
       ${jgNoSelfCutNoticeHtml()}
       ${jgNumSelectHtml('jg-wby-kill', wbyKv, null, null, jgNoSelfCutNums())}
@@ -4038,21 +4056,21 @@ function jgRenderStep(step){
       if(wbE.alive&&!jgWolfBrotherAwakened){
         wbNote='<div class="info" style="font-size:12px;">👬 狼弟（'+wbY.num+'號）平時不進狼窩，本回合請勿叫醒；狼兄（'+wbE.num+'號）與其餘狼人一同睜眼殺人。</div>';
       } else if(jgWolfBrotherAwakened&&jgWolfBrotherAwakenedNight===jgNight){
-        // 覺醒當晚：狼弟已經在稍早的「狼弟覺醒」步驟單獨刀過一次人了，本回合狼窩仍不叫醒他
-        wbNote='<div class="info" style="font-size:12px;">👬 狼弟（'+wbY.num+'號）今晚已在「狼弟覺醒」步驟單獨完成復仇刀，覺醒當晚仍不入狼窩，本回合請勿叫醒。</div>';
+        // 覺醒當晚：狼弟已經在稍早的「狼弟覺醒」步驟單獨用復仇刀殺過一次人了。如果當時其餘狼隊
+        // 成員也都已經死光，狼弟同時也是這晚唯一能出正常狼刀的人，所以他其實可以睜眼（其實這一步
+        // 對他來說沒有實際意義，因為刀口已經在自己畫面選好了，這裡只是照常喊一次維持節奏）；
+        // 如果狼隊友還在，狼弟這晚照舊不用叫醒，正常狼刀由其他狼隊友決定。
+        const wbyOtherAlive=jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='wolfbrother_y'&&p.alive);
+        wbNote=wbyOtherAlive
+          ?'<div class="info" style="font-size:12px;">👬 狼弟（'+wbY.num+'號）今晚已在「狼弟覺醒」步驟單獨完成復仇刀，覺醒當晚仍不入狼窩，本回合請勿叫醒。</div>'
+          :'<div class="info" style="font-size:12px;">👬 狼弟（'+wbY.num+'號）今晚已在「狼弟覺醒」步驟單獨完成復仇刀，因亦可帶正常狼刀，狼弟可睜眼。</div>';
       } else if(jgWolfBrotherAwakened){
         wbNote='<div class="info" style="font-size:12px;">👬 狼弟（'+wbY.num+'號）已覺醒，本回合與其餘狼人一同睜眼殺人。</div>';
       }
     }
-    // 若狼弟已經在自己「帶刀」的睜眼步驟選過殺人對象（jgRecord.wolfBrotherKillTarget），
-    // 這裡改成鎖定顯示，不給法官重複點選、誤改殺人對象。
-    const wbyLockedKill=jgRecord.wolfBrotherKillTarget||null;
-    const wolfKillSectionHtml=wbyLockedKill
-      ?'<label>今晚獵殺的對象</label><input type="hidden" id="jg-wolf-rec" value="'+wbyLockedKill+'">'
-        +'<div class="info-success" style="font-size:14px;font-weight:700;padding:10px 14px;">🔒 '+wbyLockedKill+'號（狼弟已在自己睜眼步驟帶刀選定，本回合鎖定不可更改）</div>'
-      :'<label>今晚獵殺的對象</label>'
-        +'<div id="jg-wolf-selfcut-notice">'+jgWolfWakeSelfCutNoticeHtml()+'</div>'
-        +'<div id="jg-wolf-rec-wrap">'+jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgWolfWakeSelfCutInfo().nums)+'</div>';
+    const wolfKillSectionHtml='<label>今晚獵殺的對象</label>'
+      +'<div id="jg-wolf-selfcut-notice">'+jgWolfWakeSelfCutNoticeHtml()+'</div>'
+      +'<div id="jg-wolf-rec-wrap">'+jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgWolfWakeSelfCutInfo().nums)+'</div>';
     jgShowPg(`
       <h2>狼人睜眼</h2>
       <div class="speech">「<em>狼人請睜眼。</em>」</div>
@@ -6218,14 +6236,24 @@ function jgSaveWolfBrotherAwaken(){
   jgRecord.wolfBrotherAwakenKill=val;
   jgWolfBrotherAwakened=true;
   jgWolfBrotherAwakenedNight=jgNight;
+  // 覺醒當晚若其餘狼隊成員已全滅，畫面上會多一個「帶刀殺人對象」的欄位（跟復仇刀分開算，
+  // 今晚可以兩刀都出）；這裡一併存起來，跟一般「帶刀」的存法共用同一套欄位，讓稍後的
+  // 「狼人睜眼」畫面自動帶出、鎖定這個選擇（見 jgSaveWolfBrotherKillGesture 的說明）。
+  const packKillEl=document.getElementById('jg-wby-pack-kill');
+  if(packKillEl){
+    const pkv=(packKillEl.value||'').trim();
+    jgRecord.wolfBrotherKillTarget=pkv||null;
+    if(pkv) jgRecord.wolfKill=pkv;
+  }
   if(jgTryEarlyEnd()) return;
   jgGoStep(jgAfterWolfBrotherStep());
 }
 
-// 狼弟已加入狼窩、其餘狼隊成員全滅時的「帶刀」手勢：法官可以直接在這一步替狼弟選殺人對象，
-// 也可以留空、把選人留到晚一點的「狼人睜眼」步驟再做——兩者只能擇一，這裡一併存進
-// jgRecord.wolfKill，讓後續死亡結算沿用同一套邏輯；狼人睜眼步驟看到 jgRecord.wolfKill
-// 已經有值時，會把選人按鈕鎖住，避免同一晚被法官不小心重複點選、改動殺人對象。
+// 狼弟已加入狼窩、其餘狼隊成員全滅時的「帶刀」手勢：帶的就是原本狼人睜眼要選的正常狼刀，
+// 只是提前換狼弟自己選。法官可以直接在這一步替狼弟選殺人對象，也可以留空、把選人留到
+// 晚一點的「狼人睜眼」步驟再做——這裡一併存進 jgRecord.wolfKill，讓後續死亡結算沿用
+// 同一套邏輯；狼人睜眼步驟看到 jgRecord.wolfKill 已經有值時，號碼格會直接預先選好、
+// 顯示成綠色（法官仍可以改選，只是不用重選一次）。
 function jgSaveWolfBrotherKillGesture(){
   const kv=(document.getElementById('jg-wby-kill')||{}).value?.trim()||'';
   jgRecord.wolfBrotherKillTarget=kv||null;
@@ -8131,7 +8159,7 @@ const ALL_ROLES = {
   mechanicalwolf:{icon:'🤖',name:'機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊相認：</strong>與其他狼人互不相認，全程不可自爆。<br><strong>學習技能：</strong>任一晚可選擇一名玩家並「學習」其身份技能，次晚起可使用該技能：<br>‧ 學到狼人／黑狼王：接下來夜晚可選一晚多開一刀（整局限一次），這一刀不可被守衛（含機械狼學到的守衛）或女巫解藥阻擋；一般守衛每晚只能擋下一刀，若這一刀與狼隊當晚的正常狼刀同時命中同一人，守衛只能擋住其中一刀，該玩家仍會因為另一刀死亡，隔天公布死亡。學到黑狼王額外還多了「被狼刀或被票出局時可以開槍帶人（被毒則不行）」。<br>‧ 學到平民：沒有主動技能。<br>‧ 學到女巫：只有一瓶毒藥（沒有解藥），整局限一次。<br>‧ 學到通靈師：每晚可查驗一名玩家的具體身份。<br>‧ 學到獵人：出局（夜槍或白天槍）時可開槍帶人。<br>‧ 學到守衛：除一般守衛功能之外，還能抵擋女巫毒與夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）；但守護與真守衛一樣仍會跟女巫同守同救「奶穿」死亡，而且只要成功擋到任一種傷害（無論最終是否因奶穿而死），這個技能就視為用畢，之後不能再守。<br><strong>帶刀手勢：</strong>當其餘狼人同伴全部出局時，機械狼開始獨自帶刀殺人。<br><strong>自刀自爆：</strong>可以被隊友自刀；全程不可自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與通靈師搭配出現</span>'},
   nightmare: {icon:'😈', name:'夢魘',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>恐懼：</strong>每晚在狼人行動前先發動技能，恐懼一名玩家，使其當晚無法發動夜間技能。若恐懼到狼隊友，狼人當晚不得殺人。<br><strong>限制：</strong>不能連續兩晚恐懼同一人，不可自爆、自刀。首夜與狼隊互不見面，可能誤恐懼到隊友。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與攝夢人搭配出現</span>'},
   wolfbrother_e:{icon:'👴', name:'狼兄', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>首夜相認：</strong>與狼弟優先睜眼互相確認身份，隨後狼弟先閉眼，狼兄再與其餘狼人一同睜眼執行狼刀。<br><strong>陣亡效果：</strong>狼兄以任何方式（票出、毒殺、被殺等）陣亡後，下一晚狼弟將「覺醒」，必須殺一人復仇。<br><strong>自刀自爆：</strong>狼兄可以被隊友自刀，但不可以自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">⚡ 常見板子搭配：黑市商人＋狼兄狼弟——狼弟覺醒前形同隱狼，黑市商人若誤與其交易會直接失敗身亡</span>'},
-  wolfbrother_y:{icon:'👦', name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。<br><strong>帶刀手勢：</strong>加入狼窩後的每一晚，狼弟睜眼時都要比出「今晚的帶刀手勢」——👍（讚）代表其餘狼隊成員已全滅、狼弟可以自己帶刀殺人，可以當下直接選人，也可以留到「狼人睜眼」步驟再殺；👎（倒讚）代表狼隊友還在，維持原本跟大家一起睜眼殺人的流程。<br><strong>自刀自爆：</strong>狼弟可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。'},
+  wolfbrother_y:{icon:'👦', name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。<br><strong>帶刀手勢：</strong>狼弟每晚睜眼都要比兩個手勢——「技能使用狀況」（復仇刀，只有覺醒那一晚比讚，其餘每晚都是倒讚）跟「今晚的帶刀手勢」（只看狼弟以外的狼隊成員是否已經全滅，跟狼弟自己有沒有正式加入狼窩無關——就算是狼兄剛陣亡、狼弟正要覺醒的那一晚，只要其餘狼隊友也全滅了，帶刀手勢照樣比讚）。帶刀手勢比讚時，狼弟帶的就是原本「狼人睜眼」要選的那把正常狼刀（不是額外多一刀），可以當下直接選人，也可以留到「狼人睜眼」步驟再殺；覺醒當晚若同時符合帶刀條件，復仇刀跟正常狼刀是分開的兩刀，當晚可以兩刀都出。<br><strong>自刀自爆：</strong>狼弟可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。'},
   // Good - villager
   villager: {icon:'🧑‍🌾',name:'平民',  team:'good', teamLabel:'好人陣營', desc:'沒有特殊技能，靠發言與推理找出狼人。白天投票是唯一武器。'},
   fool:     {icon:'🃏', name:'傻瓜', team:'good', teamLabel:'神職（特殊）', desc:'<strong>本局採用哪一種規則，由法官在開局選角時用切換鈕決定：</strong><br>'
