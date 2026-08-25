@@ -1,7 +1,6 @@
 // ═══════════════════════════════════════════
 // js/core.js
 // 全域狀態變數與共用工具函式（玩家查找、死亡結算共用邏輯、UI渲染共用函式、存讀檔、即時同步）
-// 本檔案由 index.html 拆分而成，內容為原檔案對應區塊的原樣搬移（未修改邏輯）
 // ═══════════════════════════════════════════
 
 // ═══════════════════════════════════
@@ -1006,13 +1005,14 @@ function jgSpeakTimerReplayAudio(){
   const audio=document.getElementById('jg-speak-timer-audio');
   if(audio){ try{ audio.currentTime=0; audio.play().catch(()=>{}); }catch(e){} }
 }
-// 「過」：這位發言結束，換下一位，計時器歸零重新倒數（需要法官再按一次開始）。
+// 「過」：這位發言結束，換下一位，計時器歸零並直接開始倒數（不用法官再按一次開始）。
 function jgSpeakTimerNext(){
   if(jgSpeakTimerHandle){ clearInterval(jgSpeakTimerHandle); jgSpeakTimerHandle=null; }
-  jgSpeakTimerRunning=false;
   jgSpeakTimerDone=false;
   jgSpeakTimerIdx++;
   jgSpeakTimerSec=JG_SPEAK_SECONDS;
+  jgSpeakTimerRunning=true;
+  jgSpeakTimerHandle=setInterval(jgSpeakTimerTick,1000);
   jgRenderStep(jgCurrentStep);
 }
 
@@ -1928,8 +1928,14 @@ function jgCheckWin(){
 // 人狼鏈成立時的專用勝負判定：tp＝third-party 完整名單（情侶兩人＋邱比特），
 // tpAlive＝目前還存活的第三方成員號碼。這個函式只會在第三方仍有人存活時被呼叫。
 // (1) 第三方屠光其餘所有玩家（others 清空）→ 第三方獲勝。
-// (2) 第三方存活人數「大於」場上其餘（非第三方）存活人數時，直接判定第三方獲勝
-//     （例如第三方三人都在場，需要 3:2 才算獲勝；打平，例如 3:3，遊戲尚未結束）。
+// (2) 第三方存活人數「大於」場上其餘（非第三方）存活人數時，直接判定第三方獲勝——
+//     但這條「要不要嚴格大於」的門檻，會依第三方目前還剩幾個人而不同：
+//     · 第三方全員（3人）都還存活時，要嚴格大於才算贏（3:2 算贏，3:3 打平還不算）。
+//       全員存活代表最極端的「其餘玩家仍有一定人數優勢」情況，這時候還打平，代表對方
+//       還沒被壓制到絕對劣勢，遊戲要繼續。
+//     · 第三方只剩 2 人或 1 人時，打平（人數相等）也算贏（例如 2:2、1:1 都算第三方獲勝）——
+//       因為第三方人數已經少到這個地步，只要沒被人數優勢的一方壓過去，僵局就是對第三方
+//       有利的均勢，直接判定獲勝。
 // 其餘情況遊戲繼續（回傳 null）——不管狼人或好人是否已經死絕，只要第三方還在場，
 // 就不能提前判定狼人或好人獲勝；必須等第三方（含邱比特）全滅後，才會改用一般規則。
 function jgCheckWinThirdParty(tp, tpAlive){
@@ -1938,8 +1944,14 @@ function jgCheckWinThirdParty(tp, tpAlive){
   if(others.length===0){
     return{winner:'third',msg:'邱比特與情侶（第三方陣營）已將其餘玩家屠光',icon:'💘'};
   }
-  if(tpAlive.length>others.length){
-    return{winner:'third',msg:'第三方陣營（邱比特／情侶）存活人數多於其餘玩家，直接判定第三方獲勝',icon:'💘'};
+  if(tpAlive.length===3){
+    if(tpAlive.length>others.length){
+      return{winner:'third',msg:'第三方陣營（邱比特／情侶）存活人數多於其餘玩家，直接判定第三方獲勝',icon:'💘'};
+    }
+  } else if(tpAlive.length===1||tpAlive.length===2){
+    if(tpAlive.length>=others.length){
+      return{winner:'third',msg:'第三方陣營（邱比特／情侶）存活人數與其餘玩家打平或更多，直接判定第三方獲勝',icon:'💘'};
+    }
   }
   return null;
 }

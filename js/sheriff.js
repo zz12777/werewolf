@@ -1,7 +1,6 @@
 // ═══════════════════════════════════════════
 // js/sheriff.js
 // 警長競選全流程（候選、發言、退水、投票、PK、發言方向、警徽交接）
-// 本檔案由 index.html 拆分而成，內容為原檔案對應區塊的原樣搬移（未修改邏輯）
 // ═══════════════════════════════════════════
 
 let jgSheriffAudioEl=null;
@@ -26,7 +25,7 @@ function jgFormatSheriffBlock(){
   if(!jgSheriffCampaignHappened && !jgSheriffSelfDestruct) return ''; // 沒有人上警，不輸出這個區塊
   let candidatesNums=null, startNum=null, dirLabel=null, withdrawals=[], hanTiaoNotes=[];
   const round1Votes=[], pkVotes=[];
-  let round1Abstain=null, pkAbstain=null, noSheriffNote=null;
+  let round1Abstain=null, pkAbstain=null, noSheriffNote=null, autoElectReason=null;
   jgSheriffLogLines.forEach(l=>{
     let m;
     if((m=l.match(/^候選人：(.+)號$/))) candidatesNums=m[1];
@@ -38,6 +37,12 @@ function jgFormatSheriffBlock(){
     else if((m=l.match(/^PK棄票：(.+)$/))) pkAbstain=m[1];
     else if((m=l.match(/^棄票：(.+)$/))) round1Abstain=m[1];
     else if(l.startsWith('全數 0 票')||l.startsWith('PK 後再度平票')) noSheriffNote=l;
+    // 免投票自動當選有兩種不同情境，文字紀錄要分開講清楚是哪一種：
+    // 「自始至終只有一人上警」——一路走完發言，發言結束後才直接當選（見 jgSheriffSpeechGoVote）；
+    // 「退到只剩一人」——原本不只一位候選人，中途有人退水，退到只剩一位才直接當選
+    // （見 jgSheriffHandleWithdrawResolution／jgRenderSheriffVote 的保險判斷）。
+    else if(l.startsWith('僅 ')&&l.includes('一人上警')) autoElectReason='onlyOne';
+    else if((l.startsWith('其餘候選人全數退水')||l.startsWith('候選人只剩'))&&l.includes('自動當選')) autoElectReason='reducedToOne';
   });
   let out='**警長競選\n';
   if(candidatesNums){
@@ -62,7 +67,11 @@ function jgFormatSheriffBlock(){
     if(pkAbstain) out+='--棄票：'+pkAbstain+'\n';
   }
   if(jgSheriffSelfDestruct) out+='>'+(jgSheriffSelfDestructNum||'x')+'號 自爆'+(jgSheriffSelfDestructBroughtNum?'帶'+jgSheriffSelfDestructBroughtNum:'')+'吞警徽，本局無警長\n';
-  else if(jgSheriffElectedNum && round1Votes.length===0 && pkVotes.length===0) out+='>'+jgSheriffElectedNum+'號自動當選警長（候選人退到只剩一人／自始至終只有一人，不需投票）\n';
+  else if(jgSheriffElectedNum && round1Votes.length===0 && pkVotes.length===0){
+    if(autoElectReason==='onlyOne') out+='>只一人上警，不需投票，'+jgSheriffElectedNum+'號自動當選警長\n';
+    else if(autoElectReason==='reducedToOne') out+='>候選人退到只剩一人，'+jgSheriffElectedNum+'號自動當選警長（不需投票）\n';
+    else out+='>'+jgSheriffElectedNum+'號自動當選警長（候選人退到只剩一人／自始至終只有一人，不需投票）\n';
+  }
   else if(!jgSheriffElectedNum && noSheriffNote) out+='>'+noSheriffNote+'\n';
   else if(!jgSheriffElectedNum && jgSheriffElectionDone && round1Votes.length===0 && pkVotes.length===0) out+='>平票或全數退水，本局無警長\n';
   return out;

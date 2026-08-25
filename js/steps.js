@@ -1,7 +1,6 @@
 // ═══════════════════════════════════════════
 // js/steps.js
 // 主要畫面調度函式 jgRenderStep()——依目前步驟渲染對應畫面，涵蓋夜晚與白天所有步驟
-// 本檔案由 index.html 拆分而成，內容為原檔案對應區塊的原樣搬移（未修改邏輯）
 // ═══════════════════════════════════════════
 
 function jgRenderStep(step){
@@ -1385,18 +1384,27 @@ function jgRenderStep(step){
       }
       jgRecord.demonhunterTarget=null;
     }
-    // Dreamcatcher consecutive kill
+    // Dreamcatcher consecutive kill——封印判斷要「不管這個人現在是不是已經死了」都要標記
+    // （理由同純白之女查殺那段的註解：同一晚可能同時被狼刀擊殺，_skillSealed 不能漏標）。
     if(jgRecord.dreamcatcherKillTarget){
       const dct=jgFind(jgRecord.dreamcatcherKillTarget);
-      if(dct&&dct.alive){dct.alive=false;dct._skillSealed=true;if(!deads.includes(dct.num))deads.push(dct.num);}
+      if(dct){
+        dct._skillSealed=true;
+        if(dct.alive){dct.alive=false;}
+        if(!deads.includes(dct.num))deads.push(dct.num);
+      }
       jgRecord.dreamcatcherKillTarget=null;
     }
-    // Dreamcatcher: if dreamcatcher dies this dawn, their target also dies
+    // Dreamcatcher: if dreamcatcher dies this dawn, their target also dies（同樣不能漏標 _skillSealed）
     if(jgRecord.dreamcatcherTarget){
       const dcP2=jgPlayers.find(p=>p.role==='dreamcatcher');
       if(dcP2&&!dcP2.alive){
         const dct2=jgFind(jgRecord.dreamcatcherTarget);
-        if(dct2&&dct2.alive){dct2.alive=false;dct2._skillSealed=true;if(!deads.includes(dct2.num))deads.push(dct2.num);}
+        if(dct2){
+          dct2._skillSealed=true;
+          if(dct2.alive){dct2.alive=false;}
+          if(!deads.includes(dct2.num))deads.push(dct2.num);
+        }
       }
     }
     // 狼巫、純白之女互相查殺到對方，且「剛好」兩人分別是各自陣營場上僅存的最後一人
@@ -1429,9 +1437,18 @@ function jgRenderStep(step){
     // 純白之女查驗到狼人陣營：第二晚起才會有這個目標值（見 jgSavePurewhitemaiden），
     // 守衛與女巫都無法保護，直接致死。互查對方的情況（狼刀在先）已經在上面處理過，
     // 這裡若 purewhitemaidenKillTarget 已被取消就不會再進來這個分支。
+    // 這種死法不是被狼刀擊殺，獵人／黑狼王被查殺時技能一樣被封印，不能開槍——標記
+    // _skillSealed，天亮判斷能不能開槍時會用到（見 jgHunterSkillSealed，跟攝夢人
+    // 致死用的是同一套機制）。注意：封印要「不管這個人現在是不是已經死了」都要標記——
+    // 如果這位獵人/黑狼王同一晚剛好也被狼刀擊殺（前面的狼刀結算已經先把他標成死亡），
+    // 這裡如果還用「pwt.alive」當作條件，就會漏掉這個標記，導致他明明該被封印卻沒被封印。
     if(jgRecord.purewhitemaidenKillTarget){
       const pwt=jgFind(jgRecord.purewhitemaidenKillTarget);
-      if(pwt&&pwt.alive){pwt.alive=false;if(!deads.includes(pwt.num))deads.push(pwt.num);}
+      if(pwt){
+        pwt._skillSealed=true;
+        if(pwt.alive){pwt.alive=false;}
+        if(!deads.includes(pwt.num))deads.push(pwt.num);
+      }
       jgRecord.purewhitemaidenKillTarget=null;
     }
     // 假面舞會板：舞池陣營判定。3人若陣營相同，無事發生；若不同，人數較少的一方死亡——
@@ -1559,8 +1576,15 @@ function jgRenderStep(step){
     const showLastWords=showTrueLastWords||showSwapLastWords;
     let lwHtml='';
     if(showLastWords){
+      // 遺言發言順序：真的淘汰（扣掉殉情者，殉情不留遺言）先講，換牌的人接著講；
+      // 這批人一樣要有計時器，跟白天發言／警上發言／PK 發言用同一套元件。
+      const lwOrder=[
+        ...trulyDiedNums.filter(d=>heartbreakDawnNum===null||d.toString()!==heartbreakDawnNum.toString()),
+        ...swappedNums
+      ].map(Number);
       lwHtml='<div class="divider"></div>'
-        +'<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">發表遺言（依序進行）</div>';
+        +'<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">發表遺言（依序進行）</div>'
+        +jgSpeakTimerWidgetHtml(lwOrder);
       // 情侶殉情者不算「真正淘汰」發表遺言的對象——殉情不觸發任何技能，也不留遺言
       trulyDiedNums.filter(d=>heartbreakDawnNum===null||d.toString()!==heartbreakDawnNum.toString()).forEach(d=>{
         const p=jgFind(d);
@@ -1956,6 +1980,7 @@ function jgRenderStep(step){
     const isFoolReveal=!!jgRecord._voteOutFoolReveal;
     jgShowPg(`
       <h2>遺言</h2>
+      ${jgRecord._voteOutNum?jgSpeakTimerWidgetHtml([parseInt(jgRecord._voteOutNum)]):''}
       <div class="info" style="display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 14px;">
         <span style="font-size:18px;">💬</span><span>${name} 發表遺言${isFoolReveal?'<span style="display:block;font-size:11px;color:var(--text2);margin-top:2px;">（翻牌為傻瓜，免於淘汰，可留在場上，但之後不能再投票）</span>':''}</span>
       </div>

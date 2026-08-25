@@ -1,7 +1,6 @@
 // ═══════════════════════════════════════════
 // js/playdata-core.js
 // 遊玩數據分頁：排行榜統計、積分計算、成長趨勢圖
-// 本檔案由 index.html 拆分而成，內容為原檔案對應區塊的原樣搬移（未修改邏輯）
 // ═══════════════════════════════════════════
 
 const ABBR={'民':'平民','狼':'狼人','巫':'女巫','預':'預言家','守':'守衛','獵':'獵人','通':'通靈師','混':'混血兒','王':'黑狼王','月':'血月使者','魔':'魔術師','魘':'夢魘','攝':'攝夢人','騎':'騎士'};
@@ -403,12 +402,17 @@ function pdRebuildAndRender(){
       let pointsDynamic=0, pointsLocked=0;
       if(!g.unclear){
         if(pl.third){
-          // 這場配成人狼鏈、成為第三方陣營一員：勝負跟著第三方走，不算進原本陣營的好人/邪惡勝率，
-          // 免得該局明明是靠第三方輸贏，卻被誤記到玩家原本身分（例如狼人、平民）的陣營戰績裡。
+          // 這場配成人狼鏈、成為第三方陣營一員：陣營細項（好人/邪惡）不算，避免誤記到玩家
+          // 原本身分的陣營戰績裡；但整體勝場數／總場次仍要算進去——個人勝率＝
+          // 總勝場（含第三方獲勝）÷ 總場次（不含和局），第三方獲勝跟好人/邪惡獲勝一樣都算贏。
           camp='third';
           result=(g.winner==='third')?'win':'lose';
+          p.games++;
           p.thirdGames++;
-          if(result==='win'){ p.thirdWins++; pointsDynamic=2; pointsLocked=2; } // 第三方固定2分，兩種算法都一樣
+          if(result==='win'){
+            p.wins++;
+            p.thirdWins++; pointsDynamic=2; pointsLocked=2; // 第三方固定2分，兩種算法都一樣
+          }
         } else {
           camp=classify(roleDisp);
           result = (camp===g.winner) ? 'win':'lose';
@@ -432,7 +436,7 @@ function pdRebuildAndRender(){
       // 太細碎；每局紀錄仍然用 roleDisp，保留括號內的具體資訊。
       const roleTally=roleDisp.replace(/\(.*?\)/,'');
       p.roleCounts[roleTally]=(p.roleCounts[roleTally]||0)+1;
-      p.history.push({date:g.date,label:g.id,board:g.board,role:roleDisp,result,resultText:g.resultText,pointsDynamic,pointsLocked});
+      p.history.push({date:g.date,label:g.id,board:g.board,role:roleDisp,result,resultText:g.resultText,pointsDynamic,pointsLocked,camp});
     });
   });
   const boardCounts={};
@@ -538,7 +542,8 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
       const cls=h.result==='win'?'win':(h.result==='lose'?'lose':'unclear');
       const mark=h.result==='win'?'✓':(h.result==='lose'?'✗':'－');
       const title=h.result==='unclear'?' title="不列入戰績勝率"':'';
-      return `<div class="hist-item"><span class="hist-res ${cls}"${title}>${mark}</span><span class="hist-role">${h.role}</span><span>${h.board}</span><span class="hist-date">${pdDisplayDateShort(h.date)}</span></div>`;
+      const thirdTag=h.camp==='third'?'<span class="chip third" style="padding:1px 6px;font-size:11px;margin-left:4px;">💘 第三方</span>':'';
+      return `<div class="hist-item"><span class="hist-res ${cls}"${title}>${mark}</span><span class="hist-role">${h.role}</span>${thirdTag}<span>${h.board}</span><span class="hist-date">${pdDisplayDateShort(h.date)}</span></div>`;
     }).join('');
     const divider=(!isRanked&&i===pdRankedList.length)
       ?`<div class="pd-unranked-divider">⬇ 以下玩家遊玩場數未達門檻，僅供參考、不列入正式排名</div>`:'';
@@ -609,11 +614,15 @@ function pdRenderGames(){
   const list=document.getElementById('game-list');
   if(!filtered.length){ list.innerHTML='<div class="empty">沒有符合條件的場次</div>'; return; }
   list.innerHTML=filtered.map((g,i)=>{
-    const badgeCls = g.unclear?'bu':(g.winner==='evil'?'bw':'bv');
+    const badgeCls = g.unclear?'bu':(g.winner==='evil'?'bw':(g.winner==='third'?'bthird':'bv'));
     const roster=g.players.map(p=>{
       const disp=pdDisplayRole(p.role);
-      const camp=g.unclear?null:classify(disp);
-      const badge=g.unclear?'':`<span class="badge ${camp==='evil'?'bw':'bv'}" style="padding:2px 8px;font-size:10px;">${camp==='evil'?'邪惡':'好人'}</span>`;
+      // 第三方（人狼鏈成立時的情侶＋邱比特）：不歸類成好人/邪惡，直接標「第三方」、用粉色，
+      // 跟其他好人/邪惡陣營的判定方式分開處理。
+      const camp=g.unclear?null:(p.third?'third':classify(disp));
+      const badgeLabel=camp==='third'?'第三方':(camp==='evil'?'邪惡':'好人');
+      const badgeColorCls=camp==='third'?'bthird':(camp==='evil'?'bw':'bv');
+      const badge=g.unclear?'':`<span class="badge ${badgeColorCls}" style="padding:2px 8px;font-size:10px;">${badgeLabel}</span>`;
       return `<tr><td>${p.num}</td><td>${p.name}</td><td>${disp}${p.role.includes('（')?'<span style="color:var(--text3);font-size:11px;"> '+p.role.match(/（(.*?)）/)[1]+'</span>':''}</td><td>${badge}</td></tr>`;
     }).join('');
     return `
