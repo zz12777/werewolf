@@ -52,7 +52,7 @@ const ALL_ROLES = {
     +'<li>狼人可以在競選環節的任何時間點自爆；狼人自爆會直接吞掉警徽，本局不再有警長。</li></ul>'
     +'<strong>PK 平票後還能退水嗎？</strong> 原則上不行——進入投票環節、出現平票之後，參與 PK 的候選人不能再退水。'},
   luckyone: {icon:'🍀', name:'幸運兒', team:'special', teamLabel:'附加身分', desc:'由黑市商人交易產生，並非開局直接分配的身分。獲得預言家查驗、女巫毒藥或獵人獵槍其中一項技能，自取得的下個夜晚（查驗／毒藥）或下個白天（獵槍）起可以使用。<br>若獲得查驗，每晚都可查；若獲得巫毒及獵槍，只能使用一次。'},
-  purewhitemaiden:{icon:'🕊️', name:'純白之女', team:'good', teamLabel:'神職', desc:'<strong>查驗：</strong>每晚查驗一名玩家的真實身份。<strong>第二夜起</strong>，若查驗到狼人陣營，該名狼人立即死亡——守衛與女巫都無法保護被查驗出局的對象。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與狼巫搭配出現</span>'},
+  purewhitemaiden:{icon:'🕊️', name:'純白之女', team:'good', teamLabel:'神職', desc:'<strong>查驗：</strong>每晚查驗一名玩家的真實身份。<strong>第二夜起</strong>，若查驗到狼人陣營，該名狼人立即死亡，守衛與女巫都無法保護被查驗出局的對象，黑狼王若被查死，無法開槍。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與狼巫搭配出現</span>'},
   dancer:{icon:'💃', name:'舞者', team:'good', teamLabel:'神職（假面舞會板專用）', desc:'<strong>共舞：</strong>第二夜起，每晚強制選擇3名玩家共舞（可以選自己），組成當晚的舞池。<br><strong>舞池結果：</strong>這3人若陣營相同，無事發生；若不同，人數較少的一方死亡（例如2狼1好人，該名好人死亡）——這裡的「陣營」如果被假面賜予面具改變過，以改變後的陣營為準。<br><strong>限制：</strong>每位玩家整局只能參與一次共舞，選過的人不能再選（人數不夠3人時當晚自動跳過共舞）。<br><strong>自我保護：</strong>免疫女巫的毒；若舞者選擇自己也進入舞池，當晚舞池中的所有玩家都免疫狼刀（但仍可能死於舞池本身的陣營判定）。<br><span style="color:var(--seer);font-size:12px;">⚡ 假面舞會板專屬角色，通常與假面搭配出現</span>'},
 };
 
