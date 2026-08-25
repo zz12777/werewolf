@@ -1,14 +1,15 @@
 // ═══════════════════════════════════════════
 // js/core.js
 // 全域狀態變數與共用工具函式（玩家查找、死亡結算共用邏輯、UI渲染共用函式、存讀檔、即時同步）
+// 本檔案由 index.html 拆分而成，內容為原檔案對應區塊的原樣搬移（未修改邏輯）
 // ═══════════════════════════════════════════
 
 // ═══════════════════════════════════
 // SHARED DATA
 // ═══════════════════════════════════
-const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',sheriff:'警長',luckyone:'幸運兒'};
-const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',medium:'bs',blackmarket:'bwt'};
-const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',medium:'av-seer',blackmarket:'av-witch'};
+const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',sheriff:'警長',luckyone:'幸運兒'};
+const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2'};
+const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard'};
 
 function getComp(n){
   const t={
@@ -192,9 +193,9 @@ let jgGameCount=1; // increments each new game this session, used in the export 
 let jgHasStartedBefore=false;
 const ROLE_ABBR={
   villager:'民', hybrid:'混血', cupid:'邱比特', thief:'盜賊', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
-  gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟',
+  gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面',
   mechanicalwolf:'機', seer:'預', witch:'巫', hunter:'獵', guard:'守', dreamcatcher:'攝夢', knight:'騎士', magician:'魔術',
-  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', sheriff:'警長', luckyone:'幸運'
+  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', sheriff:'警長', luckyone:'幸運'
 };
 // Builds a short label for the export header from whichever "special" (non-baseline) roles
 // appeared this game — e.g. 通靈師+機械狼 present → "通靈師機械狼".
@@ -344,6 +345,16 @@ function jgIsWolfPackMember(p){
   if(WOLF_ROLES.includes(p.role)) return true;
   return !!(jgDualIdentityMode&&p.role2==='wolfking');
 }
+// 假面本身就是狼隊（跟石像鬼一樣），只是不跟狼隊見面、不知道隊友是誰——這只影響「他自己
+// 知不知道誰是隊友」，不影響他的陣營歸屬：預言家查他永遠是狼、他在舞池裡永遠算狼隊，
+// 這些都直接吃 jgIsWolfPackMember／WOLF_ROLES 就好，不需要另外特判。
+// 真正需要另外處理的是「假面自己什麼時候可以開始帶刀殺人」——這跟他的陣營歸屬是兩件事，
+// 見下面 jgMaskCanKill()。
+function jgMaskCanKill(mkP){
+  if(!mkP) return false;
+  return jgPlayers.filter(x=>WOLF_ROLES.includes(x.role)&&x.role!=='mask'&&!x.alive).length===
+    jgPlayers.filter(x=>WOLF_ROLES.includes(x.role)&&x.role!=='mask').length;
+}
 // 專門給「人數統計／勝負判定」使用的狼隊歸屬判斷：情侶若配成「狼狼鏈」，邱比特的勝負
 // 跟著狼隊走——好人陣營要獲勝，除了原本的條件，也要連邱比特一起淘汰。但邱比特本人
 // 「永遠不會帶狼刀」，不參與狼人殺人決策、不與狼隊一起睜眼，所以只有這個「算不算輸贏」
@@ -358,6 +369,19 @@ function jgIsWolfForWin(p){
 function jgIsHunterCapable(p){
   if(!p) return false;
   return !!jgHunterCapableTag(p.role, p.num);
+}
+// 這位玩家「今晚」的獵人/黑狼王開槍技能是不是被封印了——不管他本身是不是真獵人／黑狼王，
+// 只要符合以下任一種情況，死亡時都不能開槍帶人（即使同時也被狼刀擊殺）：
+// 1) 被夢魘恐懼（本回合技能被封，只影響「這一晚」的死亡結算，跟白天被票出局無關——
+//    白天被票是完全獨立的死法，夢魘的封印不會延續過去，一樣可以正常開槍）
+// 2) 是攝夢人「連續兩晚夢遊同一人」造成的致死目標——這種死法本質是攝夢人技能直接致死，
+//    不是正常的角色技能觸發時機，技能被封印，不能開槍
+// 3) 攝夢人自己今晚死亡，連動夢遊對象一起死亡——連動死亡同樣不觸發技能，不能開槍
+// 這三種情況都要在「死亡當下」用 p._skillSealed 旗標記錄（見 steps.js 套用這兩種攝夢人死亡的
+// 地方），因為 jgRecord.dreamcatcherKillTarget／dreamcatcherTarget 在套用死亡後就會被清空，
+// 等到後面判斷能不能開槍時已經讀不到了，必須在套用死亡的當下就把旗標釘在玩家物件上。
+function jgHunterSkillSealed(p){
+  return !!(p && (jgFeared(p) || p._skillSealed));
 }
 // 跟 jgIsHunterCapable 判斷邏輯相同，但吃「死前記住的原始身分」而非玩家目前的 role
 // （雙身分模式換牌後 role 會變，開槍資格要看死前那張牌），並回傳具體是哪一種資格
@@ -491,6 +515,26 @@ function jgFormatNightLog(){
   }
   const dhP=jgPlayers.find(p=>p.role==='demonhunter');
   if(dhP&&dhP.alive&&jgNight>=2) lines.push('狩 '+(jgRecord.demonhunterTarget||'x'));
+  const wsP=jgPlayers.find(p=>p.role==='wolfshaman');
+  if(wsP&&wsP.alive){
+    const v=jgRecord.wolfshamanChecked;
+    lines.push('巫查 '+jgSwapDisplay(jgRecord.wolfshamanCheckedRaw, v)+(jgRecord.wolfshamanKillTarget?'(致死)':''));
+  }
+  const pwP=jgPlayers.find(p=>p.role==='purewhitemaiden');
+  if(pwP&&pwP.alive){
+    const v=jgRecord.purewhitemaidenChecked;
+    lines.push('白查 '+jgSwapDisplay(jgRecord.purewhitemaidenCheckedRaw, v)+(jgRecord.purewhitemaidenKillTarget?'(致死)':''));
+  }
+  const dnP=jgPlayers.find(p=>p.role==='dancer');
+  if(dnP&&dnP.alive&&jgNight>=2){
+    lines.push(jgRecord.dancerPool?('舞池 '+jgRecord.dancerPool.join('/')+(jgRecord.dancerSelfIn?'(舞者入池)':'')):'舞池 x(人數不足自動跳過)');
+  }
+  const mkP=jgPlayers.find(p=>p.role==='mask');
+  if(mkP&&mkP.alive&&jgNight>=2){
+    if(jgRecord.maskKillTarget) lines.push('假面刀 '+jgRecord.maskKillTarget);
+    lines.push('假面查 '+(jgRecord.maskCheckTarget||'x'));
+    lines.push('假面賜 '+(jgRecord.maskGrantTarget||'x'));
+  }
   return lines;
 }
 // jgPlayers: {num, name, role, alive}
@@ -502,6 +546,13 @@ let jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,see
 let jgLastGuardTarget=null;
 let jgLastWolfBeautyCharm=null;
 let jgLastNightmareTarget=null;
+// 假面舞會板專用狀態：
+// jgDancerEverDanced＝整局曾經進過舞池的玩家號碼集合（每位玩家整局只能共舞一次，跨夜持續累積）
+// jgLastMaskCheckTarget／jgLastMaskGrantTarget＝假面上一晚查驗／賜予面具的目標（各自獨立，
+// 不能連續兩晚指定同一人），只在「假面」這個角色的板子會用到
+let jgDancerEverDanced=new Set();
+let jgLastMaskCheckTarget=null;
+let jgLastMaskGrantTarget=null;
 let jgLastDreamcatcherTarget=null;
 let jgDreamcatcherEverTargeted={}; // num(string) -> true once ever dreamed, for first-time immunity
 let jgMagicianSwapped=[]; // persists across nights
@@ -1024,6 +1075,9 @@ function jgStart(){
   jgLastGuardTarget=null;
   jgLastWolfBeautyCharm=null;
   jgLastNightmareTarget=null;
+  jgDancerEverDanced=new Set();
+  jgLastMaskCheckTarget=null;
+  jgLastMaskGrantTarget=null;
   jgLastDreamcatcherTarget=null;
   jgDreamcatcherEverTargeted={};
   jgMagicianSwapped=[];
@@ -1275,7 +1329,7 @@ function jgRenderRoster(){
 // 跟玩家狀態卡一起顯示在旁邊（電腦版）／下方（手機版），方便法官隨時回頭核對，
 // 不用等到遊戲結束看完整文字紀錄才知道之前的票型。──
 function jgCaptureState(){
-  return JSON.parse(JSON.stringify({
+  return Object.assign(JSON.parse(JSON.stringify({
     jgPlayers, jgNight, jgWitchSaveUsed, jgWitchPoisonUsed, jgRecord,
     jgLastGuardTarget, jgLastWolfBeautyCharm, jgLastNightmareTarget, jgLastDreamcatcherTarget,
     jgDreamcatcherEverTargeted, jgMagicianSwapped, jgMechWolfLearned, jgMechWolfBonusKillUsed,
@@ -1292,8 +1346,12 @@ function jgCaptureState(){
     jgSheriffLogLines, jgSheriffElectedNum, jgSheriffTransferPending, jgSheriffTransferDeadNum, jgSheriffTransferNextStep,
     jgVotePkRound, jgVotePkCandidates, jgVotePkOrder, jgSheriffPkOrder,
     jgBadgeMode, jgSheriffFirstBlowDone, jgSheriffFirstBlowNum, jgSheriffPostponedToDay2, jgSheriffDay2CandidatesAsked, jgSheriffFinalNight,
-    jgHanTiaoSheriffNote, jgHanTiaoDiscussNotes, jgHanTiaoCommitted, jgNightmareForceMode
-  }));
+    jgHanTiaoSheriffNote, jgHanTiaoDiscussNotes, jgHanTiaoCommitted, jgNightmareForceMode,
+    jgLastMaskCheckTarget, jgLastMaskGrantTarget
+  })), {
+    // Set 不能用 JSON.stringify 序列化（會變成空物件），改用陣列另外存、restore 時再轉回 Set
+    jgDancerEverDanced: [...jgDancerEverDanced]
+  });
 }
 
 function jgRestoreState(snap){
@@ -1305,6 +1363,9 @@ function jgRestoreState(snap){
   jgLastGuardTarget=snap.jgLastGuardTarget;
   jgLastWolfBeautyCharm=snap.jgLastWolfBeautyCharm;
   jgLastNightmareTarget=snap.jgLastNightmareTarget;
+  jgLastMaskCheckTarget=snap.jgLastMaskCheckTarget;
+  jgLastMaskGrantTarget=snap.jgLastMaskGrantTarget;
+  jgDancerEverDanced=new Set(snap.jgDancerEverDanced||[]);
   jgLastDreamcatcherTarget=snap.jgLastDreamcatcherTarget;
   jgDreamcatcherEverTargeted=snap.jgDreamcatcherEverTargeted;
   jgMagicianSwapped=snap.jgMagicianSwapped;
@@ -1891,6 +1952,9 @@ function jgCheckWinNormal(){
   // 機械狼板：機械狼與其餘狼人互不相認、不碰面，狼隊無法憑人數優勢確認勝利，
   // 就算「狼人+機械狼」人數已達多數，仍必須屠民或屠神才算獲勝。
   const hasMechWolfBoard=(jgComp&&jgComp.mechanicalwolf>0);
+  // 假面舞會板：假面跟機械狼一樣不與狼隊見面、不知道隊友是誰，狼隊同樣無法憑人數優勢確認
+  // 勝利——就算「狼人+假面」人數已達多數，仍必須屠民或屠神才算獲勝。
+  const hasMaskBoard=(jgComp&&jgComp.mask>0);
   // 魔術師板：魔術師交換號碼牌可能讓狼人誤殺自己人，狼人也可能因為害怕被交換而自刀，
   // 使得單純看人數打平（狼=好）時情勢其實還不明朗；只有狼隊人數「嚴格多於」好人才算篤定，
   // 打平時要再等一輪，讓刀擊/交換結果沉澱後局勢明確（例：狼3好3不算，狼3好2才算）。
@@ -1911,7 +1975,7 @@ function jgCheckWinNormal(){
     if(p.role==='dreamcatcher') return true;
     return false;
   });
-  if(!hasMechWolfBoard){
+  if(!hasMechWolfBoard&&!hasMaskBoard){
     if(hasMagicianBoard||hasComebackThreat){
       if(aw.length>ag.length) return{winner:'wolf',msg:'狼人人數已達多數',icon:'🐺'};
     } else if(aw.length>=ag.length) return{winner:'wolf',msg:'狼人人數已達多數',icon:'🐺'};

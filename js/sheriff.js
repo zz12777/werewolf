@@ -207,8 +207,8 @@ function jgSaveSheriffSelfDestruct(){
   const val=(document.getElementById('jg-sheriff-blow-rec')||{}).value?.trim()||'';
   if(!val){ alert('⚠️ 請選擇自爆的玩家號碼！'); return; }
   const p=jgFind(val);
-  if(!p||!p.alive||!jgSheriffCandidates.includes(p.num)||!(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y')){
-    alert('⚠️ 這個號碼目前不是仍在競選中、存活的狼人／黑狼王／白狼王／血月使者／狼弟，不能自爆！');
+  if(!p||!p.alive||!jgSheriffCandidates.includes(p.num)||!(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')){
+    alert('⚠️ 這個號碼目前不是仍在競選中、存活的狼人／黑狼王／白狼王／血月使者／狼弟／狼巫，不能自爆！');
     return;
   }
   if(jgPendingNightDeadNums().includes(p.num)){

@@ -37,7 +37,7 @@ function jgDiscussExtraButtonsHtml(){
   // 血月使者的自爆併進「狼人自爆」這顆按鈕：點進去選號碼，選到血月使者會自動導去血月專屬流程
   // （封印當晚神職技能），選到一般狼人／黑狼王則走一般自爆流程，不用另外分開兩顆按鈕。
   // 自刀自爆規則：狼兄不可自爆（可自刀）、狼弟可自爆（可自刀），一併算進「狼人自爆」這顆按鈕的資格判斷
-  const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'));
+  const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman'));
   if(canWolfBlow) html+='<button class="danger" onclick="jgGoStep(\'wolf-selfblow\')" style="margin-top:4px;">🐺 狼人自爆 →</button>';
   return html;
 }

@@ -20,6 +20,8 @@ const ALL_ROLES = {
   nightmare: {icon:'😈', name:'夢魘',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>恐懼：</strong>每晚在狼人行動前先發動技能，恐懼一名玩家，使其當晚無法發動夜間技能。若恐懼到狼隊友，狼人當晚不得殺人。<br><strong>限制：</strong>不能連續兩晚恐懼同一人，不可自爆、自刀。首夜與狼隊互不見面，可能誤恐懼到隊友。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與攝夢人搭配出現</span>'},
   wolfbrother_e:{icon:'👴', name:'狼兄', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>首夜相認：</strong>與狼弟優先睜眼互相確認身份，隨後狼弟先閉眼，狼兄再與其餘狼人一同睜眼執行狼刀。<br><strong>陣亡效果：</strong>狼兄以任何方式（票出、毒殺、被殺等）陣亡後，下一晚狼弟將「覺醒」，必須殺一人復仇。<br><strong>自刀自爆：</strong>狼兄可以被隊友自刀，但不可以自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">⚡ 常見板子搭配：黑市商人＋狼兄狼弟——狼弟覺醒前形同隱狼，黑市商人若誤與其交易會直接失敗身亡</span>'},
   wolfbrother_y:{icon:'👦', name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。<br><strong>帶刀手勢：</strong>狼弟每晚睜眼都要比兩個手勢——「技能使用狀況」（復仇刀，只有覺醒那一晚比讚，其餘每晚都是倒讚）跟「今晚的帶刀手勢」（只看狼弟以外的狼隊成員是否已經全滅，跟狼弟自己有沒有正式加入狼窩無關——就算是狼兄剛陣亡、狼弟正要覺醒的那一晚，只要其餘狼隊友也全滅了，帶刀手勢照樣比讚）。帶刀手勢比讚時，狼弟帶的就是原本「狼人睜眼」要選的那把正常狼刀（不是額外多一刀），可以當下直接選人，也可以留到「狼人睜眼」步驟再殺；覺醒當晚若同時符合帶刀條件，復仇刀跟正常狼刀是分開的兩刀，當晚可以兩刀都出。<br><strong>自刀自爆：</strong>狼弟可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。'},
+  wolfshaman:{icon:'🔮', name:'狼巫', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>與狼隊一同刀人：</strong>與其餘狼人一同睜眼、參與商議選擇獵殺對象。<br><strong>查驗：</strong>刀口決定後，獨自睜眼查驗一名玩家的真實身份。<strong>第二夜起</strong>，若查驗到純白之女，純白之女立即死亡——守衛與女巫都無法保護被查驗出局的對象。<br><strong>自刀自爆：</strong>可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與純白之女搭配出現</span>'},
+  mask:{icon:'🎭', name:'假面', team:'wolf', teamLabel:'狼人陣營（假面舞會板專用）', desc:'<strong>不與狼隊見面：</strong>不與其他狼人相認、不可自爆（可自刀）。<br><strong>帶刀：</strong>當其餘正牌狼人（不含假面自己）全部出局時，假面開始獨自帶刀殺人（跟正常狼刀一樣，可被守衛/女巫解藥阻擋）。<br><strong>查驗：</strong>第二夜起，可先查驗一名玩家今晚是否在舞池中（舞者選出的3人共舞名單）。<br><strong>賜予面具：</strong>查驗之後，可選擇1名玩家賜予面具，改變該玩家「當夜」在舞池陣營判定中的陣營（用來干擾舞者共舞的死亡結果）。<br><strong>限制：</strong>免疫女巫的毒；查驗、賜予面具都不能連續兩晚指定同一名玩家（兩者各自獨立計算）。<br><span style="color:var(--seer);font-size:12px;">⚡ 假面舞會板專屬角色，通常與舞者搭配出現</span>'},
   // Good - villager
   villager: {icon:'🧑‍🌾',name:'平民',  team:'good', teamLabel:'好人陣營', desc:'沒有特殊技能，靠發言與推理找出狼人。白天投票是唯一武器。'},
   fool:     {icon:'🃏', name:'傻瓜', team:'good', teamLabel:'神職（特殊）', desc:'<strong>本局採用哪一種規則，由法官在開局選角時用切換鈕決定：</strong><br>'
@@ -50,11 +52,13 @@ const ALL_ROLES = {
     +'<li>狼人可以在競選環節的任何時間點自爆；狼人自爆會直接吞掉警徽，本局不再有警長。</li></ul>'
     +'<strong>PK 平票後還能退水嗎？</strong> 原則上不行——進入投票環節、出現平票之後，參與 PK 的候選人不能再退水。'},
   luckyone: {icon:'🍀', name:'幸運兒', team:'special', teamLabel:'附加身分', desc:'由黑市商人交易產生，並非開局直接分配的身分。獲得預言家查驗、女巫毒藥或獵人獵槍其中一項技能，自取得的下個夜晚（查驗／毒藥）或下個白天（獵槍）起可以使用。<br>若獲得查驗，每晚都可查；若獲得巫毒及獵槍，只能使用一次。'},
+  purewhitemaiden:{icon:'🕊️', name:'純白之女', team:'good', teamLabel:'神職', desc:'<strong>查驗：</strong>每晚查驗一名玩家的真實身份。<strong>第二夜起</strong>，若查驗到狼人陣營，該名狼人立即死亡——守衛與女巫都無法保護被查驗出局的對象。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與狼巫搭配出現</span>'},
+  dancer:{icon:'💃', name:'舞者', team:'good', teamLabel:'神職（假面舞會板專用）', desc:'<strong>共舞：</strong>第二夜起，每晚強制選擇3名玩家共舞（可以選自己），組成當晚的舞池。<br><strong>舞池結果：</strong>這3人若陣營相同，無事發生；若不同，人數較少的一方死亡（例如2狼1好人，該名好人死亡）——這裡的「陣營」如果被假面賜予面具改變過，以改變後的陣營為準。<br><strong>限制：</strong>每位玩家整局只能參與一次共舞，選過的人不能再選（人數不夠3人時當晚自動跳過共舞）。<br><strong>自我保護：</strong>免疫女巫的毒；若舞者選擇自己也進入舞池，當晚舞池中的所有玩家都免疫狼刀（但仍可能死於舞池本身的陣營判定）。<br><span style="color:var(--seer);font-size:12px;">⚡ 假面舞會板專屬角色，通常與假面搭配出現</span>'},
 };
 
-const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y'];
+const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask'];
 const VIL_ROLES  = ['villager','hybrid'];
-const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool'];
+const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer'];
 const SPECIAL_ROLES = ['sheriff','luckyone','cupid','thief'];
 
 // 單身分限定的「板子」預設：每個板子固定包含一組常見搭配的特殊角色（狼隊或神職），
@@ -74,7 +78,24 @@ const JG_BOARD_PRESETS = {
   cupid_thief_board:       {label:'邱比特+盜賊（不含傻瓜）', fixed:{cupid:1, thief:1}, wolfkingDefault:'wolfking'},
   thief_board:             {label:'盜賊（開局前需另外多準備2張候選身分牌）', fixed:{thief:1}},
   thief_cupid_board:       {label:'盜賊+邱比特+傻瓜（建議12人警長局）', fixed:{thief:1, cupid:1, fool:1}, wolfkingDefault:'wolfking'},
+  wolfshaman_purewhitemaiden:{label:'狼巫+純白之女', fixed:{wolfshaman:1, purewhitemaiden:1}},
+  masquerade_board:{label:'假面舞會（假面+舞者，固定含預言家/女巫/傻瓜）', fixed:{mask:1, dancer:1, seer:1, witch:1, fool:1}},
 };
+
+// 選板子的下拉選單以前是寫死在 index.html 裡的 <option>，跟這裡的 JG_BOARD_PRESETS 是兩份
+// 各自獨立維護的清單，新增板子時很容易漏改其中一邊。現在改成頁面載入時，直接照 JG_BOARD_PRESETS
+// 的內容自動產生選項——只要這裡有新增板子，下拉選單就一定會同步出現，不用再手動改 HTML。
+// 「自訂角色」那個選項不是真正的板子（不對應 JG_BOARD_PRESETS 裡的任何一筆），維持寫在 HTML 裡。
+function jgPopulateBoardPresetDropdown(){
+  const sel=document.getElementById('jg-board-preset');
+  if(!sel) return;
+  Object.entries(JG_BOARD_PRESETS).forEach(([key,preset])=>{
+    const opt=document.createElement('option');
+    opt.value=key;
+    opt.textContent=preset.label;
+    sel.appendChild(opt);
+  });
+}
 // 板子的基本角色只開放這兩組：狼隊（不限一個，黑狼王／白狼王彈性二選一）、神職＋混血兒（各自最多一個）
 const JG_PRESET_WOLF_BASE=['wolf','wolfking','whitewolf'];
 // 混血兒不放進這個通用清單：只有在板子本身就固定包含混血兒（見 JG_BOARD_PRESETS）時，
@@ -91,10 +112,15 @@ let jgFoolChaseMode='chase';
 // 「屠神」勝負判定用的神職清單：只有「要追刀」規則才把傻瓜算進去（狼隊必須連傻瓜一起殺光才算屠神）；
 // 「不需追刀」規則傻瓜被放逐就直接出局，不需要、也不會被當成屠神判定的一員。
 function jgAllGodsForWin(){
-  const base=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+  const base=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','purewhitemaiden','dancer'];
   if(jgFoolChaseMode==='chase') base.push('fool');
   return base;
 }
+// 「還握有主動反擊技能的神職」清單——用在血月使者殘局判斷（有沒有神職能靠主動技能翻盤）。
+// 故意跟上面 jgAllGodsForWin() 不一樣：那份是「屠神」勝負判定用的完整神職清單（依規則
+// 設定，可能含傻瓜）；這份清單傻瓜永遠不算進去，因為傻瓜沒有任何主動技能可以反殺血月，
+// 兩份清單概念不同，不要合併，只是這份清單本身原本被複製貼上了兩次，這裡統一成一份。
+const ACTIVE_SKILL_GODS=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','purewhitemaiden','dancer'];
 
 function renderRulesCards(){
   function makeCard(id){

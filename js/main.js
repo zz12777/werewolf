@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════
 
 // ── INIT ──
+jgPopulateBoardPresetDropdown();
 jgUpdateComp();
 document.getElementById('jg-count').addEventListener('input',()=>{
   const isDual=jgSetupDualMode;

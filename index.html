@@ -174,6 +174,32 @@
       <span class="board-role">邱比特</span>：全場第一個睜眼的角色，第一夜指定兩名玩家（可以鏈自己）成為情侶；兩人隨後互相確認彼此，但不知道誰是邱比特、也不知道對方陣營。若兩人陣營相同（人人鏈／狼狼鏈），邱比特的勝負跟著那個陣營走；若一人好人一人狼人（人狼鏈），邱比特與這對情侶會獨立成為第三方陣營，勝負規則完全不同（見下方「勝利條件」）。情侶其中一人死亡，另一人會立刻殉情，殉情者原本的技能不會發動。建議搭配 10 人（3神3民3狼+邱比特）或 13 人（4神4民4狼+邱比特）板子使用；本板狼隊刀人需刀型一致，不一致視為空刀。<br><span class="role-link" onclick="jumpToRole('cupid')">→ 查看邱比特完整規則</span>
     </div>
   </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🔮</span>
+      <span class="rcol-name">狼巫＋純白之女</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">狼巫</span>：與其餘狼人一同睜眼、參與商議選擇獵殺對象；刀口決定後，獨自睜眼查驗一名玩家的真實身份，第二夜起若查到純白之女，純白之女立即死亡（守衛與女巫都無法保護）。<br><span class="role-link" onclick="jumpToRole('wolfshaman')">→ 查看狼巫完整規則</span>
+      <br><br>
+      <span class="board-role">純白之女</span>：每晚查驗一名玩家的真實身份，第二夜起若查到狼人陣營，該名狼人立即死亡（守衛與女巫都無法保護）。若兩人剛好互查到對方、且分別是各自陣營最後一人，判定為「狼刀在先」，狼巫存活、純白之女死亡。<br><span class="role-link" onclick="jumpToRole('purewhitemaiden')">→ 查看純白之女完整規則</span>
+    </div>
+  </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🎭</span>
+      <span class="rcol-name">假面舞會（假面＋舞者）</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">假面</span>：不與狼隊見面、不可自爆；其餘正牌狼人全滅後可獨自帶刀殺人。第二夜起可先查驗一名玩家今晚是否在舞池中，之後可賜予1名玩家面具，改變該玩家「當夜」在舞池陣營判定中的陣營；查驗與賜予面具都不能連續兩晚指定同一人。<br><span class="role-link" onclick="jumpToRole('mask')">→ 查看假面完整規則</span>
+      <br><br>
+      <span class="board-role">舞者</span>：第二夜起每晚強制選3名玩家共舞（可以選自己），這3人若陣營相同無事發生，不同則人數較少的一方死亡；每位玩家整局只能共舞一次。若舞者選自己進入舞池，當晚舞池中所有人都免疫狼刀。<br><span class="role-link" onclick="jumpToRole('dancer')">→ 查看舞者完整規則</span>
+      <br><br>
+      <a href="https://youtu.be/ZT3tIQmRszE?si=VZ8JMzdC0nTuCf8W" target="_blank" rel="noopener">📺 板子介紹影片</a>　<a href="https://youtu.be/vz_vDFL_N08?si=pkzyScdeYlmSz1ZQ" target="_blank" rel="noopener">🎬 實玩影片</a>
+    </div>
+  </div>
   </div>
   </div>
 
@@ -285,19 +311,6 @@
     <label for="jg-board-preset">選擇板子</label>
     <select id="jg-board-preset" onchange="jgSetBoardPreset(this.value)">
       <option value="custom">自訂角色（可能有bug，遇到狀況請用「問題回報」回報）</option>
-      <option value="mechwolf_medium">機械狼+通靈師</option>
-      <option value="dreamcatcher_nightmare">攝夢人+夢魘</option>
-      <option value="blackmarket_wolfbrothers">黑市商人+狼兄狼弟</option>
-      <option value="wolfbeauty_knight">狼美人+騎士</option>
-      <option value="gargoyle_gravkeeper">石像鬼+守墓人</option>
-      <option value="bloodmoon_demonhunter">血月使者+獵魔人</option>
-      <option value="magician_wolfking">魔術師+黑/白狼王</option>
-      <option value="hybrid_wolfking_bloodmoon">混血兒+黑/白狼王+血月</option>
-      <option value="evilknight_guard">惡靈騎士+守衛</option>
-      <option value="thief_board">盜賊</option>
-      <option value="cupid_board">邱比特（建議10或13人）</option>
-      <option value="cupid_thief_board">邱比特+盜賊（不含傻瓜）</option>
-      <option value="thief_cupid_board">邱比特+盜賊+傻瓜（建議12人警長局）</option>
     </select>
   </div>
   <div class="info" id="jg-comp-desc" style="text-align:center;font-size:13px;margin-bottom:4px;"></div>

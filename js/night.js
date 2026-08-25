@@ -30,6 +30,19 @@ function jgBuildHunterStatusHtml(p){
     return '<div class="info-warn">已因情侶殉情出局，技能不會發動，仍需走完流程避免洩露身分</div>'
       +'<div class="speech">「<em>你的技能使用狀況是 👎</em>」</div>';
   }
+  // 被夢魘恐懼：本回合技能被封印，開槍手勢要比倒讚——但這個封印只影響「這一晚」的死亡
+  // 結算（例如今晚被狼刀擊殺就不能開槍），不影響之後白天被票出局時的開槍資格，那是完全
+  // 獨立的死法，不會被這一晚的恐懼延續過去。
+  if(jgFeared(p)){
+    return '<div class="info-warn">已被夢魘恐懼，本回合技能被封印</div>'
+      +'<div class="speech">「<em>你的技能使用狀況是 👎</em>」</div>';
+  }
+  // 攝夢人已經在稍早的睜眼順序連續兩晚夢遊同一人（此時已經知道結果，即使實際死亡要等到
+  // 天亮才套用）：技能一樣被封印，不能開槍，手勢要比倒讚。
+  if(jgRecord&&jgRecord.dreamcatcherKillTarget&&p.num.toString()===jgRecord.dreamcatcherKillTarget.toString()){
+    return '<div class="info-warn">被攝夢人連續兩晚夢遊致死，技能被封印</div>'
+      +'<div class="speech">「<em>你的技能使用狀況是 👎</em>」</div>';
+  }
   const gsKill=jgRecord.guardTarget&&jgRecord.wolfKill&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
   const mgsKill=jgRecord.mechWolfGuardTarget&&jgRecord.wolfKill&&(jgRecord.mechWolfGuardTarget.toString()===jgRecord.wolfKill.toString());
   const wsKill=jgRecord.witchSave;
@@ -350,7 +363,7 @@ function jgIdFieldHtml(rn, existingP, whoId, nameId, onChangeFn){
 
 function jgGodIdHtml(roleId,existingP){
   if(jgNight!==1) return '';
-  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜'};
+  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面'};
   const rn=RZHMAP[roleId]||roleId;
   return jgIdFieldHtml(rn, existingP, 'jg-god-who-'+roleId, 'jg-god-name-'+roleId);
 }
@@ -371,7 +384,7 @@ function jgRequireFirstId(elId, label){
 
 function jgSaveGodId(roleId){
   if(jgNight!==1) return true;
-  const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜'};
+  const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面'};
   if(!jgRequireFirstId('jg-god-who-'+roleId, RZHMAP2[roleId]||roleId)) return false;
   const whoNum=parseInt((document.getElementById('jg-god-who-'+roleId)||{}).value||'0');
   const name=(document.getElementById('jg-god-name-'+roleId)||{}).value?.trim()||'';
@@ -497,6 +510,53 @@ function jgSaveDemonhunter(){
     if(jgTryEarlyEnd()) return;
   }
   jgGoStep(jgNextGodStep('demonhunter-wake'));
+}
+
+// 狼巫查驗：身分已經在「狼人睜眼」步驟跟其餘狼隊一起記錄過了（見 jgSaveWolf 的 wolfRoles
+// 清單），這裡不用再問一次號碼，直接找到目前是狼巫的玩家。查驗每晚都會做（第一晚也會問，
+// 只是沒有致死效果），但第二晚起若查到純白之女，純白之女立即死亡——這個死亡不可被守衛／
+// 女巫阻擋，實際套用死亡在天亮結算時處理（見 steps.js 的 dawn 區塊），這裡只負責記錄查驗
+// 結果跟致死目標。
+function jgSaveWolfshamanCheck(){
+  const wsP=jgPlayers.find(p=>p.role==='wolfshaman');
+  const rawVal=jgFeared(wsP)?null:((document.getElementById('jg-wolfshaman-target')||{}).value?.trim()||null);
+  const val=rawVal?jgMagicSwapNum(rawVal):null;
+  jgRecord.wolfshamanCheckedRaw=rawVal;
+  jgRecord.wolfshamanChecked=val;
+  jgRecord.wolfshamanKillTarget=null;
+  if(val&&jgNight>=2){
+    const t=jgFind(val);
+    if(t&&t.alive&&t.role==='purewhitemaiden') jgRecord.wolfshamanKillTarget=val;
+  }
+  if(jgIsFirstNight()){
+    jgGoStep(jgNextGodStep('wolfshaman-check'));
+  } else {
+    if(jgTryEarlyEnd()) return;
+    jgGoStep(jgAfterWolfshamanStep());
+  }
+}
+
+// 純白之女查驗：跟預言家一樣是神職，第一晚需要指定號碼（jgSaveGodId 統一處理）。每晚都會
+// 查驗，第二晚起若查到狼人陣營（含所有狼隊角色），該名狼人立即死亡——同樣不可被守衛／
+// 女巫阻擋，實際套用在天亮結算時處理，這裡只負責記錄查驗結果跟致死目標。
+function jgSavePurewhitemaiden(){
+  if(!jgSaveGodId('purewhitemaiden')) return;
+  const pwP=jgPlayers.find(p=>p.role==='purewhitemaiden');
+  const rawVal=jgFeared(pwP)?null:((document.getElementById('jg-purewhitemaiden-target')||{}).value?.trim()||null);
+  const val=rawVal?jgMagicSwapNum(rawVal):null;
+  jgRecord.purewhitemaidenCheckedRaw=rawVal;
+  jgRecord.purewhitemaidenChecked=val;
+  jgRecord.purewhitemaidenKillTarget=null;
+  if(val&&jgNight>=2){
+    const t=jgFind(val);
+    if(t&&t.alive&&WOLF_ROLES.includes(t.role)) jgRecord.purewhitemaidenKillTarget=val;
+  }
+  if(jgIsFirstNight()){
+    jgGoStep(jgNextGodStep('purewhitemaiden-wake'));
+  } else {
+    if(jgTryEarlyEnd()) return;
+    jgGoStep('seer-wake');
+  }
 }
 
 function jgMechWolfGuardCheckRepeat(){
@@ -997,6 +1057,68 @@ function jgSaveSubWolf(stepId){
   jgGoStep(jgNextAfterSubWolf(stepId));
 }
 
+// ── 假面舞會板：舞者／假面 ──
+function jgSaveDancer(){
+  if(!jgSaveGodId('dancer')) return;
+  const dnP=jgPlayers.find(p=>p.role==='dancer');
+  jgRecord.dancerPool=null;
+  jgRecord.dancerSelfIn=false;
+  if(jgNight>=2 && dnP && dnP.alive){
+    const eligible=jgPlayers.filter(p=>p.alive&&!jgDancerEverDanced.has(p.num)).map(p=>p.num);
+    if(eligible.length>=3){
+      const v1=parseInt((document.getElementById('jg-dancer-p1')||{}).value||'0');
+      const v2=parseInt((document.getElementById('jg-dancer-p2')||{}).value||'0');
+      const v3=parseInt((document.getElementById('jg-dancer-p3')||{}).value||'0');
+      if(!v1||!v2||!v3){ alert('⚠️ 請選滿3位玩家才能繼續！'); return; }
+      const set=new Set([v1,v2,v3]);
+      if(set.size!==3){ alert('⚠️ 3位玩家不能重複選同一人！'); return; }
+      for(const v of set){
+        if(!eligible.includes(v)){ alert('⚠️ '+v+'號 不符合共舞資格（已死亡或已經共舞過），請重新選擇！'); return; }
+      }
+      jgRecord.dancerPool=[v1,v2,v3];
+      jgRecord.dancerSelfIn=set.has(dnP.num);
+      set.forEach(n=>jgDancerEverDanced.add(n));
+    }
+  }
+  jgGoStep(jgAfterDancerStep());
+}
+// 即時顯示「這個號碼今晚在不在舞池中」——假面睜眼時舞者已經選完池了，可以直接查
+function jgMaskCheckLive(){
+  const val=(document.getElementById('jg-mask-check')||{}).value?.trim()||'';
+  const box=document.getElementById('jg-mask-check-result');
+  if(!box) return;
+  if(!val){box.innerHTML='';return;}
+  const inPool=!!(jgRecord.dancerPool&&jgRecord.dancerPool.map(String).includes(val.toString()));
+  box.innerHTML='<div class="'+(inPool?'info-success':'info')+'" style="font-size:14px;padding:8px 12px;margin-top:4px;">'+val+'號 今晚'+(inPool?'在':'不在')+'舞池中</div>';
+}
+function jgSaveMask(){
+  if(!jgSaveGodId('mask')) return;
+  const mkP=jgPlayers.find(p=>p.role==='mask');
+  jgRecord.maskKillTarget=null;
+  jgRecord.maskCheckTarget=null;
+  jgRecord.maskGrantTarget=null;
+  if(jgNight>=2 && mkP && mkP.alive){
+    // 1) 帶刀：其餘正牌狼人（不含假面自己）全滅時才會顯示這個欄位，用法跟石像鬼的
+    // 「隊友全滅後可以自己帶刀」完全一樣——直接覆蓋 jgRecord.wolfKill，照一般狼刀規則
+    // 結算（可被守衛／女巫解藥阻擋）。這裡用 jgMaskCanKill(mkP)——跟假面陣營歸屬是分開的
+    // 兩件事：陣營歸屬固定就是狼隊（見 jgIsWolfPackMember），這裡只判斷「其餘正牌狼是不是
+    // 全滅、假面能不能開始自己動手殺人」。
+    const allWolvesDead=jgMaskCanKill(mkP);
+    if(allWolvesDead){
+      const kv=(document.getElementById('jg-mask-kill')||{}).value?.trim()||'';
+      jgRecord.maskKillTarget=kv||null;
+      jgRecord.wolfKill=jgMagicSwapNum(kv||null);
+    }
+    // 2) 查驗是否在舞池：純資訊性，不能連續兩晚查同一人
+    const cv=(document.getElementById('jg-mask-check')||{}).value?.trim()||'';
+    if(cv){ jgRecord.maskCheckTarget=cv; jgLastMaskCheckTarget=cv; }
+    // 3) 賜予面具：改變該玩家「今晚」在舞池陣營判定中的陣營，不能連續兩晚賜同一人
+    const gv=(document.getElementById('jg-mask-grant')||{}).value?.trim()||'';
+    if(gv){ jgRecord.maskGrantTarget=gv; jgLastMaskGrantTarget=gv; }
+  }
+  jgGoStep(jgAfterMaskStep());
+}
+
 function jgGargoyleCheck(){
   const val=(document.getElementById('jg-gargoyle-check')||{}).value?.trim()||'';
   const box=document.getElementById('jg-gargoyle-result');
@@ -1282,7 +1404,7 @@ function jgSaveWolf(){
       const whoEl=document.getElementById('jg-wolf-who-'+i0);
       if(!whoEl) break;
       const roleId0=whoEl.getAttribute('data-role')||'wolf';
-      const RNAME_CHK={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者'};
+      const RNAME_CHK={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者',wolfshaman:'狼巫'};
       if(!jgRequireFirstId('jg-wolf-who-'+i0, RNAME_CHK[roleId0]||'狼人')) return;
       i0++;
     }
@@ -1414,6 +1536,20 @@ function jgNightStartNext(){
   if((jgNight===1 && jgComp.cupid>0 && !jgCupidChosen) || jgThiefBuriedActiveTonight('cupid')){
     return 'cupid-wake';
   }
+  // 假面舞會板：舞者 → 假面，排在整個晚上最前面（比夢魘還早）——這個板子本身不會跟夢魘/
+  // 魔術師/守衛/攝夢人等板子混用，這裡直接插在最前面即可，不影響其他板子原本的順序。
+  const hasDancer=(jgNight===1?(jgComp.dancer>0):jgHasRoleAny(['dancer']))||jgThiefBuriedActiveTonight('dancer');
+  if(hasDancer) return 'dancer-wake';
+  return jgAfterDancerStep();
+}
+// 舞者結束後的下一步：假面（若板子有）→ 原本的夢魘開頭
+function jgAfterDancerStep(){
+  const hasMask=(jgNight===1?(jgComp.mask>0):jgHasRoleAny(['mask']))||jgThiefBuriedActiveTonight('mask');
+  if(hasMask) return 'mask-wake';
+  return jgAfterMaskStep();
+}
+// 假面結束後的下一步：接回原本 jgNightStartNext 尾端「夢魘」那一段
+function jgAfterMaskStep(){
   const hasNightmare = (jgNight===1 ? (jgComp.nightmare>0) : jgHasRoleAny(['nightmare'])) || jgThiefBuriedActiveTonight('nightmare');
   if(hasNightmare) return 'nightmare-wake';
   return jgAfterNightmareStep();
@@ -1584,9 +1720,15 @@ function jgNextAfterSubWolf(currentStep){
 const GOD_CHAIN=[
   {step:'medium-wake',      role:'medium',       check:(n,c)=>(n===1?(c.medium>0):jgHasRoleAny(['medium']))||jgThiefBuriedActiveTonight('medium')},
   {step:'hunter-wake',      role:'hunter',       check:(n,c)=>(n===1?(c.hunter>0):jgHasRoleAny(['hunter']))||jgMechWolfHunterActive()||jgThiefBuriedActiveTonight('hunter')},
+  // 純白之女第一晚排在獵人之後（其餘夜晚改成緊接女巫之後，見 jgSaveWitch／jgPurewhitemaidenPending，
+  // 這裡的 check 只在第一晚生效，避免第二晚起被同時觸發兩次）
+  {step:'purewhitemaiden-wake', role:'purewhitemaiden', check:(n,c)=>jgIsFirstNight()&&((n===1?(c.purewhitemaiden>0):jgHasRoleAny(['purewhitemaiden']))||jgThiefBuriedActiveTonight('purewhitemaiden'))},
   {step:'knight-wake',      role:'knight',       check:(n,c)=>(n===1&&c.knight>0)||jgThiefBuriedActiveTonight('knight')},
   {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>(n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter']))||jgThiefBuriedActiveTonight('demonhunter')},
   {step:'fool-wake',        role:'fool',         check:(n,c)=>(n===1&&c.fool>0)||jgThiefBuriedActiveTonight('fool')},
+  // 狼巫第一晚排在整條神職鏈最後（其餘夜晚改成緊接狼刀決定之後，見 jgPostWolfStep／
+  // jgWolfshamanPending，這裡的 check 只在第一晚生效）
+  {step:'wolfshaman-check', role:'wolfshaman',   check:(n,c)=>jgIsFirstNight()&&((n===1?(c.wolfshaman>0):jgHasRoleAny(['wolfshaman']))||jgThiefBuriedActiveTonight('wolfshaman'))},
 ];
 // 黑市商人已移到狼人（含狼美人）睜眼之後、女巫之前——見 jgBlackMarketPending / jgNextWolfStep / jgNextAfterSubWolf
 function jgBlackMarketPending(){
@@ -1614,7 +1756,24 @@ function jgLuckyOneWakeIsLast(){
 // 狼人（含狼美人等）睜眼結束後的下一步：黑市商人 → 女巫，依序檢查誰該登場
 // （幸運兒交易當晚由 jgSaveBlackMarket→luckyone-walk 處理；交易後續夜晚已移到
 //  jgNextGodStep 尾端，不再從這裡進場）
+// 狼巫從第二晚起緊接在狼刀決定之後獨自查驗（第一晚仍照第一晚專屬順序，排在整條神職鏈
+// 最後——見 GOD_CHAIN 最後一項），所以這裡只在「不是第一晚」時才插進來。
+function jgWolfshamanPending(){
+  return !jgIsFirstNight() && (jgHasRoleAny(['wolfshaman'])||jgThiefBuriedActiveTonight('wolfshaman'));
+}
+// 純白之女從第二晚起排在女巫之後、獵人（神職鏈）之前查驗（第一晚仍照第一晚專屬順序，
+// 排在獵人之後、狼巫之前——見 GOD_CHAIN），同樣只在「不是第一晚」時才從這裡插入。
+function jgPurewhitemaidenPending(){
+  return !jgIsFirstNight() && (jgHasRoleAny(['purewhitemaiden'])||jgThiefBuriedActiveTonight('purewhitemaiden'));
+}
 function jgPostWolfStep(){
+  if(jgWolfshamanPending()) return 'wolfshaman-check';
+  if(jgBlackMarketPending()) return 'blackmarket-wake';
+  return 'witch-wake';
+}
+// 狼巫查驗結束後（第二晚起才會走到這裡）的下一步，跟原本 jgPostWolfStep 扣掉狼巫那一段
+// 邏輯一致：黑市商人 → 女巫。
+function jgAfterWolfshamanStep(){
   if(jgBlackMarketPending()) return 'blackmarket-wake';
   return 'witch-wake';
 }
@@ -1726,7 +1885,7 @@ function jgSaveWitch(){
   }
   jgRecord.witchStepDone=true;
   if(jgTryEarlyEnd()) return;
-  jgGoStep('seer-wake');
+  jgGoStep(jgPurewhitemaidenPending()?'purewhitemaiden-wake':'seer-wake');
 }
 
 function jgSaveBloodMoonLastNight(){

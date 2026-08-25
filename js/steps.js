@@ -196,6 +196,61 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveLoversWake()">兩人已閉眼，下一步 →</button>
     `,'💘 情侶');
   }
+  else if(step==='dancer-wake'){
+    const dnP=jgPlayers.find(p=>p.role==='dancer');
+    const idHtml=jgGodIdHtml('dancer',dnP);
+    const dead=dnP&&!dnP.alive;
+    const eligibleNums=jgPlayers.filter(p=>p.alive&&!jgDancerEverDanced.has(p.num)).map(p=>p.num);
+    const notEnough=eligibleNums.length<3;
+    const excludeForPicker=jgPlayers.filter(p=>!eligibleNums.includes(p.num)).map(p=>p.num);
+    jgShowPg(`
+      <h2>舞者睜眼</h2>
+      <div class="speech">「<em>舞者請睜眼${jgNight<2?'':'，請選擇3名玩家共舞'}。</em>」</div>
+      ${idHtml}
+      ${dead?'<div class="info-warn">舞者已出局，仍需走完流程</div>':''}
+      ${(dead||jgNight<2)?'':(notEnough
+        ?'<div class="info">今晚符合資格（存活且沒共舞過）的玩家不到3人，本回合自動跳過共舞。</div>'
+        :`<label>選擇3名玩家共舞（可以選自己；每位玩家整局只能共舞一次，灰色號碼為已跳過共舞或死亡）</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${jgNumSelectHtml('jg-dancer-p1','',null,null,excludeForPicker,'不符合共舞資格，不可選取')}
+            ${jgNumSelectHtml('jg-dancer-p2','',null,null,excludeForPicker,'不符合共舞資格，不可選取')}
+            ${jgNumSelectHtml('jg-dancer-p3','',null,null,excludeForPicker,'不符合共舞資格，不可選取')}
+          </div>
+          <div class="info" style="font-size:12px;margin-top:4px;">這3人若陣營相同，無事發生；若不同，人數較少的一方死亡。若選自己進入舞池，當晚舞池中所有人都免疫狼刀。</div>`)}
+      <div class="speech" style="margin-top:10px;">「<em>舞者請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveDancer()">已紀錄，下一步 →</button>
+    `,'💃 舞者');
+  }
+  else if(step==='mask-wake'){
+    const mkP=jgPlayers.find(p=>p.role==='mask');
+    const idHtml=jgGodIdHtml('mask',mkP);
+    const dead=mkP&&!mkP.alive;
+    // 假面陣營固定是狼隊（跟石像鬼一樣，只是不跟隊友見面）；這裡要的是另一件事：
+    // 「其餘正牌狼是不是全滅、假面能不能開始自己動手殺人」，用 jgMaskCanKill 判斷。
+    const allWolvesDead=jgMaskCanKill(mkP);
+    const checkExclude=jgLastMaskCheckTarget?[parseInt(jgLastMaskCheckTarget)]:[];
+    const grantExclude=jgLastMaskGrantTarget?[parseInt(jgLastMaskGrantTarget)]:[];
+    jgShowPg(`
+      <h2>假面睜眼</h2>
+      <div class="speech">「<em>假面請睜眼。</em>」</div>
+      ${idHtml}
+      ${dead?'<div class="info-warn">假面已出局，仍需走完流程</div>':''}
+      ${(dead||jgNight<2)?'':`
+        ${allWolvesDead?`<div class="info-warn" style="margin-bottom:8px;">🔪 其餘正牌狼人已全滅，假面帶刀狀態：比讚，可以殺人</div>
+          <label>今晚要殺的對象（留空=不殺）</label>${jgNumSelectHtml('jg-mask-kill','')}
+          <div class="divider"></div>`:'<div class="info" style="font-size:12px;">（正牌狼人尚未全滅，假面帶刀狀態：比倒讚，暫時不能殺人）</div><div class="divider"></div>'}
+        <label>查驗一名玩家今晚是否在舞池中（留空=不查；灰色=昨晚查過，不能連續兩晚查同一人）</label>
+        ${jgNumSelectHtml('jg-mask-check','','jgMaskCheckLive',null,checkExclude,'不能連續兩晚查驗同一人')}
+        <div id="jg-mask-check-result"></div>
+        <div class="divider"></div>
+        <label>賜予面具的對象（留空=不賜；灰色=昨晚賜過，不能連續兩晚賜同一人）</label>
+        ${jgNumSelectHtml('jg-mask-grant','',null,null,grantExclude,'不能連續兩晚賜予面具同一人')}
+        <div class="info" style="font-size:12px;margin-top:4px;">被賜予面具的玩家，「今晚」在舞池陣營判定中的陣營會被改變，用來干擾舞者共舞的死亡結果。</div>
+      `}
+      <div class="speech" style="margin-top:10px;">「<em>假面請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveMask()">已紀錄，下一步 →</button>
+    `,'🎭 假面');
+  }
   else if(step==='nightmare-wake'){
     const isFirst=jgIsFirstNight();
     const nmP=jgPlayers.find(p=>p.role==='nightmare');
@@ -385,7 +440,7 @@ function jgRenderStep(step){
       const wolfRoles=Object.entries(jgComp).filter(([k])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='nightmare'&&k!=='wolfbrother_e'&&k!=='wolfbrother_y');
       let wiIdx=0;
       wolfRoles.forEach(([roleId,cnt])=>{
-        const RNAME_L={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者'};
+        const RNAME_L={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者',wolfshaman:'狼巫'};
         const assignedCount=jgPlayers.filter(p=>p.role===roleId).length;
         if(assignedCount<cnt) allWolfIdsAssigned=false;
         for(let i=0;i<cnt;i++){
@@ -402,16 +457,23 @@ function jgRenderStep(step){
     }
     const needId=isFirst&&!jgMechAssignDone&&!allWolfIdsAssigned;
     const killVal=jgRecord.wolfKill||'';
-    // 「這一晚場上還有沒有活著的主狼群（不含石像鬼／機械狼／夢魘，他們各自有自己的畫面）」：
+    // 「這一晚場上還有沒有活著的主狼群（不含石像鬼／機械狼／假面，他們各自有自己獨立的殺人畫面）」：
     // 沒有的話，法官照樣要喊「狼人請睜眼…請閉眼」維持節奏（不然玩家會從流程跳過推理出狼死光了），
     // 但不能顯示「選擇殺人對象」的按鈕與名單，因為根本沒有活人可以做這個決定。
+    // 注意：夢魘不能排除在外——夢魘本身沒有像石像鬼那樣「隊友全滅後可以自己額外殺人」的獨立
+    // 技能，牠平常只在自己的畫面選恐懼對象，實際的刀口仍然要靠「狼人睜眼」這個共用畫面決定；
+    // 如果隊友都死光、只剩夢魘存活，這個共用畫面就是牠唯一能刀人的地方，不能因為牠「平常」
+    // 不在這個畫面出手，就誤判成「狼隊已全滅、沒人能選」。
+    // 假面則要排除在外：他「不入狼隊、不與狼人見面」，就算其餘正牌狼隊全滅後他能開始帶刀殺人，
+    // 那也是靠他自己獨立的 mask-wake 畫面（見 jgSaveMask），不是這個共用的「狼人睜眼」畫面，
+    // 不能因為假面還活著，就讓這個共用畫面誤判成「狼隊還有人在、可以選人」。
     // 注意：第一夜（isFirst）時，主狼群的號碼很可能「還沒」記錄進 jgPlayers（要等法官在這個畫面
     // 填完號碼、按下「已紀錄，下一步」才會真的寫進去），這時候直接看 jgPlayers 會誤判成「全滅」，
     // 導致殺人對象的欄位整個不見、法官連刀口都選不了（就算候選身分含盜賊變狼也一樣）。第一夜還
     // 沒有人真的死過，所以第一夜改成直接看板子設定（jgComp）裡有沒有配置主狼群角色即可。
     const mainPackAlive=isFirst
-      ? Object.entries(jgComp).some(([k,v])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='nightmare'&&(v||0)>0)
-      : jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='gargoyle'&&p.role!=='mechanicalwolf'&&p.role!=='nightmare'&&p.alive);
+      ? Object.entries(jgComp).some(([k,v])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='mask'&&(v||0)>0)
+      : jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='gargoyle'&&p.role!=='mechanicalwolf'&&p.role!=='mask'&&p.alive);
     const hasNightmareRole=jgNight===1?(jgComp.nightmare>0):jgHasRoleAny(['nightmare']);
     const hasMechWolfRole=jgNight===1?(jgComp.mechanicalwolf>0):jgHasRoleAny(['mechanicalwolf']);
     let compatNote='';
@@ -973,6 +1035,47 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveDemonhunter()">已紀錄，下一步 →</button>
     `,'🗡️ 獵魔人');
   }
+  else if(step==='purewhitemaiden-wake'){
+    const pwP=jgPlayers.find(p=>p.role==='purewhitemaiden');
+    const idHtml=jgGodIdHtml('purewhitemaiden',pwP);
+    const dead=pwP&&!pwP.alive;
+    const feared=jgFeared(pwP);
+    const cur=jgRecord.purewhitemaidenChecked||'';
+    jgShowPg(`
+      <h2>純白之女睜眼</h2>
+      <div class="speech">「<em>純白之女請睜眼，請選擇要查驗的玩家。</em>」</div>
+      ${idHtml}
+      ${dead?'<div class="info-warn">純白之女已出局，仍需走完流程</div>':''}
+      <div id="jg-god-purewhitemaiden-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      ${dead?'':`<div id="jg-god-purewhitemaiden-action" style="${feared?'display:none;':''}">
+        <label>今晚查驗的對象（留空=不查）</label>
+        ${jgNumSelectHtml('jg-purewhitemaiden-target', cur)}
+        <div class="info" style="font-size:12px;margin-top:4px;">${jgNight<2?'第一晚查驗只會讓法官知道真實身份，不會致死；從第二晚起，若查到狼人陣營，該名狼人立即死亡（守衛與女巫都無法保護）。':'若查到狼人陣營，該名狼人立即死亡（守衛與女巫都無法保護）。'}</div>
+      </div>`}
+      <div class="speech" style="margin-top:10px;">「<em>純白之女請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSavePurewhitemaiden()">已紀錄，下一步 →</button>
+    `,'🕊️ 純白之女');
+  }
+  else if(step==='wolfshaman-check'){
+    const wsP=jgPlayers.find(p=>p.role==='wolfshaman');
+    if(!wsP){ jgGoStep(jgIsFirstNight()?jgNextGodStep('wolfshaman-check'):jgAfterWolfshamanStep()); return; }
+    const dead=!wsP.alive;
+    const feared=jgFeared(wsP);
+    const cur=jgRecord.wolfshamanChecked||'';
+    jgShowPg(`
+      <h2>狼巫查驗</h2>
+      <div class="speech">「<em>狼巫請睜眼，請選擇要查驗的玩家。</em>」</div>
+      ${dead?'<div class="info-warn">狼巫已出局，仍需走完流程</div>':''}
+      <div id="jg-god-wolfshaman-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      ${dead?'':`<div id="jg-god-wolfshaman-action" style="${feared?'display:none;':''}">
+        <label>今晚查驗的對象（留空=不查）</label>
+        ${jgNumSelectHtml('jg-wolfshaman-target', cur)}
+        <div class="info" style="font-size:12px;margin-top:4px;">${jgNight<2?'第一晚查驗只會讓法官知道真實身份，不會致死；從第二晚起，若查到純白之女，純白之女立即死亡（守衛與女巫都無法保護）。':'若查到純白之女，純白之女立即死亡（守衛與女巫都無法保護）。'}</div>
+      </div>`}
+      <div class="speech" style="margin-top:10px;">「<em>狼巫請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveWolfshamanCheck()">已紀錄，下一步 →</button>
+    `,'🔮 狼巫');
+  }
   else if(step==='gravkeeper-wake'){
     const isFirst=jgIsFirstNight();
     const gkP=jgPlayers.find(p=>p.role==='gravkeeper');
@@ -1135,6 +1238,10 @@ function jgRenderStep(step){
     const _dcImmune=jgRecord.dreamcatcherImmune;
     const _wolfKillIsDCImmune=_dcImmune&&jgRecord.wolfKill&&(jgRecord.wolfKill.toString()===_dcImmune.toString());
     const _poisonIsDCImmune=_dcImmune&&jgRecord.witchPoison&&(jgRecord.witchPoison.toString()===_dcImmune.toString());
+    // 假面舞會板：舞者若選自己進舞池，當晚舞池中所有玩家免疫狼刀（不影響舞池本身的陣營死亡判定，
+    // 那是另一個獨立的死法，見下方 dancerPool 陣營結算）
+    const _dancerImmunePool=(jgRecord.dancerSelfIn&&jgRecord.dancerPool)?jgRecord.dancerPool.map(String):[];
+    const _wolfKillIsDancerImmune=!!(jgRecord.wolfKill&&_dancerImmunePool.includes(jgRecord.wolfKill.toString()));
     // 獵魔人免疫女巫毒藥
     const _poisonTargetP=jgRecord.witchPoison?jgFind(jgRecord.witchPoison):null;
     const _poisonIsDemonhunter=!!(_poisonTargetP&&_poisonTargetP.role==='demonhunter');
@@ -1142,12 +1249,15 @@ function jgRenderStep(step){
     // 兩種守衛同守同一人（沒有女巫介入）只是雙重保護，不會奶穿。這個判定只在天亮結算時發生，
     // 女巫睜眼與獵人等其他夜間角色都不會提前知道——牌面上跟一般狼刀致死看起來一樣。
     const guardedByAny=!!(guardSaved||mechWolfGuardSavesKill);
-    const overheal=!!(jgRecord.wolfKill&&guardedByAny&&witchSaved&&!_wolfKillIsEK&&!_wolfKillIsDCImmune);
-    const wolfKillDies=!!(jgRecord.wolfKill&&!_wolfKillIsEK&&!_wolfKillIsDCImmune&&
+    const overheal=!!(jgRecord.wolfKill&&guardedByAny&&witchSaved&&!_wolfKillIsEK&&!_wolfKillIsDCImmune&&!_wolfKillIsDancerImmune);
+    const wolfKillDies=!!(jgRecord.wolfKill&&!_wolfKillIsEK&&!_wolfKillIsDCImmune&&!_wolfKillIsDancerImmune&&
       (overheal||(!guardedByAny&&!witchSaved)));
     if(wolfKillDies) deads.push(jgRecord.wolfKill);
     // Witch poison (guard cannot block this, but 機械狼學到守衛 specially can)
-    if(jgRecord.witchPoison&&!mechWolfGuardSavesPoison&&!_poisonIsDCImmune&&!_poisonIsDemonhunter) deads.push(jgRecord.witchPoison);
+    // 假面／舞者免疫女巫的毒（規則明寫兩者都免疫）
+    const _poisonTargetP2=jgRecord.witchPoison?jgFind(jgRecord.witchPoison):null;
+    const _poisonIsMaskOrDancer=!!(_poisonTargetP2&&(_poisonTargetP2.role==='mask'||_poisonTargetP2.role==='dancer'));
+    if(jgRecord.witchPoison&&!mechWolfGuardSavesPoison&&!_poisonIsDCImmune&&!_poisonIsDemonhunter&&!_poisonIsMaskOrDancer) deads.push(jgRecord.witchPoison);
     // Lucky-one witch-gift poison (guard cannot block this)
     if(jgRecord.luckyonePoison) deads.push(jgRecord.luckyonePoison);
     // Black market trade failure — dealer dies
@@ -1278,7 +1388,7 @@ function jgRenderStep(step){
     // Dreamcatcher consecutive kill
     if(jgRecord.dreamcatcherKillTarget){
       const dct=jgFind(jgRecord.dreamcatcherKillTarget);
-      if(dct&&dct.alive){dct.alive=false;if(!deads.includes(dct.num))deads.push(dct.num);}
+      if(dct&&dct.alive){dct.alive=false;dct._skillSealed=true;if(!deads.includes(dct.num))deads.push(dct.num);}
       jgRecord.dreamcatcherKillTarget=null;
     }
     // Dreamcatcher: if dreamcatcher dies this dawn, their target also dies
@@ -1286,8 +1396,69 @@ function jgRenderStep(step){
       const dcP2=jgPlayers.find(p=>p.role==='dreamcatcher');
       if(dcP2&&!dcP2.alive){
         const dct2=jgFind(jgRecord.dreamcatcherTarget);
-        if(dct2&&dct2.alive){dct2.alive=false;if(!deads.includes(dct2.num))deads.push(dct2.num);}
+        if(dct2&&dct2.alive){dct2.alive=false;dct2._skillSealed=true;if(!deads.includes(dct2.num))deads.push(dct2.num);}
       }
+    }
+    // 狼巫、純白之女互相查殺到對方，且「剛好」兩人分別是各自陣營場上僅存的最後一人
+    // （最後一狼、最後一神）：規則採「狼刀在先」——狼隊的擊殺視為先發生，所以狼巫這一查殺
+    // 先生效（純白之女死亡）；純白之女的查殺因為「先發生」的狼刀已經讓她自己死了，這一下
+    // 等於沒發動，直接取消，狼巫不會跟著陪葬。
+    // 這個特判只在「雙方都是各自陣營最後一人」時才適用——如果互查當下狼隊或神職還有其他
+    // 存活成員，就不算這個特殊情況，兩邊維持各自正常結算、同歸於盡（不套用狼刀在先）。
+    const wolfshamanMutualKill=!!(jgRecord.wolfshamanKillTarget&&jgRecord.purewhitemaidenKillTarget);
+    if(wolfshamanMutualKill){
+      const wsP2=jgPlayers.find(p=>p.role==='wolfshaman');
+      const pwP2=jgPlayers.find(p=>p.role==='purewhitemaiden');
+      const isMutual=!!(wsP2&&pwP2
+        &&jgRecord.wolfshamanKillTarget.toString()===pwP2.num.toString()
+        &&jgRecord.purewhitemaidenKillTarget.toString()===wsP2.num.toString());
+      const aliveWolves=jgPlayers.filter(p=>WOLF_ROLES.includes(p.role)&&p.alive);
+      const aliveGods=jgPlayers.filter(p=>GOD_ROLES.includes(p.role)&&p.alive);
+      const isLastWolfLastGod=isMutual
+        &&aliveWolves.length===1&&aliveWolves[0].role==='wolfshaman'
+        &&aliveGods.length===1&&aliveGods[0].role==='purewhitemaiden';
+      if(isLastWolfLastGod) jgRecord.purewhitemaidenKillTarget=null; // 狼刀在先：純白之女的查殺取消，狼巫不死
+    }
+    // 狼巫查驗到純白之女：第二晚起才會有這個目標值（見 jgSaveWolfshamanCheck），
+    // 守衛與女巫都無法保護，直接致死。
+    if(jgRecord.wolfshamanKillTarget){
+      const wst=jgFind(jgRecord.wolfshamanKillTarget);
+      if(wst&&wst.alive){wst.alive=false;if(!deads.includes(wst.num))deads.push(wst.num);}
+      jgRecord.wolfshamanKillTarget=null;
+    }
+    // 純白之女查驗到狼人陣營：第二晚起才會有這個目標值（見 jgSavePurewhitemaiden），
+    // 守衛與女巫都無法保護，直接致死。互查對方的情況（狼刀在先）已經在上面處理過，
+    // 這裡若 purewhitemaidenKillTarget 已被取消就不會再進來這個分支。
+    if(jgRecord.purewhitemaidenKillTarget){
+      const pwt=jgFind(jgRecord.purewhitemaidenKillTarget);
+      if(pwt&&pwt.alive){pwt.alive=false;if(!deads.includes(pwt.num))deads.push(pwt.num);}
+      jgRecord.purewhitemaidenKillTarget=null;
+    }
+    // 假面舞會板：舞池陣營判定。3人若陣營相同，無事發生；若不同，人數較少的一方死亡——
+    // 陣營若被假面「賜予面具」改變過，以改變後的陣營為準。這個死亡是舞池機制本身的判定，
+    // 不是狼刀，不受守衛／女巫影響（規則沒有特別說可以擋，先當作不可擋，若之後要改成
+    // 可被守衛/女巫擋下再回來調整這裡）。
+    if(jgRecord.dancerPool&&jgRecord.dancerPool.length===3){
+      const poolInfo=jgRecord.dancerPool.map(n=>{
+        const p=jgFind(n);
+        if(!p) return null;
+        // 假面在舞池裡的陣營一律算狼隊（跟他自己知不知道誰是隊友無關，陣營歸屬永遠是狼——
+        // 見 jgIsWolfPackMember），除非被假面自己賜予面具改變，才會在這次判定裡翻成好人。
+        let camp=jgIsWolfPackMember(p)?'wolf':'good';
+        if(jgRecord.maskGrantTarget&&n.toString()===jgRecord.maskGrantTarget.toString()) camp=(camp==='wolf'?'good':'wolf');
+        return {num:n, camp};
+      }).filter(Boolean);
+      if(poolInfo.length===3){
+        const wolfCnt=poolInfo.filter(c=>c.camp==='wolf').length;
+        if(wolfCnt!==0&&wolfCnt!==3){
+          const minorityCamp=wolfCnt===1?'wolf':'good';
+          poolInfo.filter(c=>c.camp===minorityCamp).forEach(m=>{
+            const p=jgFind(m.num);
+            if(p&&p.alive){p.alive=false;if(!deads.includes(p.num))deads.push(p.num);}
+          });
+        }
+      }
+      jgRecord.dancerPool=null;
     }
     // Wolfbeauty dies from poison at night → charm kill at dawn
     if(jgRecord.witchPoison&&jgRecord.wolfbeautyCharm){
@@ -1339,6 +1510,7 @@ function jgRenderStep(step){
         || (jgMechWolfWolfkingActive()?jgPlayers.find(p=>p.role==='mechanicalwolf'):null);
       if(!wkp||!jgRecord.wolfKill) return false;
       if(wkp.num.toString()!==jgRecord.wolfKill.toString()) return false;
+      if(jgHunterSkillSealed(wkp)) return false; // 夢魘恐懼／攝夢人致死＝技能封印，即使同時也被狼刀擊殺也不能開槍
       const gs=jgRecord.guardTarget&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
       const mgs=jgRecord.mechWolfGuardTarget&&(jgRecord.mechWolfGuardTarget.toString()===jgRecord.wolfKill.toString());
       const ws=jgRecord.witchSave;
@@ -1353,6 +1525,7 @@ function jgRenderStep(step){
       if(!jgRecord.wolfKill) return false;
       const victim=jgFind(jgRecord.wolfKill);
       if(!victim||!jgIsHunterCapable(victim)) return false;
+      if(jgHunterSkillSealed(victim)) return false; // 夢魘恐懼／攝夢人致死＝技能封印，即使同時也被狼刀擊殺也不能開槍
       const gSaved=jgRecord.guardTarget&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
       const mgSaved=jgRecord.mechWolfGuardTarget&&(jgRecord.mechWolfGuardTarget.toString()===jgRecord.wolfKill.toString());
       const wSaved=jgRecord.witchSave;
@@ -1451,7 +1624,7 @@ function jgRenderStep(step){
       const _beAlive=jgAlive();
       const _beWolves=_beAlive.filter(p=>jgIsWolfForWin(p));
       const _beGood=_beAlive.filter(p=>!jgIsWolfForWin(p));
-      const _beAllGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+      const _beAllGods=ACTIVE_SKILL_GODS;
       const _beGods=_beGood.filter(p=>_beAllGods.includes(p.role));
       const _beVils=_beGood.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
       if(_beWolves.length===1&&_beWolves[0].role==='bloodmoon'&&_beGods.length===1&&_beVils.length===1){
@@ -1522,13 +1695,16 @@ function jgRenderStep(step){
     const sheriffAlive=!!(sheriffP&&sheriffP.alive);
     if(sheriffAlive){
       const dm=jgDayMeta[jgNight]||{};
-      if(jgNight===1&&dm.start&&dm.dir){
-        // 第一天：警長結果公布時就已經決定過警左／警右了，這裡直接顯示結果即可，不用再選一次
+      if(dm.start&&dm.dir){
+        // 方向已經決定過了（第一天警長公布結果時就定過，或剛剛點過警左／警右）：
+        // 不管第幾天，都要直接顯示「計時器＋開始發言」畫面，不能再跳回去選方向一次。
+        // （這裡以前只有 jgNight===1 才會走到這個分支，導致第二天以後警長選完警左/警右
+        // 沒有計時器可用——這是這次要修的重點 bug。）
         const dirLabel2=dm.dir==='逆'?'逆時針':'順時針';
         jgShowPg(`
           <h2>發言討論</h2>
           ${jgSpeakTimerWidgetHtml(jgDaySpeechOrderList(jgNight))}
-          ${jgFirstDayCompCheckHtml()}
+          ${jgNight===1?jgFirstDayCompCheckHtml():''}
           <div class="speech">「<em>從 ${dm.start} 號開始，${dirLabel2}依序發言。</em>」</div>
           ${jgDiscussExtraButtonsHtml()}
           ${jgHanTiaoInputHtml('jg-hantiao-discuss-input', jgHanTiaoDiscussNotes[jgNight], 'jgUpdateHanTiaoDiscuss')}
@@ -1536,7 +1712,7 @@ function jgRenderStep(step){
         `,'💬 發言');
         return;
       }
-      // 有警長在場：每次發言前都由警長宣布警左／警右，法官只需點選警長左右兩邊的號碼，
+      // 有警長在場、方向還沒決定：每次發言前都由警長宣布警左／警右，法官只需點選警長左右兩邊的號碼，
       // 方向自動判定（不使用隨機轉盤——轉盤只在沒有警長、平安夜或需要方向時才使用）。
       const curStart=dm.start||null;
       jgShowPg(`
@@ -1630,14 +1806,14 @@ function jgRenderStep(step){
     `,'🤍 白狼王');
   }
   else if(step==='wolf-selfblow'){
-    // 自刀自爆規則：狼人／黑狼王／血月使者／狼弟可以自爆；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆
-    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y')).map(p=>p.num);
+    // 自刀自爆規則：狼人／黑狼王／血月使者／狼弟／狼巫可以自爆；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆
+    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
     const bmEligible=jgPlayers.find(p=>p.role==='bloodmoon'&&p.alive);
     jgShowPg(`
       <h2>狼人自爆</h2>
       <div class="speech">「<em>請選擇宣告自爆的玩家號碼。</em>」</div>
-      <label>自爆的玩家號碼（只能選存活的狼人／黑狼王／血月使者／狼弟；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆）</label>
+      <label>自爆的玩家號碼（只能選存活的狼人／黑狼王／血月使者／狼弟／狼巫；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆）</label>
       <div class="info" style="font-size:11px;margin-bottom:4px;">⏱️ 除了警長競選（吞警徽）以外，自爆須在該玩家「自己發言的階段」宣告，不能搶在別人發言時自爆</div>
       ${jgNumSelectHtml('jg-wolf-blow-rec', '', null, null, exclude, '這個角色不能自爆，不可選取', jgSelfBlowExcludeReason)}
       <div class="info" style="font-size:12px;margin-top:6px;">一般狼人／黑狼王自爆：直接淘汰，不能開槍帶人，跳過投票，直接進入夜晚。</div>
@@ -1648,8 +1824,8 @@ function jgRenderStep(step){
   else if(step==='sheriff-selfdestruct-pick'){
     const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
     const pendingDead=jgPendingNightDeadNums();
-    // 自刀自爆規則：狼弟可以自爆（含警上吞警徽），狼兄不行；其餘限制不變
-    const eligible=jgPlayers.filter(p=>p.alive&&!pendingDead.includes(p.num)&&jgSheriffCandidates.includes(p.num)&&(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y')).map(p=>p.num);
+    // 自刀自爆規則：狼弟、狼巫可以自爆（含警上吞警徽），狼兄不行；其餘限制不變
+    const eligible=jgPlayers.filter(p=>p.alive&&!pendingDead.includes(p.num)&&jgSheriffCandidates.includes(p.num)&&(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
     const sheriffBlowReason=(num)=>{
       const p=jgFind(num);
@@ -1717,7 +1893,7 @@ function jgRenderStep(step){
     // 「還要看刀到誰才知道輸贏」。
     const _blmA=jgAlive();
     const _blmAg=_blmA.filter(p=>!jgIsWolfForWin(p));
-    const _blmAllGods=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket'];
+    const _blmAllGods=ACTIVE_SKILL_GODS;
     const _blmGodCnt=_blmAg.filter(p=>_blmAllGods.includes(p.role)).length;
     const _blmVilCnt=_blmAg.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid').length;
     const _blmGuaranteed=_blmGodCnt===1&&_blmVilCnt===1;
