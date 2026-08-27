@@ -1048,12 +1048,14 @@ function jgRenderStep(step){
       <div id="jg-god-purewhitemaiden-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
       ${dead?'':`<div id="jg-god-purewhitemaiden-action" style="${feared?'display:none;':''}">
         <label>今晚查驗的對象（留空=不查）</label>
-        ${jgNumSelectHtml('jg-purewhitemaiden-target', cur)}
-        <div class="info" style="font-size:12px;margin-top:4px;">${jgNight<2?'第一晚查驗只會讓法官知道真實身份，不會致死；從第二晚起，若查到狼人陣營，該名狼人立即死亡（守衛與女巫都無法保護）。':'若查到狼人陣營，該名狼人立即死亡（守衛與女巫都無法保護）。'}</div>
+        ${jgNumSelectHtml('jg-purewhitemaiden-target', cur, 'jgPurewhitemaidenCheckLive')}
+        <div id="jg-purewhitemaiden-result"></div>
+        <div class="info" style="font-size:12px;margin-top:4px;">${jgNight<2?'第一晚查驗只會讓純白之女知道真實身份，不會致死；從第二晚起，若查到狼人陣營，該名狼人立即死亡（守衛與女巫都無法保護）。':'若查到狼人陣營，該名狼人立即死亡（守衛與女巫都無法保護）。'}</div>
       </div>`}
       <div class="speech" style="margin-top:10px;">「<em>純白之女請閉眼。</em>」</div>
       <button class="primary" onclick="jgSavePurewhitemaiden()">已紀錄，下一步 →</button>
     `,'🕊️ 純白之女');
+    if(cur&&!dead&&!feared) setTimeout(jgPurewhitemaidenCheckLive,50);
   }
   else if(step==='wolfshaman-check'){
     const wsP=jgPlayers.find(p=>p.role==='wolfshaman');
@@ -1068,12 +1070,14 @@ function jgRenderStep(step){
       <div id="jg-god-wolfshaman-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
       ${dead?'':`<div id="jg-god-wolfshaman-action" style="${feared?'display:none;':''}">
         <label>今晚查驗的對象（留空=不查）</label>
-        ${jgNumSelectHtml('jg-wolfshaman-target', cur)}
-        <div class="info" style="font-size:12px;margin-top:4px;">${jgNight<2?'第一晚查驗只會讓法官知道真實身份，不會致死；從第二晚起，若查到純白之女，純白之女立即死亡（守衛與女巫都無法保護）。':'若查到純白之女，純白之女立即死亡（守衛與女巫都無法保護）。'}</div>
+        ${jgNumSelectHtml('jg-wolfshaman-target', cur, 'jgWolfshamanCheckLive')}
+        <div id="jg-wolfshaman-result"></div>
+        <div class="info" style="font-size:12px;margin-top:4px;">${jgNight<2?'第一晚查驗只會讓狼巫知道真實身份，不會致死；從第二晚起，若查到純白之女，純白之女立即死亡（守衛與女巫都無法保護）。':'若查到純白之女，純白之女立即死亡（守衛與女巫都無法保護）。'}</div>
       </div>`}
       <div class="speech" style="margin-top:10px;">「<em>狼巫請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolfshamanCheck()">已紀錄，下一步 →</button>
     `,'🔮 狼巫');
+    if(cur&&!dead&&!feared) setTimeout(jgWolfshamanCheckLive,50);
   }
   else if(step==='gravkeeper-wake'){
     const isFirst=jgIsFirstNight();

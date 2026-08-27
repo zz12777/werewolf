@@ -535,9 +535,10 @@ function jgSaveWolfshamanCheck(){
   }
 }
 
-// 純白之女查驗：跟預言家一樣是神職，第一晚需要指定號碼（jgSaveGodId 統一處理）。每晚都會
-// 查驗，第二晚起若查到狼人陣營（含所有狼隊角色），該名狼人立即死亡——同樣不可被守衛／
-// 女巫阻擋，實際套用在天亮結算時處理，這裡只負責記錄查驗結果跟致死目標。
+// 純白之女查驗：跟預言家一樣是神職，第一晚需要指定號碼（jgSaveGodId 統一處理）。每晚都排在
+// 女巫之後同一個位置（不像狼巫，第一晚跟其餘夜晚位置不同），查驗結果每晚都會顯示，第二晚起
+// 若查到狼人陣營（含所有狼隊角色），該名狼人立即死亡——同樣不可被守衛／女巫阻擋，實際套用
+// 在天亮結算時處理，這裡只負責記錄查驗結果跟致死目標。
 function jgSavePurewhitemaiden(){
   if(!jgSaveGodId('purewhitemaiden')) return;
   const pwP=jgPlayers.find(p=>p.role==='purewhitemaiden');
@@ -550,12 +551,8 @@ function jgSavePurewhitemaiden(){
     const t=jgFind(val);
     if(t&&t.alive&&WOLF_ROLES.includes(t.role)) jgRecord.purewhitemaidenKillTarget=val;
   }
-  if(jgIsFirstNight()){
-    jgGoStep(jgNextGodStep('purewhitemaiden-wake'));
-  } else {
-    if(jgTryEarlyEnd()) return;
-    jgGoStep('seer-wake');
-  }
+  if(jgTryEarlyEnd()) return;
+  jgGoStep('seer-wake');
 }
 
 function jgMechWolfGuardCheckRepeat(){
@@ -1306,6 +1303,33 @@ function jgMechWolfMediumCheckLive(){
     +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給機械狼看</button>';
 }
 
+// 狼巫／純白之女查驗真實身份的大字報顯示，跟通靈師（jgMediumCheck）同一套做法：
+// 先在畫面上顯示查到的結果，再讓法官視需要點按鈕用大字報的方式呈現給查驗者本人看
+// （保護隱私，不用直接口頭講出來讓其他人聽到）。
+function jgWolfshamanCheckLive(){
+  const val=(document.getElementById('jg-wolfshaman-target')||{}).value?.trim()||'';
+  const box=document.getElementById('jg-wolfshaman-result');
+  if(!box) return;
+  if(!val){box.innerHTML='';return;}
+  const found=jgFind(val);
+  if(!found){box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
+  const label=jgFullRoleName(jgCheckDisplayRole(found.role||'villager'));
+  const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  box.innerHTML='<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+label+'</div>'
+    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給狼巫看</button>';
+}
+function jgPurewhitemaidenCheckLive(){
+  const val=(document.getElementById('jg-purewhitemaiden-target')||{}).value?.trim()||'';
+  const box=document.getElementById('jg-purewhitemaiden-result');
+  if(!box) return;
+  if(!val){box.innerHTML='';return;}
+  const found=jgFind(val);
+  if(!found){box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
+  const label=jgFullRoleName(jgCheckDisplayRole(found.role||'villager'));
+  const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  box.innerHTML='<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+label+'</div>'
+    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給純白之女看</button>';
+}
 function jgMediumCheck(){
   const val=(document.getElementById('jg-medium-check')||{}).value?.trim()||'';
   const box=document.getElementById('jg-medium-result');
@@ -1719,9 +1743,6 @@ function jgNextAfterSubWolf(currentStep){
 const GOD_CHAIN=[
   {step:'medium-wake',      role:'medium',       check:(n,c)=>(n===1?(c.medium>0):jgHasRoleAny(['medium']))||jgThiefBuriedActiveTonight('medium')},
   {step:'hunter-wake',      role:'hunter',       check:(n,c)=>(n===1?(c.hunter>0):jgHasRoleAny(['hunter']))||jgMechWolfHunterActive()||jgThiefBuriedActiveTonight('hunter')},
-  // 純白之女第一晚排在獵人之後（其餘夜晚改成緊接女巫之後，見 jgSaveWitch／jgPurewhitemaidenPending，
-  // 這裡的 check 只在第一晚生效，避免第二晚起被同時觸發兩次）
-  {step:'purewhitemaiden-wake', role:'purewhitemaiden', check:(n,c)=>jgIsFirstNight()&&((n===1?(c.purewhitemaiden>0):jgHasRoleAny(['purewhitemaiden']))||jgThiefBuriedActiveTonight('purewhitemaiden'))},
   {step:'knight-wake',      role:'knight',       check:(n,c)=>(n===1&&c.knight>0)||jgThiefBuriedActiveTonight('knight')},
   {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>(n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter']))||jgThiefBuriedActiveTonight('demonhunter')},
   {step:'fool-wake',        role:'fool',         check:(n,c)=>(n===1&&c.fool>0)||jgThiefBuriedActiveTonight('fool')},
@@ -1760,10 +1781,11 @@ function jgLuckyOneWakeIsLast(){
 function jgWolfshamanPending(){
   return !jgIsFirstNight() && (jgHasRoleAny(['wolfshaman'])||jgThiefBuriedActiveTonight('wolfshaman'));
 }
-// 純白之女從第二晚起排在女巫之後、獵人（神職鏈）之前查驗（第一晚仍照第一晚專屬順序，
-// 排在獵人之後、狼巫之前——見 GOD_CHAIN），同樣只在「不是第一晚」時才從這裡插入。
+// 純白之女每晚都排在女巫之後、（如果板子有）獵人（神職鏈）之前查驗——不管第幾晚，位置都一樣，
+// 不像狼巫那樣第一晚跟其餘夜晚位置不同。用板子設定（jgComp）判斷第一晚（此時角色可能還沒
+// 指定給玩家），其餘夜晚才能直接看場上實際角色。
 function jgPurewhitemaidenPending(){
-  return !jgIsFirstNight() && (jgHasRoleAny(['purewhitemaiden'])||jgThiefBuriedActiveTonight('purewhitemaiden'));
+  return (jgIsFirstNight()?(jgComp.purewhitemaiden>0):jgHasRoleAny(['purewhitemaiden']))||jgThiefBuriedActiveTonight('purewhitemaiden');
 }
 function jgPostWolfStep(){
   if(jgWolfshamanPending()) return 'wolfshaman-check';

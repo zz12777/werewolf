@@ -1566,16 +1566,16 @@ function jgConflictCheck(whoNum, roleId){
 }
 
 // After "確認身分" (everyone has viewed their card), decide where to go:
-// Mechanical-wolf / black-market / gargoyle+gravkeeper boards record every player's
-// identity up front (feature request), instead of discovering roles progressively
-// during night-1 wake steps. 石像鬼「不與狼隊見面」，這樣才能確保石像鬼的身分不會在
-// 跟狼人擠同一畫面時洩露。
+// Mechanical-wolf / black-market / gargoyle+gravkeeper / 純白之女查驗真實身分板，這些板子
+// 都需要一開始就完整記錄每位玩家的身分，而不是讓法官在遊戲過程中一步步「發現」角色——
+// 石像鬼「不與狼隊見面」是這樣才能確保身分不會在跟狼人擠同一畫面時洩露；純白之女／狼巫
+// 則是因為查驗結果攸關真實身分判定與生死，法官必須有一份完全準確的底牌可以核對。
 function jgProceedToNight(){
   if(jgNight===1 && jgDualIdentityMode && !jgDualAssignDone){
     jgGoStep('dual-assign');
     return;
   }
-  if(jgNight===1 && (jgComp.mechanicalwolf>0||jgComp.gargoyle>0) && !jgMechAssignDone){
+  if(jgNight===1 && (jgComp.mechanicalwolf>0||jgComp.gargoyle>0||jgComp.purewhitemaiden>0) && !jgMechAssignDone){
     jgGoStep('mech-assign');
     return;
   }
