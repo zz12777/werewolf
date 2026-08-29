@@ -210,7 +210,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rp-potion-dot{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;font-size:9px;font-weight:700;background:rgba(124,58,237,0.14);color:var(--witch);border:1px solid rgba(124,58,237,0.35);}
 .rp-potion-dot.used{background:rgba(0,0,0,0.05);color:var(--text3);border-color:rgba(0,0,0,0.12);}
 /* 狼隊角色（含血月使者、機械狼、夢魘、狼兄狼弟、狼巫、假面……）全部統一同一種紅色，方便法官一眼認出敵我 */
-.rp-wolf .rp-role,.rp-wolfking .rp-role,.rp-whitewolf .rp-role,.rp-wolfbeauty .rp-role,.rp-evilknight .rp-role,.rp-gargoyle .rp-role,.rp-bloodmoon .rp-role,.rp-mechanicalwolf .rp-role,.rp-nightmare .rp-role,.rp-wolfbrother_e .rp-role,.rp-wolfbrother_y .rp-role,.rp-wolfshaman .rp-role,.rp-mask .rp-role{background:rgba(184,56,40,0.1);color:#922418;}
+.rp-wolf .rp-role,.rp-wolfking .rp-role,.rp-whitewolf .rp-role,.rp-wolfbeauty .rp-role,.rp-evilknight .rp-role,.rp-gargoyle .rp-role,.rp-bloodmoon .rp-role,.rp-mechanicalwolf .rp-role,.rp-nightmare .rp-role,.rp-wolfbrother_e .rp-role,.rp-wolfbrother_y .rp-role,.rp-wolfshaman .rp-role,.rp-mask .rp-role,.rp-bigbadwolf .rp-role,.rp-bigmechwolf .rp-role,.rp-smallmechwolf .rp-role{background:rgba(184,56,40,0.1);color:#922418;}
 /* 平民／混血兒全部維持同一種綠色（混血兒陣營未知，好人視角一律當平民看待） */
 .rp-villager .rp-role,.rp-hybrid .rp-role{background:rgba(58,122,42,0.1);color:#2a601c;}
 /* 女巫刻意避開紅色，其餘神職彼此也各自分開一個顏色，方便快速辨識 */
@@ -231,6 +231,8 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rp-purewhitemaiden .rp-role{background:#ffffff;color:#3a3a3a;border:1px solid rgba(0,0,0,0.14);}
 /* 舞者：假面舞會板專屬，用金黃色——跟狼隊的紅色/假面舞會裡的暖橘色都拉開，不會被誤認成狼隊 */
 .rp-dancer .rp-role{background:rgba(191,144,0,0.14);color:#8a6800;}
+/* 小女孩：大野狼+小女孩板專屬，用粉紫色，跟其他神職顏色都拉開 */
+.rp-littlegirl .rp-role{background:rgba(150,90,200,0.12);color:#6a3a9e;}
 .rp-unknown .rp-role{background:var(--bg3);color:var(--text3);}
 .rp-tag-lucky{display:inline-block;margin-left:3px;font-size:8px;font-weight:800;padding:0 3px;border-radius:5px;background:rgba(154,124,40,0.18);color:var(--gold);vertical-align:1px;}
 #jg-p-main{display:none;flex-direction:column;min-height:calc(100vh - 52px);padding:0;}

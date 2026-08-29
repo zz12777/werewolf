@@ -61,7 +61,7 @@ function jgDiscussExtraButtonsHtml(){
   // 血月使者的自爆併進「狼人自爆」這顆按鈕：點進去選號碼，選到血月使者會自動導去血月專屬流程
   // （封印當晚神職技能），選到一般狼人／黑狼王則走一般自爆流程，不用另外分開兩顆按鈕。
   // 自刀自爆規則：狼兄不可自爆（可自刀）、狼弟可自爆（可自刀），一併算進「狼人自爆」這顆按鈕的資格判斷
-  const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman'));
+  const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman'||p.role==='bigbadwolf'));
   if(canWolfBlow) html+='<button class="danger" onclick="jgGoStep(\'wolf-selfblow\')" style="margin-top:4px;">🐺 狼人自爆 →</button>';
   return html;
 }
@@ -249,8 +249,12 @@ function jgRenderVoteHistory(){
 // consecutive-target trackers, logs, vote tally, etc). Excludes setup-only data that never
 // changes mid-game (jgTotal/jgComp/jgPlayerNames) and the history stacks themselves.
 function jgSaveDawnHunterShot(){
+  // 開槍者的判斷要跟畫面渲染時（steps.js 的 dawnShoot 那段）用同一個函式，否則雙機械狼板
+  // 裡「機械狼自己刀死、有獵人資格的人」開槍時，這裡會抓錯人（原本寫死抓 jgRecord.wolfKill，
+  // 遇到不是主要狼刀致死的情況就會抓到 null 或不相干的人）。
+  const shootNum=jgDawnShootTargetNum();
   const shooter=jgPlayers.find(pl=>pl.role==='wolfking'&&jgRecord.wolfKill&&pl.num.toString()===jgRecord.wolfKill.toString())
-    ||jgFind(jgRecord.wolfKill);
+    ||jgFind(shootNum);
   // 這一槍的開槍資格是不是（也）來自黑市商人給的「獵人獵槍」幸運兒技能——不管開槍的人
   // 本身是不是真獵人，只要他就是目前這個未使用過的幸運兒，這一槍用完都要標記成已使用。
   const shooterIsLuckyGun=!!(shooter&&jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&jgLuckyOne.num===shooter.num);

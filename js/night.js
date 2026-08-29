@@ -362,7 +362,7 @@ function jgIdFieldHtml(rn, existingP, whoId, nameId, onChangeFn){
 
 function jgGodIdHtml(roleId,existingP){
   if(jgNight!==1) return '';
-  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面'};
+  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面',littlegirl:'小女孩',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼'};
   const rn=RZHMAP[roleId]||roleId;
   return jgIdFieldHtml(rn, existingP, 'jg-god-who-'+roleId, 'jg-god-name-'+roleId);
 }
@@ -383,7 +383,7 @@ function jgRequireFirstId(elId, label){
 
 function jgSaveGodId(roleId){
   if(jgNight!==1) return true;
-  const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面'};
+  const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面',littlegirl:'小女孩',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼'};
   if(!jgRequireFirstId('jg-god-who-'+roleId, RZHMAP2[roleId]||roleId)) return false;
   const whoNum=parseInt((document.getElementById('jg-god-who-'+roleId)||{}).value||'0');
   const name=(document.getElementById('jg-god-name-'+roleId)||{}).value?.trim()||'';
@@ -1063,6 +1063,98 @@ function jgToggleDancerPool(n){
   else { if(picked.length>=3) return; picked.push(n); }
   jgRenderStep(jgCurrentStep);
 }
+// ── 大野狼+小女孩板：小女孩 ──
+// 小女孩每晚都跟狼人一起睜眼參與討論，但她自己的身分記錄（號碼）獨立在這個步驟完成，
+// 不影響「狼人（大野狼）+小女孩」那個共用畫面的殺人流程。
+function jgSaveLittlegirl(){
+  if(!jgSaveGodId('littlegirl')) return;
+  jgGoStep(jgAfterLittlegirlStep());
+}
+// ── 大野狼+小女孩板：大野狼 ──
+// 「四隻狼是否全部存活」不排除大野狼自己——board設計上就是「狼人×3＋大野狼＝四隻狼」，
+// 只要其中任何一隻死了，這個額外技能就整個失效，不能發動。這一刀是跟主要狼刀「分開」的
+// 額外一刀，兩個目標可能不同，天亮結算時分開處理（見 steps.js 的 dawn 區塊）。
+function jgSaveBigBadWolf(){
+  const bbP=jgPlayers.find(p=>p.role==='bigbadwolf');
+  jgRecord.bigbadwolfBonusKillTarget=null;
+  if(bbP&&bbP.alive){
+    const allFourAlive=jgPlayers.filter(p=>WOLF_ROLES.includes(p.role)).every(p=>p.alive);
+    if(allFourAlive){
+      const kv=(document.getElementById('jg-bigbadwolf-kill')||{}).value?.trim()||'';
+      if(kv){ jgRecord.bigbadwolfBonusKillTarget=jgMagicSwapNum(kv); }
+    }
+  }
+  jgGoStep(jgAfterBigBadWolfStep());
+}
+function jgAfterBigBadWolfStep(){
+  return jgPurewhitemaidenPending()?'purewhitemaiden-wake':'seer-wake';
+}
+// ── 雙機械狼板：大／小機械狼共用的存檔函式（用 roleId 參數分辨是哪一隻） ──
+function jgSaveMechWolf2(roleId){
+  if(!jgSaveGodId(roleId)) return;
+  const st=jgMechWolf2State[roleId];
+  const selfP=jgPlayers.find(p=>p.role===roleId);
+  if(jgFeared(selfP)||(roleId==='smallmechwolf'&&st.rejoinedPack)){
+    jgGoStep(jgMechWolf2NextStep(roleId));
+    return;
+  }
+  if(selfP&&selfP.alive){
+    const canRepick=!st.learned||st.learned==='bigmechwolf'||st.learned==='smallmechwolf';
+    if(canRepick){
+      const lv=(document.getElementById('jg-'+roleId+'-learn')||{}).value?.trim()||'';
+      if(lv){
+        const t=jgFind(lv);
+        if(t){ st.learned=t.role||'villager'; st.learnedNight=jgNight; }
+      }
+    } else if(jgNight>st.learnedNight){
+      // 已經學到明確身分、且過了學到的那一晚（技能才會生效）：處理女巫毒藥／守衛保護的
+      // 使用（各自整局限一次、成功擋下一次傷害後守衛技能就報銷，判定留到天亮結算）。
+      if(st.learned==='witch'&&!st.poisonUsed){
+        const pv=(document.getElementById('jg-'+roleId+'-poison')||{}).value?.trim()||'';
+        if(pv){
+          jgRecord['mechwolf2Poison_'+roleId]=jgMagicSwapNum(pv);
+          st.poisonUsed=true;
+        }
+      }
+      if(st.learned==='guard'&&!st.guardUsed){
+        const gv=(document.getElementById('jg-'+roleId+'-guard')||{}).value?.trim()||'';
+        if(gv&&st.lastGuardTarget&&gv===st.lastGuardTarget.toString()){
+          alert('⚠️ 不能連續兩晚守護同一人，請重新選擇！');
+          return;
+        }
+        if(gv){
+          st.lastGuardTarget=gv;
+          jgRecord['mechwolf2Guard_'+roleId]=gv;
+        }
+      }
+    }
+    const eligible=jgNight>=2&&jgMechWolf2KillEligible(roleId);
+    if(eligible){
+      const isFirstKillNight=st.killTurnFirstNight===null;
+      if(isFirstKillNight) st.killTurnFirstNight=jgNight;
+      const doubleKill=isFirstKillNight&&st.learned==='wolf';
+      const k1=(document.getElementById('jg-'+roleId+'-kill1')||{}).value?.trim()||'';
+      jgRecord['mechwolf2Kill_'+roleId+'_1']=k1?jgMagicSwapNum(k1):null;
+      if(doubleKill){
+        const k2=(document.getElementById('jg-'+roleId+'-kill2')||{}).value?.trim()||'';
+        jgRecord['mechwolf2Kill_'+roleId+'_2']=k2?jgMagicSwapNum(k2):null;
+      } else {
+        jgRecord['mechwolf2Kill_'+roleId+'_2']=null;
+      }
+    }
+  }
+  // 規則8：兩隻機械狼都學到狼人 -> 小機械狼「下一晚」直接回歸主狼群（不用等輪到自己），
+  // 回歸當晚狼隊刀無敵（可破守衛的盾，見 jgAfterGargoyleStep 的觸發點跟 dawn 結算）。
+  const bigSt=jgMechWolf2State.bigmechwolf, smallSt=jgMechWolf2State.smallmechwolf;
+  if(bigSt.learned==='wolf'&&smallSt.learned==='wolf'&&!smallSt.rejoinedPack&&!smallSt._pendingRejoinNight){
+    smallSt._pendingRejoinNight=jgNight+1;
+  }
+  jgRenderRoster();
+  jgGoStep(jgMechWolf2NextStep(roleId));
+}
+function jgMechWolf2NextStep(roleId){
+  return roleId==='bigmechwolf'?jgAfterBigMechWolfStep():jgAfterSmallMechWolfStep();
+}
 function jgSaveDancer(){
   if(!jgSaveGodId('dancer')) return;
   const dnP=jgPlayers.find(p=>p.role==='dancer');
@@ -1465,6 +1557,11 @@ function jgSaveWolf(){
   { const wolfKillRawVal=(document.getElementById('jg-wolf-rec')||{}).value?.trim()||null;
     jgRecord.wolfKillRaw=wolfKillRawVal;
     jgRecord.wolfKill=jgMagicSwapNum(wolfKillRawVal); }
+  // 大野狼+小女孩板：狼隊指認小女孩的猜測號碼（只在第二夜起、板子有小女孩時才會有這個欄位）。
+  // 猜對猜錯的實際判定跟死亡結算留到天亮處理（見 steps.js 的 dawn 區塊），這裡只負責記錄猜測值。
+  { const identifyRawVal=(document.getElementById('jg-wolf-identify-rec')||{}).value?.trim()||null;
+    jgRecord.wolfIdentifyGuessRaw=identifyRawVal;
+    jgRecord.wolfIdentifyGuess=identifyRawVal?jgMagicSwapNum(identifyRawVal):null; }
   if(jgRecord.nightmareBlocksWolf) jgRecord.wolfKill=null;
   // Bloodmoon seal: skip all god steps this night
   if(jgRecord.bloodmoonSealNight){
@@ -1600,7 +1697,14 @@ function jgAfterMagicianStep(){
 }
 // Where to go once the guard step is done (or skipped because there's no guard).
 // 攝夢人現在排在守衛之後、狼之前睜眼（見使用者需求：夢魘→守衛→攝夢人→狼→女巫→預言家）。
+// 小女孩排在守衛之後、攝夢人之前（大野狼+小女孩板：守衛→小女孩→狼人+小女孩→女巫→大野狼→獵人）。
 function jgAfterGuardStep(){
+  const hasLittlegirl = (jgNight===1 ? (jgComp.littlegirl>0) : jgHasRoleAny(['littlegirl'])) || jgThiefBuriedActiveTonight('littlegirl');
+  if(hasLittlegirl) return 'littlegirl-wake';
+  return jgAfterLittlegirlStep();
+}
+// 小女孩結束後的下一步：接回原本 jgAfterGuardStep 尾端「攝夢人」那一段
+function jgAfterLittlegirlStep(){
   const hasDreamcatcher = (jgNight===1 ? (jgComp.dreamcatcher>0) : jgHasRoleAny(['dreamcatcher'])) || jgThiefBuriedActiveTonight('dreamcatcher');
   if(hasDreamcatcher) return 'dreamcatcher-wake';
   return jgAfterDreamcatcherStep();
@@ -1648,6 +1752,18 @@ function jgAfterGravkeeperStep(){
   if(hasGargoyle) return 'gargoyle-wake';
   return jgAfterGargoyleStep();
 }
+// 雙機械狼板：判斷「現在輪到誰帶刀」——優先順序是「一般狼人（小狼）→ 大機械狼 → 小機械狼」。
+// 板子上如果根本沒有配置一般狼人，視為「小狼已經全滅」，大機械狼從第二晚起就直接遞補。
+function jgMechWolf2KillEligible(roleId){
+  const allSmallWolvesDead=jgPlayers.filter(p=>p.role==='wolf').every(p=>!p.alive);
+  if(roleId==='bigmechwolf') return allSmallWolvesDead;
+  if(roleId==='smallmechwolf'){
+    const bigP=jgPlayers.find(p=>p.role==='bigmechwolf');
+    const bigDead=!bigP||!bigP.alive;
+    return allSmallWolvesDead&&bigDead;
+  }
+  return false;
+}
 // 場上是否還有任何活著的狼隊成員（一般狼人、黑狼王、白狼王、狼美人、惡靈騎士、石像鬼、
 // 血月使者、機械狼、夢魘、狼兄狼弟——只要 WOLF_ROLES 裡任何一個角色還活著就算）。
 function jgAfterGargoyleStep(){
@@ -1655,6 +1771,26 @@ function jgAfterGargoyleStep(){
     jgPlayers.filter(p=>WOLF_ROLES.includes(p.role)&&p.role!=='gargoyle'&&!p.alive).length===
     jgPlayers.filter(p=>WOLF_ROLES.includes(p.role)&&p.role!=='gargoyle').length;
   if(ggAllDead) return jgNextWolfStep();
+  // 規則8觸發點：小機械狼上一晚被標記「下一晚回歸主狼群」，這一晚開始生效——順便標記
+  // 「這一晚狼隊刀無敵（可破守衛的盾）」，天亮結算時會用到（見 steps.js dawn 區塊）。
+  const smallSt2=jgMechWolf2State.smallmechwolf;
+  if(smallSt2._pendingRejoinNight===jgNight){
+    smallSt2.rejoinedPack=true;
+    smallSt2._pendingRejoinNight=null;
+    jgRecord._mechwolf2InvincibleKnifeNight=true;
+  }
+  // 雙機械狼板：大機械狼、小機械狼各自獨立睜眼，排在石像鬼之後、原本單一機械狼之前
+  // （沿用「不與狼隊見面的特殊狼角色都排在狼人睜眼之前」這個既有慣例）。
+  const hasBigMechWolf=(jgNight===1?(jgComp.bigmechwolf>0):jgHasRoleAny(['bigmechwolf']))||jgThiefBuriedActiveTonight('bigmechwolf');
+  if(hasBigMechWolf) return 'bigmechwolf-wake';
+  return jgAfterBigMechWolfStep();
+}
+function jgAfterBigMechWolfStep(){
+  const hasSmallMechWolf=(jgNight===1?(jgComp.smallmechwolf>0):jgHasRoleAny(['smallmechwolf']))||jgThiefBuriedActiveTonight('smallmechwolf');
+  if(hasSmallMechWolf) return 'smallmechwolf-wake';
+  return jgAfterSmallMechWolfStep();
+}
+function jgAfterSmallMechWolfStep(){
   const hasMechWolf = (jgNight===1 ? (jgComp.mechanicalwolf>0) : jgHasRoleAny(['mechanicalwolf'])) || jgThiefBuriedActiveTonight('mechanicalwolf');
   if(hasMechWolf) return 'mechanicalwolf-wake';
   return 'wolf-wake';
@@ -1787,8 +1923,11 @@ function jgLuckyOneWakeIsLast(){
 //  jgNextGodStep 尾端，不再從這裡進場）
 // 狼巫從第二晚起緊接在狼刀決定之後獨自查驗（第一晚仍照第一晚專屬順序，排在整條神職鏈
 // 最後——見 GOD_CHAIN 最後一項），所以這裡只在「不是第一晚」時才插進來。
-function jgWolfshamanPending(){
-  return !jgIsFirstNight() && (jgHasRoleAny(['wolfshaman'])||jgThiefBuriedActiveTonight('wolfshaman'));
+// 大野狼每晚都排在女巫之後（不管其他狼是不是全滅，都要走這個步驟維持節奏——只是「能不能
+// 真的多殺一人」要看場上四隻狼是否全部存活，這個判斷在畫面渲染跟 jgSaveBigBadWolf 裡各自
+// 處理，這裡只負責「板子上有沒有大野狼」）。
+function jgBigBadWolfPending(){
+  return (jgIsFirstNight()?(jgComp.bigbadwolf>0):jgHasRoleAny(['bigbadwolf']))||jgThiefBuriedActiveTonight('bigbadwolf');
 }
 // 純白之女每晚都排在女巫之後、（如果板子有）獵人（神職鏈）之前查驗——不管第幾晚，位置都一樣，
 // 不像狼巫那樣第一晚跟其餘夜晚位置不同。用板子設定（jgComp）判斷第一晚（此時角色可能還沒
@@ -1915,6 +2054,7 @@ function jgSaveWitch(){
   }
   jgRecord.witchStepDone=true;
   if(jgTryEarlyEnd()) return;
+  if(jgBigBadWolfPending()){ jgGoStep('bigbadwolf-wake'); return; }
   jgGoStep(jgPurewhitemaidenPending()?'purewhitemaiden-wake':'seer-wake');
 }
 

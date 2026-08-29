@@ -218,7 +218,7 @@ function jgSaveSheriffSelfDestruct(){
   const p=jgFind(val);
   // 自爆資格只看「是不是還活著、是不是自爆合法的狼隊角色」，不要求一定要是目前的警長候選人——
   // 任何一隻符合資格的狼，不管有沒有參選警長，都可以在警長競選期間（不管誰正在發言）隨時自爆。
-  if(!p||!p.alive||!(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')){
+  if(!p||!p.alive||!(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman'||p.role==='bigbadwolf')){
     alert('⚠️ 這個號碼目前不是存活的狼人／黑狼王／白狼王／血月使者／狼弟／狼巫，不能自爆！');
     return;
   }

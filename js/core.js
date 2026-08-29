@@ -6,9 +6,9 @@
 // ═══════════════════════════════════
 // SHARED DATA
 // ═══════════════════════════════════
-const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',sheriff:'警長',luckyone:'幸運兒'};
-const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2'};
-const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard'};
+const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',sheriff:'警長',luckyone:'幸運兒'};
+const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs'};
+const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer'};
 
 function getComp(n){
   const t={
@@ -192,9 +192,9 @@ let jgGameCount=1; // increments each new game this session, used in the export 
 let jgHasStartedBefore=false;
 const ROLE_ABBR={
   villager:'民', hybrid:'混血', cupid:'邱比特', thief:'盜賊', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
-  gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面',
+  gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面', bigbadwolf:'大野狼', bigmechwolf:'大機狼', smallmechwolf:'小機狼',
   mechanicalwolf:'機', seer:'預', witch:'巫', hunter:'獵', guard:'守', dreamcatcher:'攝夢', knight:'騎士', magician:'魔術',
-  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', sheriff:'警長', luckyone:'幸運'
+  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', littlegirl:'小女孩', sheriff:'警長', luckyone:'幸運'
 };
 // Builds a short label for the export header from whichever "special" (non-baseline) roles
 // appeared this game — e.g. 通靈師+機械狼 present → "通靈師機械狼".
@@ -369,6 +369,30 @@ function jgIsHunterCapable(p){
   if(!p) return false;
   return !!jgHunterCapableTag(p.role, p.num);
 }
+// 這一晚「誰因為被狼隊刀死而觸發開槍」的目標號碼——不只看主要狼刀，雙機械狼板裡機械狼
+// 自己帶的刀（見 jgRecord._mechwolf2KillVictims）殺到的人一樣算數。render 畫面（steps.js）
+// 跟實際存檔（jgSaveDawnHunterShot，day.js）都要呼叫同一個函式，兩邊認定的開槍者才不會
+// 兜不起來。優先序：主要狼刀的目標（含黑狼王，維持舊行為）→ 機械狼自己刀死、有獵人資格
+// 的人（依 jgRecord._mechwolf2KillVictims 出現順序）。
+function jgDawnShootTargetNum(){
+  if(jgRecord.wolfKill){
+    const victim=jgFind(jgRecord.wolfKill);
+    if(victim&&victim.role==='wolfking') return jgRecord.wolfKill; // 黑狼王另有 dawnWolfKingShoot 專門判斷，這裡只是回傳號碼
+    if(victim&&jgIsHunterCapable(victim)&&!jgHunterSkillSealed(victim)){
+      const gSaved=jgRecord.guardTarget&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
+      const mgSaved=jgRecord.mechWolfGuardTarget&&(jgRecord.mechWolfGuardTarget.toString()===jgRecord.wolfKill.toString());
+      const wSaved=jgRecord.witchSave;
+      const overhealHit=(gSaved||mgSaved)&&wSaved;
+      if(overhealHit||(!gSaved&&!mgSaved&&!wSaved)) return jgRecord.wolfKill;
+    }
+  }
+  const victims=jgRecord._mechwolf2KillVictims||[];
+  for(const num of victims){
+    const v=jgFind(num);
+    if(v&&jgIsHunterCapable(v)&&!jgHunterSkillSealed(v)) return num;
+  }
+  return jgRecord.wolfKill||null;
+}
 // 這位玩家「今晚」的獵人/黑狼王開槍技能是不是被封印了——不管他本身是不是真獵人／黑狼王，
 // 只要符合以下任一種情況，死亡時都不能開槍帶人（即使同時也被狼刀擊殺）：
 // 1) 被夢魘恐懼（本回合技能被封，只影響「這一晚」的死亡結算，跟白天被票出局無關——
@@ -382,6 +406,10 @@ function jgIsHunterCapable(p){
 function jgHunterSkillSealed(p){
   return !!(p && (jgFeared(p) || p._skillSealed));
 }
+function jgMechWolf2HunterActive(roleId){
+  const st=jgMechWolf2State[roleId];
+  return !!(st&&st.learned==='hunter'&&st.learnedNight!==null);
+}
 // 跟 jgIsHunterCapable 判斷邏輯相同，但吃「死前記住的原始身分」而非玩家目前的 role
 // （雙身分模式換牌後 role 會變，開槍資格要看死前那張牌），並回傳具體是哪一種資格
 // （真獵人／機械狼學到獵人／幸運兒得到獵槍），方便連鎖開槍畫面顯示正確的角色名稱。
@@ -389,6 +417,7 @@ function jgHunterCapableTag(role, num){
   if(role==='hunter') return 'hunter';
   if(role==='wolfking') return 'wolfking';
   if(role==='mechanicalwolf'&&jgMechWolfHunterActive()) return 'mechanicalwolf';
+  if((role==='bigmechwolf'||role==='smallmechwolf')&&jgMechWolf2HunterActive(role)) return role;
   if(jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&jgLuckyOne.num===num) return 'luckyone';
   return null;
 }
@@ -533,6 +562,28 @@ function jgFormatNightLog(){
     if(jgRecord.maskKillTarget) lines.push('假面刀'+jgRecord.maskKillTarget);
     lines.push('假面查'+(jgRecord.maskCheckTarget||'x')+'給'+(jgRecord.maskGrantTarget||'x'));
   }
+  const bbP=jgPlayers.find(p=>p.role==='bigbadwolf');
+  if(bbP&&bbP.alive) lines.push('野狼刀'+(jgRecord.bigbadwolfBonusKillTarget||'x'));
+  const lgP2=jgPlayers.find(p=>p.role==='littlegirl');
+  if(lgP2&&jgNight>=2) lines.push(jgRecord.wolfIdentifyGuessRaw?('指認'+jgRecord.wolfIdentifyGuessRaw+(jgRecord._littlegirlSubstituteKill?'(成功)':'(失敗)')):'指認x');
+  // 雙機械狼板：大／小機械狼各自的刀口（可能雙刀）、若學到女巫/守衛則另外記下毒/守的對象
+  ['bigmechwolf','smallmechwolf'].forEach(roleId=>{
+    const mp=jgPlayers.find(p=>p.role===roleId);
+    if(!mp||!mp.alive) return;
+    const label=roleId==='bigmechwolf'?'大機':'小機';
+    const st=jgMechWolf2State[roleId];
+    const k1=jgRecord['mechwolf2Kill_'+roleId+'_1'];
+    const k2=jgRecord['mechwolf2Kill_'+roleId+'_2'];
+    if(k1) lines.push(label+'刀'+k1+(k2?('+'+k2):''));
+    if(st.learned==='witch'){
+      const pv=jgRecord['mechwolf2Poison_'+roleId];
+      if(pv) lines.push(label+'毒'+pv);
+    }
+    if(st.learned==='guard'){
+      const gv=jgRecord['mechwolf2Guard_'+roleId];
+      if(gv) lines.push(label+'守'+gv);
+    }
+  });
   return lines;
 }
 // jgPlayers: {num, name, role, alive}
@@ -560,6 +611,18 @@ let jgMechWolfPoisonUsed=false; // learned 'witch' role: poison is a one-time it
 let jgLastMechWolfGuardTarget=null; // learned 'guard' role: can't guard the same person on consecutive nights, same as a real guard
 let jgMechWolfGuardUsed=false; // learned 'guard' role: ability is consumed once it successfully blocks a wolf-kill or witch-poison
 let jgMechWolfLearnedNight=null; // night number when learned; skill usable from the next night on
+// 雙機械狼板專用狀態：用「角色 key 索引」管理大／小機械狼各自獨立的學習與技能使用狀態，
+// 不要複製兩份變數各自維護——兩隻機械狼共用同一套（帶 roleId 參數的）函式操作這個物件，
+// 之後真的要調整某個欄位的意義，只要改一個地方，兩隻機械狼都會一起套用到。
+// killTurnFirstNight：這隻機械狼「第一次」輪到自己帶刀優先權那一晚的夜數（null＝還沒輪到）——
+// 用來判斷「這是不是他第一次輪到帶刀」，只有第一次輪到、且學到「狼人」時才會帶雙刀。
+// rejoinedPack：只有小機械狼會用到（規則8：兩隻都學到狼人時，小機下一晚直接回歸主狼群，
+// 不用等輪到自己），一旦是 true，小機械狼就不再用自己的獨立畫面出刀，改成參與共用的
+// 「狼人睜眼」畫面，直到遊戲結束。
+function jgMechWolf2NewState(){
+  return {learned:null, learnedNight:null, poisonUsed:false, guardUsed:false, lastGuardTarget:null, killTurnFirstNight:null, rejoinedPack:false};
+}
+let jgMechWolf2State={bigmechwolf:jgMechWolf2NewState(), smallmechwolf:jgMechWolf2NewState()};
 let jgWolfBrotherIdDone=false;  // 狼兄狼弟 night-1 mutual ID step completed
 let jgWolfBrotherAwakened=false; // 狼弟 has had their one-time awakening kill
 let jgWolfBrotherAwakenedNight=null; // night number the awakening kill happened on — the den only opens to 狼弟 starting the NEXT night, not that same night
@@ -1086,6 +1149,7 @@ function jgStart(){
   jgLastMechWolfGuardTarget=null;
   jgMechWolfGuardUsed=false;
   jgMechWolfLearnedNight=null;
+  jgMechWolf2State={bigmechwolf:jgMechWolf2NewState(), smallmechwolf:jgMechWolf2NewState()};
   jgWolfBrotherIdDone=false;
   jgWolfBrotherAwakened=false;
   jgWolfBrotherAwakenedNight=null;
@@ -1346,7 +1410,7 @@ function jgCaptureState(){
     jgLastGuardTarget, jgLastWolfBeautyCharm, jgLastNightmareTarget, jgLastDreamcatcherTarget,
     jgDreamcatcherEverTargeted, jgMagicianSwapped, jgMechWolfLearned, jgMechWolfBonusKillUsed,
     jgMechWolfPoisonUsed, jgMechWolfGuardUsed, jgLastMechWolfGuardTarget,
-    jgMechWolfLearnedNight, jgWolfBrotherIdDone, jgWolfBrotherAwakened, jgWolfBrotherAwakenedNight, jgLastNightPeaceful,
+    jgMechWolfLearnedNight, jgMechWolf2State, jgWolfBrotherIdDone, jgWolfBrotherAwakened, jgWolfBrotherAwakenedNight, jgLastNightPeaceful,
     jgSpeakDirection, jgBlackMarketUsed, jgLuckyOne, jgBlackMarketTradeNight, jgNightLog, jgDayLog, jgDayMeta, jgDawnDeaths,
     jgVoteTally, jgLastWinResult, jgRoleCounts, jgMechAssign, jgMechAssignDone,
     jgDualIdentityMode, jgDualAssign, jgDualAssignDone, jgHybridChosen, jgHybridTarget, jgCupidChosen, jgLovers,
@@ -1387,6 +1451,7 @@ function jgRestoreState(snap){
   jgLastMechWolfGuardTarget=snap.jgLastMechWolfGuardTarget;
   jgMechWolfGuardUsed=snap.jgMechWolfGuardUsed;
   jgMechWolfLearnedNight=snap.jgMechWolfLearnedNight;
+  jgMechWolf2State=snap.jgMechWolf2State||{bigmechwolf:jgMechWolf2NewState(), smallmechwolf:jgMechWolf2NewState()};
   jgWolfBrotherIdDone=snap.jgWolfBrotherIdDone;
   jgWolfBrotherAwakened=snap.jgWolfBrotherAwakened;
   jgWolfBrotherAwakenedNight=snap.jgWolfBrotherAwakenedNight;
@@ -1796,6 +1861,13 @@ function jgFullRoleName(r){
 // never a compound "機械狼（已學習：X）" label. Unlearned mechanical wolves still show as 機械狼.
 function jgCheckDisplayRole(role){
   if(role==='mechanicalwolf'&&jgMechWolfLearned) return jgMechWolfLearned;
+  // 雙機械狼板：學到另一隻機械狼身分時，通靈師查驗要顯示成通用「機械狼」（不指名是大是小），
+  // 借用既有的 'mechanicalwolf' 角色顯示格式即可，不用另外定義新的顯示規則。
+  if((role==='bigmechwolf'||role==='smallmechwolf')){
+    const learned=jgMechWolf2State[role].learned;
+    if(learned==='bigmechwolf'||learned==='smallmechwolf') return 'mechanicalwolf';
+    if(learned) return learned;
+  }
   return role;
 }
 

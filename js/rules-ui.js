@@ -21,6 +21,9 @@ const ALL_ROLES = {
   wolfbrother_y:{icon:'👦', name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。<br><strong>帶刀手勢：</strong>狼弟每晚睜眼都要比兩個手勢——「技能使用狀況」（復仇刀，只有覺醒那一晚比讚，其餘每晚都是倒讚）跟「今晚的帶刀手勢」（只看狼弟以外的狼隊成員是否已經全滅，跟狼弟自己有沒有正式加入狼窩無關——就算是狼兄剛陣亡、狼弟正要覺醒的那一晚，只要其餘狼隊友也全滅了，帶刀手勢照樣比讚）。帶刀手勢比讚時，狼弟帶的就是原本「狼人睜眼」要選的那把正常狼刀（不是額外多一刀），可以當下直接選人，也可以留到「狼人睜眼」步驟再殺；覺醒當晚若同時符合帶刀條件，復仇刀跟正常狼刀是分開的兩刀，當晚可以兩刀都出。<br><strong>自刀自爆：</strong>狼弟可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。'},
   wolfshaman:{icon:'🔮', name:'狼巫', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>與狼隊一同刀人：</strong>與其餘狼人一同睜眼、參與商議選擇獵殺對象。<br><strong>查驗：</strong>刀口決定後，獨自睜眼查驗一名玩家的真實身份。<strong>第二夜起</strong>，若查驗到純白之女，純白之女立即死亡——守衛與女巫都無法保護被查驗出局的對象。<br><strong>自刀自爆：</strong>可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與純白之女搭配出現</span>'},
   mask:{icon:'🎭', name:'假面', team:'wolf', teamLabel:'狼人陣營（假面舞會板專用）', desc:'<strong>不與狼隊見面：</strong>不與其他狼人相認、不可自爆（可自刀）。<br><strong>帶刀：</strong>當其餘正牌狼人（不含假面自己）全部出局時，假面開始獨自帶刀殺人（跟正常狼刀一樣，可被守衛/女巫解藥阻擋）。<br><strong>查驗：</strong>第二夜起，可先查驗一名玩家今晚是否在舞池中（舞者選出的3人共舞名單）。<br><strong>給予面具：</strong>查驗之後，可選擇1名玩家給予面具，改變該玩家「當夜」在舞池陣營判定中的陣營（用來干擾舞者共舞的死亡結果）。<br><strong>限制：</strong>免疫女巫的毒；查驗、給予面具都不能連續兩晚指定同一名玩家（兩者各自獨立計算）。<br><span style="color:var(--seer);font-size:12px;">⚡ 假面舞會板專屬角色，通常與舞者搭配出現</span>'},
+  bigbadwolf:{icon:'🐺', name:'大野狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>與狼隊一同刀人：</strong>加入狼隊夜間討論，一同選擇擊殺對象，可以被隊友自刀，也可以自己自爆。<br><strong>額外一刀：</strong>只要場上四隻狼（狼人×3＋大野狼）全部存活，大野狼可以在女巫結束之後，額外選擇一名玩家擊殺（跟正常狼刀是分開的兩刀，當晚可能造成兩人死亡）。只要有任何一隻狼已經陣亡，這個額外技能就會失效，不能發動。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與小女孩搭配出現</span>'},
+  bigmechwolf:{icon:'🤖', name:'大機械狼', team:'wolf', teamLabel:'狼人陣營（雙機械狼板專用）', desc:'<strong>不與狼隊見面：</strong>夜晚不與其他狼見面，只在自己睜眼階段單獨睜眼，不可自爆。<br><strong>帶刀順序：</strong>狼隊帶刀優先順序是「一般狼人（小狼）→ 大機械狼 → 小機械狼」，小狼全滅後才輪到大機械狼帶刀；只有一個機械狼學到狼人時，該機械狼在自己第一次輪到帶刀的那一晚會帶雙刀；若大小機械狼都學到狼人，小機械狼下一晚直接回歸狼隊、且當夜狼隊刀無敵（可破守衛的盾），大機械狼仍照原本順序、輪到時第一晚帶雙刀。<br><strong>學習：</strong>第一晚可學習一名玩家的技能，通靈師查驗會顯示學到的身分；第二晚起法官會告知學到的身分（但不會說是跟誰學的）。學到通靈師/女巫/獵人/守衛/平民/另一機械狼，各自有不同效果，詳見板子介紹。<br><span style="color:var(--seer);font-size:12px;">⚡ 雙機械狼板專屬角色，通常與小機械狼一同出現</span>'},
+  smallmechwolf:{icon:'🤖', name:'小機械狼', team:'wolf', teamLabel:'狼人陣營（雙機械狼板專用）', desc:'<strong>不與狼隊見面：</strong>夜晚不與其他狼見面，只在自己睜眼階段單獨睜眼，不可自爆。<br><strong>帶刀順序：</strong>狼隊帶刀優先順序是「一般狼人（小狼）→ 大機械狼 → 小機械狼」，大機械狼也陣亡後才輪到小機械狼帶刀；只有一個機械狼學到狼人時，該機械狼在自己第一次輪到帶刀的那一晚會帶雙刀；若大小機械狼都學到狼人，小機械狼下一晚直接回歸狼隊、且當夜狼隊刀無敵（可破守衛的盾）。<br><strong>學習：</strong>規則與大機械狼相同，第一晚學習、第二晚起法官告知學到的身分（但不說是跟誰學的）。<br><span style="color:var(--seer);font-size:12px;">⚡ 雙機械狼板專屬角色，通常與大機械狼一同出現</span>'},
   // Good - villager
   villager: {icon:'🧑‍🌾',name:'平民',  team:'good', teamLabel:'好人陣營', desc:'沒有特殊技能，靠發言與推理找出狼人。白天投票是唯一武器。'},
   fool:     {icon:'🃏', name:'傻瓜', team:'good', teamLabel:'神職（特殊）', desc:'<strong>本局採用哪一種規則，由法官在開局選角時用切換鈕決定：</strong><br>'
@@ -53,11 +56,12 @@ const ALL_ROLES = {
   luckyone: {icon:'🍀', name:'幸運兒', team:'special', teamLabel:'附加身分', desc:'由黑市商人交易產生，並非開局直接分配的身分。獲得預言家查驗、女巫毒藥或獵人獵槍其中一項技能，自取得的下個夜晚（查驗／毒藥）或下個白天（獵槍）起可以使用。<br>若獲得查驗，每晚都可查；若獲得巫毒及獵槍，只能使用一次。'},
   purewhitemaiden:{icon:'🕊️', name:'純白之女', team:'good', teamLabel:'神職', desc:'<strong>查驗：</strong>每晚查驗一名玩家的真實身份。<strong>第二夜起</strong>，若查驗到狼人陣營，該名狼人立即死亡——守衛與女巫都無法保護被查驗出局的對象。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與狼巫搭配出現</span>'},
   dancer:{icon:'💃', name:'舞者', team:'good', teamLabel:'神職（假面舞會板專用）', desc:'<strong>共舞：</strong>第二夜起，每晚強制選擇3名玩家共舞（可以選自己），組成當晚的舞池。<br><strong>舞池結果：</strong>這3人若陣營相同，無事發生；若不同，人數較少的一方死亡（例如2狼1好人，該名好人死亡）——這裡的「陣營」如果被假面給予面具改變過，以改變後的陣營為準。<br><strong>限制：</strong>每位玩家整局只能參與一次共舞，選過的人不能再選（人數不夠3人時當晚自動跳過共舞）。<br><strong>自我保護：</strong>免疫女巫的毒；若舞者選擇自己也進入舞池，當晚舞池中的所有玩家都免疫狼刀（但仍可能死於舞池本身的陣營判定）。<br><span style="color:var(--seer);font-size:12px;">⚡ 假面舞會板專屬角色，通常與假面搭配出現</span>'},
+  littlegirl:{icon:'👧', name:'小女孩', team:'good', teamLabel:'神職', desc:'<strong>混入狼隊：</strong>每晚跟狼人牌一起睜眼，一同參與商議、選擇擊殺對象——但陣營仍然是好人，不是狼隊一員。<br><strong>被指認：</strong>第二夜起，狼隊選完殺人對象後，有一次機會指認場上誰是小女孩。指認成功：小女孩代替原本的狼刀目標死亡（守衛守不住、女巫也救不了），原本被選的目標沒事。指認失敗：無事發生，原本的狼刀目標照常結算。<br><strong>單純被刀：</strong>如果狼隊不是靠指認、而是直接把刀口選在小女孩身上，這就是一般狼刀，女巫可以正常用解藥救她。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與大野狼搭配出現</span>'},
 };
 
-const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask'];
+const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask','bigbadwolf','bigmechwolf','smallmechwolf'];
 const VIL_ROLES  = ['villager','hybrid'];
-const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer'];
+const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer','littlegirl'];
 const SPECIAL_ROLES = ['sheriff','luckyone','cupid','thief'];
 
 // 單身分限定的「板子」預設：每個板子固定包含一組常見搭配的特殊角色（狼隊或神職），
@@ -76,6 +80,8 @@ const JG_BOARD_PRESETS = {
   cupid_board:             {label:'邱比特', fixed:{cupid:1}},
   wolfshaman_purewhitemaiden:{label:'狼巫+純白之女', fixed:{wolfshaman:1, purewhitemaiden:1}},
   masquerade_board:{label:'假面+舞者', fixed:{mask:1, dancer:1, seer:1, witch:1, fool:1}},
+  bigbadwolf_littlegirl:{label:'大野狼+小女孩', fixed:{bigbadwolf:1, littlegirl:1, wolf:3}},
+  bigmechwolf_smallmechwolf:{label:'雙機械狼', fixed:{bigmechwolf:1, smallmechwolf:1}},
 };
 
 // 選板子的下拉選單以前是寫死在 index.html 裡的 <option>，跟這裡的 JG_BOARD_PRESETS 是兩份
@@ -108,7 +114,7 @@ let jgFoolChaseMode='chase';
 // 「屠神」勝負判定用的神職清單：只有「要追刀」規則才把傻瓜算進去（狼隊必須連傻瓜一起殺光才算屠神）；
 // 「不需追刀」規則傻瓜被放逐就直接出局，不需要、也不會被當成屠神判定的一員。
 function jgAllGodsForWin(){
-  const base=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','purewhitemaiden','dancer'];
+  const base=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','purewhitemaiden','dancer','littlegirl'];
   if(jgFoolChaseMode==='chase') base.push('fool');
   return base;
 }

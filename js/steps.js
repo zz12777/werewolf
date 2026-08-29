@@ -254,6 +254,32 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveMask()">已紀錄，下一步 →</button>
     `,'🎭 假面');
   }
+  else if(step==='bigbadwolf-wake'){
+    const bbP=jgPlayers.find(p=>p.role==='bigbadwolf');
+    if(!bbP){ jgGoStep(jgAfterBigBadWolfStep()); return; }
+    const dead=!bbP.alive;
+    const feared=jgFeared(bbP);
+    const allFourAlive=jgPlayers.filter(p=>WOLF_ROLES.includes(p.role)).every(p=>p.alive);
+    jgShowPg(`
+      <h2>大野狼睜眼</h2>
+      <div class="speech">「<em>大野狼請睜眼。</em>」</div>
+      ${dead?'<div class="info-warn">大野狼已出局，仍需走完流程</div>':''}
+      <div id="jg-god-bigbadwolf-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      ${(dead||feared)?'':(allFourAlive
+        ?`<div class="info-warn" style="margin-bottom:8px;">🔪 四隻狼全部存活，大野狼可以額外殺一人</div>
+          <label>請選擇擊殺的目標（留空=不殺）</label>${jgNumSelectHtml('jg-bigbadwolf-kill','')}
+          <div class="info" style="font-size:12px;margin-top:4px;">這一刀跟狼隊正常的狼刀是分開的，當晚可能造成兩人死亡。</div>`
+        :'<div class="info" style="font-size:12px;">（已有隊友陣亡，大野狼額外技能失效，本回合不能殺人）</div>')}
+      <div class="speech" style="margin-top:10px;">「<em>大野狼請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveBigBadWolf()">已紀錄，下一步 →</button>
+    `,'🐺 大野狼');
+  }
+  else if(step==='bigmechwolf-wake'){
+    jgRenderMechWolf2Step('bigmechwolf');
+  }
+  else if(step==='smallmechwolf-wake'){
+    jgRenderMechWolf2Step('smallmechwolf');
+  }
   else if(step==='nightmare-wake'){
     const isFirst=jgIsFirstNight();
     const nmP=jgPlayers.find(p=>p.role==='nightmare');
@@ -303,6 +329,20 @@ function jgRenderStep(step){
       <div class="speech" style="margin-top:12px;">「<em>守衛請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveGuard()">已紀錄，下一步 →</button>
     `,'🛡️ 守衛');
+  }
+  else if(step==='littlegirl-wake'){
+    const lgP=jgPlayers.find(p=>p.role==='littlegirl');
+    const idHtml=jgGodIdHtml('littlegirl',lgP);
+    const dead=lgP&&!lgP.alive;
+    jgShowPg(`
+      <h2>小女孩睜眼</h2>
+      <div class="speech">「<em>小女孩請睜眼。</em>」</div>
+      ${idHtml}
+      ${dead?'<div class="info-warn">小女孩已出局，仍需走完流程</div>':''}
+      <div class="info" style="font-size:12px;">小女孩會跟狼人牌一起睜眼、參與擊殺對象討論，實際刀口選擇在下一步「狼人（大野狼）+小女孩」畫面進行，這裡只需要記錄身分。</div>
+      <div class="speech" style="margin-top:10px;">「<em>小女孩請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveLittlegirl()">已紀錄，下一步 →</button>
+    `,'👧 小女孩');
   }
   // ── 混血兒：只在第一夜出現一次，選擇支持對象 ──
   else if(step==='hybrid-wake'){
@@ -440,7 +480,7 @@ function jgRenderStep(step){
     let allWolfIdsAssigned=true;
     if(isFirst){
       // Count wolf-team players (all wolf roles except gargoyle/mechanicalwolf/nightmare/wolfbrother/假面 who wake separately)
-      const wolfRoles=Object.entries(jgComp).filter(([k])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='nightmare'&&k!=='wolfbrother_e'&&k!=='wolfbrother_y'&&k!=='mask');
+      const wolfRoles=Object.entries(jgComp).filter(([k])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='nightmare'&&k!=='wolfbrother_e'&&k!=='wolfbrother_y'&&k!=='mask'&&k!=='bigmechwolf'&&k!=='smallmechwolf');
       // 假面「不與狼隊見面」，身分已經在他自己的 mask-wake 畫面記錄過了，這裡不能再讓他的號碼
       // 出現在可選清單裡（不然法官可能誤選，等於洩露/搞混假面身分）。
       const maskP=jgPlayers.find(p=>p.role==='mask');
@@ -478,9 +518,17 @@ function jgRenderStep(step){
     // 填完號碼、按下「已紀錄，下一步」才會真的寫進去），這時候直接看 jgPlayers 會誤判成「全滅」，
     // 導致殺人對象的欄位整個不見、法官連刀口都選不了（就算候選身分含盜賊變狼也一樣）。第一夜還
     // 沒有人真的死過，所以第一夜改成直接看板子設定（jgComp）裡有沒有配置主狼群角色即可。
+    // 雙機械狼板：大／小機械狼平常不與狼隊見面，一律排除在共用畫面之外——除非小機械狼已經
+    // 依規則8「回歸主狼群」，這時候他要算進來，才能在這個畫面選刀口。
+    const _smallMechRejoined=jgMechWolf2State.smallmechwolf.rejoinedPack;
+    const _excludedFromMainPack=(role)=>{
+      if(role==='gargoyle'||role==='mechanicalwolf'||role==='mask'||role==='bigmechwolf') return true;
+      if(role==='smallmechwolf') return !_smallMechRejoined;
+      return false;
+    };
     const mainPackAlive=isFirst
-      ? Object.entries(jgComp).some(([k,v])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='mask'&&(v||0)>0)
-      : jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='gargoyle'&&p.role!=='mechanicalwolf'&&p.role!=='mask'&&p.alive);
+      ? Object.entries(jgComp).some(([k,v])=>WOLF_ROLES.includes(k)&&!_excludedFromMainPack(k)&&(v||0)>0)
+      : jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&!_excludedFromMainPack(p.role)&&p.alive);
     const hasNightmareRole=jgNight===1?(jgComp.nightmare>0):jgHasRoleAny(['nightmare']);
     const hasMechWolfRole=jgNight===1?(jgComp.mechanicalwolf>0):jgHasRoleAny(['mechanicalwolf']);
     let compatNote='';
@@ -508,17 +556,25 @@ function jgRenderStep(step){
     const wolfKillSectionHtml='<label>今晚獵殺的對象</label>'
       +'<div id="jg-wolf-selfcut-notice">'+jgWolfWakeSelfCutNoticeHtml()+'</div>'
       +'<div id="jg-wolf-rec-wrap">'+jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgWolfWakeSelfCutInfo().nums)+'</div>';
+    // 大野狼+小女孩板：第二夜起，狼隊選完殺人對象後，多一次指認小女孩的機會（一局限一次
+    // 「這一晚」用，指認成功小女孩代替死亡，失敗則無事發生、原本刀口照常結算）。
+    const hasLittlegirlRole=jgNight===1?(jgComp.littlegirl>0):jgHasRoleAny(['littlegirl']);
+    const identifySectionHtml=(hasLittlegirlRole&&jgNight>=2)
+      ?'<div class="divider"></div><label>指認小女孩（留空=不指認；猜中：小女孩代替原本刀口死亡，守衛/女巫都無法阻止；猜錯：無事發生，原本刀口照常結算）</label>'
+        +jgNumSelectHtml('jg-wolf-identify-rec', jgRecord.wolfIdentifyGuessRaw||'')
+        +'<div class="info" style="font-size:12px;margin-top:4px;">「請指認小女孩，三秒後投票，三、二、一」</div>'
+      :'';
     jgShowPg(`
       <h2>狼人睜眼</h2>
-      <div class="speech">「<em>狼人請睜眼。</em>」</div>
+      <div class="speech">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請睜眼。</em>」</div>
       ${needId?wolfFieldsInner+'<div class="divider" style="margin:12px 0 8px;"></div>':''}
       ${mainPackAlive?`<div class="speech">「<em>請選擇今晚要殺的對象。</em>」</div>
       ${compatNote}
       <div id="jg-wolf-blocked-msg" style="${jgRecord.nightmareBlocksWolf?'':'display:none;'}"><div class="info-danger">⚠️ 夢魘恐懼到狼隊友，狼人今晚不得殺人</div></div>
       ${wbNote}
-      <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}">${wolfKillSectionHtml}</div>`
+      <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}">${wolfKillSectionHtml}${identifySectionHtml}</div>`
       :'<div class="info-warn">狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程</div>'}
-      <div class="speech" style="margin-top:12px;">「<em>狼人請閉眼。</em>」</div>
+      <div class="speech" style="margin-top:12px;">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
     `,'🐺 狼人');
   }
@@ -1227,6 +1283,19 @@ function jgRenderStep(step){
     // First night: seal remaining unassigned players as villagers
     if(jgNight===1){ jgSealVillagers(); jgRenderRoster(); }
 
+    // 大野狼+小女孩板：狼隊指認小女孩的判定要搶在最前面處理——如果指認成功，小女孩會「代替」
+    // 原本的狼刀死亡目標死亡，原本的目標完全沒事；所以要在計算 guardSaved／witchSaved 等一切
+    // 狼刀相關邏輯之前，先把 jgRecord.wolfKill 清空，讓後面所有判斷都以「這一刀原本的目標沒事」
+    // 為準。小女孩這個死法不可被守衛/女巫阻擋，另外用 _littlegirlSubstituteKill 標記，天亮結算
+    // 時獨立處理，不走一般狼刀的守衛/女巫判斷（見下方「特殊致死」那一段）。
+    const _lgP=jgPlayers.find(p=>p.role==='littlegirl');
+    const _identifySuccess=!!(_lgP&&_lgP.alive&&jgRecord.wolfIdentifyGuess&&_lgP.num.toString()===jgRecord.wolfIdentifyGuess.toString());
+    if(_identifySuccess){
+      jgRecord._littlegirlSubstituteKill=_lgP.num;
+      jgRecord.wolfKill=null;
+    }
+    jgRecord.wolfIdentifyGuess=null;
+
     const guardSaved=jgRecord.guardTarget&&jgRecord.wolfKill&&
       (jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
     const witchSaved=jgRecord.witchSave;
@@ -1240,6 +1309,11 @@ function jgRenderStep(step){
     if(jgMechWolfLearned==='guard'&&!jgMechWolfGuardUsed&&(mechWolfGuardSavesKill||mechWolfGuardSavesPoison)){
       jgMechWolfGuardUsed=true;
     }
+    // 雙機械狼板：學到守衛的機械狼，保護對象免疫「狼刀、巫毒、夜槍」等一切夜間傷害（包含
+    // 兩隻機械狼各自的刀口、大小機械狼自己學到的女巫毒）。可能兩隻都學到守衛、各自守不同
+    // 目標，所以用「有沒有任一隻守到這個號碼」來判斷，不是只看單一欄位。
+    const _mechwolf2GuardTargets=['bigmechwolf','smallmechwolf'].map(r=>jgRecord['mechwolf2Guard_'+r]).filter(Boolean);
+    const jgMechWolf2GuardProtects=(num)=>!!(num&&_mechwolf2GuardTargets.some(t=>t.toString()===num.toString()));
     let deads=[];
     // Wolf kill (blocked by guard or witch save?)
     // Evilknight is immune to wolf kill
@@ -1259,16 +1333,20 @@ function jgRenderStep(step){
     // 任一種守衛（真守衛或機械狼學到的守衛）與女巫同守同救（同一目標）：奶穿，該玩家實際上死亡。
     // 兩種守衛同守同一人（沒有女巫介入）只是雙重保護，不會奶穿。這個判定只在天亮結算時發生，
     // 女巫睜眼與獵人等其他夜間角色都不會提前知道——牌面上跟一般狼刀致死看起來一樣。
-    const guardedByAny=!!(guardSaved||mechWolfGuardSavesKill);
+    const guardedByAny=!!(guardSaved||mechWolfGuardSavesKill||jgMechWolf2GuardProtects(jgRecord.wolfKill));
+    // 雙機械狼板規則8：小機械狼回歸主狼群當晚，狼隊的主要狼刀「無敵」，可以直接破守衛的盾
+    // （這個旗標只在那一晚有效，見 jgAfterGargoyleStep 的觸發點）——注意只破守衛，不影響
+    // 女巫解藥，女巫該不該救人仍然照原本邏輯判斷。
+    const _wolfKillIsInvincible=!!jgRecord._mechwolf2InvincibleKnifeNight;
     const overheal=!!(jgRecord.wolfKill&&guardedByAny&&witchSaved&&!_wolfKillIsEK&&!_wolfKillIsDCImmune&&!_wolfKillIsDancerImmune);
     const wolfKillDies=!!(jgRecord.wolfKill&&!_wolfKillIsEK&&!_wolfKillIsDCImmune&&!_wolfKillIsDancerImmune&&
-      (overheal||(!guardedByAny&&!witchSaved)));
+      (overheal||(_wolfKillIsInvincible?!witchSaved:(!guardedByAny&&!witchSaved))));
     if(wolfKillDies) deads.push(jgRecord.wolfKill);
     // Witch poison (guard cannot block this, but 機械狼學到守衛 specially can)
     // 假面／舞者免疫女巫的毒（規則明寫兩者都免疫）
     const _poisonTargetP2=jgRecord.witchPoison?jgFind(jgRecord.witchPoison):null;
     const _poisonIsMaskOrDancer=!!(_poisonTargetP2&&(_poisonTargetP2.role==='mask'||_poisonTargetP2.role==='dancer'));
-    if(jgRecord.witchPoison&&!mechWolfGuardSavesPoison&&!_poisonIsDCImmune&&!_poisonIsDemonhunter&&!_poisonIsMaskOrDancer) deads.push(jgRecord.witchPoison);
+    if(jgRecord.witchPoison&&!mechWolfGuardSavesPoison&&!jgMechWolf2GuardProtects(jgRecord.witchPoison)&&!_poisonIsDCImmune&&!_poisonIsDemonhunter&&!_poisonIsMaskOrDancer) deads.push(jgRecord.witchPoison);
     // Lucky-one witch-gift poison (guard cannot block this)
     if(jgRecord.luckyonePoison) deads.push(jgRecord.luckyonePoison);
     // Black market trade failure — dealer dies
@@ -1279,6 +1357,33 @@ function jgRenderStep(step){
     if(jgRecord.mechWolfPoison) deads.push(jgRecord.mechWolfPoison);
     // 機械狼學到狼人：一次性額外一刀（不可被守衛/女巫解藥阻擋）
     if(jgRecord.mechWolfBonusKillTarget) deads.push(jgRecord.mechWolfBonusKillTarget);
+    // 雙機械狼板：先把這一晚兩隻機械狼各自的毒藥目標存成區域變數（在任何欄位被清空之前），
+    // 讓「守衛技能有沒有接觸到攻擊」跟「毒有沒有命中」都用同一份資料，不會因為誰先清空
+    // 欄位而讀到 null（這裡曾經因為順序寫反，導致守衛技能永遠判斷成「沒接觸到攻擊」）。
+    const _mw2PoisonBig=jgRecord['mechwolf2Poison_bigmechwolf'];
+    const _mw2PoisonSmall=jgRecord['mechwolf2Poison_smallmechwolf'];
+    // 機械守衛技能一旦這一晚成功「接觸」到任一起攻擊（不管最後是否因奶穿而死），即視為
+    // 用畢——用「保護對象這一晚有沒有被任何攻擊鎖定」判斷，不是只看最終死活。要搶在
+    // 任何攻擊目標欄位被清空之前判斷。
+    ['bigmechwolf','smallmechwolf'].forEach(r=>{
+      const st=jgMechWolf2State[r];
+      const gv=jgRecord['mechwolf2Guard_'+r];
+      if(gv&&!st.guardUsed){
+        const attacked=[jgRecord.wolfKill,jgRecord.witchPoison,
+          jgRecord['mechwolf2Kill_bigmechwolf_1'],jgRecord['mechwolf2Kill_bigmechwolf_2'],
+          jgRecord['mechwolf2Kill_smallmechwolf_1'],jgRecord['mechwolf2Kill_smallmechwolf_2'],
+          _mw2PoisonBig,_mw2PoisonSmall,
+          jgRecord.bigbadwolfBonusKillTarget].filter(Boolean).some(t=>t.toString()===gv.toString());
+        if(attacked) st.guardUsed=true;
+      }
+      jgRecord['mechwolf2Guard_'+r]=null;
+    });
+    // 大／小機械狼各自學到女巫時下的毒（可被雙機械狼板的機械守衛擋下，跟一般女巫毒不同——
+    // 這裡故意用 jgMechWolf2GuardProtects，不是不可擋）
+    if(_mw2PoisonBig&&!jgMechWolf2GuardProtects(_mw2PoisonBig)) deads.push(_mw2PoisonBig);
+    if(_mw2PoisonSmall&&!jgMechWolf2GuardProtects(_mw2PoisonSmall)) deads.push(_mw2PoisonSmall);
+    jgRecord['mechwolf2Poison_bigmechwolf']=null;
+    jgRecord['mechwolf2Poison_smallmechwolf']=null;
     deads=[...new Set(deads)];
 
     // Hunter night shot (only valid if hunter was actually killed by the wolf-kill path,
@@ -1463,6 +1568,47 @@ function jgRenderStep(step){
       }
       jgRecord.purewhitemaidenKillTarget=null;
     }
+    // 大野狼+小女孩板：小女孩被成功指認、代替原本刀口死亡——不可被守衛／女巫阻擋，
+    // 用法跟狼巫／純白之女的查殺一致（見上方 _identifySuccess 的判斷）。
+    if(jgRecord._littlegirlSubstituteKill){
+      const lgt=jgFind(jgRecord._littlegirlSubstituteKill);
+      if(lgt&&lgt.alive){ lgt.alive=false; if(!deads.includes(lgt.num))deads.push(lgt.num); }
+      jgRecord._littlegirlSubstituteKill=null;
+    }
+    // 大野狼+小女孩板：大野狼的額外一刀。這一刀是跟主要狼刀「分開」的獨立目標，只受守衛
+    // 保護影響（守衛當晚選的號碼剛好跟這一刀的目標一樣才會被擋下）——女巫這時候早就結束
+    // 回合了（大野狼排在女巫之後才睜眼），時序上根本沒有機會對這個目標用解藥，不用特別排除。
+    if(jgRecord.bigbadwolfBonusKillTarget){
+      const bbt=jgFind(jgRecord.bigbadwolfBonusKillTarget);
+      const guardedThis=!!(jgRecord.guardTarget&&jgRecord.guardTarget.toString()===jgRecord.bigbadwolfBonusKillTarget.toString());
+      const mechGuardedThis=!!(jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===jgRecord.bigbadwolfBonusKillTarget.toString());
+      if(bbt&&bbt.alive&&!guardedThis&&!mechGuardedThis&&!jgMechWolf2GuardProtects(jgRecord.bigbadwolfBonusKillTarget)){ bbt.alive=false; if(!deads.includes(bbt.num))deads.push(bbt.num); }
+      jgRecord.bigbadwolfBonusKillTarget=null;
+    }
+    // 雙機械狼板：大／小機械狼各自輪到帶刀時選的目標（可能是「一般帶刀」或「雙刀其中一刀」，
+    // 見 jgSaveMechWolf2）。這是跟主要狼刀「分開」的獨立目標，只受一般守衛/機械守衛保護
+    // 影響——女巫這時候早就結束回合了（機械狼排在女巫之後才睜眼），時序上根本碰不到這個
+    // 目標，不用特別排除。真的死掉的號碼另外記一份到 _mechwolf2KillVictims，因為稍後
+    // 判斷「這一晚被狼隊刀到的人能不能開槍」時，這些欄位已經被這裡清空、讀不到了。
+    jgRecord._mechwolf2KillVictims=[];
+    ['bigmechwolf','smallmechwolf'].forEach(roleId=>{
+      [1,2].forEach(idx=>{
+        const key='mechwolf2Kill_'+roleId+'_'+idx;
+        const target=jgRecord[key];
+        if(target){
+          const t=jgFind(target);
+          const guardedThis=!!(jgRecord.guardTarget&&jgRecord.guardTarget.toString()===target.toString());
+          const mechGuardedThis=!!(jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===target.toString());
+          if(t&&t.alive&&!guardedThis&&!mechGuardedThis&&!jgMechWolf2GuardProtects(target)){
+            t.alive=false;
+            if(!deads.includes(t.num))deads.push(t.num);
+            jgRecord._mechwolf2KillVictims.push(t.num);
+          }
+          jgRecord[key]=null;
+        }
+      });
+    });
+    jgRecord._mechwolf2InvincibleKnifeNight=false;
     // 假面舞會板：舞池陣營判定。3人若陣營相同，無事發生；若不同，人數較少的一方死亡——
     // 陣營若被假面「給予面具」改變過，以改變後的陣營為準。這個死亡是舞池機制本身的判定，
     // 不是狼刀，不受守衛／女巫影響（規則沒有特別說可以擋，先當作不可擋，若之後要改成
@@ -1550,20 +1696,16 @@ function jgRenderStep(step){
       return overhealHit||(!gs&&!mgs&&!ws);
     })();
 
-    const dawnHunterShoot=(()=>{
-      if(!jgRecord.wolfKill) return false;
-      const victim=jgFind(jgRecord.wolfKill);
-      if(!victim||!jgIsHunterCapable(victim)) return false;
-      if(jgHunterSkillSealed(victim)) return false; // 夢魘恐懼／攝夢人致死＝技能封印，即使同時也被狼刀擊殺也不能開槍
-      const gSaved=jgRecord.guardTarget&&(jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
-      const mgSaved=jgRecord.mechWolfGuardTarget&&(jgRecord.mechWolfGuardTarget.toString()===jgRecord.wolfKill.toString());
-      const wSaved=jgRecord.witchSave;
-      // 若因奶穿而死（守護+女巫解藥同時命中），死因仍成立，可以開槍
-      const overhealHit=(gSaved||mgSaved)&&wSaved;
-      return overhealHit||(!gSaved&&!mgSaved&&!wSaved);
-    })();
+    // 這一晚是否有人因為被狼隊刀死觸發開槍——不只看主要狼刀，雙機械狼板的機械狼自己
+    // 帶的刀殺到的人一樣算數（見 jgDawnShootTargetNum，跟 jgSaveDawnHunterShot 共用同一個
+    // 判斷，避免兩邊認定的開槍者兜不起來）。
+    const _dawnShootTargetNum=jgDawnShootTargetNum();
+    const dawnHunterShoot=!!(_dawnShootTargetNum&&(()=>{
+      const victim=jgFind(_dawnShootTargetNum);
+      return victim&&victim.role!=='wolfking'&&jgIsHunterCapable(victim)&&!jgHunterSkillSealed(victim);
+    })());
     const dawnShoot=dawnHunterShoot||dawnWolfKingShoot;
-    const dawnShootP=dawnShoot?jgFind(jgRecord.wolfKill):null;
+    const dawnShootP=dawnShoot?jgFind(dawnHunterShoot?_dawnShootTargetNum:jgRecord.wolfKill):null;
     const dawnShootName=dawnShootP&&dawnShootP.name&&dawnShootP.name!==dawnShootP.num+'號'?dawnShootP.num+'號 '+dawnShootP.name:(dawnShootP?dawnShootP.num+'號':'');
     // 被狼刀殺死、夜間開槍的這位若本身既是真獵人、又是黑市商人交易出來、拿到「獵人獵槍」的
     // 幸運兒，等於身上有兩把槍，兩個技能各自獨立開一槍
@@ -1843,7 +1985,7 @@ function jgRenderStep(step){
   }
   else if(step==='wolf-selfblow'){
     // 自刀自爆規則：狼人／黑狼王／血月使者／狼弟／狼巫可以自爆；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆
-    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')).map(p=>p.num);
+    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman'||p.role==='bigbadwolf')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
     const bmEligible=jgPlayers.find(p=>p.role==='bloodmoon'&&p.alive);
     jgShowPg(`
@@ -1863,7 +2005,7 @@ function jgRenderStep(step){
     // 不要求一定是本輪候選人（任何符合資格的狼都可以隨時自爆，不用等自己上警才行），
     // 也不排除「昨晚已經被下毒、天亮才會公布死亡」的號碼——公布之前這個人正常參與白天流程，
     // 本來就可以正常自爆，一樣算數。
-    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')).map(p=>p.num);
+    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman'||p.role==='bigbadwolf')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
     const sheriffBlowReason=(num)=>jgSelfBlowExcludeReason(num);
     jgShowPg(`
@@ -2008,4 +2150,76 @@ function jgRenderStep(step){
     // night-start 讀到的就已經是空的，血月封印會失效。
     jgGoStep('night-start');
   }
+}
+
+// ── 雙機械狼板：大／小機械狼共用的睜眼畫面（用 roleId 參數分辨是哪一隻，避免寫兩份重複的畫面） ──
+function jgRenderMechWolf2Step(roleId){
+  const label=roleId==='bigmechwolf'?'大機械狼':'小機械狼';
+  const selfP=jgPlayers.find(p=>p.role===roleId);
+  const st=jgMechWolf2State[roleId];
+  // 小機械狼已經回歸主狼群後（規則8：兩隻都學到狼人），這個獨立畫面不再需要選任何東西，
+  // 實際刀口改在共用的「狼人睜眼」畫面決定，這裡只維持喊話節奏。
+  if(roleId==='smallmechwolf'&&st.rejoinedPack){
+    jgShowPg(`
+      <h2>${label}睜眼</h2>
+      <div class="speech">「<em>${label}請睜眼。</em>」</div>
+      <div class="info" style="font-size:12px;">小機械狼已經回歸主狼群，跟其餘存活的狼人一起在「狼人睜眼」畫面決定刀口，這裡不用再做任何選擇。</div>
+      <div class="speech" style="margin-top:10px;">「<em>${label}請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveMechWolf2('${roleId}')">已紀錄，下一步 →</button>
+    `,'🤖 '+label);
+    return;
+  }
+  const idHtml=jgGodIdHtml(roleId,selfP);
+  const dead=selfP&&!selfP.alive;
+  const feared=jgFeared(selfP);
+  const eligible=jgNight>=2&&jgMechWolf2KillEligible(roleId);
+  const isFirstKillNight=eligible&&st.killTurnFirstNight===null;
+  const doubleKill=isFirstKillNight&&st.learned==='wolf';
+
+  let bodyHtml='';
+  if(!dead&&!feared){
+    // 學到「另一隻機械狼」不算真正學到技能，第二晚起可以繼續重新選人學習（不限只有一次
+    // 補選機會——只要一直學到另一隻機械狼，就一直可以繼續重選，直到學到別的身分為止）。
+    const canRepick=!st.learned||st.learned==='bigmechwolf'||st.learned==='smallmechwolf';
+    if(canRepick){
+      bodyHtml+='<label>今晚要學習的對象是？（留空=不學，下晚可以再選）</label>'
+        +jgNumSelectHtml('jg-'+roleId+'-learn','')
+        +'<div class="info" style="font-size:12px;margin-top:4px;">通靈師查驗這個號碼時會顯示他學到的具體身分。若學到的是「另一隻機械狼」，之後的夜晚還能重新選人學習。</div>';
+    } else if(jgNight>=2){
+      bodyHtml+='<div class="info" style="font-size:13px;padding:8px 12px;">📖 你學到的身分是：<strong>'+jgFullRoleName(st.learned)+'</strong>（法官不會告知是跟誰學的）</div>';
+      const canUseSkill=jgNight>st.learnedNight;
+      if(canUseSkill&&st.learned==='witch'&&!st.poisonUsed){
+        bodyHtml+='<div class="divider"></div><label>今晚要使用毒藥嗎？（整局限一次，留空=不用，之後晚上還能再選是否使用）</label>'
+          +jgNumSelectHtml('jg-'+roleId+'-poison','');
+      } else if(canUseSkill&&st.learned==='witch'&&st.poisonUsed){
+        bodyHtml+='<div class="info" style="font-size:12px;margin-top:6px;">毒藥已經用過了，本局不能再用。</div>';
+      }
+      if(canUseSkill&&st.learned==='guard'&&!st.guardUsed){
+        const guardExclude=st.lastGuardTarget?[parseInt(st.lastGuardTarget)]:[];
+        bodyHtml+='<div class="divider"></div><label>今晚要守護的對象是？（不能連續兩晚守同一人；成功擋下一次傷害後，這個技能就報銷了，留空=不守）</label>'
+          +jgNumSelectHtml('jg-'+roleId+'-guard','',null,null,guardExclude,'不能連續兩晚守護同一人');
+      } else if(canUseSkill&&st.learned==='guard'&&st.guardUsed){
+        bodyHtml+='<div class="info" style="font-size:12px;margin-top:6px;">守護技能已經用過（成功擋下一次傷害），不能再用。</div>';
+      }
+    }
+    if(eligible){
+      bodyHtml+='<div class="divider"></div>'
+        +'<div class="info-warn">🔪 輪到'+label+'帶刀'+(doubleKill?'（第一次輪到，且學到狼人，本回合可以帶兩刀！）':'')+'</div>'
+        +'<label>今晚要殺的對象'+(doubleKill?'（第一刀）':'')+'（留空=不殺）</label>'+jgNumSelectHtml('jg-'+roleId+'-kill1','');
+      if(doubleKill){
+        bodyHtml+='<label style="margin-top:8px;">第二刀（留空=不殺）</label>'+jgNumSelectHtml('jg-'+roleId+'-kill2','');
+      }
+    }
+  }
+
+  jgShowPg(`
+    <h2>${label}睜眼</h2>
+    <div class="speech">「<em>${label}請睜眼。</em>」</div>
+    ${idHtml}
+    ${dead?'<div class="info-warn">'+label+'已出局，仍需走完流程</div>':''}
+    <div id="jg-god-${roleId}-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+    ${bodyHtml}
+    <div class="speech" style="margin-top:10px;">「<em>${label}請閉眼。</em>」</div>
+    <button class="primary" onclick="jgSaveMechWolf2('${roleId}')">已紀錄，下一步 →</button>
+  `,'🤖 '+label);
 }
