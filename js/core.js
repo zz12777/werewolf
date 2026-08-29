@@ -530,9 +530,8 @@ function jgFormatNightLog(){
   }
   const mkP=jgPlayers.find(p=>p.role==='mask');
   if(mkP&&mkP.alive&&jgNight>=2){
-    if(jgRecord.maskKillTarget) lines.push('假面刀 '+jgRecord.maskKillTarget);
-    lines.push('假面查 '+(jgRecord.maskCheckTarget||'x'));
-    lines.push('假面賜 '+(jgRecord.maskGrantTarget||'x'));
+    if(jgRecord.maskKillTarget) lines.push('假面刀'+jgRecord.maskKillTarget);
+    lines.push('假面查'+(jgRecord.maskCheckTarget||'x')+'給'+(jgRecord.maskGrantTarget||'x'));
   }
   return lines;
 }
@@ -547,7 +546,7 @@ let jgLastWolfBeautyCharm=null;
 let jgLastNightmareTarget=null;
 // 假面舞會板專用狀態：
 // jgDancerEverDanced＝整局曾經進過舞池的玩家號碼集合（每位玩家整局只能共舞一次，跨夜持續累積）
-// jgLastMaskCheckTarget／jgLastMaskGrantTarget＝假面上一晚查驗／賜予面具的目標（各自獨立，
+// jgLastMaskCheckTarget／jgLastMaskGrantTarget＝假面上一晚查驗／給予面具的目標（各自獨立，
 // 不能連續兩晚指定同一人），只在「假面」這個角色的板子會用到
 let jgDancerEverDanced=new Set();
 let jgLastMaskCheckTarget=null;
@@ -1316,6 +1315,7 @@ function jgRenderRoster(){
       bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
+      <button type="button" class="rp-toggle-btn" title="手動修改死亡狀態（安全網，避免忘記勾選/漏改）" onclick="jgManualToggleAlive(${p.num})">⇄</button>
       <div class="rp-num">${p.num}${jgSheriff===p.num?'<span title="警長" style="margin-left:2px;">🎖️</span>':''}</div>
       <div class="rp-name">${p.name===`${p.num}號`?'—':p.name}</div>
       ${bodyHtml}
@@ -1323,6 +1323,18 @@ function jgRenderRoster(){
     </div>`;
   }).join('');
   jgRenderVoteHistory();
+}
+// 玩家狀態卡右上角的小按鈕：手動翻轉這位玩家的生存狀態，當作最後防線用——例如法官忘記在
+// 遺言頁面勾選傻瓜翻牌、或任何其他需要事後手動修正死亡狀態的情況，都可以直接在這裡點一下
+// 修正，不用整個流程重跑。純粹翻轉 alive 布林值，不會連動觸發任何死亡技能或連鎖效果，
+// 所以只適合拿來做「狀態顯示」層級的修正，不能取代正常的死亡結算流程。
+function jgManualToggleAlive(num){
+  const p=jgByNum(num);
+  if(!p) return;
+  const nm=p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p.num+'號';
+  if(!confirm(nm+' 目前狀態：'+(p.alive?'存活':'死亡')+'，確定要手動切換成「'+(p.alive?'死亡':'存活')+'」嗎？（這只是修正畫面顯示，不會觸發任何死亡技能或連鎖效果）')) return;
+  p.alive=!p.alive;
+  jgRenderRoster();
 }
 
 // ── 遊戲進行中即時投票紀錄：整理警長票型（含 PK）跟每天白天投票（含 PK），

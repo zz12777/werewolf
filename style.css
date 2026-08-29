@@ -197,7 +197,9 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .roster-panel{background:var(--bg2);border-top:1px solid var(--border);padding:10px 16px 14px;width:100%;}
 .roster-title{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
 .roster-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px;}
-.rp{border-radius:var(--r-sm);padding:7px 5px;text-align:center;border:1px solid var(--border);background:var(--bg);transition:opacity 0.2s;}
+.rp{border-radius:var(--r-sm);padding:7px 5px;text-align:center;border:1px solid var(--border);background:var(--bg);transition:opacity 0.2s;position:relative;}
+.rp-toggle-btn{position:absolute;top:2px;right:2px;width:20px;height:20px;padding:0;margin:0;border-radius:50%;font-size:11px;line-height:1;background:var(--bg3);border:1px solid var(--border);color:var(--text3);opacity:0.55;}
+.rp-toggle-btn:hover{opacity:1;}
 .rp.rp-dead{opacity:0.4;background:var(--bg2);}
 .rp .rp-num{font-size:16px;font-weight:800;color:var(--text);}
 .rp.rp-dead .rp-num{text-decoration:line-through;color:var(--text3);}
@@ -227,8 +229,8 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rp-blackmarket .rp-role{background:rgba(122,74,26,0.12);color:#5e3810;}
 /* 純白之女：維持白色（跟她名字呼應），用淺灰邊框跟背景色區塊區分開來，不跟其他神職搶顏色 */
 .rp-purewhitemaiden .rp-role{background:#ffffff;color:#3a3a3a;border:1px solid rgba(0,0,0,0.14);}
-/* 舞者：假面舞會板專屬，給一個其他角色沒用過的暖橘色 */
-.rp-dancer .rp-role{background:rgba(214,110,26,0.12);color:#a3540e;}
+/* 舞者：假面舞會板專屬，用金黃色——跟狼隊的紅色/假面舞會裡的暖橘色都拉開，不會被誤認成狼隊 */
+.rp-dancer .rp-role{background:rgba(191,144,0,0.14);color:#8a6800;}
 .rp-unknown .rp-role{background:var(--bg3);color:var(--text3);}
 .rp-tag-lucky{display:inline-block;margin-left:3px;font-size:8px;font-weight:800;padding:0 3px;border-radius:5px;background:rgba(154,124,40,0.18);color:var(--gold);vertical-align:1px;}
 #jg-p-main{display:none;flex-direction:column;min-height:calc(100vh - 52px);padding:0;}

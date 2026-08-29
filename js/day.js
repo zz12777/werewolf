@@ -7,6 +7,31 @@ function jgPushDayLog(line){
   if(!jgDayLog[jgNight]) jgDayLog[jgNight]=[];
   jgDayLog[jgNight].push(line);
 }
+// 遺言頁面的「已翻牌是傻瓜」勾選框——法官照桌上實際情況勾選，不自動假設。
+// 追刀規則：翻牌代表「這次放逐免死」，人要復原回存活狀態，之後得靠夜晚手段（狼刀等）
+// 另外淘汰才算數。不追刀規則：翻牌只是留在場上發言的敘事許可，遊戲判定上維持已淘汰
+// （不用復原存活），屠神／屠民不用再補刀。取消勾選則完全復原成一般死亡（沒有翻牌）。
+function jgToggleFoolReveal(checked){
+  const num=jgRecord._voteOutNum;
+  const p=num?jgFind(num):null;
+  if(!p||p.role!=='fool') return;
+  if(checked){
+    p.foolRevealed=true;
+    if(jgFoolChaseMode==='chase'){
+      p.alive=true;
+      jgPushDayLog(num+'號翻牌是傻瓜！免於此次放逐，之後只能發言、不能再投票，需另外淘汰才算數');
+    } else {
+      jgPushDayLog(num+'號翻牌是傻瓜！可留在場上發言，但視同已淘汰、不能再投票');
+    }
+  } else {
+    p.foolRevealed=false;
+    if(jgFoolChaseMode==='chase') p.alive=false;
+  }
+  jgRenderRoster();
+  const cw=jgCheckWin();
+  if(cw){ jgShowWin(cw); return; }
+  jgRenderStep(jgCurrentStep);
+}
 // 白天「票X」那一行事後被開槍帶人補上帶走的對象（黑狼王／獵人被票出局後開槍），
 // 跟夜晚的「刀」那行道理一樣，只是白天是接在對應的票數列後面。
 function jgAmendDayVoteLine(shooterNum, abbr, val){
@@ -498,7 +523,10 @@ let jgAbstainVoters={}; // voter num -> true（本輪棄票，不投給任何人
 
 // 平票 PK 期間，只有平票的候選人可以被投票；其餘所有活著的玩家才有投票權。
 function jgVoteTargets(){
-  return jgVotePkRound ? jgVotePkCandidates.slice().sort((a,b)=>a-b) : jgAlive().map(p=>p.num).sort((a,b)=>a-b);
+  // 傻瓜翻牌免於淘汰後，之後整局都不能再被投票放逐（只能靠夜晚的手段淘汰）——
+  // 不管一般投票還是 PK 投票，他的號碼都不會再出現在可投的目標清單裡。
+  const base=jgVotePkRound ? jgVotePkCandidates.slice() : jgAlive().map(p=>p.num);
+  return base.filter(n=>{ const p=jgFind(n); return !(p&&p.foolRevealed); }).sort((a,b)=>a-b);
 }
 function jgVoteVoters(){
   // 傻瓜翻牌免於淘汰後，之後整局都只能發言、不能再參與投票（不管是一般投票還是 PK 投票）。
@@ -666,19 +694,9 @@ function jgSaveVoteInner(){
   const val=String(top[0]);
   jgVotePkRound=false; jgVotePkCandidates=[];
   const found=jgFind(val);
-  if(found&&found.role==='fool'&&!found.foolRevealed&&jgFoolChaseMode!=='nochase'){
-    // 傻瓜被票出局：翻牌免於淘汰（整局只能發生這一次），之後只能發言、不能再投票
-    // （見 jgVoteVoters 已經把 foolRevealed 的人排除在投票資格外）。傻瓜不會真的死亡，
-    // 不呼叫 jgApplyDeath、不觸發任何連鎖（狼美人殉情／情侶殉情等都不適用）。
-    found.foolRevealed=true;
-    jgDayLog[jgNight]=(jgDayLog[jgNight]||[]).concat([found.num+'號翻牌是傻瓜！免於淘汰，之後只能發言、不能再投票']);
-    alert('🃏 '+found.num+'號翻牌是傻瓜！免於淘汰，但之後整局只能發言、不能再參與投票。');
-    jgRecord._voteOutNum=found.num;
-    jgRecord._voteOutFoolReveal=true;
-    jgRenderRoster();
-    jgGoStep('vote-last-words');
-    return;
-  }
+  // 傻瓜被投出局：不再自動假設他一定會翻牌（真實桌上翻不翻牌是玩家自己的選擇，法官不該替他
+  // 決定）——預設跟一般玩家一樣直接死亡，遺言頁面會有一個「已翻牌」的勾選框，法官照桌上實際
+  // 情況勾選即可（見 jgToggleFoolReveal，會依「要不要追刀」規則決定勾選後死亡狀態怎麼變）。
   if(found){
     const eliminatedRole=found.role; // capture BEFORE any dual-identity card-swap
     const trulyDied=jgApplyDeath(found);

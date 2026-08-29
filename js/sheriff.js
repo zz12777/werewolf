@@ -216,14 +216,15 @@ function jgSaveSheriffSelfDestruct(){
   const val=(document.getElementById('jg-sheriff-blow-rec')||{}).value?.trim()||'';
   if(!val){ alert('⚠️ 請選擇自爆的玩家號碼！'); return; }
   const p=jgFind(val);
-  if(!p||!p.alive||!jgSheriffCandidates.includes(p.num)||!(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')){
-    alert('⚠️ 這個號碼目前不是仍在競選中、存活的狼人／黑狼王／白狼王／血月使者／狼弟／狼巫，不能自爆！');
+  // 自爆資格只看「是不是還活著、是不是自爆合法的狼隊角色」，不要求一定要是目前的警長候選人——
+  // 任何一隻符合資格的狼，不管有沒有參選警長，都可以在警長競選期間（不管誰正在發言）隨時自爆。
+  if(!p||!p.alive||!(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')){
+    alert('⚠️ 這個號碼目前不是存活的狼人／黑狼王／白狼王／血月使者／狼弟／狼巫，不能自爆！');
     return;
   }
-  if(jgPendingNightDeadNums().includes(p.num)){
-    alert('⚠️ '+p.num+'號昨晚已經死亡（等一下天亮就會公布），不能自爆！');
-    return;
-  }
+  // 注意：這裡故意不擋「昨晚已經被下毒、等一下天亮才會公布死亡」的號碼——這種玩家在天亮公布之前，
+  // 場面上仍然算是正常存活、正常參與白天流程的玩家，本來就可以正常自爆；自爆會直接、立刻讓他
+  // 出局並成功吞掉警徽進入黑夜，這一爆算數，不會因為他其實已經被毒到就變成無效。
   if(p.role==='whitewolf'){
     // 白狼王自爆可以帶人：先進到帶人選號畫面，選完（jgSaveSheriffSelfDestructWhiteWolfBring）
     // 才真正套用死亡、繼續走下面 jgFinishSheriffSelfDestruct 的吞警徽既有流程。

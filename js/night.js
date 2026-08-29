@@ -1054,6 +1054,15 @@ function jgSaveSubWolf(stepId){
 }
 
 // ── 假面舞會板：舞者／假面 ──
+// 點按舞池候選人號碼：多或少都不行，正好3人才能送出——已滿3人時，再點沒被選過的號碼不會加進去
+// （要先取消一個才能換人），點已選的號碼則直接取消勾選。
+function jgToggleDancerPool(n){
+  const picked=jgRecord.dancerPoolPick||(jgRecord.dancerPoolPick=[]);
+  const i=picked.indexOf(n);
+  if(i>=0){ picked.splice(i,1); }
+  else { if(picked.length>=3) return; picked.push(n); }
+  jgRenderStep(jgCurrentStep);
+}
 function jgSaveDancer(){
   if(!jgSaveGodId('dancer')) return;
   const dnP=jgPlayers.find(p=>p.role==='dancer');
@@ -1062,20 +1071,18 @@ function jgSaveDancer(){
   if(jgNight>=2 && dnP && dnP.alive){
     const eligible=jgPlayers.filter(p=>p.alive&&!jgDancerEverDanced.has(p.num)).map(p=>p.num);
     if(eligible.length>=3){
-      const v1=parseInt((document.getElementById('jg-dancer-p1')||{}).value||'0');
-      const v2=parseInt((document.getElementById('jg-dancer-p2')||{}).value||'0');
-      const v3=parseInt((document.getElementById('jg-dancer-p3')||{}).value||'0');
-      if(!v1||!v2||!v3){ alert('⚠️ 請選滿3位玩家才能繼續！'); return; }
-      const set=new Set([v1,v2,v3]);
-      if(set.size!==3){ alert('⚠️ 3位玩家不能重複選同一人！'); return; }
+      const picked=jgRecord.dancerPoolPick||[];
+      if(picked.length!==3){ alert('⚠️ 請點選滿3位玩家才能繼續！'); return; }
+      const set=new Set(picked);
       for(const v of set){
         if(!eligible.includes(v)){ alert('⚠️ '+v+'號 不符合共舞資格（已死亡或已經共舞過），請重新選擇！'); return; }
       }
-      jgRecord.dancerPool=[v1,v2,v3];
+      jgRecord.dancerPool=[...set];
       jgRecord.dancerSelfIn=set.has(dnP.num);
       set.forEach(n=>jgDancerEverDanced.add(n));
     }
   }
+  jgRecord.dancerPoolPick=[];
   jgGoStep(jgAfterDancerStep());
 }
 // 即時顯示「這個號碼今晚在不在舞池中」——假面睜眼時舞者已經選完池了，可以直接查
@@ -1085,7 +1092,7 @@ function jgMaskCheckLive(){
   if(!box) return;
   if(!val){box.innerHTML='';return;}
   const inPool=!!(jgRecord.dancerPool&&jgRecord.dancerPool.map(String).includes(val.toString()));
-  box.innerHTML='<div class="'+(inPool?'info-success':'info')+'" style="font-size:14px;padding:8px 12px;margin-top:4px;">'+val+'號 今晚'+(inPool?'在':'不在')+'舞池中</div>';
+  box.innerHTML='<div class="'+(inPool?'info-success':'info')+'" style="font-size:14px;padding:8px 12px;margin-top:4px;">'+val+'號 '+(inPool?'👍 比讚——在舞池中':'👎 比倒讚——不在舞池中')+'</div>';
 }
 function jgSaveMask(){
   if(!jgSaveGodId('mask')) return;
@@ -1108,7 +1115,7 @@ function jgSaveMask(){
     // 2) 查驗是否在舞池：純資訊性，不能連續兩晚查同一人
     const cv=(document.getElementById('jg-mask-check')||{}).value?.trim()||'';
     if(cv){ jgRecord.maskCheckTarget=cv; jgLastMaskCheckTarget=cv; }
-    // 3) 賜予面具：改變該玩家「今晚」在舞池陣營判定中的陣營，不能連續兩晚賜同一人
+    // 3) 給予面具：改變該玩家「今晚」在舞池陣營判定中的陣營，不能連續兩晚給同一人
     const gv=(document.getElementById('jg-mask-grant')||{}).value?.trim()||'';
     if(gv){ jgRecord.maskGrantTarget=gv; jgLastMaskGrantTarget=gv; }
   }
@@ -1432,8 +1439,10 @@ function jgSaveWolf(){
       i0++;
     }
     if(!jgRequireFirstId('jg-gargoyle-who-wolf','石像鬼')) return;
-    // Clear only the wolf-team roles assigned via this step (gargoyle/mechanicalwolf/nightmare/wolfbrother are identified in their own separate steps)
-    WOLF_ROLES.filter(r=>r!=='gargoyle'&&r!=='mechanicalwolf'&&r!=='nightmare'&&r!=='wolfbrother_e'&&r!=='wolfbrother_y').forEach(r=>jgPlayers.forEach(p=>{ if(p.role===r) p.role=null; }));
+    // Clear only the wolf-team roles assigned via this step (gargoyle/mechanicalwolf/nightmare/wolfbrother/假面
+    // 都是在自己獨立的步驟裡記錄身分，不會出現在這個畫面的欄位裡，清除時要排除，不然假面剛在自己
+    // 畫面記錄好的身分，會被這裡清空、卻沒有對應欄位能重新指定回去，導致假面的身分整個消失）
+    WOLF_ROLES.filter(r=>r!=='gargoyle'&&r!=='mechanicalwolf'&&r!=='nightmare'&&r!=='wolfbrother_e'&&r!=='wolfbrother_y'&&r!=='mask').forEach(r=>jgPlayers.forEach(p=>{ if(p.role===r) p.role=null; }));
     // Iterate through all wolf-type inputs (they have data-role set in the HTML)
     let i=0;
     while(true){

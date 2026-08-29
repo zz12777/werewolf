@@ -201,7 +201,12 @@ function jgRenderStep(step){
     const dead=dnP&&!dnP.alive;
     const eligibleNums=jgPlayers.filter(p=>p.alive&&!jgDancerEverDanced.has(p.num)).map(p=>p.num);
     const notEnough=eligibleNums.length<3;
-    const excludeForPicker=jgPlayers.filter(p=>!eligibleNums.includes(p.num)).map(p=>p.num);
+    const picked=jgRecord.dancerPoolPick||[];
+    const gridHtml=jgPlayers.filter(p=>eligibleNums.includes(p.num)).map(p=>{
+      const sel=picked.includes(p.num);
+      return '<button type="button" onclick="jgToggleDancerPool('+p.num+')" style="width:44px;height:44px;border-radius:50%;padding:0;font-size:14px;font-weight:700;'
+        +(sel?'background:var(--accent);color:#fff;border-color:transparent;':'')+'">'+p.num+'</button>';
+    }).join('');
     jgShowPg(`
       <h2>舞者睜眼</h2>
       <div class="speech">「<em>舞者請睜眼${jgNight<2?'':'，請選擇3名玩家共舞'}。</em>」</div>
@@ -209,12 +214,8 @@ function jgRenderStep(step){
       ${dead?'<div class="info-warn">舞者已出局，仍需走完流程</div>':''}
       ${(dead||jgNight<2)?'':(notEnough
         ?'<div class="info">今晚符合資格（存活且沒共舞過）的玩家不到3人，本回合自動跳過共舞。</div>'
-        :`<label>選擇3名玩家共舞（可以選自己；每位玩家整局只能共舞一次，灰色號碼為已跳過共舞或死亡）</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${jgNumSelectHtml('jg-dancer-p1','',null,null,excludeForPicker,'不符合共舞資格，不可選取')}
-            ${jgNumSelectHtml('jg-dancer-p2','',null,null,excludeForPicker,'不符合共舞資格，不可選取')}
-            ${jgNumSelectHtml('jg-dancer-p3','',null,null,excludeForPicker,'不符合共舞資格，不可選取')}
-          </div>
+        :`<label>點選3名玩家共舞（可以選自己；每位玩家整局只能共舞一次，灰色號碼為已跳過共舞或死亡；目前已選 ${picked.length}/3）</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">${gridHtml}</div>
           <div class="info" style="font-size:12px;margin-top:4px;">這3人若陣營相同，無事發生；若不同，人數較少的一方死亡。若選自己進入舞池，當晚舞池中所有人都免疫狼刀。</div>`)}
       <div class="speech" style="margin-top:10px;">「<em>舞者請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveDancer()">已紀錄，下一步 →</button>
@@ -235,16 +236,19 @@ function jgRenderStep(step){
       ${idHtml}
       ${dead?'<div class="info-warn">假面已出局，仍需走完流程</div>':''}
       ${(dead||jgNight<2)?'':`
-        ${allWolvesDead?`<div class="info-warn" style="margin-bottom:8px;">🔪 其餘正牌狼人已全滅，假面帶刀狀態：比讚，可以殺人</div>
-          <label>今晚要殺的對象（留空=不殺）</label>${jgNumSelectHtml('jg-mask-kill','')}
-          <div class="divider"></div>`:'<div class="info" style="font-size:12px;">（正牌狼人尚未全滅，假面帶刀狀態：比倒讚，暫時不能殺人）</div><div class="divider"></div>'}
-        <label>查驗一名玩家今晚是否在舞池中（留空=不查；灰色=昨晚查過，不能連續兩晚查同一人）</label>
+        <div class="divider"></div>
+        <label style="font-weight:700;">① 今晚的帶刀手勢是？</label>
+        ${allWolvesDead?`<div class="info-warn" style="margin:6px 0 8px;">🔪 比讚——其餘正牌狼人已全滅，假面可以殺人</div>
+          <label>今晚要殺的對象（留空=不殺）</label>${jgNumSelectHtml('jg-mask-kill','')}`
+          :'<div class="info" style="font-size:12px;margin:6px 0;">👎 比倒讚——正牌狼人尚未全滅，暫時不能殺人</div>'}
+        <div class="divider"></div>
+        <label style="font-weight:700;">② 今晚要查驗是否在舞池的號碼是？</label>
         ${jgNumSelectHtml('jg-mask-check','','jgMaskCheckLive',null,checkExclude,'不能連續兩晚查驗同一人')}
         <div id="jg-mask-check-result"></div>
         <div class="divider"></div>
-        <label>賜予面具的對象（留空=不賜；灰色=昨晚賜過，不能連續兩晚賜同一人）</label>
-        ${jgNumSelectHtml('jg-mask-grant','',null,null,grantExclude,'不能連續兩晚賜予面具同一人')}
-        <div class="info" style="font-size:12px;margin-top:4px;">被賜予面具的玩家，「今晚」在舞池陣營判定中的陣營會被改變，用來干擾舞者共舞的死亡結果。</div>
+        <label style="font-weight:700;">③ 要給予面具的對象是？</label>
+        ${jgNumSelectHtml('jg-mask-grant','',null,null,grantExclude,'不能連續兩晚給予面具同一人')}
+        <div class="info" style="font-size:12px;margin-top:4px;">被給予面具的玩家，「今晚」在舞池陣營判定中的陣營會被改變，用來干擾舞者共舞的死亡結果。（留空=不給；灰色=昨晚給過，不能連續兩晚給同一人）</div>
       `}
       <div class="speech" style="margin-top:10px;">「<em>假面請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveMask()">已紀錄，下一步 →</button>
@@ -435,8 +439,12 @@ function jgRenderStep(step){
     let wolfFieldsInner='';
     let allWolfIdsAssigned=true;
     if(isFirst){
-      // Count wolf-team players (all wolf roles except gargoyle/mechanicalwolf/nightmare/wolfbrother who wake separately)
-      const wolfRoles=Object.entries(jgComp).filter(([k])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='nightmare'&&k!=='wolfbrother_e'&&k!=='wolfbrother_y');
+      // Count wolf-team players (all wolf roles except gargoyle/mechanicalwolf/nightmare/wolfbrother/假面 who wake separately)
+      const wolfRoles=Object.entries(jgComp).filter(([k])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='nightmare'&&k!=='wolfbrother_e'&&k!=='wolfbrother_y'&&k!=='mask');
+      // 假面「不與狼隊見面」，身分已經在他自己的 mask-wake 畫面記錄過了，這裡不能再讓他的號碼
+      // 出現在可選清單裡（不然法官可能誤選，等於洩露/搞混假面身分）。
+      const maskP=jgPlayers.find(p=>p.role==='mask');
+      const excludeMaskNum=maskP?[maskP.num]:[];
       let wiIdx=0;
       wolfRoles.forEach(([roleId,cnt])=>{
         const RNAME_L={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者',wolfshaman:'狼巫'};
@@ -446,13 +454,13 @@ function jgRenderStep(step){
           const kw=jgPlayers.filter(p=>p.role===roleId)[i];
           wolfFieldsInner+='<div style="margin-bottom:8px;">'
             +'<label style="margin-top:0;"><strong>'+(RNAME_L[roleId]||'狼人')+(cnt>1?' '+(i+1):'')+'</strong>號碼</label>'
-            +jgNumSelectHtml('jg-wolf-who-'+wiIdx, kw?kw.num:'', 'jgWolfIdOnChange', 'data-role="'+roleId+'"')
+            +jgNumSelectHtml('jg-wolf-who-'+wiIdx, kw?kw.num:'', 'jgWolfIdOnChange', 'data-role="'+roleId+'"', excludeMaskNum, '假面不與狼隊見面，不可選取')
             +'</div>';
           wiIdx++;
         }
       });
       // 石像鬼「不與狼隊見面」，身分已經在 mech-assign（或自己獨立的 gargoyle-wake）記錄，
-      // 不再跟其餘狼人擠在同一個畫面裡記名字，也不會跟狼人一起睜眼。
+      // 不再跟其餘狼人擠在同一個畫面裡記名字，也不會跟狼人一起睜眼。假面同理。
     }
     const needId=isFirst&&!jgMechAssignDone&&!allWolfIdsAssigned;
     const killVal=jgRecord.wolfKill||'';
@@ -1456,7 +1464,7 @@ function jgRenderStep(step){
       jgRecord.purewhitemaidenKillTarget=null;
     }
     // 假面舞會板：舞池陣營判定。3人若陣營相同，無事發生；若不同，人數較少的一方死亡——
-    // 陣營若被假面「賜予面具」改變過，以改變後的陣營為準。這個死亡是舞池機制本身的判定，
+    // 陣營若被假面「給予面具」改變過，以改變後的陣營為準。這個死亡是舞池機制本身的判定，
     // 不是狼刀，不受守衛／女巫影響（規則沒有特別說可以擋，先當作不可擋，若之後要改成
     // 可被守衛/女巫擋下再回來調整這裡）。
     if(jgRecord.dancerPool&&jgRecord.dancerPool.length===3){
@@ -1464,7 +1472,7 @@ function jgRenderStep(step){
         const p=jgFind(n);
         if(!p) return null;
         // 假面在舞池裡的陣營一律算狼隊（跟他自己知不知道誰是隊友無關，陣營歸屬永遠是狼——
-        // 見 jgIsWolfPackMember），除非被假面自己賜予面具改變，才會在這次判定裡翻成好人。
+        // 見 jgIsWolfPackMember），除非被假面自己給予面具改變，才會在這次判定裡翻成好人。
         let camp=jgIsWolfPackMember(p)?'wolf':'good';
         if(jgRecord.maskGrantTarget&&n.toString()===jgRecord.maskGrantTarget.toString()) camp=(camp==='wolf'?'good':'wolf');
         return {num:n, camp};
@@ -1851,23 +1859,18 @@ function jgRenderStep(step){
   }
   else if(step==='sheriff-selfdestruct-pick'){
     const isFirstBlow=jgBadgeMode==='double'&&!jgSheriffFirstBlowDone;
-    const pendingDead=jgPendingNightDeadNums();
-    // 自刀自爆規則：狼弟、狼巫可以自爆（含警上吞警徽），狼兄不行；其餘限制不變
-    const eligible=jgPlayers.filter(p=>p.alive&&!pendingDead.includes(p.num)&&jgSheriffCandidates.includes(p.num)&&(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')).map(p=>p.num);
+    // 自刀自爆規則：狼弟、狼巫可以自爆（含警上吞警徽），狼兄不行；其餘限制不變。
+    // 不要求一定是本輪候選人（任何符合資格的狼都可以隨時自爆，不用等自己上警才行），
+    // 也不排除「昨晚已經被下毒、天亮才會公布死亡」的號碼——公布之前這個人正常參與白天流程，
+    // 本來就可以正常自爆，一樣算數。
+    const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='whitewolf'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
-    const sheriffBlowReason=(num)=>{
-      const p=jgFind(num);
-      if(!p) return '不可選取';
-      const nm=p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p.num+'號';
-      if(pendingDead.includes(p.num)) return nm+'　昨晚已經死亡，不能自爆';
-      if(!jgSheriffCandidates.includes(p.num)) return nm+'　不是本輪候選人，不能自爆';
-      return jgSelfBlowExcludeReason(num);
-    };
+    const sheriffBlowReason=(num)=>jgSelfBlowExcludeReason(num);
     jgShowPg(`
       <h2>狼人自爆（吞警徽）</h2>
-      <div class="info" style="font-size:12px;">請選擇宣告自爆的玩家號碼（只有仍在競選中的候選人才能選）</div>
-      <label>自爆的玩家號碼（惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆，昨晚已經死亡的狼也不能選）</label>
-      ${jgNumSelectHtml('jg-sheriff-blow-rec', '', null, null, exclude, '這個角色不能自爆、不是候選人，或昨晚已經死亡，不可選取', sheriffBlowReason)}
+      <div class="info" style="font-size:12px;">請選擇宣告自爆的玩家號碼</div>
+      <label>自爆的玩家號碼（惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄、假面都不能自爆）</label>
+      ${jgNumSelectHtml('jg-sheriff-blow-rec', '', null, null, exclude, '這個角色不能自爆，不可選取', sheriffBlowReason)}
       <div class="info" style="font-size:12px;margin-top:6px;">${isFirstBlow?'雙爆吞警徽規則：這是第一次自爆，警徽暫不流失，競選會延到隔天繼續。':'本局將不再有警長，該玩家會被淘汰。'}</div>
       <button class="danger" onclick="jgSaveSheriffSelfDestruct()" style="margin-top:10px;">確認自爆 →</button>
     `,'💥 自爆吞警徽');
@@ -1981,13 +1984,18 @@ function jgRenderStep(step){
   else if(step==='vote-last-words'){
     const p=jgRecord._voteOutNum?jgByNum(jgRecord._voteOutNum):null;
     const name=p?(p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p.num+'號'):'被放逐玩家';
-    const isFoolReveal=!!jgRecord._voteOutFoolReveal;
+    const foolChecked=!!(p&&p.foolRevealed);
     jgShowPg(`
       <h2>遺言</h2>
       ${jgRecord._voteOutNum?jgSpeakTimerWidgetHtml([parseInt(jgRecord._voteOutNum)]):''}
       <div class="info" style="display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 14px;">
-        <span style="font-size:18px;">💬</span><span>${name} 發表遺言${isFoolReveal?'<span style="display:block;font-size:11px;color:var(--text2);margin-top:2px;">（翻牌為傻瓜，免於淘汰，可留在場上，但之後不能再投票）</span>':''}</span>
+        <span style="font-size:18px;">💬</span><span>${name} 發表遺言</span>
       </div>
+      ${p&&p.role==='fool'?`<label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border-radius:var(--r-sm);margin-bottom:10px;cursor:pointer;">
+        <input type="checkbox" ${foolChecked?'checked':''} onchange="jgToggleFoolReveal(this.checked)" style="width:18px;height:18px;">
+        <span>已翻牌是傻瓜，可留在場上發言（依桌上實際情況勾選；不勾＝正常死亡）</span>
+      </label>
+      ${foolChecked?`<div class="info-success" style="font-size:12px;margin:-4px 0 10px;">${jgFoolChaseMode==='chase'?'已翻牌，本次放逐免死，之後只能發言、不能再投票——狼隊必須另外在夜晚淘汰他，屠神才算數。':'已翻牌，可留在場上發言、不能再投票——但這局判定上仍視同已淘汰，屠神／屠民不用再另外補刀。'}</div>`:''}`:''}
       <button class="primary" onclick="jgGoStep('next-night')">遺言結束，天黑 →</button>
     `,'💬 遺言');
   }
