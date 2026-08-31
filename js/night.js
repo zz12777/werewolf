@@ -1099,12 +1099,14 @@ function jgSaveMechWolf2(roleId){
     return;
   }
   if(selfP&&selfP.alive){
-    const canRepick=!st.learned||st.learned==='bigmechwolf'||st.learned==='smallmechwolf';
+    // 重選只能從第二晚開始（跟畫面渲染那邊的判斷一致，見 jgRenderMechWolf2Step 的註解）。
+    const isLearnedOtherMech=st.learned==='bigmechwolf'||st.learned==='smallmechwolf';
+    const canRepick=!st.learned||(isLearnedOtherMech&&jgNight>st.learnedNight);
     if(canRepick){
       const lv=(document.getElementById('jg-'+roleId+'-learn')||{}).value?.trim()||'';
       if(lv){
         const t=jgFind(lv);
-        if(t){ st.learned=t.role||'villager'; st.learnedNight=jgNight; }
+        if(t){ st.learned=t.role||'villager'; st.learnedNight=jgNight; st.learnTargetNum=t.num; }
       }
     } else if(jgNight>st.learnedNight){
       // 已經學到明確身分、且過了學到的那一晚（技能才會生效）：處理女巫毒藥／守衛保護的
@@ -1154,6 +1156,34 @@ function jgSaveMechWolf2(roleId){
 }
 function jgMechWolf2NextStep(roleId){
   return roleId==='bigmechwolf'?jgAfterBigMechWolfStep():jgAfterSmallMechWolfStep();
+}
+// 雙機械狼板：學習對象查看即時結果 + 大字報，跟單一機械狼共用同一套做法（見 jgMechWolfLearnCheck）。
+// jgNumGridPick 會把「欄位id、選到的值」當參數傳進來，這裡直接從 id 判斷是大機還是小機，
+// 不用另外包兩個同名不同 roleId 的 wrapper 函式。
+// 雙機械狼板：把角色代碼轉成「查驗/大字報用」的顯示身分——目標剛好是另一隻機械狼時，
+// 一律顯示成通用「機械狼」，不指名是大是小。這裡不能直接呼叫 jgCheckDisplayRole，因為
+// 那個函式的語意是「這個角色被查驗時要顯示成什麼」，用在機械狼身上會變成「顯示牠自己
+// 學到的技能」，跟這裡要的「這個目標本身是不是機械狼」語意不同。
+function jgMechWolf2RawRoleDisplay(role){
+  return (role==='bigmechwolf'||role==='smallmechwolf')?'mechanicalwolf':(role||'villager');
+}
+// 直接吃玩家號碼顯示大字報（學習選人當下、還沒存檔完成前的即時查看用）
+function jgMechWolf2ShowBigCardRaw(num){
+  const t=jgFind(num);
+  if(!t){ jgShowBigCard('找不到玩家'); return; }
+  jgShowBigCard(t.num+'號', jgFullRoleName(jgMechWolf2RawRoleDisplay(t.role)));
+}
+function jgMechWolf2LearnCheck(id, val){
+  const roleId=id.includes('smallmechwolf')?'smallmechwolf':'bigmechwolf';
+  const box=document.getElementById('jg-'+roleId+'-learn-result');
+  if(!box) return;
+  if(!val){box.innerHTML='';return;}
+  const found=jgFind(val);
+  if(!found){box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
+  const label=jgFullRoleName(jgMechWolf2RawRoleDisplay(found.role));
+  const mwLabel=roleId==='bigmechwolf'?'大機械狼':'小機械狼';
+  box.innerHTML='<div class="info-success" style="font-size:16px;font-weight:800;text-align:center;padding:10px;">'+found.num+'號 → '+label+'</div>'
+    +'<button onclick="jgMechWolf2ShowBigCardRaw('+found.num+')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+mwLabel+'看</button>';
 }
 function jgSaveDancer(){
   if(!jgSaveGodId('dancer')) return;
@@ -1923,6 +1953,9 @@ function jgLuckyOneWakeIsLast(){
 //  jgNextGodStep 尾端，不再從這裡進場）
 // 狼巫從第二晚起緊接在狼刀決定之後獨自查驗（第一晚仍照第一晚專屬順序，排在整條神職鏈
 // 最後——見 GOD_CHAIN 最後一項），所以這裡只在「不是第一晚」時才插進來。
+function jgWolfshamanPending(){
+  return !jgIsFirstNight() && (jgHasRoleAny(['wolfshaman'])||jgThiefBuriedActiveTonight('wolfshaman'));
+}
 // 大野狼每晚都排在女巫之後（不管其他狼是不是全滅，都要走這個步驟維持節奏——只是「能不能
 // 真的多殺一人」要看場上四隻狼是否全部存活，這個判斷在畫面渲染跟 jgSaveBigBadWolf 裡各自
 // 處理，這裡只負責「板子上有沒有大野狼」）。

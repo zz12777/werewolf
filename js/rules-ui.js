@@ -81,7 +81,7 @@ const JG_BOARD_PRESETS = {
   wolfshaman_purewhitemaiden:{label:'狼巫+純白之女', fixed:{wolfshaman:1, purewhitemaiden:1}},
   masquerade_board:{label:'假面+舞者', fixed:{mask:1, dancer:1, seer:1, witch:1, fool:1}},
   bigbadwolf_littlegirl:{label:'大野狼+小女孩', fixed:{bigbadwolf:1, littlegirl:1, wolf:3}},
-  bigmechwolf_smallmechwolf:{label:'雙機械狼', fixed:{bigmechwolf:1, smallmechwolf:1}},
+  bigmechwolf_smallmechwolf:{label:'雙機械狼', fixed:{bigmechwolf:1, smallmechwolf:1, medium:1}},
 };
 
 // 選板子的下拉選單以前是寫死在 index.html 裡的 <option>，跟這裡的 JG_BOARD_PRESETS 是兩份
@@ -268,12 +268,14 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   // God roles
   // 通靈師會顯示比預言家更完整的查驗資訊（含機械狼學到的身份），純白之女則是「查殺」版的
   // 查驗神職——三者查驗的定位互相重疊，所以只要選了其中一個，另外兩個就不再顯示讓大家選，
-  // 避免同時出現在同一場。
+  // 避免同時出現在同一場。雙機械狼板同理：機械狼的學習機制需要搭配通靈師才能查出「學到的
+  // 身分」，只要板子上有大/小機械狼，預言家就不會出現（避免跟通靈師的查驗定位重疊）。
   const seerCnt=pickState.seer||0, mediumCnt=pickState.medium||0, pwCnt=pickState.purewhitemaiden||0;
+  const hasMechWolf2=(pickState.bigmechwolf||0)>0||(pickState.smallmechwolf||0)>0;
   html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職（點選加入，再點移除）</div>';
   html+='<div class="rpick-grid">';
   gods.forEach(id=>{
-    if(id==='seer'&&(mediumCnt>0||pwCnt>0)) return;
+    if(id==='seer'&&(mediumCnt>0||pwCnt>0||hasMechWolf2)) return;
     if(id==='medium'&&(seerCnt>0||pwCnt>0)) return;
     if(id==='purewhitemaiden'&&(seerCnt>0||mediumCnt>0)) return;
     const r=ALL_ROLES[id]; const cnt=pickState[id]||0;
@@ -287,6 +289,7 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   if(mediumCnt>0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">已選通靈師，預言家、純白之女不會重複出現</div>';
   if(seerCnt>0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">已選預言家，通靈師、純白之女不會重複出現</div>';
   if(pwCnt>0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">已選純白之女，預言家、通靈師不會重複出現</div>';
+  if(hasMechWolf2&&seerCnt===0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">板子上有大/小機械狼，預言家不會出現（機械狼的學習機制要搭配通靈師才能查出結果）</div>';
   el.innerHTML=html;
 }
 

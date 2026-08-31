@@ -192,7 +192,7 @@ let jgGameCount=1; // increments each new game this session, used in the export 
 let jgHasStartedBefore=false;
 const ROLE_ABBR={
   villager:'民', hybrid:'混血', cupid:'邱比特', thief:'盜賊', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
-  gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面', bigbadwolf:'大野狼', bigmechwolf:'大機狼', smallmechwolf:'小機狼',
+  gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面', bigbadwolf:'大野狼', bigmechwolf:'大機', smallmechwolf:'小機',
   mechanicalwolf:'機', seer:'預', witch:'巫', hunter:'獵', guard:'守', dreamcatcher:'攝夢', knight:'騎士', magician:'魔術',
   demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', littlegirl:'小女孩', sheriff:'警長', luckyone:'幸運'
 };
@@ -620,7 +620,7 @@ let jgMechWolfLearnedNight=null; // night number when learned; skill usable from
 // 不用等輪到自己），一旦是 true，小機械狼就不再用自己的獨立畫面出刀，改成參與共用的
 // 「狼人睜眼」畫面，直到遊戲結束。
 function jgMechWolf2NewState(){
-  return {learned:null, learnedNight:null, poisonUsed:false, guardUsed:false, lastGuardTarget:null, killTurnFirstNight:null, rejoinedPack:false};
+  return {learned:null, learnedNight:null, learnTargetNum:null, poisonUsed:false, guardUsed:false, lastGuardTarget:null, killTurnFirstNight:null, rejoinedPack:false};
 }
 let jgMechWolf2State={bigmechwolf:jgMechWolf2NewState(), smallmechwolf:jgMechWolf2NewState()};
 let jgWolfBrotherIdDone=false;  // 狼兄狼弟 night-1 mutual ID step completed
@@ -1643,16 +1643,17 @@ function jgConflictCheck(whoNum, roleId){
 }
 
 // After "確認身分" (everyone has viewed their card), decide where to go:
-// Mechanical-wolf / black-market / gargoyle+gravkeeper / 純白之女查驗真實身分板，這些板子
-// 都需要一開始就完整記錄每位玩家的身分，而不是讓法官在遊戲過程中一步步「發現」角色——
+// Mechanical-wolf / black-market / gargoyle+gravkeeper / 純白之女查驗真實身分板 / 雙機械狼板，
+// 這些板子都需要一開始就完整記錄每位玩家的身分，而不是讓法官在遊戲過程中一步步「發現」角色——
 // 石像鬼「不與狼隊見面」是這樣才能確保身分不會在跟狼人擠同一畫面時洩露；純白之女／狼巫
-// 則是因為查驗結果攸關真實身分判定與生死，法官必須有一份完全準確的底牌可以核對。
+// 則是因為查驗結果攸關真實身分判定與生死，法官必須有一份完全準確的底牌可以核對；大／小
+// 機械狼同樣不與狼隊見面，而且查驗（通靈師）跟法官告知學到的身分也都需要準確的底牌。
 function jgProceedToNight(){
   if(jgNight===1 && jgDualIdentityMode && !jgDualAssignDone){
     jgGoStep('dual-assign');
     return;
   }
-  if(jgNight===1 && (jgComp.mechanicalwolf>0||jgComp.gargoyle>0||jgComp.purewhitemaiden>0) && !jgMechAssignDone){
+  if(jgNight===1 && (jgComp.mechanicalwolf>0||jgComp.gargoyle>0||jgComp.purewhitemaiden>0||jgComp.bigmechwolf>0||jgComp.smallmechwolf>0) && !jgMechAssignDone){
     jgGoStep('mech-assign');
     return;
   }
@@ -1893,6 +1894,14 @@ function jgBigCardFor(val){
   const found=jgFind(val);
   if(!found){ jgShowBigCard('找不到玩家'); return; }
   jgShowBigCard(found.num+'號', jgFullRoleName(jgCheckDisplayRole(found.role||'villager')));
+}
+// 雙機械狼板專用：第二晚起法官要告知機械狼「跟誰學的、學到什麼」——直接沿用
+// jgMechWolf2ShowBigCardRaw（跟學習選人當下的即時大字報是同一套顯示邏輯，機械狼目標
+// 一律顯示成通用「機械狼」），只是這裡改成從已存檔的狀態讀目標號碼。
+function jgMechWolf2ShowLearnedBigCard(roleId){
+  const st=jgMechWolf2State[roleId];
+  if(!st.learnTargetNum){ jgShowBigCard('尚未學習'); return; }
+  jgMechWolf2ShowBigCardRaw(st.learnTargetNum);
 }
 
 // Live-check the mechanical wolf's learn target (also offers a big-card reveal for privacy)

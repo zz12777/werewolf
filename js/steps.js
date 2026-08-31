@@ -214,7 +214,7 @@ function jgRenderStep(step){
       ${dead?'<div class="info-warn">舞者已出局，仍需走完流程</div>':''}
       ${(dead||jgNight<2)?'':(notEnough
         ?'<div class="info">今晚符合資格（存活且沒共舞過）的玩家不到3人，本回合自動跳過共舞。</div>'
-        :`<label>點選3名玩家共舞（可以選自己；每位玩家整局只能共舞一次，灰色號碼為已跳過共舞或死亡；目前已選 ${picked.length}/3）</label>
+        :`<label>點選3名玩家共舞（可以選自己；每位玩家整局只能共舞一次）</label>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">${gridHtml}</div>
           <div class="info" style="font-size:12px;margin-top:4px;">這3人若陣營相同，無事發生；若不同，人數較少的一方死亡。若選自己進入舞池，當晚舞池中所有人都免疫狼刀。</div>`)}
       <div class="speech" style="margin-top:10px;">「<em>舞者請閉眼。</em>」</div>
@@ -1984,17 +1984,19 @@ function jgRenderStep(step){
     `,'🤍 白狼王');
   }
   else if(step==='wolf-selfblow'){
-    // 自刀自爆規則：狼人／黑狼王／血月使者／狼弟／狼巫可以自爆；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆
+    // 自刀自爆規則：狼人／黑狼王／血月使者／狼弟／狼巫可以自爆；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄、假面都不能自爆
     const eligible=jgPlayers.filter(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman'||p.role==='bigbadwolf')).map(p=>p.num);
     const exclude=jgPlayers.filter(p=>!eligible.includes(p.num)).map(p=>p.num);
     const bmEligible=jgPlayers.find(p=>p.role==='bloodmoon'&&p.alive);
     jgShowPg(`
       <h2>狼人自爆</h2>
       <div class="speech">「<em>請選擇宣告自爆的玩家號碼。</em>」</div>
-      <label>自爆的玩家號碼（只能選存活的狼人／黑狼王／血月使者／狼弟／狼巫；惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄都不能自爆）</label>
-      <div class="info" style="font-size:11px;margin-bottom:4px;">⏱️ 除了警長競選（吞警徽）以外，自爆須在該玩家「自己發言的階段」宣告，不能搶在別人發言時自爆</div>
+      <label>自爆的玩家號碼</label>
+      <div class="info" style="font-size:12px;margin-bottom:6px;">
+        <div>✅ 可以自爆：狼人／黑狼王／血月使者／狼弟／狼巫</div>
+        <div style="margin-top:2px;">🚫 不能自爆：惡靈騎士、石像鬼、狼美人、機械狼、夢魘、狼兄、假面</div>
+      </div>
       ${jgNumSelectHtml('jg-wolf-blow-rec', '', null, null, exclude, '這個角色不能自爆，不可選取', jgSelfBlowExcludeReason)}
-      <div class="info" style="font-size:12px;margin-top:6px;">一般狼人／黑狼王自爆：直接淘汰，不能開槍帶人，跳過投票，直接進入夜晚。</div>
       ${bmEligible?'<div class="info" style="font-size:12px;margin-top:4px;">⚠️ 選到'+bmEligible.num+'號血月使者會走血月專屬流程：封印當晚神職技能，只能在血月使者「自己發言的階段」宣告，不能搶在別人發言時自爆。</div>':''}
       <button class="danger" onclick="jgSaveWolfSelfBlow()" style="margin-top:10px;">確認自爆 →</button>
     `,'🐺 狼人自爆');
@@ -2178,15 +2180,29 @@ function jgRenderMechWolf2Step(roleId){
 
   let bodyHtml='';
   if(!dead&&!feared){
-    // 學到「另一隻機械狼」不算真正學到技能，第二晚起可以繼續重新選人學習（不限只有一次
-    // 補選機會——只要一直學到另一隻機械狼，就一直可以繼續重選，直到學到別的身分為止）。
-    const canRepick=!st.learned||st.learned==='bigmechwolf'||st.learned==='smallmechwolf';
-    if(canRepick){
-      bodyHtml+='<label>今晚要學習的對象是？（留空=不學，下晚可以再選）</label>'
-        +jgNumSelectHtml('jg-'+roleId+'-learn','')
-        +'<div class="info" style="font-size:12px;margin-top:4px;">通靈師查驗這個號碼時會顯示他學到的具體身分。若學到的是「另一隻機械狼」，之後的夜晚還能重新選人學習。</div>';
-    } else if(jgNight>=2){
-      bodyHtml+='<div class="info" style="font-size:13px;padding:8px 12px;">📖 你學到的身分是：<strong>'+jgFullRoleName(st.learned)+'</strong>（法官不會告知是跟誰學的）</div>';
+    // 學到「另一隻機械狼」不算真正學到技能：學到的當下（不管第幾晚）就已經用即時顯示＋
+    // 大字報告知過結果了（見下面 !st.learned 分支跟 jgMechWolf2LearnCheck），所以下一晚
+    // 不用再重複顯示一次「你學到的身分是」，直接讓他重新選人學習就好——選了新對象後，
+    // 一樣即時顯示＋大字報（同一套 jgMechWolf2LearnCheck）。這個「直接重選」要等到「學到
+    // 的那一晚」之後才會出現（用 jgNight>st.learnedNight 判斷），避免法官在同一晚按
+    // 「上一步」回到這個畫面時，誤判成已經可以重選。
+    const isLearnedOtherMech=st.learned==='bigmechwolf'||st.learned==='smallmechwolf';
+    const canRepickNow=isLearnedOtherMech&&jgNight>st.learnedNight;
+    if(!st.learned||canRepickNow){
+      const selfNums=selfP?[selfP.num]:[];
+      bodyHtml+='<label>'+(st.learned?'今晚要重新學習的對象是？':'今晚要學習的對象是？')+'（留空=不學，下晚可以再選，不能學自己）</label>'
+        +jgNumSelectHtml('jg-'+roleId+'-learn','','jgMechWolf2LearnCheck',null,selfNums,'不能學習自己')
+        +'<div id="jg-'+roleId+'-learn-result"></div>'
+        +(st.learned?'':'<div class="info" style="font-size:12px;margin-top:4px;">通靈師查驗這個號碼時會顯示他學到的具體身分。若學到的是「另一隻機械狼」，之後的夜晚還能重新選人學習。</div>');
+    } else if(!isLearnedOtherMech&&jgNight>=2){
+      // 學到真正的身分（不是另一台機械狼）：第二晚起法官要告知號碼與身分（大字報顯示），
+      // 並依學到的技能開放對應的夜間操作。
+      const learnTargetP=st.learnTargetNum?jgFind(st.learnTargetNum):null;
+      bodyHtml+='<div class="info" style="font-size:13px;padding:8px 12px;">📖 你學到的身分是：<strong>'+jgFullRoleName(st.learned)+'</strong>'
+        +(learnTargetP?'（'+learnTargetP.num+'號）':'')+'</div>';
+      if(learnTargetP){
+        bodyHtml+='<button onclick="jgMechWolf2ShowLearnedBigCard(\''+roleId+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+label+'看</button>';
+      }
       const canUseSkill=jgNight>st.learnedNight;
       if(canUseSkill&&st.learned==='witch'&&!st.poisonUsed){
         bodyHtml+='<div class="divider"></div><label>今晚要使用毒藥嗎？（整局限一次，留空=不用，之後晚上還能再選是否使用）</label>'
