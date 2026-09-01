@@ -80,13 +80,42 @@ function awTopTiers(dict, maxTiers){
 }
 
 function computeAwards(){
-  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={}, thirdPartyWins={};
+  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={}, thirdPartyWins={}, hanTiaoStar={};
 
   // 💘 邱比特傳說：人狼鏈成立、成為第三方陣營，且該局第三方獲勝——不需要解析 g.log，
   // 直接看送出紀錄時標記在 g.players[].third 上的旗標（見 pdSubmitGameRecord）即可。
   (GAMES||[]).forEach(g=>{
     if(!g.players||g.winner!=='third') return;
     g.players.forEach(pl=>{ if(pl.third) awAddCredit(thirdPartyWins, pl.name, g.id); });
+  });
+
+  // 🃏 悍跳之星：狼隊悍跳預言家，且該玩家後來真的當選警長——直接在整場文字紀錄裡找
+  // 「悍跳預言家號碼：X」跟「當選警長」相關的行，比對是不是同一個號碼（不看逐夜細節，
+  // 這兩件事在文字紀錄裡本來就各自只會出現一次／一組）。當選警長的寫法有好幾種（一般
+  // 投票、PK投票、各種自動當選文案），見 jgFormatSheriffBlock 實際輸出的格式。
+  (GAMES||[]).forEach(g=>{
+    if(!g.players||!g.log) return;
+    const log=String(g.log);
+    const htm=log.match(/悍跳預言家號碼：(\d+)/);
+    if(!htm) return;
+    const hanTiaoNum=htm[1];
+    let electedNum=null, em;
+    if((em=log.match(/--警長票(\d+)：[^\n]*（當選警長）/))) electedNum=em[1];
+    else if((em=log.match(/(\d+)號自動當選警長/))) electedNum=em[1];
+    if(!electedNum||electedNum!==hanTiaoNum) return;
+    const p=g.players.find(pl=>String(pl.num)===hanTiaoNum);
+    if(p&&awIsWolfBroad(p.role)) awAddCredit(hanTiaoStar, p.name, g.id);
+  });
+  // 舊格式場次：文字紀錄裡還沒有標準的「當選警長」字樣（那時候還沒做這個功能），
+  // 沒辦法用上面的規則自動比對，只能手動列出——之後如果還有更早期的場次要算進來，
+  // 直接在這個清單裡加一行即可。加一道防呆：如果之後上面的自動判斷也認得出同一場，
+  // 不要因為手動清單又重複加一次，導致次數灌水。
+  const AW_HANTIAO_MANUAL={ '0812_1':'黃家珮' };
+  Object.entries(AW_HANTIAO_MANUAL).forEach(([gameId,name])=>{
+    const g=(GAMES||[]).find(x=>x.id===gameId);
+    if(!g) return;
+    const already=hanTiaoStar[name]&&hanTiaoStar[name].games.has(gameId);
+    if(!already) awAddCredit(hanTiaoStar, name, gameId);
   });
 
   (GAMES||[]).forEach(g=>{
@@ -149,6 +178,8 @@ function computeAwards(){
       note:'【首刀女巫】:女巫首夜被狼刀，該局所有見面狼隊友（不含機械狼）都算1次。'},
     {icon:'💘',title:'邱比特傳說',top:awTopTiers(thirdPartyWins),
       note:'【第三方獲勝】:邱比特與情侶配成人狼鏈、獨立成第三方陣營，該局由第三方獲勝時，三人都算1次。'},
+    {icon:'🃏',title:'悍跳之星',top:awTopTiers(hanTiaoStar),
+      note:'【悍跳預言家之星】:狼隊悍跳預言家，並且當選警長。'},
   ];
 }
 

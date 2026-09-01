@@ -18,7 +18,7 @@ document.getElementById('jg-count').addEventListener('input',()=>{
   jgUpdateComp();
 });
 renderRulesCards();
-renderGlossary();
+loadGlossary();
 renderGuideTagInfo();
 
 

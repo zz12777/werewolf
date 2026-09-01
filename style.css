@@ -333,6 +333,19 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rname-suggest-item.dup{color:var(--text3);}
 .rname-suggest-item .rname-tag{float:right;font-size:11px;color:var(--text3);}
 .rname-btn{width:38px;height:38px;flex-shrink:0;padding:0;margin:0;border-radius:10px;font-size:15px;}
+/* 新版設定玩家名單：空格區（橫向分兩行）＋常用玩家按鈕區 */
+.rname-slots-grid{display:grid;gap:8px;margin-bottom:16px;}
+.rname-slot{position:relative;border:2px solid var(--border2);border-radius:var(--r-sm);padding:8px 6px;text-align:center;cursor:pointer;background:var(--bg);transition:border-color 0.15s,background 0.15s;}
+.rname-slot.active{border-color:var(--accent);background:rgba(184,56,40,0.06);}
+.rname-slot-num{font-size:12px;font-weight:800;color:var(--text3);}
+.rname-slot-name{font-size:14px;font-weight:700;margin-top:2px;word-break:break-all;min-height:20px;}
+.rname-slot-x{position:absolute;top:-6px;right:-6px;width:20px;height:20px;padding:0;margin:0;border-radius:50%;font-size:11px;line-height:1;background:var(--bg3);border:1px solid var(--border);color:var(--text3);}
+.rname-pool-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.rname-pool-btn{width:auto;flex:0 0 auto;padding:8px 12px;border-radius:999px;font-size:13px;font-weight:600;background:var(--bg2);border:1px solid var(--border2);margin:0;position:relative;white-space:nowrap;}
+.rname-pool-btn.dup{opacity:0.55;}
+.rname-pool-btn .rname-tag{margin-left:6px;font-size:11px;color:var(--text3);}
+.rname-pool-x{display:inline-block;margin-right:5px;color:var(--text3);font-size:11px;}
+.rname-pool-x:hover{color:var(--wolf);}
 .rname-dup-warn{font-size:12px;color:#922418;margin:-2px 0 10px;}
 
 /* ══════ 遊玩數據分頁專用樣式 ══════ */

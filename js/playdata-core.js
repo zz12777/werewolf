@@ -204,6 +204,12 @@ function pdSubmitGameRecord(){
 // 排行榜排序模式：'simple'＝簡單勝率，'bayes'＝貝葉斯分數
 // ═══════════════════════════════════════════
 let PD_SORT_MODE='simple';
+// 場次紀錄的日期篩選預設要顯示「最近一個日期」，不是「全部日期」——但只要法官自己手動改過
+// 這個篩選（含改回「全部日期」），就要記住法官的選擇，之後資料重新整理（例如雲端場次陸續
+// 載入進來）時不能再蓋回去，不然篩選會一直被打斷。用這個旗標記錄「法官有沒有手動改過」，
+// 不是「這個函式有沒有跑過」——雲端資料是非同步陸續載入的，一開始本地資料還沒完整時就先
+// 跑過一次，這裡如果只認「跑過一次」，等真正的雲端資料到齊時反而不會套用預設值了。
+let pdDateUserChanged=false;
 const PD_BAYES_C=5; // 信心場數常數：場次少於這個數字時，分數會明顯被拉向陣營平均值
 
 // ═══════════════════════════════════════════
@@ -581,10 +587,15 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
     const o=document.createElement('option'); o.value=p.name; o.textContent=p.name; fPlayerEl.appendChild(o);
   });
   const fDateEl=document.getElementById('f-date');
+  // 場次紀錄預設顯示「最近一個日期」，不是「全部日期」——但只在法官還沒手動改過篩選時才套用
+  // 這個預設，法官自己改過（含改回「全部日期」）之後，重新整理資料要保留法官的選擇。
+  const _fDatePrevVal=fDateEl.value;
   fDateEl.innerHTML='<option value="">全部日期</option>';
-  [...new Set(GAMES.map(g=>g.date))].sort().reverse().forEach(d=>{
+  const _fDateSorted=[...new Set(GAMES.map(g=>g.date))].sort().reverse();
+  _fDateSorted.forEach(d=>{
     const o=document.createElement('option'); o.value=d; o.textContent=pdDisplayDate(d); fDateEl.appendChild(o);
   });
+  fDateEl.value=(!pdDateUserChanged&&_fDateSorted.length)?_fDateSorted[0]:_fDatePrevVal;
   const fBoardEl=document.getElementById('f-board');
   fBoardEl.innerHTML='<option value="">全部板子</option>';
   [...new Set(GAMES.map(g=>g.board))].forEach(b=>{
@@ -645,7 +656,7 @@ function pdToggleGame(i){
   document.getElementById('pd-gbody-'+i).classList.toggle('open');
 }
 document.getElementById('f-player').addEventListener('change', pdRenderGames);
-document.getElementById('f-date').addEventListener('change', pdRenderGames);
+document.getElementById('f-date').addEventListener('change', function(){ pdDateUserChanged=true; pdRenderGames(); });
 document.getElementById('f-board').addEventListener('change', pdRenderGames);
 
 // ═══════════════════════════════════════════

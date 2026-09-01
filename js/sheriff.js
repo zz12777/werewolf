@@ -337,14 +337,16 @@ function jgConfirmSheriffSpeechOrder(){
 function jgOrderFromStart(list, start, dir){
   const arr=list.slice().sort((a,b)=>a-b);
   if(!arr.length||start==null) return arr;
-  let startIdx=arr.indexOf(start);
-  if(startIdx<0) startIdx=0;
-  const ordered=[];
-  for(let i=0;i<arr.length;i++){
-    const idx=dir==='逆'?(startIdx-i+arr.length*10)%arr.length:(startIdx+i)%arr.length;
-    ordered.push(arr[idx]);
-  }
-  return ordered;
+  // 用「跟起點的相對座位距離」排序，而不是先在候選名單裡找起點的陣列位置——這樣起點本人
+  // 如果後來退水、已經不在名單裡了，其餘人的順序還是照原本轉盤定下的方向/起點去算，不會
+  // 因為起點消失、退化成「從候選名單裡排序最前面的人」重新起算，導致整個順序跳掉、跟退水
+  // 之前完全不連貫（例如轉盤轉到8先發言，8之後又退水，其餘人的發言順序不該因此打亂）。
+  const total=jgTotal||arr[arr.length-1];
+  const dist=(n)=>{
+    const raw=dir==='逆'?(start-n):(n-start);
+    return ((raw%total)+total)%total;
+  };
+  return arr.slice().sort((a,b)=>dist(a)-dist(b));
 }
 // Step 3：依序政見發表，發表完可以退水
 // PK 回合（jgSheriffPkRound 為 true）時直接回傳 jgSheriffPkOrder——這是進 PK 那一刻，
@@ -429,7 +431,7 @@ function jgRenderSheriffSpeech(){
   }).join('');
   jgShowPg(`
     <h2>警長競選・${jgSheriffPkRound?'平票 PK 發言':'政見發表'}</h2>
-    ${jgSpeakTimerWidgetHtml(ordered)}
+    ${jgSpeakTimerWidgetHtml(ordered, jgSheriffPkRound)}
     <div class="speech">「<em>${jgSheriffPkRound?'平票玩家請再次發言 PK。':'請依序發表警長政見。'}</em>」</div>
     <div style="margin-top:10px;">${rows}</div>
     ${jgSheriffPkRound?'<div class="info-warn" style="font-size:12px;">平票 PK 回合中，此輪不可退水</div>'
@@ -532,12 +534,14 @@ function jgRenderSheriffVote(){
     jgGoStep('dawn');
     return;
   }
-  // 有上警過的人（不論現在還在競選還是已經退水）都不能投票，只有從頭到尾都沒上警的人才有投票權
-  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&!jgSheriffWithdrawn.includes(n)).sort((a,b)=>a-b);
+  // 投票資格依「是不是PK輪」而不同：第一輪投票，只有從頭到尾都沒上警的人才能投（退水過的
+  // 候選人這輪也不能投）；PK輪投票，除了目前正在PK的候選人以外，其他人都能投（含退水過、
+  // 或第一輪上過警但沒進PK的候選人）。
+  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&(jgSheriffPkRound||!jgSheriffWithdrawn.includes(n))).sort((a,b)=>a-b);
   jgShowPg(`
     <h2>警長競選・投票</h2>
-    <div class="speech">「<em>沒有上警的玩家，請投票選出警長，3、2、1，請投票。</em>」</div>
-    <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">候選人：${cands.join('、')}號；只有從未上警的玩家（${voters.join('、')||'無'}）有投票權</div>
+    <div class="speech">「<em>${jgSheriffPkRound?'除了PK的候選人外，其他人都可以投票，3、2、1。':'沒有上警的玩家，請投票選出警長，3、2、1，請投票。'}</em>」</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:6px;">候選人：${cands.join('、')}號；${jgSheriffPkRound?'沒有在PK中的玩家（'+(voters.join('、')||'無')+'）有投票權（含已退水、或第一輪上過警但沒進PK的玩家）':'從未上警的玩家（'+(voters.join('、')||'無')+'）有投票權'}</div>
     <!-- 快速輸入投票已停用，改用下方「N號投給」逐一點選 -->
     <div id="jg-sheriff-vote-tally"></div>
     <div id="jg-sheriff-vote-summary" style="margin-top:6px;"></div>
@@ -592,7 +596,7 @@ function jgParseQuickVoteTokens(raw, expectedCount, validTargets){
 // 沒有獨立的棄票物件（沒被標記給任何候選人就是棄票）。
 function jgSheriffVoteQuickInputHtml(){
   const cands=jgSheriffCandidates.slice().sort((a,b)=>a-b);
-  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&!jgSheriffWithdrawn.includes(n)).sort((a,b)=>a-b);
+  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&(jgSheriffPkRound||!jgSheriffWithdrawn.includes(n))).sort((a,b)=>a-b);
   if(voters.length===0) return '';
   return '<div class="card" style="margin:10px 0;padding:10px 14px;">'
     +'<label style="margin:0 0 4px;">⚡ 快速輸入投票（可連續輸入不用分隔，或用空白／逗號分隔，棄票打 n）</label>'
@@ -606,7 +610,7 @@ function jgApplySheriffQuickVote(){
   if(!input) return;
   const cands=jgSheriffCandidates.slice().sort((a,b)=>a-b);
   const candSet=new Set(cands);
-  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&!jgSheriffWithdrawn.includes(n)).sort((a,b)=>a-b);
+  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&(jgSheriffPkRound||!jgSheriffWithdrawn.includes(n))).sort((a,b)=>a-b);
   const tokens=jgParseQuickVoteTokens(input.value, voters.length, candSet);
   if(!tokens||tokens.length!==voters.length){
     alert('⚠️ 看不懂這串輸入，請確認：\n· 總共要對應 '+voters.length+' 位投票玩家（'+voters.join('、')+'）\n· 號碼須為目前候選人（'+cands.join('、')+'）\n· 棄票打 n\n也可以改用空白或逗號分隔輸入，例如：3 5 n 2 或 3,5,n,2');
@@ -638,7 +642,7 @@ function jgRenderSheriffVoteTally(){
   const box=document.getElementById('jg-sheriff-vote-tally');
   if(!box) return;
   const cands=jgSheriffCandidates.slice().sort((a,b)=>a-b);
-  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&!jgSheriffWithdrawn.includes(n)).sort((a,b)=>a-b);
+  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&(jgSheriffPkRound||!jgSheriffWithdrawn.includes(n))).sort((a,b)=>a-b);
   let html='';
   voters.forEach(voter=>{
     const votedFor=cands.find(t=>jgSheriffVoteTally[t]&&jgSheriffVoteTally[t][voter]);
@@ -692,7 +696,7 @@ function jgUpdateSheriffVoteTallySummary(){
 function jgSaveSheriffVote(){ jgSaveSheriffVoteInner(); jgLiveSyncPush(); }
 function jgSaveSheriffVoteInner(){
   const cands=jgSheriffCandidates.slice();
-  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&!jgSheriffWithdrawn.includes(n));
+  const voters=jgAlive().map(p=>p.num).filter(n=>!cands.includes(n)&&(jgSheriffPkRound||!jgSheriffWithdrawn.includes(n)));
   const counts=cands.map(t=>[t,Object.values(jgSheriffVoteTally[t]||{}).filter(Boolean).length]);
   const maxCount=Math.max(0,...counts.map(([,c])=>c));
   const top=counts.filter(([,c])=>c===maxCount).map(([t])=>t);
@@ -737,6 +741,10 @@ function jgSaveSheriffVoteInner(){
   jgSheriffLogLines.push('平票：'+top.join('、')+'號，進入 PK（PK 發言順序：'+jgSheriffPkOrder.join('→')+'）');
   jgSheriffPkRound=true;
   jgSheriffCandidates=top;
+  // 進入 PK 是全新的一輪發言，強制把計時器的「舊順序」標記清空——不要依賴
+  // jgSpeakTimerWidgetHtml 自己去比對新舊順序是否重疊，直接在這裡保證一定是全新起算，
+  // 才不會因為某種殘留的舊狀態，導致 PK 一開始就顯示成不是第一位在發言。
+  jgSpeakTimerOrderKey='';
   alert('⚠️ 平票：'+top.join('、')+'號，進入 PK。PK 發言順序：'+jgSheriffPkOrder.join('→')+'（前一輪越晚發言者，PK 越早發言），期間不可退水。');
   jgGoStep('sheriff-speech');
 }

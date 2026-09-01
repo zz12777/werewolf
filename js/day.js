@@ -122,6 +122,7 @@ function jgApplyCompFix(){
     if(p) p.role=sel.value;
   }
   jgRenderRoster();
+  jgSpeakTimerOrderKey=''; // 進入這一天的發言是全新一輪，強制計時器從第一位重新起算
   jgGoStep('discuss');
 }
 
@@ -468,7 +469,7 @@ function jgLastWordsBtn(btn){
   jgShowPg(`
     <h2>遺言</h2>
     <div class="speech">「<em>${name} 可以發表遺言。</em>」</div>
-    <button class="primary" onclick="jgGoStep('discuss')">遺言結束，開始發言 →</button>
+    <button class="primary" onclick="jgSpeakTimerOrderKey='';jgGoStep('discuss')">遺言結束，開始發言 →</button>
   `,'💬 遺言');
 }
 
@@ -689,6 +690,9 @@ function jgSaveVoteInner(){
     jgVotePkRound=true;
     jgVotePkCandidates=top;
     jgVoteTally={};
+    // 進入 PK 是全新的一輪發言，強制清空計時器的「舊順序」標記，保證從第一位開始算，
+    // 理由跟警上 PK 那邊一樣（見 jgSaveSheriffVoteInner）。
+    jgSpeakTimerOrderKey='';
     alert('⚠️ 平票：'+top.join('、')+'號，進入 PK。PK 發言順序：'+jgVotePkOrder.join('→')+'（前一輪越晚發言者，PK 越早發言），請依序發言後再重新投票。');
     jgGoStep('vote');
     return;
@@ -858,6 +862,7 @@ function jgSaveKnightDuel(){
     jgRenderRoster();
     alert('⚔️ '+target.num+'號是好人，騎士以死謝罪');
     const win=jgCheckWin(); if(win){jgShowWin(win);return;}
+    jgSpeakTimerOrderKey=''; // 進入這一天的發言是全新一輪，強制計時器從第一位重新起算
     jgGoStep('discuss');
   }
 }

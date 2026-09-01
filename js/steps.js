@@ -573,7 +573,7 @@ function jgRenderStep(step){
       <div id="jg-wolf-blocked-msg" style="${jgRecord.nightmareBlocksWolf?'':'display:none;'}"><div class="info-danger">⚠️ 夢魘恐懼到狼隊友，狼人今晚不得殺人</div></div>
       ${wbNote}
       <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}">${wolfKillSectionHtml}${identifySectionHtml}</div>`
-      :'<div class="info-warn">狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程</div>'}
+      :('<div class="info-warn">'+((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0)?'小狼已全滅，仍須走完流程':'狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程')+'</div>')}
       <div class="speech" style="margin-top:12px;">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
     `,'🐺 狼人');
@@ -1738,7 +1738,7 @@ function jgRenderStep(step){
       ].map(Number);
       lwHtml='<div class="divider"></div>'
         +'<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">發表遺言（依序進行）</div>'
-        +jgSpeakTimerWidgetHtml(lwOrder);
+        +jgSpeakTimerWidgetHtml(lwOrder, true);
       // 情侶殉情者不算「真正淘汰」發表遺言的對象——殉情不觸發任何技能，也不留遺言
       trulyDiedNums.filter(d=>heartbreakDawnNum===null||d.toString()!==heartbreakDawnNum.toString()).forEach(d=>{
         const p=jgFind(d);
@@ -1946,7 +1946,7 @@ function jgRenderStep(step){
     const pkOrderLabel=pk?(jgVotePkOrder&&jgVotePkOrder.length?jgVotePkOrder.join('→'):pkCandLabel):'';
     jgShowPg(`
       <h2>${pk?'投票放逐・PK':'投票放逐'}</h2>
-      ${pk?jgSpeakTimerWidgetHtml(jgVotePkOrder):''}
+      ${pk?jgSpeakTimerWidgetHtml(jgVotePkOrder, true):''}
       <div class="speech">「<em>${pk?'平票玩家請依序發言 PK：'+pkOrderLabel+'。PK 結束後，其餘玩家重新投票。':'準備投票選出要放逐的玩家，3、2、1'}</em>」</div>
       ${pk?'<div class="info-warn" style="font-size:12px;">PK 發言順序：'+pkOrderLabel+'（前一輪越晚發言者，PK 越早發言）。只有 '+pkCandLabel+' 號以外的玩家可以投票，票投給 '+pkCandLabel+' 號其中一人</div>'
         :''}
@@ -2131,7 +2131,7 @@ function jgRenderStep(step){
     const foolChecked=!!(p&&p.foolRevealed);
     jgShowPg(`
       <h2>遺言</h2>
-      ${jgRecord._voteOutNum?jgSpeakTimerWidgetHtml([parseInt(jgRecord._voteOutNum)]):''}
+      ${jgRecord._voteOutNum?jgSpeakTimerWidgetHtml([parseInt(jgRecord._voteOutNum)], true):''}
       <div class="info" style="display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 14px;">
         <span style="font-size:18px;">💬</span><span>${name} 發表遺言</span>
       </div>
@@ -2157,8 +2157,12 @@ function jgRenderStep(step){
 // ── 雙機械狼板：大／小機械狼共用的睜眼畫面（用 roleId 參數分辨是哪一隻，避免寫兩份重複的畫面） ──
 function jgRenderMechWolf2Step(roleId){
   const label=roleId==='bigmechwolf'?'大機械狼':'小機械狼';
+  const otherRoleId=roleId==='bigmechwolf'?'smallmechwolf':'bigmechwolf';
+  const otherLabel=roleId==='bigmechwolf'?'小機械狼':'大機械狼';
   const selfP=jgPlayers.find(p=>p.role===roleId);
   const st=jgMechWolf2State[roleId];
+  const otherSt=jgMechWolf2State[otherRoleId];
+  const otherP=jgPlayers.find(p=>p.role===otherRoleId);
   // 小機械狼已經回歸主狼群後（規則8：兩隻都學到狼人），這個獨立畫面不再需要選任何東西，
   // 實際刀口改在共用的「狼人睜眼」畫面決定，這裡只維持喊話節奏。
   if(roleId==='smallmechwolf'&&st.rejoinedPack){
@@ -2174,57 +2178,81 @@ function jgRenderMechWolf2Step(roleId){
   const idHtml=jgGodIdHtml(roleId,selfP);
   const dead=selfP&&!selfP.alive;
   const feared=jgFeared(selfP);
+  const isLearnedOtherMech=st.learned==='bigmechwolf'||st.learned==='smallmechwolf';
+  const canUseSkill=!!st.learned&&!isLearnedOtherMech&&st.learnedNight!==null&&jgNight>st.learnedNight;
   const eligible=jgNight>=2&&jgMechWolf2KillEligible(roleId);
   const isFirstKillNight=eligible&&st.killTurnFirstNight===null;
   const doubleKill=isFirstKillNight&&st.learned==='wolf';
 
-  let bodyHtml='';
-  if(!dead&&!feared){
-    // 學到「另一隻機械狼」不算真正學到技能：學到的當下（不管第幾晚）就已經用即時顯示＋
-    // 大字報告知過結果了（見下面 !st.learned 分支跟 jgMechWolf2LearnCheck），所以下一晚
-    // 不用再重複顯示一次「你學到的身分是」，直接讓他重新選人學習就好——選了新對象後，
-    // 一樣即時顯示＋大字報（同一套 jgMechWolf2LearnCheck）。這個「直接重選」要等到「學到
-    // 的那一晚」之後才會出現（用 jgNight>st.learnedNight 判斷），避免法官在同一晚按
-    // 「上一步」回到這個畫面時，誤判成已經可以重選。
-    const isLearnedOtherMech=st.learned==='bigmechwolf'||st.learned==='smallmechwolf';
-    const canRepickNow=isLearnedOtherMech&&jgNight>st.learnedNight;
-    if(!st.learned||canRepickNow){
+  // Part 1：學習，或使用已學到的技能——跟單一機械狼（jgMechWolfSkillUseHtml 那一段）走
+  // 完全一樣的結構，就算已出局也要照樣走一次台詞，不能只剩睜眼／閉眼，避免其他玩家從
+  // 流程有沒有跑這一段猜出誰還活著。
+  let learnHtml='';
+  if(feared){
+    learnHtml='';
+  } else if(!st.learned||isLearnedOtherMech){
+    // 「重新選人學習」（學到另一台機械狼的情況）要等過了「學到的那一晚」才出現，避免法官
+    // 在同一晚按「上一步」回到這個畫面時，誤判成已經可以重選。
+    const canRepickNow=!st.learned||jgNight>st.learnedNight;
+    if(dead){
+      learnHtml='';
+    } else if(canRepickNow){
       const selfNums=selfP?[selfP.num]:[];
-      bodyHtml+='<label>'+(st.learned?'今晚要重新學習的對象是？':'今晚要學習的對象是？')+'（留空=不學，下晚可以再選，不能學自己）</label>'
+      learnHtml='<div class="speech">「<em>今晚要學習的對象是？</em>」</div>'
+        +'<label>'+(st.learned?'重新選人學習':'學習對象號碼')+'（留空=本晚不學習，不能學自己）</label>'
         +jgNumSelectHtml('jg-'+roleId+'-learn','','jgMechWolf2LearnCheck',null,selfNums,'不能學習自己')
         +'<div id="jg-'+roleId+'-learn-result"></div>'
         +(st.learned?'':'<div class="info" style="font-size:12px;margin-top:4px;">通靈師查驗這個號碼時會顯示他學到的具體身分。若學到的是「另一隻機械狼」，之後的夜晚還能重新選人學習。</div>');
-    } else if(!isLearnedOtherMech&&jgNight>=2){
-      // 學到真正的身分（不是另一台機械狼）：第二晚起法官要告知號碼與身分（大字報顯示），
-      // 並依學到的技能開放對應的夜間操作。
-      const learnTargetP=st.learnTargetNum?jgFind(st.learnTargetNum):null;
-      bodyHtml+='<div class="info" style="font-size:13px;padding:8px 12px;">📖 你學到的身分是：<strong>'+jgFullRoleName(st.learned)+'</strong>'
-        +(learnTargetP?'（'+learnTargetP.num+'號）':'')+'</div>';
-      if(learnTargetP){
-        bodyHtml+='<button onclick="jgMechWolf2ShowLearnedBigCard(\''+roleId+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+label+'看</button>';
-      }
-      const canUseSkill=jgNight>st.learnedNight;
-      if(canUseSkill&&st.learned==='witch'&&!st.poisonUsed){
-        bodyHtml+='<div class="divider"></div><label>今晚要使用毒藥嗎？（整局限一次，留空=不用，之後晚上還能再選是否使用）</label>'
-          +jgNumSelectHtml('jg-'+roleId+'-poison','');
-      } else if(canUseSkill&&st.learned==='witch'&&st.poisonUsed){
-        bodyHtml+='<div class="info" style="font-size:12px;margin-top:6px;">毒藥已經用過了，本局不能再用。</div>';
-      }
-      if(canUseSkill&&st.learned==='guard'&&!st.guardUsed){
-        const guardExclude=st.lastGuardTarget?[parseInt(st.lastGuardTarget)]:[];
-        bodyHtml+='<div class="divider"></div><label>今晚要守護的對象是？（不能連續兩晚守同一人；成功擋下一次傷害後，這個技能就報銷了，留空=不守）</label>'
-          +jgNumSelectHtml('jg-'+roleId+'-guard','',null,null,guardExclude,'不能連續兩晚守護同一人');
-      } else if(canUseSkill&&st.learned==='guard'&&st.guardUsed){
-        bodyHtml+='<div class="info" style="font-size:12px;margin-top:6px;">守護技能已經用過（成功擋下一次傷害），不能再用。</div>';
-      }
     }
-    if(eligible){
-      bodyHtml+='<div class="divider"></div>'
-        +'<div class="info-warn">🔪 輪到'+label+'帶刀'+(doubleKill?'（第一次輪到，且學到狼人，本回合可以帶兩刀！）':'')+'</div>'
+  } else if(canUseSkill){
+    if(st.learned==='hunter'){
+      learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>'+jgBuildHunterStatusHtml(selfP);
+    } else if(dead){
+      learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div><div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
+    } else {
+      learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>'+jgMechWolf2SkillUseHtml(roleId);
+    }
+  } else {
+    learnHtml=st.learned?'<div class="info" style="font-size:12px;">已學得「'+jgFullRoleName(st.learned)+'」，次晚起可使用技能。</div>':'';
+  }
+
+  // 法官告知學到的身分＋號碼：只在「學到的那一晚的下一晚」顯示一次（不是學到當下、也不是
+  // 之後每晚都重複講一次——玩家上一晚就已經知道了），用大字報顯示。
+  let informHtml='';
+  if(!dead&&!feared&&!isLearnedOtherMech&&st.learned&&jgNight===st.learnedNight+1){
+    const learnTargetP=st.learnTargetNum?jgFind(st.learnTargetNum):null;
+    informHtml='<div class="info" style="font-size:13px;padding:8px 12px;">📖 你學到的身分是：<strong>'+jgFullRoleName(st.learned)+'</strong>'
+      +(learnTargetP?'（'+learnTargetP.num+'號）':'')+'</div>';
+    if(learnTargetP){
+      informHtml+='<button onclick="jgMechWolf2ShowLearnedBigCard(\''+roleId+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+label+'看</button>';
+    }
+    informHtml+='<div class="divider"></div>';
+  }
+
+  // 告知另一隻機械狼的號碼與目前學到的身分：第二晚起每晚都顯示（對方學到的身分可能之後
+  // 又重選變了，所以每晚都給最新狀態，不是只講一次）。
+  let otherInfoHtml='';
+  if(!dead&&!feared&&jgNight>=2){
+    const otherLearnedDisplay=otherP?(!otherSt.learned?'尚未學到':((otherSt.learned==='bigmechwolf'||otherSt.learned==='smallmechwolf')?'機械狼':jgFullRoleName(otherSt.learned))):'（尚未記錄身分）';
+    otherInfoHtml='<div class="info" style="font-size:12px;padding:8px 12px;">🤝 '+otherLabel+'是 <strong>'+(otherP?otherP.num+'號':'?')+'</strong>，目前學到的身分是：<strong>'+otherLearnedDisplay+'</strong>'
+      +(otherP?' <button onclick="jgMechWolf2ShowBigCardRaw('+otherP.num+')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+label+'看</button>':'')+'</div>';
+  }
+
+  // Part 2：帶刀手勢（第二晚起才有）——就算已出局，這句台詞也要照樣問一次，只是死亡沒有
+  // 實際帶刀選項，固定比倒讚略過即可。
+  let killGestureHtml='';
+  if(jgNight>=2&&!feared){
+    if(dead){
+      killGestureHtml='<div class="divider"></div><div class="speech">「<em>今晚的帶刀手勢是？（👎 倒讚）</em>」</div>';
+    } else if(eligible){
+      killGestureHtml='<div class="divider"></div>'
+        +'<div class="info-warn">🔪 今晚的帶刀手勢是？（👍 讚）輪到'+label+'帶刀'+(doubleKill?'（第一次輪到，且學到狼人，本回合可以帶兩刀！）':'')+'</div>'
         +'<label>今晚要殺的對象'+(doubleKill?'（第一刀）':'')+'（留空=不殺）</label>'+jgNumSelectHtml('jg-'+roleId+'-kill1','');
       if(doubleKill){
-        bodyHtml+='<label style="margin-top:8px;">第二刀（留空=不殺）</label>'+jgNumSelectHtml('jg-'+roleId+'-kill2','');
+        killGestureHtml+='<label style="margin-top:8px;">第二刀（留空=不殺）</label>'+jgNumSelectHtml('jg-'+roleId+'-kill2','');
       }
+    } else {
+      killGestureHtml='<div class="divider"></div><div class="speech">「<em>今晚的帶刀手勢是？（👎 倒讚）</em>」（還沒輪到'+label+'帶刀）</div>';
     }
   }
 
@@ -2234,7 +2262,12 @@ function jgRenderMechWolf2Step(roleId){
     ${idHtml}
     ${dead?'<div class="info-warn">'+label+'已出局，仍需走完流程</div>':''}
     <div id="jg-god-${roleId}-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
-    ${bodyHtml}
+    <div style="${feared?'display:none;':''}">
+    ${informHtml}
+    ${learnHtml}
+    ${otherInfoHtml}
+    ${killGestureHtml}
+    </div>
     <div class="speech" style="margin-top:10px;">「<em>${label}請閉眼。</em>」</div>
     <button class="primary" onclick="jgSaveMechWolf2('${roleId}')">已紀錄，下一步 →</button>
   `,'🤖 '+label);

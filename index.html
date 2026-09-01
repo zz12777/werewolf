@@ -280,7 +280,12 @@
     </div>
     <div class="rcol-body">
             <strong>結果判定：</strong>多數票者出局。<br>
-            <strong>平票怎麼辦？</strong>若最高票出現平票，自動進入 PK：平票玩家再次發言，其餘玩家重新投票一次，票投給任一位 PK 候選人。
+            <strong>平票怎麼辦？</strong>若最高票出現平票，自動進入 PK：平票玩家依「PK 發言順序」（見下方）再次發言，其餘玩家重新投票一次，票投給任一位 PK 候選人。<br><br>
+            <strong>PK 發言順序：</strong>不論是警長競選（警上）還是白天投票放逐，PK 的發言順序都是「前一輪發言順序整個反過來」——前一輪越晚發言的人，PK 時越早發言；前一輪越早發言的人，PK 時越晚發言。<br><br>
+            <strong>投票資格：</strong><br>
+            ‧ 警長競選第一輪投票：只有從頭到尾都沒上警的玩家才能投票，曾經上警、後來退水的候選人這輪也不能投。<br>
+            ‧ 警長競選 PK 投票：除了正在 PK 的候選人以外，其他人都能投——包含已經退水的候選人、或第一輪有上警但沒有進入 PK 的候選人。<br>
+            ‧ 白天投票放逐（含 PK）：除了正在被投票的玩家（PK 候選人）以外，其他存活玩家都能投票。
     </div>
   </div>
   <div class="rcol">
@@ -308,14 +313,7 @@
   <!-- 專有名詞小辭典 -->
   <div class="rules-section" id="sec-glossary">
   <div class="rules-h1">📚 專有名詞小辭典</div>
-  <div class="rules-h2">🔎 查驗／守護結果</div>
-  <div id="glossary-water-list" class="card-grid"></div>
-
-  <div class="rules-h2">🎖️ 警長競選</div>
-  <div id="glossary-sheriff-list" class="card-grid"></div>
-
-  <div class="rules-h2">🎭 發言與戰術</div>
-  <div id="glossary-tactic-list" class="card-grid"></div>
+  <div id="glossary-dynamic-list"></div>
   </div>
 </div>
 <!-- ══════════════════════════════════════
@@ -426,7 +424,7 @@
 <!-- 即時票型紀錄（公開，任何人打開這個頁面都看得到；資料來自法官端同步過去的 Google 試算表） -->
 <div class="card" style="margin:16px 0;">
   <div class="section-title">📡 即時票型紀錄</div>
-  <div class="info" style="font-size:12px;">法官記完一輪投票會自動同步到這裡，畫面每幾秒會自動更新，若還沒出來請等他一下或問法官，法官告訴你票型；</div>
+  <div class="info" style="font-size:12px;">法官記完一輪投票會自動同步到這裡，畫面每幾秒會自動更新，若還沒出來請等他一下或問法官，法官告訴你票型喔。</div>
   <div id="jg-live-session-view" style="margin-top:10px;"></div>
 </div>
 
@@ -474,6 +472,11 @@
   <div class="card" id="leaderboard"></div>
   </div>
 
+  <!-- 特別獎項（小分隊限定成就）：橫向一排、放不下可以左右滑 -->
+  <div class="big-section-title">特別獎項</div>
+  <div class="awards-strip" id="awards-strip"></div>
+  <div class="award-detail" id="award-detail"></div>
+
   <!-- 場次篩選 -->
   <div class="big-section-title">場次紀錄</div>
   <div class="filters">
@@ -483,11 +486,6 @@
   </div>
   <div class="gcount" id="gcount"></div>
   <div id="game-list" class="card-grid"></div>
-
-  <!-- 特別獎項（小分隊限定成就）：放在整頁最下面，橫向一排、放不下可以左右滑 -->
-  <div class="big-section-title">🏆 特別獎項</div>
-  <div class="awards-strip" id="awards-strip"></div>
-  <div class="award-detail" id="award-detail"></div>
 
 </div>
 

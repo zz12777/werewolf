@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // Preset name pool for quick player-roster setup (judge can still type a custom name for anyone)
-const JG_NAME_PRESET=['陳冠竹','巫嘉軒','鄭文奇','李法順','李想成','陳冠彣','陳玉堂','黃家珮','黃柏寰','何冠岳','謝子凡','王悅謙','孫揚和','蘇祐樂','許逸凡','林芸竹','吳柏霖','陳詩涵','劉謙叡','龔則乾','洪梓睿','黃禹勛','蘇奕安','郭展吟','許綺文','林均豪','潘彥誠','曾冠學','謝伊晨','陳芯錞','劉欣融'];
+const JG_NAME_PRESET=['陳冠竹','巫嘉軒','鄭文奇','李法順','李想成','陳冠彣','陳玉堂','黃家珮','黃柏寰','何冠岳','謝子凡','王悅謙','孫揚和','蘇祐樂','許逸凡','林芸竹','吳柏霖','陳詩涵','劉謙叡','龔則乾','洪梓睿','黃禹勛','蘇奕安','郭展吟','許綺文','林均豪','潘彥誠','曾冠學','謝伊晨','陳芯錞','劉欣融','賴宥瑋','魏愷呈'];
 let jgPlayerNames={}; // num -> name, set via the roster setup page before jgStart()
 
 // ── 文字紀錄匯出 ──
@@ -572,6 +572,8 @@ function jgFormatNightLog(){
     if(!mp||!mp.alive) return;
     const label=roleId==='bigmechwolf'?'大機':'小機';
     const st=jgMechWolf2State[roleId];
+    // 這一晚剛學到（不管學到的是真的身分還是另一台機械狼）都要記一行「學X」，X是跟誰學的號碼
+    if(st.learnedNight===jgNight&&st.learnTargetNum) lines.push(label+'學'+st.learnTargetNum);
     const k1=jgRecord['mechwolf2Kill_'+roleId+'_1'];
     const k2=jgRecord['mechwolf2Kill_'+roleId+'_2'];
     if(k1) lines.push(label+'刀'+k1+(k2?('+'+k2):''));
@@ -786,22 +788,24 @@ function jgUpdateComp(){
   jgRenderNightmareModeUI();
 }
 
-// 夢魘規則切換（每晚強制恐懼／可以不恐懼）：只有這場板子有選夢魘才顯示。
-// 12 人以上局預設「可不恐懼」，12 人以下維持傳統「強制恐懼」；法官手動切過之後
-// 就不再依人數自動覆蓋，直到重新整理／重選板子。實際規則差異見 jgSaveNightmare()。
 function jgOpenRosterSetup(){
   const isDual=jgSetupDualMode;
   const min=isDual?4:6, max=isDual?7:14;
   const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count')?.value)||min));
   jgTotal=n;
+  jgRosterActiveSlot=1;
   jgRenderRosterSetupRows();
   document.querySelectorAll('#t-judge .pg').forEach(p=>p.classList.remove('on'));
   document.getElementById('jg-p-roster').classList.add('on');
 }
 
+/* ── 舊版「設定玩家名單」畫面（逐列輸入框＋打字比對建議清單）先註解保留，改用下面
+   新版「空格＋常用玩家按鈕」的版本。要恢復舊版的話，把這整塊註解拿掉，
+   並把 jgOpenRosterSetup() 裡呼叫的 jgRenderRosterSetupRows 換回這個版本即可。
+
 // 每一列：號碼＋姓名輸入框（打一兩個字就用比對出候選人名單，選錯了可以直接手動改字）
 // ＋「⇄交換」（跟另一個號碼互換姓名，不用先清空）＋「✕清空」按鈕。
-function jgRenderRosterSetupRows(){
+function jgRenderRosterSetupRows_OLD(){
   const box=document.getElementById('jg-roster-setup-rows');
   if(!box) return;
   let html='<button type="button" class="ghost" style="margin:0 0 12px;" onclick="jgRosterClearAll()">🗑️ 清空全部姓名</button>';
@@ -889,7 +893,7 @@ function jgRosterClear(i){
   inp.focus();
 }
 
-function jgRosterClearAll(){
+function jgRosterClearAll_OLD(){
   if(!confirm('確定要清空所有已設定的姓名嗎？')) return;
   for(let i=1;i<=jgTotal;i++){
     const inp=document.getElementById('jg-roster-input-'+i);
@@ -897,6 +901,140 @@ function jgRosterClearAll(){
     jgRosterHideSuggest(i);
   }
   jgRosterHighlightDup();
+}
+*/
+
+// ── 新版「設定玩家名單」畫面：先顯示 N 個空格（橫向分兩行），下方是常用玩家姓名按鈕，
+// 點格子選定「目前作用中」的號碼，點按鈕就填進去、自動跳下一個空格；找不到人也能手動輸入，
+// 輸入完按確定一樣會填入格子，同時把這個名字加進常用名單（存到瀏覽器 localStorage，
+// 下次開啟、換場次都還記得住，不用每次重新輸入）。
+let jgRosterActiveSlot=1;
+const JG_NAME_POOL_STORAGE_KEY='jgNamePool';
+// 常用玩家名單：優先讀瀏覽器裡存過的名單，第一次使用（或讀取失敗）才退回內建的
+// JG_NAME_PRESET 當起點。用一個記憶體快取，這樣就算 localStorage 讀寫失敗（例如無痕
+// 模式封鎖），至少同一個分頁的這次使用過程中，剛手動輸入過的新名字還是會記得住、
+// 可以重複點選，不會每次呼叫都被打回原本的內建名單。
+let jgNamePoolCache=null;
+function jgGetNamePool(){
+  if(jgNamePoolCache) return jgNamePoolCache;
+  try{
+    const raw=localStorage.getItem(JG_NAME_POOL_STORAGE_KEY);
+    if(raw){
+      const arr=JSON.parse(raw);
+      if(Array.isArray(arr)&&arr.length){ jgNamePoolCache=arr; return jgNamePoolCache; }
+    }
+  }catch(e){}
+  jgNamePoolCache=JG_NAME_PRESET.slice();
+  return jgNamePoolCache;
+}
+function jgAddNameToPool(name){
+  const pool=jgGetNamePool();
+  if(!pool.includes(name)){
+    pool.push(name);
+    try{ localStorage.setItem(JG_NAME_POOL_STORAGE_KEY, JSON.stringify(pool)); }catch(e){}
+  }
+}
+function jgRosterFindNameSlot(name){
+  for(let i=1;i<=jgTotal;i++){ if((jgPlayerNames[i]||'')===name) return i; }
+  return null;
+}
+// 指定完一個號碼之後，自動跳到「下一個還空著」的號碼，讓法官可以連續點按鈕一路填下去，
+// 不用每格都自己點一次；如果往後找不到空的，就從頭找空的；全部都填滿了就停在原地。
+function jgRosterAdvanceSlot(){
+  for(let i=jgRosterActiveSlot+1;i<=jgTotal;i++){ if(!jgPlayerNames[i]){ jgRosterActiveSlot=i; return; } }
+  for(let i=1;i<jgRosterActiveSlot;i++){ if(!jgPlayerNames[i]){ jgRosterActiveSlot=i; return; } }
+}
+function jgRosterSetActiveSlot(i){
+  jgRosterActiveSlot=i;
+  jgRenderRosterSetupRows();
+}
+function jgRosterAssignName(name){
+  // 防呆：就算按鈕本身已經被 disabled，這裡還是再擋一次——同一個名字不能同時對應兩個號碼。
+  const takenAt=jgRosterFindNameSlot(name);
+  if(takenAt&&takenAt!==jgRosterActiveSlot){
+    alert('⚠️ 「'+name+'」已經是 '+takenAt+' 號了，不能同時對應兩個號碼。');
+    return;
+  }
+  jgPlayerNames[jgRosterActiveSlot]=name;
+  jgRosterAdvanceSlot();
+  jgRenderRosterSetupRows();
+}
+function jgRosterAssignManual(){
+  const inp=document.getElementById('jg-roster-manual-input');
+  if(!inp) return;
+  const name=inp.value.trim();
+  if(!name){ alert('⚠️ 請先輸入姓名'); return; }
+  jgPlayerNames[jgRosterActiveSlot]=name;
+  jgAddNameToPool(name);
+  jgRosterAdvanceSlot();
+  jgRenderRosterSetupRows();
+}
+function jgRosterClearSlot(i){
+  delete jgPlayerNames[i];
+  jgRosterActiveSlot=i;
+  jgRenderRosterSetupRows();
+}
+function jgRosterClearAll(){
+  if(!confirm('確定要清空所有已設定的姓名嗎？')) return;
+  for(let i=1;i<=jgTotal;i++) delete jgPlayerNames[i];
+  jgRosterActiveSlot=1;
+  jgRenderRosterSetupRows();
+}
+// 從常用名單裡永久移除一個名字（例如當初打錯字誤加進去的）——只影響常用名單本身，
+// 不會動到目前已經填在座位格子裡的姓名（就算那個名字剛好還留在某個格子裡也一樣）。
+function jgRemoveNameFromPool(name){
+  if(!confirm('確定要把「'+name+'」從常用名單移除嗎？（不會影響目前已填入格子裡的姓名）')) return;
+  const pool=jgGetNamePool();
+  const idx=pool.indexOf(name);
+  if(idx>=0) pool.splice(idx,1);
+  try{ localStorage.setItem(JG_NAME_POOL_STORAGE_KEY, JSON.stringify(pool)); }catch(e){}
+  jgRenderRosterSetupRows();
+}
+function jgRenderRosterSetupRows(){
+  const box=document.getElementById('jg-roster-setup-rows');
+  if(!box) return;
+  if(jgRosterActiveSlot==null||jgRosterActiveSlot>jgTotal) jgRosterActiveSlot=1;
+  const cols=Math.ceil(jgTotal/2);
+  // 空格區：橫向分兩行——每一格點下去，會變成「目前作用中」的號碼（用顏色標示），
+  // 隱藏的 input 是給 jgApplyRosterSetupNames 之類既有的存檔邏輯讀值用，格式不用改。
+  let slotsHtml='<button type="button" class="ghost" style="margin:0 0 12px;" onclick="jgRosterClearAll()">🗑️ 清空全部姓名</button>'
+    +'<div class="rname-slots-grid" style="grid-template-columns:repeat('+cols+',1fr);">';
+  for(let i=1;i<=jgTotal;i++){
+    const cur=jgPlayerNames[i]||'';
+    const isActive=(i===jgRosterActiveSlot);
+    slotsHtml+='<div class="rname-slot'+(isActive?' active':'')+'" onclick="jgRosterSetActiveSlot('+i+')">'
+      +(cur?'<button type="button" class="rname-slot-x" onclick="event.stopPropagation();jgRosterClearSlot('+i+')" title="清空這一格">✕</button>':'')
+      +'<div class="rname-slot-num">'+i+'</div>'
+      +'<div class="rname-slot-name">'+(cur||'（空）')+'</div>'
+      +'<input type="hidden" id="jg-roster-input-'+i+'" value="'+cur.replace(/"/g,'&quot;')+'">'
+      +'</div>';
+  }
+  slotsHtml+='</div>';
+
+  // 常用玩家按鈕區——同一個名字已經對應到「別的」號碼時，按鈕直接鎖住不能按（不是只有
+  // 提示文字），要換人的話得先把那個號碼清空；每個按鈕右上角有個小 ✕，是「從常用名單永久
+  // 移除」用的（例如當初打錯字），跟清空座位格子是兩件事，不要搞混。
+  let poolHtml='<div class="info" style="margin:14px 0 8px;font-size:13px;">目前設定：<strong>'+jgRosterActiveSlot+' 號</strong>，點下面的名字，或直接手動輸入</div>';
+  const pool=jgGetNamePool();
+  poolHtml+='<div class="rname-pool-grid">';
+  poolHtml+=pool.map(nm=>{
+    const takenAt=jgRosterFindNameSlot(nm);
+    const lockedElsewhere=takenAt&&takenAt!==jgRosterActiveSlot;
+    const safe=nm.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return '<button type="button" class="rname-pool-btn'+(lockedElsewhere?' dup':'')+'"'
+      +(lockedElsewhere?' disabled':'')+' onclick="jgRosterAssignName(\''+safe+'\')">'
+      +'<span class="rname-pool-x" onclick="event.stopPropagation();jgRemoveNameFromPool(\''+safe+'\')" title="從常用名單移除">✕</span>'
+      +nm+(takenAt?'<span class="rname-tag">'+takenAt+'號</span>':'')+'</button>';
+  }).join('');
+  poolHtml+='</div>';
+
+  // 手動輸入（找不到人的時候用；確定後會自動加入上面的常用名單，下次也能直接點）
+  poolHtml+='<div style="display:flex;gap:8px;margin-top:10px;align-items:stretch;">'
+    +'<input type="text" id="jg-roster-manual-input" placeholder="不在名單裡？手動輸入姓名" style="flex:1;margin:0;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();jgRosterAssignManual();}">'
+    +'<button type="button" class="primary" style="width:auto;flex:0 0 auto;margin:0;padding:0 20px;" onclick="jgRosterAssignManual()">確定</button>'
+    +'</div>';
+
+  box.innerHTML=slotsHtml+poolHtml;
 }
 
 function jgApplyRosterSetupNames(){
@@ -980,16 +1118,44 @@ let jgSpeakTimerDone=false;
 
 // 換一批新的發言順序（例如今天的一般發言 vs 警上政見發表 vs PK 發言）時，自動歸零重來；
 // 同一批順序內（只是重新 render 同一個畫面）則保留目前進度，不會每次都被重置。
-function jgSpeakTimerEnsureOrder(order){
+// 發言順序中途改變時（例如警上競選有人退水），不能整個重置計時器——只要正在發言的那個人
+// 本身沒有退水，就該讓他繼續倒數，不能因為「別人」退水、順序重排就打斷他的計時；只有正在
+// 發言的人自己退水時，才需要換到下一位、重新起算時間。
+function jgSpeakTimerEnsureOrder(order, forceReset){
   const key=(order||[]).join(',');
-  if(key!==jgSpeakTimerOrderKey){
-    jgSpeakTimerOrderKey=key;
-    jgSpeakTimerIdx=0;
+  if(key===jgSpeakTimerOrderKey) return;
+  const oldOrder=(!forceReset&&jgSpeakTimerOrderKey)?jgSpeakTimerOrderKey.split(',').filter(Boolean).map(Number):[];
+  const oldCurrent=oldOrder.length?oldOrder[jgSpeakTimerIdx]:null;
+  const newOrder=order||[];
+  jgSpeakTimerOrderKey=key;
+  if(oldCurrent!=null){
+    const newIdx=newOrder.indexOf(oldCurrent);
+    if(newIdx>=0){
+      // 正在發言的人還在新順序裡，只是因為別人退水導致陣列位置改變——保持在他身上繼續
+      // 倒數，不重置秒數／執行狀態。
+      jgSpeakTimerIdx=newIdx;
+      return;
+    }
+    // 正在發言的人自己退水了：換成原本排在他後面、且還留在新順序裡的第一個人，並重新起算
+    // （新的人開始講，時間本來就該重新倒數）。
+    const oldIdxOfCurrent=oldOrder.indexOf(oldCurrent);
+    let nextNum=null;
+    for(let i=oldIdxOfCurrent+1;i<oldOrder.length;i++){
+      if(newOrder.includes(oldOrder[i])){ nextNum=oldOrder[i]; break; }
+    }
+    jgSpeakTimerIdx=Math.max(0, nextNum!=null?newOrder.indexOf(nextNum):0);
     jgSpeakTimerSec=JG_SPEAK_SECONDS;
     jgSpeakTimerRunning=false;
     jgSpeakTimerDone=false;
     if(jgSpeakTimerHandle){ clearInterval(jgSpeakTimerHandle); jgSpeakTimerHandle=null; }
+    return;
   }
+  // 沒有舊順序可比對（第一次進入這個畫面）：照原本邏輯整個初始化
+  jgSpeakTimerIdx=0;
+  jgSpeakTimerSec=JG_SPEAK_SECONDS;
+  jgSpeakTimerRunning=false;
+  jgSpeakTimerDone=false;
+  if(jgSpeakTimerHandle){ clearInterval(jgSpeakTimerHandle); jgSpeakTimerHandle=null; }
 }
 function jgSpeakTimerFmt(sec){
   const mm=String(Math.floor(sec/60)).padStart(2,'0');
@@ -998,8 +1164,14 @@ function jgSpeakTimerFmt(sec){
 }
 // 產生計時器卡片 HTML，塞進發言／警上政見發表／PK 發言三個畫面的最上方。
 // order 是「這一輪」的發言順序（number[]，已經照座位／PK 反轉排好）；沒有人可發言時回傳空字串。
-function jgSpeakTimerWidgetHtml(order){
-  jgSpeakTimerEnsureOrder(order||[]);
+// forceReset：這次呼叫是不是「切換到全新的一輪發言」（不是同一輪中途有人退水／自爆導致
+// 名單變短）——是的話，就算順序陣列的內容剛好跟舊的有重疊，也不要用「找舊的目前發言人
+// 現在排第幾個」那套邏輯接續，直接從頭開始（第一位、時間重新倒數）。像「一般競選發言→PK
+// 發言」「一般白天發言→投票PK發言」「進入遺言」這些場景，都是全新的一輪，該用 true；只有
+// 「同一輪發言中途，名單本身縮水」（例如警上競選發言中途退水）才要用 false 保留原本正在
+// 發言的人跟已經倒數的秒數。
+function jgSpeakTimerWidgetHtml(order, forceReset){
+  jgSpeakTimerEnsureOrder(order||[], forceReset);
   if(!order||!order.length) return '';
   if(jgSpeakTimerIdx>=order.length) jgSpeakTimerIdx=order.length-1;
   const cur=order[jgSpeakTimerIdx];
@@ -1330,6 +1502,15 @@ function jgMechDisplayLabel(learnedRole){
 // Returns the role label to display for a player, accounting for mechanical-wolf learning.
 function jgRoleDisplayName(p){
   if(p.role==='mechanicalwolf') return jgMechWolfLearned?jgMechDisplayLabel(jgMechWolfLearned):'機械狼';
+  // 雙機械狼板：玩家狀態卡片顯示「大機-X」「小機-X」（X 是學到的身分），還沒學到就只顯示
+  // 「大機」「小機」；學到的是另一台機械狼（還沒學到「真的」身分）就顯示「大機-機械狼」。
+  if(p.role==='bigmechwolf'||p.role==='smallmechwolf'){
+    const st=jgMechWolf2State[p.role];
+    const prefix=p.role==='bigmechwolf'?'大機':'小機';
+    if(!st||!st.learned) return prefix;
+    if(st.learned==='bigmechwolf'||st.learned==='smallmechwolf') return prefix+'-機械狼';
+    return prefix+'-'+jgFullRoleName(st.learned);
+  }
   return RNAME[p.role]||'平民';
 }
 
@@ -1523,7 +1704,16 @@ function jgRestoreState(snap){
 
 function jgBack(){
   if(jgSpeakTimerHandle){ clearInterval(jgSpeakTimerHandle); jgSpeakTimerHandle=null; jgSpeakTimerRunning=false; }
-  if(jgStepHistory.length<=1) return;
+  if(jgStepHistory.length<=1){
+    // 已經是這場遊戲最早的一步（發牌，或發牌之前的盜賊候選轉盤），沒有更早的紀錄可以倒回去了。
+    // 這時候「上一步」改成讓法官可以回到「開始遊戲」設定畫面，重新調整人數／角色／警長模式
+    // 等設定——原本按了完全沒反應，現在至少有個出口。
+    if(confirm('目前已經是這場遊戲最早的步驟，沒有更早的紀錄了。要回到「開始遊戲」設定畫面重新調整設定嗎？（這場遊戲的發牌進度會被捨棄）')){
+      document.querySelectorAll('#t-judge .pg').forEach(p=>p.classList.remove('on'));
+      document.getElementById('jg-p-setup').classList.add('on');
+    }
+    return;
+  }
   // Drop the step/state we're currently viewing.
   jgStepHistory.pop();
   jgStateHistory.pop();

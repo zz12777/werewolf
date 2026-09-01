@@ -509,40 +509,86 @@ function jgPresetToggleGod(id){
 // ═══════════════════════════════════
 // 專有名詞 (Glossary)
 // ═══════════════════════════════════
-const GLOSSARY_WATER=[
-  {term:'金水', desc:'預言家在夜晚查驗後，查出為好人的玩家。'},
-  {term:'銀水', desc:'女巫在夜晚使用解藥救的玩家。'},
-  {term:'銅水', desc:'守衛在夜晚成功守護的玩家。'},
+// ══════════════════════════════════════
+// 專有名詞小辭典（跟「攻略參考」同一套：Google 試算表 + 發布成 CSV 的做法）
+// ══════════════════════════════════════
+// 設定方式：
+// 1. 試算表 A／B／C 三欄放「詞語」「說明」「分類」，分類欄自由填字（不是固定選項），
+//    同一個分類名稱的詞條會自動被分在同一區塊顯示，區塊出現順序照試算表裡「第一次
+//    出現這個分類」的那一列決定。第一列可以放「詞語／說明／分類」當表頭，程式會自動
+//    偵測並跳過，不放表頭也沒關係。
+// 2. 檔案 → 共用 → 發布到網路，來源選「專有名詞小辭典」那個工作表、格式選 CSV，
+//    把產生的網址貼進下面 GLOSSARY_SHEET_CSV_URL 的單引號中間即可。
+// 3. 之後在試算表新增一列＝多一個詞條，重新整理網頁就會抓到最新內容。
+// 4. 如果沒設定網址、或抓取失敗，會改用下面 GLOSSARY_LOCAL 這個陣列當備援內容。
+const GLOSSARY_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA5OjCfXPH9iKiVzR_WvUFCLfqAjTHJRZeU8RwhXyMNKliM5lTn8-zfqjGpYwBv7IWgNKAtVjIaWG/pub?gid=237154590&single=true&output=csv';
+const GLOSSARY_LOCAL=[
+  {term:'金水', desc:'預言家在夜晚查驗後，查出為好人的玩家。', category:'查驗／守護結果'},
+  {term:'銀水', desc:'女巫在夜晚使用解藥救的玩家。', category:'查驗／守護結果'},
+  {term:'銅水', desc:'守衛在夜晚成功守護的玩家。', category:'查驗／守護結果'},
+  {term:'上警', desc:'參與警長競選。', category:'警長競選'},
+  {term:'退水', desc:'參與警長競選（上警）的玩家，在發言結束後或投票前主動退出競選的行為。', category:'警長競選'},
+  {term:'警左／警右', desc:'警長當選後，決定當晚（或後續每次）發言／睜眼從自己的左邊或右邊的玩家開始，稱為「警左」或「警右」。', category:'警長競選'},
+  {term:'悍跳', desc:'狼人玩家在白天強行假冒神職身份（多指假冒預言家，即「悍跳預言家」）以爭奪警長徽章或主導發言風向。', category:'發言與戰術'},
+  {term:'衝鋒', desc:'狼人玩家在發言與投票環節中，公開且強力地為己方悍跳的狼隊友站台、衝票，試圖將真神職或好人投票出局。', category:'發言與戰術'},
+  {term:'倒鉤', desc:'狼人玩家選擇不幫狼隊友，反而假裝成好人，公開站邊真預言家並為其投票，藉此隱藏自身狼人身份並建立良好形象。', category:'發言與戰術'},
+  {term:'墊飛', desc:'狼人故意以極差、極像狼人的發言去站邊真預言家，藉由讓自己顯得像狼人，來污染真預言家的金水或團隊信用，使其看起來像「狼人在幫真預言家拉票」。', category:'發言與戰術'},
+  {term:'奶穿', desc:'守衛的守護與女巫的解藥在同一夜晚作用於同一位玩家，「同守同救」，導致該名玩家依然死亡。', category:'發言與戰術'},
+  {term:'屠邊', desc:'狼人陣營不必殺光所有好人也能獲勝的其中一種方式：只要把「神職」全部殺光，或把「平民」全部殺光（任一邊清空），狼人就直接獲勝，不需要等到殺光全部好人。', category:'發言與戰術'},
 ];
-const GLOSSARY_SHERIFF=[
-  {term:'上警', desc:'參與警長競選。'},
-  {term:'退水', desc:'參與警長競選（上警）的玩家，在發言結束後或投票前主動退出競選的行為。'},
-  {term:'警左／警右', desc:'警長當選後，決定當晚（或後續每次）發言／睜眼從自己的左邊或右邊的玩家開始，稱為「警左」或「警右」。'},
-];
-const GLOSSARY_TACTIC=[
-  {term:'悍跳', desc:'狼人玩家在白天強行假冒神職身份（多指假冒預言家，即「悍跳預言家」）以爭奪警長徽章或主導發言風向。'},
-  {term:'衝鋒', desc:'狼人玩家在發言與投票環節中，公開且強力地為己方悍跳的狼隊友站台、衝票，試圖將真神職或好人投票出局。'},
-  {term:'倒鉤', desc:'狼人玩家選擇不幫狼隊友，反而假裝成好人，公開站邊真預言家並為其投票，藉此隱藏自身狼人身份並建立良好形象。'},
-  {term:'墊飛', desc:'狼人故意以極差、極像狼人的發言去站邊真預言家，藉由讓自己顯得像狼人，來污染真預言家的金水或團隊信用，使其看起來像「狼人在幫真預言家拉票」。'},
-  {term:'奶穿', desc:'守衛的守護與女巫的解藥在同一夜晚作用於同一位玩家，「同守同救」，導致該名玩家依然死亡。'},
-  {term:'屠邊', desc:'狼人陣營不必殺光所有好人也能獲勝的其中一種方式：只要把「神職」全部殺光，或把「平民」全部殺光（任一邊清空），狼人就直接獲勝，不需要等到殺光全部好人。'},
-];
-function renderGlossary(){
-  function makeTermCard(item){
-    return `<div class="rcol">
+let glossaryLoaded=false;
+// 三個既有分類沿用原本的 icon，新分類（試算表裡新打的分類名稱）一律用通用的 📁。
+const GLOSSARY_CATEGORY_ICON={'查驗／守護結果':'🔎','警長競選':'🎖️','發言與戰術':'🎭'};
+function glossaryRowsToEntries(rows){
+  if(!rows.length) return [];
+  let start=0;
+  const first=(rows[0][0]||'').trim().toLowerCase();
+  if(first==='詞語'||first==='term'||first==='') start=1;
+  return rows.slice(start).map(r=>({
+    term:(r[0]||'').trim(),
+    desc:(r[1]||'').trim(),
+    category:(r[2]||'').trim()||'其他',
+  })).filter(e=>e.term);
+}
+function renderGlossary(entries){
+  const root=document.getElementById('glossary-dynamic-list');
+  if(!root) return;
+  // 依「第一次出現這個分類」的順序分組，不是照字母或原本寫死的順序，這樣試算表裡
+  // 詞條的排列順序就能直接決定畫面上分類區塊出現的順序。
+  const order=[]; const groups={};
+  entries.forEach(e=>{
+    if(!groups[e.category]){ groups[e.category]=[]; order.push(e.category); }
+    groups[e.category].push(e);
+  });
+  root.innerHTML=order.map(cat=>{
+    const icon=GLOSSARY_CATEGORY_ICON[cat]||'📁';
+    const cards=groups[cat].map(item=>`<div class="rcol">
       <div class="rcol-hd" onclick="toggleRcol(this)">
         <span class="rcol-name">${item.term}</span>
         <span class="rcol-arrow">▶</span>
       </div>
       <div class="rcol-body">${item.desc}</div>
-    </div>`;
+    </div>`).join('');
+    return `<div class="rules-h2">${icon} ${cat}</div><div class="card-grid">${cards}</div>`;
+  }).join('');
+}
+async function loadGlossary(){
+  if(glossaryLoaded) return;
+  glossaryLoaded=true;
+  if(!GLOSSARY_SHEET_CSV_URL){
+    renderGlossary(GLOSSARY_LOCAL);
+    return;
   }
-  const wEl=document.getElementById('glossary-water-list');
-  const sEl=document.getElementById('glossary-sheriff-list');
-  const tEl=document.getElementById('glossary-tactic-list');
-  if(wEl) wEl.innerHTML=GLOSSARY_WATER.map(makeTermCard).join('');
-  if(sEl) sEl.innerHTML=GLOSSARY_SHERIFF.map(makeTermCard).join('');
-  if(tEl) tEl.innerHTML=GLOSSARY_TACTIC.map(makeTermCard).join('');
+  try{
+    const res=await fetch(GLOSSARY_SHEET_CSV_URL);
+    if(!res.ok) throw new Error('fetch failed');
+    const text=await res.text();
+    const rows=parseGuideCsv(text); // 沿用攻略參考同一套 CSV 解析器，不用另外寫一份
+    const entries=glossaryRowsToEntries(rows);
+    renderGlossary(entries.length?entries:GLOSSARY_LOCAL);
+  }catch(e){
+    renderGlossary(GLOSSARY_LOCAL);
+  }
 }
 
 // ── 角色與規則頁的關鍵字搜尋：比對每張卡片（板子介紹／角色／名詞）的標題與內文 ──
