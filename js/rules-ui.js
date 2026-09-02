@@ -102,7 +102,7 @@ function jgPopulateBoardPresetDropdown(){
 const JG_PRESET_WOLF_BASE=['wolf','wolfking','whitewolf'];
 // 混血兒不放進這個通用清單：只有在板子本身就固定包含混血兒（見 JG_BOARD_PRESETS）時，
 // 才會以「鎖定」格子出現在該板子裡，不會讓混血兒出現在其他跟他無關的板子讓大家誤選。
-const JG_PRESET_GOD_BASE=['seer','witch','hunter','guard'];
+const JG_PRESET_GOD_BASE=['seer','witch','hunter','guard','knight','fool','demonhunter'];
 
 // Role picker state: {roleId: count}
 let jgRolePick = {wolf:2, villager:2, seer:1, witch:1};
@@ -300,7 +300,7 @@ const RPICK_STATE = {
 const RPICK_TOTAL = {
   'jg-role-picker': ()=>{
     const isDual=jgSetupDualMode;
-    const min=isDual?4:6, max=isDual?7:14;
+    const min=isDual?4:6, max=isDual?7:16;
     const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count')?.value)||min));
     // 有盜賊時，開局前要多準備 2 張候選身分牌，要選滿的角色總數是「玩家人數 + 2」。
     const hasThief=!isDual&&((jgRolePick&&jgRolePick.thief)>0);
@@ -481,6 +481,20 @@ function renderPresetPicker(){
   });
   html+='</div>';
   if(excludeSeer) html+='<div style="font-size:11px;color:var(--text3);margin:4px 0 0;">本板固定為通靈師，不會重複出現預言家</div>';
+
+  // 混血兒、盜賊不算「神職」（各自陣營歸屬跟一般玩法不同），但任何板子都應該能自由加選——
+  // 本板固定包含時已經在上面用鎖定格子顯示過了，這裡只用來讓「原本沒固定包含」的板子
+  // 也能自由加選這兩個角色。
+  const specialTiles=['hybrid','thief'].filter(id=>!fixedKeys.includes(id)).map(id=>{
+    const r=ALL_ROLES[id]; const cnt=state[id]||0;
+    return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
+      +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
+      +(cnt>0?'<span class="rp-cnt">✓</span>':'')+'</div>';
+  }).join('');
+  if(specialTiles){
+    html+='<div style="font-size:11px;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:0.5px;">特殊角色</div>'
+      +'<div class="rpick-grid">'+specialTiles+'</div>';
+  }
 
   el.innerHTML=html;
 }

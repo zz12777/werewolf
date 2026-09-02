@@ -48,6 +48,9 @@ function jgAfterDawn(){
 }
 function jgSetDiscussStart(n){
   jgDayMeta[jgNight]=Object.assign({}, jgDayMeta[jgNight], {start:n, dir:jgSheriffLRAutoDir(n)});
+  // 剛決定警左／警右，這是「這輪發言」第一次真正確立順序的時刻——強制清空計時器的舊記錄，
+  // 保證畫面顯示的是新順序的第一位，不是殘留著決定方向之前（甚至更早）的舊狀態。
+  jgSpeakTimerOrderKey='';
   jgRenderStep(jgCurrentStep);
 }
 // 警長選警左／警右的簡化版 picker：只列出警長左右兩邊的號碼給法官選，
@@ -147,6 +150,9 @@ function jgSpinWheel(){
       const dir=jgSpeakDirection||(Math.random()<0.5?'順':'逆');
       jgSpeakDirection=dir;
       jgDayMeta[jgNight]={start:finalNum, dir:dir};
+      // 轉盤剛決定完起點跟方向，第一次真正確立這輪發言順序——強制清空計時器舊記錄，
+      // 理由跟 jgSetDiscussStart 一樣。
+      jgSpeakTimerOrderKey='';
       const dirLabel=dir==='順'?'順時針 →':'← 逆時針';
       jgShowBigCard(finalNum+'號', dirLabel+' 發言');
       if(box) box.innerHTML='<div class="info-success" style="text-align:center;padding:14px;">'
@@ -175,6 +181,9 @@ function jgSpinDirectionOnly(){
       jgSpeakDirection=dir;
       const start=jgComputeSpeakStart();
       if(start!==null) jgDayMeta[jgNight]={start:start, dir:dir};
+      // 轉盤剛決定完方向、起點也跟著確立——同樣是這輪發言第一次真正確立順序的時刻，
+      // 強制清空計時器舊記錄，理由跟 jgSetDiscussStart 一樣。
+      jgSpeakTimerOrderKey='';
       const dirLabel=dir==='順'?'順時針 →':'← 逆時針';
       jgShowBigCard(start!==null?start+'號':'—', dirLabel+' 發言');
       if(box) box.innerHTML='<div class="info-success" style="text-align:center;padding:14px;">'

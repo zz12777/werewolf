@@ -730,14 +730,14 @@ function jgSetMode(isDual){
   }
   const countInput=document.getElementById('jg-count');
   const label=document.getElementById('jg-count-label');
-  const min=isDual?4:6, max=isDual?7:14;
+  const min=isDual?4:6, max=isDual?7:16;
   let n=min;
   if(countInput){
     countInput.min=min; countInput.max=max;
     n=Math.min(max,Math.max(min,parseInt(countInput.value)||min));
     countInput.value=n;
   }
-  if(label) label.textContent=isDual?'玩家人數（4～7，雙身分共 8～14 個角色）':'玩家人數（6～14）';
+  if(label) label.textContent=isDual?'玩家人數（4～7，雙身分共 8～14 個角色）':'玩家人數（6～16）';
   jgRolePick=Object.assign({}, isDual?(DEFAULT_COMP_DUAL[n]||DEFAULT_COMP_DUAL[4]):(DEFAULT_COMP[n]||DEFAULT_COMP[6]));
   jgRolePick._init=true;
   jgUpdateComp();
@@ -745,7 +745,7 @@ function jgSetMode(isDual){
 
 function jgUpdateComp(){
   const isDual=jgSetupDualMode;
-  const min=isDual?4:6, max=isDual?7:14;
+  const min=isDual?4:6, max=isDual?7:16;
   const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count')?.value)||min));
   if(!jgRolePick._init){
     if(!isDual&&jgBoardPreset!=='custom'){ jgApplyPresetDefaults(n); }
@@ -790,7 +790,7 @@ function jgUpdateComp(){
 
 function jgOpenRosterSetup(){
   const isDual=jgSetupDualMode;
-  const min=isDual?4:6, max=isDual?7:14;
+  const min=isDual?4:6, max=isDual?7:16;
   const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count')?.value)||min));
   jgTotal=n;
   jgRosterActiveSlot=1;
