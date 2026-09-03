@@ -506,7 +506,7 @@ function jgFormatNightLog(){
       if(!jgMechWolfBonusKillUsed||jgRecord.mechWolfBonusKillTarget) lines.push('機刀 '+(jgRecord.mechWolfBonusKillTarget||'x'));
     }
   }
-  if(hasWolf) lines.push('刀 '+jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill));
+  if(hasWolf) lines.push('刀 '+jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill)+(jgRecord._mechwolf2InvincibleKnifeNight?'（無敵刀，可破守衛盾）':''));
   const wbP3=jgPlayers.find(p=>p.role==='wolfbeauty');
   if(wbP3&&wbP3.alive) lines.push('魅 '+(jgRecord.wolfbeautyCharm||'x'));
   const bmP2=jgPlayers.find(p=>p.role==='blackmarket');
@@ -2092,6 +2092,17 @@ function jgMechWolf2ShowLearnedBigCard(roleId){
   const st=jgMechWolf2State[roleId];
   if(!st.learnTargetNum){ jgShowBigCard('尚未學習'); return; }
   jgMechWolf2ShowBigCardRaw(st.learnTargetNum);
+}
+// 雙機械狼板：給這隻機械狼看「另一隻機械狼是幾號、學到什麼身分」，格式是「X號 OO機械狼」
+// ＋「學到 YY」，跟一般查驗大字報「X號 → YY」的格式不同，特別強調對方是哪一台機械狼。
+function jgMechWolf2ShowOtherBigCard(roleId){
+  const otherRoleId=roleId==='bigmechwolf'?'smallmechwolf':'bigmechwolf';
+  const otherLabel=roleId==='bigmechwolf'?'小機械狼':'大機械狼';
+  const otherSt=jgMechWolf2State[otherRoleId];
+  const otherP=jgPlayers.find(p=>p.role===otherRoleId);
+  if(!otherP){ jgShowBigCard('尚未記錄身分'); return; }
+  const otherLearnedDisplay=!otherSt.learned?'尚未學到':((otherSt.learned==='bigmechwolf'||otherSt.learned==='smallmechwolf')?'機械狼':jgFullRoleName(otherSt.learned));
+  jgShowBigCard(otherP.num+'號 '+otherLabel, '學到 '+otherLearnedDisplay);
 }
 
 // Live-check the mechanical wolf's learn target (also offers a big-card reveal for privacy)

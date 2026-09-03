@@ -47,10 +47,13 @@ function jgBuildHunterStatusHtml(p){
   const wsKill=jgRecord.witchSave;
   const pnum=p.num;
   const byWolf=jgRecord.wolfKill&&(pnum.toString()===jgRecord.wolfKill.toString())&&!gsKill&&!mgsKill&&!wsKill;
-  // 不管是被真女巫毒還是機械狼學到的女巫毒藥毒，技能使用狀況都算比倒讚
+  // 不管是被真女巫毒、單一機械狼學到的女巫毒藥，還是雙機械狼板裡任一台機械狼學到的
+  // 女巫毒藥毒死，技能使用狀況都算比倒讚。
   const byPoison=
     (jgRecord.witchPoison&&pnum.toString()===jgRecord.witchPoison.toString())||
-    (jgRecord.mechWolfPoison&&pnum.toString()===jgRecord.mechWolfPoison.toString());
+    (jgRecord.mechWolfPoison&&pnum.toString()===jgRecord.mechWolfPoison.toString())||
+    (jgRecord.mechwolf2Poison_bigmechwolf&&pnum.toString()===jgRecord.mechwolf2Poison_bigmechwolf.toString())||
+    (jgRecord.mechwolf2Poison_smallmechwolf&&pnum.toString()===jgRecord.mechwolf2Poison_smallmechwolf.toString());
   const alreadyDead=!p.alive&&!byWolf&&!byPoison;
   if(alreadyDead){
     return '<div class="info-warn">已出局，仍需走完流程避免洩露身分</div>'
@@ -1189,27 +1192,6 @@ function jgMechWolf2MediumCheckLive(id, val){
 }
 // 雙機械狼板：已經學到明確身分（不是另一台機械狼）、且過了學到的那一晚，可以使用技能——
 // 跟單一機械狼的 jgMechWolfSkillUseHtml 是同一套邏輯，只是要照 roleId 分開讀寫欄位／狀態。
-function jgMechWolf2SkillUseHtml(roleId){
-  const st=jgMechWolf2State[roleId];
-  const learned=st.learned;
-  if(learned==='medium'){
-    const cv=jgRecord['mechwolf2Check_'+roleId]||'';
-    return '<label>查驗對象號碼</label>'
-      +jgNumSelectHtml('jg-'+roleId+'-medium-check', cv, 'jgMechWolf2MediumCheckLive')
-      +'<div id="jg-'+roleId+'-medium-result"></div>';
-  }
-  if(learned==='witch'){
-    if(st.poisonUsed) return '<div class="info" style="font-size:12px;">（法官搖頭）技能已使用完畢。</div>';
-    return '<label>今晚要毒的對象號碼（整局限一次，留空=不毒）</label>'+jgNumSelectHtml('jg-'+roleId+'-poison', '');
-  }
-  if(learned==='guard'){
-    if(st.guardUsed) return '<div class="info" style="font-size:12px;">（法官搖頭）技能已使用完畢。</div>';
-    const guardExclude=st.lastGuardTarget?[parseInt(st.lastGuardTarget)]:[];
-    return '<label>今晚要守護的對象（不能連續兩晚守同一人，留空=空守）</label>'
-      +jgNumSelectHtml('jg-'+roleId+'-guard', '', null, null, guardExclude, '不能連續兩晚守護同一人');
-  }
-  return '<div class="info" style="font-size:12px;">已學得「'+jgFullRoleName(learned)+'」，此技能請法官依角色規則自行主持（若無主動夜間技能可略過）</div>';
-}
 function jgMechWolf2LearnCheck(id, val){
   const roleId=id.includes('smallmechwolf')?'smallmechwolf':'bigmechwolf';
   const box=document.getElementById('jg-'+roleId+'-learn-result');
@@ -1491,7 +1473,10 @@ function jgMechWolf2SkillUseHtml(roleId){
     return '<label>今晚要守護的對象（不能連續兩晚守同一人，留空=空守）</label>'
       +jgNumSelectHtml('jg-'+roleId+'-guard', gv, null, null, guardExclude, '不能連續兩晚守護同一人');
   }
-  return '<div class="info" style="font-size:12px;">已學得「'+jgFullRoleName(learned)+'」，此技能請法官依角色規則自行主持（若無主動夜間技能可略過）</div>';
+  if(learned==='wolf'){
+    return '<div class="info" style="font-size:12px;">在帶刀階段有雙刀。</div>';
+  }
+  return '<div class="info" style="font-size:12px;">已學得「'+jgFullRoleName(learned)+'」，沒有主動夜間技能，可略過。</div>';
 }
 function jgMechWolfMediumCheckLive(){
   const val=(document.getElementById('jg-mechwolf-medium-check')||{}).value?.trim()||'';

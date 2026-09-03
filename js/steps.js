@@ -573,7 +573,8 @@ function jgRenderStep(step){
       <div id="jg-wolf-blocked-msg" style="${jgRecord.nightmareBlocksWolf?'':'display:none;'}"><div class="info-danger">⚠️ 夢魘恐懼到狼隊友，狼人今晚不得殺人</div></div>
       ${wbNote}
       <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}">${wolfKillSectionHtml}${identifySectionHtml}</div>`
-      :('<div class="info-warn">'+((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0)?'小狼已全滅，仍須走完流程':'狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程')+'</div>')}
+      :('<div class="info-warn">'+((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0)?'小狼已全滅，仍須走完流程':'狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程')+'</div>'
+        +((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0)?'<div class="speech" style="margin-top:8px;">「<em>今晚要殺的是？</em>」（小狼已全滅，這裡不用選，實際刀口由機械狼自己的畫面決定）</div>':''))}
       <div class="speech" style="margin-top:12px;">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
     `,'🐺 狼人');
@@ -1925,7 +1926,13 @@ function jgRenderStep(step){
     const needDirection=!jgLastNightPeaceful&&!jgSpeakDirection;
     const speakStart=(jgLastNightPeaceful||needDirection)?null:jgComputeSpeakStart();
     const speakStartLabel=speakStart?(jgSpeakDirection==='逆'?'從 '+speakStart+' 號開始，逆時針依序發言':'從 '+speakStart+' 號開始，順時針依序發言'):null;
-    if(speakStart) jgDayMeta[jgNight]={start:speakStart, dir:jgSpeakDirection};
+    if(speakStart){
+      jgDayMeta[jgNight]={start:speakStart, dir:jgSpeakDirection};
+      // 這是這一天第一次真正確立發言順序的時刻（方向早已確定，只是今天要重新算起點）——
+      // 強制清空計時器舊記錄，理由跟 jgSetDiscussStart／jgSpinWheel 一樣，避免計時器沿用
+      // 前一晚殘留的狀態，導致畫面顯示的第一位跟這裡算出來的起點對不上。
+      jgSpeakTimerOrderKey='';
+    }
     jgShowPg(`
       <h2>發言討論</h2>
       ${speakStart?jgSpeakTimerWidgetHtml(jgDaySpeechOrderList(jgNight)):''}
@@ -2165,11 +2172,21 @@ function jgRenderMechWolf2Step(roleId){
   const otherP=jgPlayers.find(p=>p.role===otherRoleId);
   // 小機械狼已經回歸主狼群後（規則8：兩隻都學到狼人），這個獨立畫面不再需要選任何東西，
   // 實際刀口改在共用的「狼人睜眼」畫面決定，這裡只維持喊話節奏。
+  // 小機械狼已經回歸主狼群後（規則8：兩隻都學到狼人），實際刀口改在共用的「狼人睜眼」
+  // 畫面決定，這裡不用再選任何東西——但台詞還是要完整走一遍（睜眼/閉眼、帶刀手勢），
+  // 不能只剩空殼，避免其他玩家從流程差異猜出小機械狼已經回歸。帶刀手勢固定比讚（因為
+  // 他現在會參與狼隊共用的刀口決定），並提供大字報提醒他「待會要回歸狼隊」。
   if(roleId==='smallmechwolf'&&st.rejoinedPack){
+    const bigP=jgPlayers.find(p=>p.role==='bigmechwolf');
     jgShowPg(`
       <h2>${label}睜眼</h2>
       <div class="speech">「<em>${label}請睜眼。</em>」</div>
-      <div class="info" style="font-size:12px;">小機械狼已經回歸主狼群，跟其餘存活的狼人一起在「狼人睜眼」畫面決定刀口，這裡不用再做任何選擇。</div>
+      <div class="info" style="font-size:12px;">因大小機皆學到狼人，小機今晚回歸狼隊</div>
+      <button onclick="jgShowBigCard('小機械狼','待會回歸狼隊（狼人睜眼時一起睜眼）')" style="margin-top:6px;width:100%;">📋 大字報顯示給小機械狼看</button>
+      ${bigP?'<button onclick="jgMechWolf2ShowOtherBigCard(\'smallmechwolf\')" style="margin-top:6px;width:100%;">📋 給小機械狼看大機械狼是幾號與身分</button>':''}
+      <div class="divider"></div>
+      <div class="speech">「<em>你要使用技能嗎？</em>」</div>
+      <div class="speech">「<em>今晚的帶刀手勢是？（👍 讚）</em>」</div>
       <div class="speech" style="margin-top:10px;">「<em>${label}請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveMechWolf2('${roleId}')">已紀錄，下一步 →</button>
     `,'🤖 '+label);
@@ -2208,7 +2225,7 @@ function jgRenderMechWolf2Step(roleId){
     if(st.learned==='hunter'){
       learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>'+jgBuildHunterStatusHtml(selfP);
     } else if(dead){
-      learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div><div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
+      learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>';
     } else {
       learnHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>'+jgMechWolf2SkillUseHtml(roleId);
     }
@@ -2216,43 +2233,35 @@ function jgRenderMechWolf2Step(roleId){
     learnHtml=st.learned?'<div class="info" style="font-size:12px;">已學得「'+jgFullRoleName(st.learned)+'」，次晚起可使用技能。</div>':'';
   }
 
-  // 法官告知學到的身分＋號碼：只在「學到的那一晚的下一晚」顯示一次（不是學到當下、也不是
-  // 之後每晚都重複講一次——玩家上一晚就已經知道了），用大字報顯示。
+  // 法官告知學到的身分＋號碼：這件事在「學到的當晚」選人的當下，就已經透過即時查驗結果＋
+  // 大字報告知過了（見 jgMechWolf2LearnCheck），不需要在後面任何一晚再重複講一次。
   let informHtml='';
-  if(!dead&&!feared&&!isLearnedOtherMech&&st.learned&&jgNight===st.learnedNight+1){
-    const learnTargetP=st.learnTargetNum?jgFind(st.learnTargetNum):null;
-    informHtml='<div class="info" style="font-size:13px;padding:8px 12px;">📖 你學到的身分是：<strong>'+jgFullRoleName(st.learned)+'</strong>'
-      +(learnTargetP?'（'+learnTargetP.num+'號）':'')+'</div>';
-    if(learnTargetP){
-      informHtml+='<button onclick="jgMechWolf2ShowLearnedBigCard(\''+roleId+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+label+'看</button>';
-    }
-    informHtml+='<div class="divider"></div>';
-  }
 
-  // 告知另一隻機械狼的號碼與目前學到的身分：第二晚起每晚都顯示（對方學到的身分可能之後
-  // 又重選變了，所以每晚都給最新狀態，不是只講一次）。
+  // 告知另一隻機械狼的號碼與目前學到的身分：只在第二晚顯示一次（雙方各自看對方一次就好，
+  // 不需要每晚重複出現），大字報格式是「X號 OO機械狼 學到 YY」。
   let otherInfoHtml='';
-  if(!dead&&!feared&&jgNight>=2){
+  if(!dead&&!feared&&jgNight===2){
     const otherLearnedDisplay=otherP?(!otherSt.learned?'尚未學到':((otherSt.learned==='bigmechwolf'||otherSt.learned==='smallmechwolf')?'機械狼':jgFullRoleName(otherSt.learned))):'（尚未記錄身分）';
     otherInfoHtml='<div class="info" style="font-size:12px;padding:8px 12px;">🤝 '+otherLabel+'是 <strong>'+(otherP?otherP.num+'號':'?')+'</strong>，目前學到的身分是：<strong>'+otherLearnedDisplay+'</strong>'
-      +(otherP?' <button onclick="jgMechWolf2ShowBigCardRaw('+otherP.num+')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+label+'看</button>':'')+'</div>';
+      +(otherP?' <button onclick="jgMechWolf2ShowOtherBigCard(\''+roleId+'\')" style="margin-top:6px;width:100%;">📋 給'+label+'看'+otherLabel+'是幾號與身分</button>':'')+'</div>';
   }
 
   // Part 2：帶刀手勢（第二晚起才有）——就算已出局，這句台詞也要照樣問一次，只是死亡沒有
-  // 實際帶刀選項，固定比倒讚略過即可。
+  // 實際帶刀選項，固定比倒讚略過即可。文字盡量精簡，不重複講「輪到誰帶刀」這種畫面上
+  // 已經看得出來的資訊。
   let killGestureHtml='';
   if(jgNight>=2&&!feared){
     if(dead){
       killGestureHtml='<div class="divider"></div><div class="speech">「<em>今晚的帶刀手勢是？（👎 倒讚）</em>」</div>';
     } else if(eligible){
       killGestureHtml='<div class="divider"></div>'
-        +'<div class="info-warn">🔪 今晚的帶刀手勢是？（👍 讚）輪到'+label+'帶刀'+(doubleKill?'（第一次輪到，且學到狼人，本回合可以帶兩刀！）':'')+'</div>'
+        +'<div class="speech">「<em>今晚的帶刀手勢是？（👍 讚）</em>」'+(doubleKill?'（學到狼人，本回合帶兩刀！）':'')+'</div>'
         +'<label>今晚要殺的對象'+(doubleKill?'（第一刀）':'')+'（留空=不殺）</label>'+jgNumSelectHtml('jg-'+roleId+'-kill1','');
       if(doubleKill){
         killGestureHtml+='<label style="margin-top:8px;">第二刀（留空=不殺）</label>'+jgNumSelectHtml('jg-'+roleId+'-kill2','');
       }
     } else {
-      killGestureHtml='<div class="divider"></div><div class="speech">「<em>今晚的帶刀手勢是？（👎 倒讚）</em>」（還沒輪到'+label+'帶刀）</div>';
+      killGestureHtml='<div class="divider"></div><div class="speech">「<em>今晚的帶刀手勢是？（👎 倒讚）</em>」</div>';
     }
   }
 
