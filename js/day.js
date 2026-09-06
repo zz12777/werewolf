@@ -284,19 +284,28 @@ function jgSaveDawnHunterShot(){
     const p=jgFind(v);
     // 惡靈騎士夜間免疫（含夜槍）：獵人/黑狼王被狼刀後開槍，若對象是惡靈騎士，不會倒牌
     const isEvilKnightImmune=!!(p&&p.role==='evilknight');
+    // 攝夢人「這一晚第一次」夢到的對象，當晚免疫所有傷害（含夜槍）——這個提醒只給法官看，
+    // 不用跟玩家解釋原因，法官知道「這槍打不中」就好。
+    const isDreamcatcherImmune=!!(jgRecord.dreamcatcherImmune&&jgRecord.dreamcatcherImmune.toString()===v.toString());
     let wbNote='';
     if(guardBlocked){
       alert('🛡️ '+v+'號當晚被守衛守護，夜槍/王槍被擋下，不會被帶走！');
     } else if(isEvilKnightImmune){
       alert('🖤 '+v+'號是惡靈騎士，夜間（含夜槍）免疫，不會倒牌！');
+    } else if(isDreamcatcherImmune){
+      alert('😴 （只給法官看）'+v+'號是攝夢人今晚的夢遊對象，本回合免疫所有傷害，夜槍/王槍帶不走，不用跟玩家說明原因。');
     } else if(p&&p.alive){
       const wasRole=p.role; // 換牌前先記住原本身分，避免 jgApplyDeath 換牌後 role 已經變了
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      const dcTargetNum=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
+        } else if(dcTargetNum){
+          alert('😴 '+p.num+'號是攝夢人，夢遊對象 '+dcTargetNum+'號 跟著陣亡！\n\n法官口白：「'+p.num+'號、'+dcTargetNum+'號 淘汰。」');
+        } else if(trulyDied&&!wbCharmNum){
+          alert('🔫 法官口白：「'+p.num+'號 淘汰。」');
         }
       }
       // 被夜槍／王槍帶走的對象，如果本身也具備獵人開槍資格（真獵人／已學得獵人的機械狼／
@@ -369,18 +378,25 @@ function jgSaveMechHunterChainShot(){
       || (jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===val.toString()));
     const p=jgFind(val);
     const isEvilKnightImmune=!!(p&&p.role==='evilknight');
+    const isDreamcatcherImmune=!!(jgRecord.dreamcatcherImmune&&jgRecord.dreamcatcherImmune.toString()===val.toString());
     if(guardBlocked){
       alert('🛡️ '+val+'號當晚被守衛守護，槍被擋下，不會被帶走！');
     } else if(isEvilKnightImmune){
       alert('🖤 '+val+'號是惡靈騎士，夜間（含夜槍）免疫，不會倒牌！');
+    } else if(isDreamcatcherImmune){
+      alert('😴 （只給法官看）'+val+'號是攝夢人今晚的夢遊對象，本回合免疫所有傷害，槍帶不走，不用跟玩家說明原因。');
     } else if(p&&p.alive){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum2=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      const dcTargetNum2=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
+        } else if(dcTargetNum2){
+          alert('😴 '+p.num+'號是攝夢人，夢遊對象 '+dcTargetNum2+'號 跟著陣亡！\n\n法官口白：「'+p.num+'號、'+dcTargetNum2+'號 淘汰。」');
+        } else if(trulyDied&&!wbCharmNum2){
+          alert('🔫 法官口白：「'+p.num+'號 淘汰。」');
         }
       }
       if(wbCharmNum2){
@@ -441,10 +457,14 @@ function jgSaveLuckyoneHunterShot(){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum3=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      const dcTargetNum3=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
+        } else if(dcTargetNum3){
+          alert('😴 '+p.num+'號是攝夢人，夢遊對象 '+dcTargetNum3+'號 跟著陣亡！\n\n法官口白：「'+p.num+'號、'+dcTargetNum3+'號 淘汰。」');
+        } else if(trulyDied&&!wbCharmNum3){
+          alert('🔫 法官口白：「'+p.num+'號 淘汰。」');
         }
       }
       let wbNote3='';
@@ -774,10 +794,14 @@ function jgSaveWolfKingShot(){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum4=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      const dcTargetNum4=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
+        } else if(dcTargetNum4){
+          alert('😴 '+p.num+'號是攝夢人，夢遊對象 '+dcTargetNum4+'號 跟著陣亡！\n\n法官口白：「'+p.num+'號、'+dcTargetNum4+'號 淘汰。」');
+        } else if(trulyDied&&!wbCharmNum4){
+          alert('🔫 法官口白：「'+p.num+'號 淘汰。」');
         }
       }
       let wbNote4='';

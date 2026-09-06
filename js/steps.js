@@ -876,7 +876,13 @@ function jgRenderStep(step){
       return;
     }
 
-    const selfKilled=witchP&&killed&&(witchP.num.toString()===killed.toString());
+    // 自己是不是被殺，要用「狼隊實際喊出來的號碼」（wolfKillRaw）去判斷，不是魔術師交換後
+    // 真正生效的號碼——女巫（跟現場所有人一樣）只聽得到狼隊口頭喊的號碼，只要那個號碼剛好
+    // 是自己，就會自然認為「我被殺了，不能自救」，即使因為魔術師交換、真正中刀的其實是
+    // 另一個人。這個認知落差正是魔術師這個角色的效果所在：交換後沒被救到的那個真正目標，
+    // 才會在天亮被公布死亡（見下面 killedDisplay 的註解，天亮公告仍然要用真正生效的號碼）。
+    const killedRawForSelfCheck=jgRecord.wolfKillRaw||killed;
+    const selfKilled=witchP&&killedRawForSelfCheck&&(witchP.num.toString()===killedRawForSelfCheck.toString());
 
     // Killed display — the spoken question is asked every night regardless of outcome,
     // so the judge's behavior never leaks whether someone died or the antidote is gone.
@@ -893,12 +899,19 @@ function jgRenderStep(step){
       killedHtml='<div class="speech">「<em>今晚他被殺了，你要使用解藥嗎？</em>」</div>'
         +'<div class="info" style="font-size:12px;margin-top:4px;color:var(--text2);">（今晚無人死亡）</div>';
     } else if(killed){
-      const kp=jgFind(killed);
+      // 顯示給女巫看的號碼要用「狼人實際喊出來的號碼」（wolfKillRaw），不是魔術師交換後
+      // 真正生效的號碼（wolfKill）——女巫跟其他玩家一樣，只聽得到狼隊口頭說的號碼，不知道
+      // 魔術師偷偷交換過；她選擇要不要救人時，底層邏輯仍然是套用在真正生效的號碼上
+      // （jgRecord.wolfKill），只是畫面顯示的號碼要對外一致，不能洩漏交換的事。若這一刀
+      // 不是來自主要狼刀（wolfKillRaw 沒有值，例如假面/大野狼額外刀等其他刀口來源），
+      // 就直接顯示 wolfKill 本身，沒有交換顯示的問題。
+      const killedDisplay=jgRecord.wolfKillRaw||killed;
+      const kp=jgFind(killedDisplay);
       const kname=kp&&kp.name!==kp.num+'號'?kp.name:'';
       killedHtml='<div class="killed-box"><div class="killed-label">今晚被狼人殺死</div>'
-        +'<div class="killed-num">'+killed+'號</div>'
+        +'<div class="killed-num">'+killedDisplay+'號</div>'
         +'<div class="killed-name">'+kname+'</div></div>'
-        +'<div class="speech">「手比 '+killed+'號'+(kname?' '+kname:'')+'：<em>今晚他被殺了，你要使用解藥嗎？</em>」</div>'
+        +'<div class="speech">「手比 '+killedDisplay+'號'+(kname?' '+kname:'')+'：<em>今晚他被殺了，你要使用解藥嗎？</em>」</div>'
         +(selfKilled?'<div class="info-warn" style="margin-top:6px;">女巫自己被殺，不能自救（搖頭）</div>':'');
     }
 

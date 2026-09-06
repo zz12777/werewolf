@@ -271,7 +271,9 @@ function jgSoloIdFearCheck(whoId, val){
 // witch number that matches tonight's wolf-kill target —女巫不能自救.
 function jgWitchIdCheck(whoId, val){
   jgSoloIdFearCheck(whoId, val);
-  const killed=jgRecord&&jgRecord.wolfKill;
+  // 跟 witch-wake 畫面那邊一樣，自己是不是被殺要用「狼隊實際喊出來的號碼」判斷，不是
+  // 魔術師交換後真正生效的號碼（見 steps.js killedRawForSelfCheck 的註解）。
+  const killed=jgRecord&&(jgRecord.wolfKillRaw||jgRecord.wolfKill);
   const selfKilled=!!(val && killed && val.toString()===killed.toString());
   const saveWrap=document.getElementById('jg-witch-save-wrap');
   const note=document.getElementById('jg-witch-selfkill-note');
@@ -2126,7 +2128,9 @@ function jgSaveWitch(){
   if(witchFearedFinal){ jgRecord.witchSave=null; jgRecord.witchPoison=null; }
   // 女巫不能自救：這是最終防線，確保即使第一晚剛剛才選定女巫號碼（此時畫面上的救人/不救按鈕
   // 可能還來不及知道「被殺的就是女巫本人」而誤顯示），存檔當下一定會把自救結果強制清空。
-  const selfKilledFinal=!!(witchPfinal&&jgRecord.wolfKill&&witchPfinal.num.toString()===jgRecord.wolfKill.toString());
+  // 一樣用「狼隊實際喊出來的號碼」判斷，不是魔術師交換後真正生效的號碼。
+  const _selfKillRawFinal=jgRecord.wolfKillRaw||jgRecord.wolfKill;
+  const selfKilledFinal=!!(witchPfinal&&_selfKillRawFinal&&witchPfinal.num.toString()===_selfKillRawFinal.toString());
   if(selfKilledFinal){ jgRecord.witchSave=null; }
   const usedSave=!witchFearedFinal&&!!jgRecord.witchSave;
   if(usedSave) jgWitchSaveUsed=true;
@@ -2194,10 +2198,14 @@ function jgSaveHunter(){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      const dcTargetNumN=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
+        } else if(dcTargetNumN){
+          alert('😴 '+p.num+'號是攝夢人，夢遊對象 '+dcTargetNumN+'號 跟著陣亡！\n\n法官口白：「'+p.num+'號、'+dcTargetNumN+'號 淘汰。」');
+        } else if(trulyDied&&!wbCharmNum){
+          alert('🔫 法官口白：「'+p.num+'號 淘汰。」');
         }
       }
       let wbNote='';

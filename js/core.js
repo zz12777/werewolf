@@ -29,11 +29,20 @@ function switchTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   document.querySelectorAll('.nav-btn').forEach((b,i)=>{
-    b.classList.toggle('active',['t-rules','t-guide','t-judge','t-data','t-report'][i]===id);
+    b.classList.toggle('active',['t-rules','t-guide','t-judge','t-data','t-room'][i]===id);
   });
-  if(id==='t-report') jgLoadReportForm();
   if(id==='t-data') pdLoadCloudGames(); // 每次切到「遊玩數據」分頁都重新抓一次雲端最新場次
   if(id==='t-guide') loadGuideArticles(); // 第一次切到「攻略參考」才去抓資料，避免沒用到還耗流量
+  if(id==='t-room'&&window.jgRoomShown!==true){
+    window.jgRoomShown=true;
+    // js/room.js 是用 <script type="module"> 載入的，執行時機比一般 script 稍晚，
+    // 這裡加一個小重試，避免使用者手速太快、模組還沒載完就點到這個分頁時畫面空白。
+    const tryRender=(n)=>{
+      if(window.jgRoomRenderEntry){ window.jgRoomRenderEntry(); }
+      else if(n>0){ setTimeout(()=>tryRender(n-1),100); }
+    };
+    tryRender(20);
+  }
   window.scrollTo(0,0);
 }
 
@@ -330,11 +339,14 @@ function jgCascadeWolfBeautyDeath(wasRole, trulyDied){
   return null;
 }
 // 某玩家「真的被淘汰」時，若他原本的身分是攝夢人，當晚夢遊（所睡）的玩家跟著同死。
+// 回傳連動死亡的號碼（比照 jgCascadeWolfBeautyDeath 的做法），讓呼叫端可以額外跳出提醒，
+// 不是只有默默把人設成死亡、法官卻不知道發生了什麼事。
 function jgCascadeDreamcatcherDeath(wasRole, trulyDied){
   if(trulyDied&&wasRole==='dreamcatcher'&&jgRecord.dreamcatcherTarget){
     const dct=jgFind(jgRecord.dreamcatcherTarget);
-    if(dct&&dct.alive) jgApplyDeath(dct);
+    if(dct&&dct.alive){ jgApplyDeath(dct); return dct.num; }
   }
+  return null;
 }
 // 雙身分模式的黑狼王例外：黑狼王不管放在卡1或卡2，都可以在狼人睜眼時參與商討殺人，
 // 避免黑狼王被鎖在尚未翻開的第二張牌裡、導致狼隊完全沒有夜間刀人能力而一直平安夜。

@@ -15,7 +15,7 @@
   <button class="nav-btn" onclick="switchTab('t-guide')"><span class="nv-icon">🧭</span>攻略參考</button>
   <button class="nav-btn active" onclick="switchTab('t-judge')"><span class="nv-icon">📋</span>法官の助手</button>
   <button class="nav-btn" onclick="switchTab('t-data')"><span class="nv-icon">📊</span>遊玩數據</button>
-  <button class="nav-btn" onclick="switchTab('t-report')"><span class="nv-icon">🐛</span>問題回報</button>
+  <button class="nav-btn" onclick="switchTab('t-room')"><span class="nv-icon">🎮</span>連線房間</button>
 </nav>
 
 <!-- ══════════════════════════════════════
@@ -315,6 +315,9 @@
   <div class="rules-h1">📚 專有名詞小辭典</div>
   <div id="glossary-dynamic-list"></div>
   </div>
+  <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
+    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
+  </div>
 </div>
 <!-- ══════════════════════════════════════
      TAB 3: 人工法官助手
@@ -428,6 +431,9 @@
   <div id="jg-live-session-view" style="margin-top:10px;"></div>
 </div>
 
+<div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
+  <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
+</div>
 </div><!-- /t-judge -->
 
 <!-- ══════════════════════════════════════
@@ -487,6 +493,9 @@
   <div class="gcount" id="gcount"></div>
   <div id="game-list" class="card-grid"></div>
 
+  <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
+    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -507,24 +516,19 @@
   <div id="guide-empty" class="empty" style="display:none;">目前還沒有收錄文章，之後會陸續新增。</div>
   <div class="chip-row" id="guide-tag-filter" style="display:none;"></div>
   <div id="guide-list" class="card-grid"></div>
+  <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
+    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
-     TAB: 問題回報
+     TAB: 連線房間
 ══════════════════════════════════════ -->
-<div id="t-report" class="tab">
-  <div class="nbanner">
-    <div class="nicon">🐛</div>
-    <h1>問題回報</h1>
-    <p class="sub" style="text-align:center;margin-top:8px;">發現 bug 或有建議嗎？填表單告訴我</p>
+<div id="t-room" class="tab">
+  <div id="jg-room-content"></div>
+  <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
+    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
   </div>
-
-  <button class="primary" style="margin-top:4px;" onclick="jgOpenReportLink(REPORT_FORM_URL)">📝 填寫問題回報表單</button>
-
-  <div class="card" style="padding:0;overflow:hidden;margin-top:14px;">
-    <iframe id="jg-report-iframe" src="" title="問題回報表單" style="width:100%;height:640px;border:none;display:block;"></iframe>
-  </div>
-  <div class="info" style="font-size:12px;margin-top:6px;">如果上面表單沒有顯示出來，請改用上方的按鈕直接開啟表單。</div>
 </div>
 
 
@@ -541,5 +545,7 @@
 <script src="js/awards.js"></script>
 <script src="js/playdata-core.js"></script>
 <script src="js/main.js"></script>
+<script type="module" src="js/firebase-init.js"></script>
+<script type="module" src="js/room.js"></script>
 </body>
 </html>
