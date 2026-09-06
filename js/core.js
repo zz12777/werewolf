@@ -1297,6 +1297,36 @@ function jgNumGridPick(id, num, onChangeFn){
   if(onChangeFn&&typeof window[onChangeFn]==='function') window[onChangeFn](id, hidden.value);
 }
 
+// 用目前設定畫面的板子（人數＋角色配置）建立連線房間，不是開始本機單人主持那一套流程。
+// 驗證邏輯比照 jgStart()，確保角色數量跟人數對得上——只是最後不是開始本機遊戲，而是把
+// 這份確認過的板子設定帶去「連線房間」分頁，讓房主輸入暱稱、正式建立房間。目前連線房間
+// 還只支援一般模式（不支援雙身分、盜賊這兩種比較複雜的板子，之後遊戲引擎做完再開放）。
+function jgRoomCreateFromSetup(){
+  if(jgSetupDualMode){ alert('⚠️ 連線房間目前還不支援雙身分模式，請切換成一般模式再建立房間。'); return; }
+  const minStart=6, maxStart=16;
+  const n=Math.min(maxStart,Math.max(minStart,parseInt(document.getElementById('jg-count').value)||minStart));
+  const compCheck=getPickComp(jgRolePick);
+  const compTotal=Object.values(compCheck).reduce((a,b)=>a+b,0);
+  if(compCheck.thief>0){ alert('⚠️ 連線房間目前還不支援盜賊板子，請調整角色配置後再建立房間。'); return; }
+  if(compTotal!==n){
+    alert('⚠️ 目前選了 '+compTotal+' 個角色，但玩家人數是 '+n+' 人（需選滿 '+n+' 個角色）才能建立房間，請調整角色數量。');
+    return;
+  }
+  window.jgRoomPendingComp={comp:compCheck, total:n};
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('t-room').classList.add('on');
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{
+    b.classList.toggle('active',['t-rules','t-guide','t-judge','t-data','t-room'][i]==='t-room');
+  });
+  window.jgRoomShown=true;
+  // js/room.js 是用 <script type="module"> 載入的，執行時機比較晚，這裡一樣用重試避免
+  // 手速太快、模組還沒載完時畫面空白（理由同 switchTab 那邊的處理）。
+  const tryRoomRender=(retries)=>{
+    if(window.jgRoomRenderCreateWithComp){ window.jgRoomRenderCreateWithComp(compCheck, n); }
+    else if(retries>0){ setTimeout(()=>tryRoomRender(retries-1),100); }
+  };
+  tryRoomRender(20);
+}
 function jgStart(){
   const isDualStart=jgSetupDualMode;
   const minStart=isDualStart?4:6, maxStart=isDualStart?7:14;
