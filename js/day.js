@@ -289,7 +289,7 @@ function jgSaveDawnHunterShot(){
     const isDreamcatcherImmune=!!(jgRecord.dreamcatcherImmune&&jgRecord.dreamcatcherImmune.toString()===v.toString());
     let wbNote='';
     if(guardBlocked){
-      alert('🛡️ '+v+'號當晚被守衛守護，夜槍/王槍被擋下，不會被帶走！');
+      alert('🛡️ 槍帶不走 '+v+'號，'+v+'號留在場內。');
     } else if(isEvilKnightImmune){
       alert('🖤 '+v+'號是惡靈騎士，夜間（含夜槍）免疫，不會倒牌！');
     } else if(isDreamcatcherImmune){
@@ -380,7 +380,7 @@ function jgSaveMechHunterChainShot(){
     const isEvilKnightImmune=!!(p&&p.role==='evilknight');
     const isDreamcatcherImmune=!!(jgRecord.dreamcatcherImmune&&jgRecord.dreamcatcherImmune.toString()===val.toString());
     if(guardBlocked){
-      alert('🛡️ '+val+'號當晚被守衛守護，槍被擋下，不會被帶走！');
+      alert('🛡️ 槍帶不走 '+val+'號，'+val+'號留在場內。');
     } else if(isEvilKnightImmune){
       alert('🖤 '+val+'號是惡靈騎士，夜間（含夜槍）免疫，不會倒牌！');
     } else if(isDreamcatcherImmune){

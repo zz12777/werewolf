@@ -574,7 +574,7 @@ function jgRenderStep(step){
       ${wbNote}
       <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}">${wolfKillSectionHtml}${identifySectionHtml}</div>`
       :('<div class="info-warn">'+((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0)?'小狼已全滅，仍須走完流程':'狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程')+'</div>'
-        +((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0)?'<div class="speech" style="margin-top:8px;">「<em>今晚要殺的是？</em>」（小狼已全滅，這裡不用選，實際刀口由機械狼自己的畫面決定）</div>':''))}
+        +((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0)?'<div class="speech" style="margin-top:8px;">「<em>今晚要殺的是？</em>」</div>':''))}
       <div class="speech" style="margin-top:12px;">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
     `,'🐺 狼人');
@@ -2228,7 +2228,13 @@ function jgRenderMechWolf2Step(roleId){
       learnHtml='';
     } else if(canRepickNow){
       const selfNums=selfP?[selfP.num]:[];
-      learnHtml='<div class="speech">「<em>今晚要學習的對象是？</em>」</div>'
+      // 「重新選人學習」（學到另一台機械狼）不能讓法官口白說「今晚要學習的對象」，這句話跟
+      // 其他夜晚的「你要使用技能嗎？」不一樣，會讓其他人從口白差異猜出這隻機械狼發生了什麼
+      // 事。所以這裡一律說「你要使用技能嗎？」，實際「學到機械狼、可以重選」這件事改用
+      // 大字報私下告知法官/機械狼本人，不會被唸出來。
+      const isRepick=!!st.learned;
+      learnHtml='<div class="speech">「<em>'+(isRepick?'你要使用技能嗎？':'今晚要學習的對象是？')+'</em>」</div>'
+        +(isRepick?'<button onclick="jgShowBigCard(\''+label+'\',\'學到機械狼，可以重新學習一個對象\')" style="margin-bottom:8px;width:100%;">📋 大字報顯示給'+label+'看</button>':'')
         +'<label>'+(st.learned?'重新選人學習':'學習對象號碼')+'（留空=本晚不學習，不能學自己）</label>'
         +jgNumSelectHtml('jg-'+roleId+'-learn','','jgMechWolf2LearnCheck',null,selfNums,'不能學習自己')
         +'<div id="jg-'+roleId+'-learn-result"></div>'

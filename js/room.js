@@ -77,7 +77,180 @@ async function jgRoomWaitAuth(){
   return window.jgFirebaseUid;
 }
 
-// ── 建立房間 ──
+// ══════════════════════════════════════════
+// 連線房間發牌（跟上面完整的自動化流程是分開的一套簡化功能）：房主在法官助手設定好板子
+// 跟玩家名單（座位號碼對應姓名）之後，開一個「發牌房」，玩家用手機加入，各自認自己是
+// 哪個座位（不用重新打名字，因為房主已經先設定好了），到齊後房主按「分配身分」，每支
+// 手機只會看到自己的身分（大字，沒有其他操作），房主的裝置則會自動跳回法官助手、繼續
+// 用本機原本那套完整功能主持遊戲——這個功能只負責取代實體卡牌，不負責之後的遊戲流程。
+// ══════════════════════════════════════════
+window.jgRoomDealCreate=async function(hostName, comp, total, presetNames){
+  const name=(hostName||'').trim();
+  if(!name){ alert('請先輸入你的全名'); return; }
+  const uid=await jgRoomWaitAuth();
+  const db=window.jgFirebaseDb;
+  let code=null;
+  for(let i=0;i<5;i++){
+    const candidate=jgRoomGenCode();
+    const snap=await getDoc(doc(db,'rooms',candidate));
+    if(!snap.exists()){ code=candidate; break; }
+  }
+  if(!code){ alert('房號產生失敗，請再試一次'); return; }
+  await setDoc(doc(db,'rooms',code),{
+    hostUid:uid, status:'lobby', createdAt:serverTimestamp(), comp:comp, total:total,
+    mode:'deal', presetNames:presetNames, dealtDone:false
+  });
+  jgRoomIsHost=true;
+  jgRoomComp=comp; jgRoomTotal=total;
+  window.jgRoomPendingComp=null; window.jgRoomPendingDeal=null;
+  try{ localStorage.setItem('jgLastRoomCode', code); }catch(e){}
+  await jgRoomEnterLobby(code);
+};
+// 加入發牌房：不用打名字，直接從房主預先設好的座位清單裡點選「我是幾號」——
+// 一個座位只能被一個人認領，避免兩支手機都宣稱自己是同一號。
+window.jgRoomDealClaimSeat=async function(seatNum, seatName){
+  if(!confirm('確定你是 '+seatNum+'號 '+seatName+' 嗎？')) return;
+  const uid=await jgRoomWaitAuth();
+  const db=window.jgFirebaseDb;
+  const existing=jgRoomLatestPlayers.find(p=>p.seatNum===seatNum);
+  if(existing&&existing.uid!==uid){ alert('這個座位已經有人認領了，請確認座位號碼是否正確。'); return; }
+  await setDoc(doc(db,'rooms',jgRoomCode,'players',uid),{
+    name:seatName, seatNum:seatNum, joinedAt:serverTimestamp(), alive:true
+  });
+  jgRoomIsHost=false; // 加入者一律不是房主（房主是建房的那個人，已經在 jgRoomDealCreate 設過）
+  const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  if(roomSnap.exists()) jgRoomIsHost=(roomSnap.data().hostUid===uid);
+  try{ localStorage.setItem('jgLastRoomCode', jgRoomCode); }catch(e){}
+};
+window.jgRoomDealJoin=async function(codeRaw){
+  const code=(codeRaw||'').trim();
+  if(!/^\d{4,6}$/.test(code)){ alert('請輸入正確的房號（4-6碼數字）'); return; }
+  const db=window.jgFirebaseDb;
+  const roomSnap=await getDoc(doc(db,'rooms',code));
+  if(!roomSnap.exists()){ alert('找不到這個房號，請確認房號是否正確'); return; }
+  if(roomSnap.data().mode!=='deal'){ alert('這不是發牌房，請確認房號。'); return; }
+  const uid=await jgRoomWaitAuth();
+  jgRoomIsHost=(roomSnap.data().hostUid===uid);
+  try{ localStorage.setItem('jgLastRoomCode', code); }catch(e){}
+  await jgRoomEnterLobby(code);
+};
+// 房主分配身分：洗牌、寫進每個座位的 secrets，再把整份「座位→身分」的結果套進本機的
+// 法官助手（jgApplyDealtRoles，定義在 js/core.js），直接把房主的畫面切回法官助手繼續
+// 主持——玩家手機那邊則靠 dealtDone 這個欄位，各自從 secrets 讀出自己的身分顯示大字。
+window.jgRoomDealAssignRoles=async function(){
+  if(!jgRoomCode) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  const presetNames=rd.presetNames||{};
+  const totalSeats=Object.keys(presetNames).length;
+  const claimedSeats=jgRoomLatestPlayers.length;
+  if(claimedSeats!==totalSeats){
+    alert('⚠️ 還有座位沒有人認領（'+claimedSeats+' / '+totalSeats+'），請等所有人都加入再分配身分。');
+    return;
+  }
+  const db=window.jgFirebaseDb;
+  const pool=shuffle(buildPool(jgRoomComp));
+  const players=jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum);
+  const seatRoleMap={};
+  await Promise.all(players.map((p,i)=>{
+    const role=pool[i]||'villager';
+    seatRoleMap[p.seatNum]=role;
+    return setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:role, seatNum:p.seatNum });
+  }));
+  await setDoc(doc(db,'rooms',jgRoomCode),{ dealtDone:true, status:'role-assigned' },{ merge:true });
+  // 房主自己的裝置：直接把這份結果套進本機法官助手，跳回去繼續主持，不用再看發牌房畫面。
+  if(window.jgApplyDealtRoles) window.jgApplyDealtRoles(seatRoleMap, jgRoomComp, jgRoomTotal);
+};
+function jgRoomRenderDealPhase(){
+  const rd=jgRoomLatestRoomDoc||{};
+  if(rd.dealtDone){
+    jgRoomRenderDealMyRole();
+  } else {
+    jgRoomRenderDealLobby();
+  }
+}
+function jgRoomRenderDealLobby(){
+  const root=document.getElementById('jg-room-content');
+  if(!root) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  const presetNames=rd.presetNames||{};
+  const seats=Object.entries(presetNames).map(([num,name])=>({num:parseInt(num), name}));
+  const claimedBySeat={};
+  jgRoomLatestPlayers.forEach(p=>{ claimedBySeat[p.seatNum]=p; });
+  const myUid=window.jgFirebaseUid;
+  const myClaimed=jgRoomLatestPlayers.some(p=>p.uid===myUid);
+  const rows=seats.sort((a,b)=>a.num-b.num).map(s=>{
+    const taken=claimedBySeat[s.num];
+    const isMine=taken&&taken.uid===myUid;
+    if(taken){
+      return '<div class="row"><div class="av av-vil">'+s.num+'</div><div class="nm">'+s.name+'</div>'
+        +'<span class="badge '+(isMine?'bv':'bw')+'">'+(isMine?'你':'已認領')+'</span></div>';
+    }
+    return '<div class="row" style="cursor:pointer;" onclick="jgRoomDealClaimSeat('+s.num+',\''+s.name+'\')"><div class="av av-vil">'+s.num+'</div><div class="nm">'+s.name+'</div>'
+      +'<span class="badge">點我認領</span></div>';
+  }).join('');
+  const hostBtn=jgRoomIsHost
+    ?'<button class="primary" style="margin-top:14px;" onclick="jgRoomDealAssignRoles()">🎴 分配身分（'+jgRoomLatestPlayers.length+' / '+seats.length+' 人）</button>'
+    :'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">'+(myClaimed?'已認領座位，等待房主分配身分...':'請從下面點選你的座位')+'</div>';
+  root.innerHTML=`
+    <div class="nbanner"><div class="nicon">🎴</div><h1>房間 ${jgRoomCode}（發牌）</h1>
+      <p class="sub" style="text-align:center;margin-top:6px;">請從下面找到你的座位號碼，點下去認領</p></div>
+    <div class="card" style="margin-top:14px;">${rows}</div>
+    ${hostBtn}
+    <button class="ghost" style="margin-top:14px;" onclick="jgRoomLeave()">離開房間</button>
+  `;
+}
+// 分配完身分後，加入的玩家（不含房主，房主已經跳回法官助手了）只會看到這個畫面：
+// 純粹顯示自己的身分，沒有任何操作按鈕——這個房間接下來的遊戲流程完全交給房主用
+// 法官助手主持，跟這支手機無關了。
+async function jgRoomRenderDealMyRole(){
+  const root=document.getElementById('jg-room-content');
+  if(!root) return;
+  const db=window.jgFirebaseDb;
+  const secretSnap=await getDoc(doc(db,'rooms',jgRoomCode,'secrets',window.jgFirebaseUid));
+  if(!secretSnap.exists()){
+    root.innerHTML='<div class="info" style="text-align:center;margin-top:40px;">身分分配中，請稍候...</div>';
+    setTimeout(()=>jgRoomRenderDealMyRole(),1000);
+    return;
+  }
+  const role=secretSnap.data().role;
+  const roleName=(typeof RNAME!=='undefined'&&RNAME[role])||role;
+  const icon=jgRoomRoleIconGuess(role);
+  root.innerHTML=`
+    <div style="text-align:center;padding:60px 20px;">
+      <div style="font-size:88px;">${icon}</div>
+      <div style="font-size:34px;font-weight:800;margin-top:20px;">你的身分是：${roleName}</div>
+    </div>
+    <button class="ghost" onclick="jgRoomLeave()">離開房間</button>
+  `;
+}
+// 粗略猜一個角色對應的 emoji（沒有的話用預設 🎴）——之後如果角色介紹資料裡本來就有
+// icon 欄位可以直接抓來用，這裡先用簡單對照表，涵蓋目前先做的四個板子＋常見角色。
+function jgRoomRoleIconGuess(role){
+  const map={wolf:'🐺',wolfking:'👑',whitewolf:'🤍',wolfbeauty:'💋',evilknight:'🖤',gargoyle:'🗿',
+    bloodmoon:'🌑',mechanicalwolf:'🤖',bigmechwolf:'🤖',smallmechwolf:'🤖',nightmare:'😱',
+    wolfbrother_e:'👬',wolfbrother_y:'👬',wolfshaman:'🔮',mask:'🎭',bigbadwolf:'🐺',
+    villager:'🧑‍🌾',seer:'🔮',witch:'🧪',hunter:'🏹',guard:'🛡️',dreamcatcher:'😴',
+    knight:'⚔️',magician:'🪄',demonhunter:'🗡️',gravkeeper:'⚰️',medium:'👁️',blackmarket:'🕴️',
+    purewhitemaiden:'🕊️',dancer:'💃',littlegirl:'👧',hybrid:'🧬',cupid:'💘',fool:'🃏'};
+  return map[role]||'🎴';
+}
+window.jgRoomRenderCreateDeal=function(comp, total, presetNames){
+  const root=document.getElementById('jg-room-content');
+  if(!root) return;
+  window.jgRoomPendingDeal={comp:comp, total:total, presetNames:presetNames};
+  root.innerHTML=`
+    <div class="nbanner"><div class="nicon">🎴</div><h1>連線房間發牌</h1></div>
+    <div class="info" style="font-size:13px;margin-top:10px;">${total} 人局，玩家名單已經照法官助手設定好的座位帶過來了。</div>
+    <div class="card" style="margin-top:14px;">
+      <label>你的全名（房主）</label>
+      <input type="text" id="jg-room-deal-name" placeholder="輸入你的全名">
+      <button class="primary" style="margin-top:10px;" onclick="jgRoomDealCreate(document.getElementById('jg-room-deal-name').value, window.jgRoomPendingDeal.comp, window.jgRoomPendingDeal.total, window.jgRoomPendingDeal.presetNames)">🎴 建立發牌房</button>
+    </div>
+    <button class="ghost" style="margin-top:10px;" onclick="switchTab('t-judge')">← 回去重新調整板子</button>
+  `;
+};
+
+
 // comp/total 是「已經在法官助手設定畫面確認過」的板子配置——房間建立時就把這份配置存進
 // 房間文件，之後「隨機分配身分」要照這份配置洗牌，而不是憑加入人數臨時套用預設板子。
 window.jgRoomCreate=async function(hostName, comp, total){
@@ -107,6 +280,20 @@ window.jgRoomCreate=async function(hostName, comp, total){
 };
 
 // ── 加入房間 ──
+// 先查一下房號對應的是「發牌房」還是一般連線房間，走對應的加入流程——發牌房不用打
+// 名字（直接從預先設好的座位清單裡選），一般房間才需要打名字自己排隊入座。
+window.jgRoomSmartJoin=async function(codeRaw, name){
+  const code=(codeRaw||'').trim();
+  if(!/^\d{4,6}$/.test(code)){ alert('請輸入正確的房號（4-6碼數字）'); return; }
+  const db=window.jgFirebaseDb;
+  const roomSnap=await getDoc(doc(db,'rooms',code));
+  if(!roomSnap.exists()){ alert('找不到這個房號，請確認房號是否正確'); return; }
+  if(roomSnap.data().mode==='deal'){
+    await jgRoomDealJoin(code);
+  } else {
+    await jgRoomJoin(code, name);
+  }
+};
 window.jgRoomJoin=async function(codeRaw, name){
   const code=(codeRaw||'').trim();
   const nm=(name||'').trim();
@@ -164,6 +351,12 @@ async function jgRoomEnterLobby(code){
 // 上帝視角則是「死亡玩家自己選擇要不要看」，優先度比投票還高（一旦切換進去，不管房間
 // 現在進行到哪一步都維持顯示上帝視角，直到玩家自己按退出）。
 function jgRoomRenderCurrentPhase(){
+  // 「連線房間發牌」是完全獨立的一套簡化流程（只負責發牌，不走警長/投票/夜晚自動化那些），
+  // 用房間文件的 mode==='deal' 判斷要不要整個改走這條路，不跟其餘畫面的邏輯混在一起。
+  if(jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.mode==='deal'){
+    jgRoomRenderDealPhase();
+    return;
+  }
   if(jgRoomGodViewOn){
     jgRoomRenderGodView();
     return;
@@ -992,6 +1185,10 @@ async function jgRoomTryAutoReconnect(){
 window.jgRoomRenderEntry=async function(){
   const root=document.getElementById('jg-room-content');
   if(!root) return;
+  if(window.jgRoomPendingDeal){
+    jgRoomRenderCreateDeal(window.jgRoomPendingDeal.comp, window.jgRoomPendingDeal.total, window.jgRoomPendingDeal.presetNames);
+    return;
+  }
   if(window.jgRoomPendingComp){
     jgRoomRenderCreateWithComp(window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total);
     return;
@@ -1012,9 +1209,9 @@ window.jgRoomRenderEntry=async function(){
     <div class="card" style="margin-top:14px;">
       <label>房號</label>
       <input type="text" id="jg-room-code-join" placeholder="輸入房號" inputmode="numeric">
-      <label style="margin-top:8px;">你的全名</label>
+      <label style="margin-top:8px;">你的全名（一般連線房間才需要，發牌房會直接讓你選座位）</label>
       <input type="text" id="jg-room-name-join" placeholder="輸入你的全名">
-      <button class="primary" style="margin-top:10px;" onclick="jgRoomJoin(document.getElementById('jg-room-code-join').value, document.getElementById('jg-room-name-join').value)">🚪 加入房間</button>
+      <button class="primary" style="margin-top:10px;" onclick="jgRoomSmartJoin(document.getElementById('jg-room-code-join').value, document.getElementById('jg-room-name-join').value)">🚪 加入房間</button>
     </div>
     <div class="info" style="font-size:12px;margin-top:10px;">目前是第一階段測試：建房、加入、即時看到玩家名單、隨機分配身分（只有自己看得到自己的牌）。遊戲流程自動化跟語音播報還在開發中。</div>
   `;

@@ -225,6 +225,14 @@ const GAME_TITLE_ROLE_ORDER=[
   'sheriff','luckyone'
 ];
 function jgAutoGameTitle(){
+  // 如果法官是直接選現成的板子（不是自訂角色），文字紀錄標題就直接用那個板子自己的名稱
+  // （例如「雙機械狼」），不要再從角色清單重新兜一次——避免板子名稱跟兜出來的標題對不上
+  // （例如「雙機械狼」板子裡其實還內建通靈師，兜出來的標題會變成「機械狼通靈師」之類，
+  // 跟法官自己選的板子名稱不一致）。只有選「自訂角色」時才維持原本從角色清單推導的邏輯。
+  if(typeof jgBoardPreset!=='undefined'&&jgBoardPreset&&jgBoardPreset!=='custom'
+     &&typeof JG_BOARD_PRESETS!=='undefined'&&JG_BOARD_PRESETS[jgBoardPreset]){
+    return JG_BOARD_PRESETS[jgBoardPreset].label;
+  }
   const baseline=new Set(['villager','wolf','seer','witch','hunter','guard']);
   const specialRoles=[];
   jgPlayers.forEach(p=>{ if(p.role&&!baseline.has(p.role)&&!specialRoles.includes(p.role)) specialRoles.push(p.role); });
@@ -242,7 +250,17 @@ function jgExportGameLog(){
   for(let i=1;i<=jgTotal;i++){
     const p=jgByNum(i);
     const nm=jgPlayerNames[i]||(p?p.name:i+'號');
-    out+=i+' '+nm+' '+(p?jgRoleDisplayName(p):'')+'\n';
+    // 雙身分模式：不管第一個身分死了沒，文字紀錄一律把兩個身分都列出來（例如「女巫 平民」），
+    // 不能只看 jgRoleDisplayName（那個是給即時畫面看「目前」身分用的，只會顯示當下那一張牌）。
+    let roleDisplay;
+    if(jgDualIdentityMode&&p){
+      const role1=p.deadRole1||p.role;
+      const role2=p.deadRole1?p.role:p.role2;
+      roleDisplay=(RNAME[role1]||'平民')+(role2?(' '+(RNAME[role2]||'平民')):'');
+    } else {
+      roleDisplay=p?jgRoleDisplayName(p):'';
+    }
+    out+=i+' '+nm+' '+roleDisplay+'\n';
   }
   const d=new Date();
   const mmdd=String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
@@ -1301,6 +1319,105 @@ function jgNumGridPick(id, num, onChangeFn){
 // 驗證邏輯比照 jgStart()，確保角色數量跟人數對得上——只是最後不是開始本機遊戲，而是把
 // 這份確認過的板子設定帶去「連線房間」分頁，讓房主輸入暱稱、正式建立房間。目前連線房間
 // 還只支援一般模式（不支援雙身分、盜賊這兩種比較複雜的板子，之後遊戲引擎做完再開放）。
+// ── 「連線房間發牌」：跟一般連線房間不同，這裡只是拿房間系統取代實體卡牌——玩家用手機
+//    加入、房主分配身分後，玩家各自的手機只會看到自己的身分卡（大字），之後遊戲流程整個
+//    照舊由房主（法官）用本機這套完整功能主持，不會走房間系統那套自動化流程。
+//    有些角色（機械狼、假面等）本來就沒有實體卡牌可以發，這個功能就是為了解決這個問題。
+function jgRoomDealFromSetup(){
+  if(jgSetupDualMode){ alert('⚠️ 連線房間發牌目前還不支援雙身分模式，請切換成一般模式。'); return; }
+  const minStart=6, maxStart=16;
+  const n=Math.min(maxStart,Math.max(minStart,parseInt(document.getElementById('jg-count').value)||minStart));
+  const compCheck=getPickComp(jgRolePick);
+  const compTotal=Object.values(compCheck).reduce((a,b)=>a+b,0);
+  if(compCheck.thief>0){ alert('⚠️ 連線房間發牌目前還不支援盜賊板子，請調整角色配置。'); return; }
+  if(compTotal!==n){
+    alert('⚠️ 目前選了 '+compTotal+' 個角色，但玩家人數是 '+n+' 人（需選滿 '+n+' 個角色）才能發牌，請調整角色數量。');
+    return;
+  }
+  // 玩家名單（座位號碼對應姓名）要先設定過，這樣玩家用手機加入時才能「認自己是幾號」，
+  // 不用另外再打一次名字；沒設定過的座位，先用「X號」當佔位名稱。
+  const presetNames={};
+  for(let i=1;i<=n;i++) presetNames[i]=jgPlayerNames[i]||(i+'號');
+  window.jgRoomPendingDeal={comp:compCheck, total:n, presetNames:presetNames};
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('t-room').classList.add('on');
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>{
+    b.classList.toggle('active',['t-rules','t-guide','t-judge','t-data','t-room'][i]==='t-room');
+  });
+  window.jgRoomShown=true;
+  const tryRoomRender=(retries)=>{
+    if(window.jgRoomRenderCreateDeal){ window.jgRoomRenderCreateDeal(compCheck, n, presetNames); }
+    else if(retries>0){ setTimeout(()=>tryRoomRender(retries-1),100); }
+  };
+  tryRoomRender(20);
+}
+// 房主的裝置在「連線房間發牌」分配完身分後呼叫這個函式：跳過本機原本「發牌‧確認身分」
+// 那一步需要法官手動一個一個對牌的流程，直接把房間系統洗好、發給每支手機的身分結果，
+// 套進本機的 jgPlayers，然後照 jgStart() 原本的完整重置邏輯走一遍、直接跳去睜眼流程。
+function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal){
+  // 人數／角色配置一律以「房間系統實際發出去的那份」為準（呼叫端傳進來的 dealtComp/
+  // dealtTotal），不要在這裡重新去讀 jgRolePick／jgTotal 這些全域 UI 狀態——房主從按下
+  // 「用連線房間發牌」到大家都認領完座位、真的按下分配身分，中間可能等了一段時間，這段
+  // 期間如果房主的畫面被其他操作動到，這些全域變數不保證還是原本設定的那份，容易對不起來。
+  const n=dealtTotal||Object.keys(seatRoleMap).length;
+  document.getElementById('jg-count').value=n;
+  jgComp=dealtComp||getPickComp(jgRolePick); jgRoleCounts={...jgComp};
+  jgDualIdentityMode=false; jgDualAssign={}; jgDualAssignDone=false;
+  jgPlayers=[]; jgNight=1;
+  jgWitchSaveUsed=false; jgWitchPoisonUsed=false;
+  jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,hunterNightShot:null,witchStepDone:false};
+  jgLastGuardTarget=null; jgLastWolfBeautyCharm=null; jgLastNightmareTarget=null;
+  jgDancerEverDanced=new Set(); jgLastMaskCheckTarget=null; jgLastMaskGrantTarget=null;
+  jgLastDreamcatcherTarget=null; jgDreamcatcherEverTargeted={}; jgMagicianSwapped=[];
+  jgMechWolfLearned=null; jgMechWolfBonusKillUsed=false; jgMechWolfPoisonUsed=false;
+  jgLastMechWolfGuardTarget=null; jgMechWolfGuardUsed=false; jgMechWolfLearnedNight=null;
+  jgMechWolf2State={bigmechwolf:jgMechWolf2NewState(), smallmechwolf:jgMechWolf2NewState()};
+  jgWolfBrotherIdDone=false; jgWolfBrotherAwakened=false; jgWolfBrotherAwakenedNight=null;
+  jgMechAssign={}; jgMechAssignDone=false; jgBlackMarketUsed=false; jgLuckyOne=null;
+  jgBlackMarketTradeNight=null; jgHybridChosen=false; jgHybridTarget=null;
+  jgCupidChosen=false; jgLovers=null; jgThiefWheelDone=false; jgThiefWheelCand1=null;
+  jgThiefWheelCand2=null; jgThiefChosen=false; jgThiefFinalNum=null; jgThiefFinalRole=null;
+  jgThiefBuriedRole=null;
+  jgSheriffEnabled=!!(document.getElementById('jg-sheriff-enabled')||{}).checked;
+  jgSheriff=null; jgSheriffElectionDone=false; jgSheriffCandidatesAsked=false;
+  jgSheriffCampaignHappened=false; jgSheriffCandidates=[]; jgSheriffWithdrawn=[];
+  jgSheriffSpeakStart=null; jgSheriffSpeakDir=null; jgSheriffVoteTally={};
+  jgSheriffPkRound=false; jgSheriffSelfDestruct=false; jgSheriffSelfDestructNum=null;
+  jgSheriffSelfDestructBroughtNum=null; jgBadgeMode=jgSetupBadgeMode;
+  jgSheriffFirstBlowDone=false; jgSheriffFirstBlowNum=null; jgSheriffPostponedToDay2=false;
+  jgSheriffDay2CandidatesAsked=false; jgSheriffFinalNight=null; jgEvilKnightRevengeUsed=false;
+  jgLastVoteOutPlayer=null; jgLastNightPeaceful=false; jgSpeakDirection=null;
+  jgHanTiaoCommitted=false; jgHanTiaoSheriffNote=''; jgHanTiaoDiscussNotes={};
+  jgNightLog={}; jgDayLog={}; jgDayMeta={}; jgDawnDeaths={}; jgLastWinResult=null;
+  jgVoteTally={}; jgAbstainVoters={}; jgVotePkRound=false; jgVotePkCandidates=[];
+  jgVotePkOrder=[]; jgSheriffPkOrder=[]; jgSheriffLogLines=[]; jgSheriffElectedNum=null;
+  jgSheriffTransferPending=false; jgSheriffTransferDeadNum=null; jgSheriffTransferNextStep=null;
+  if(jgHasStartedBefore) jgGameCount++;
+  jgHasStartedBefore=true;
+  jgLiveSessionId=null;
+  jgStepHistory=[]; jgStateHistory=[];
+  for(let i=1;i<=n;i++){
+    jgPlayers.push({num:i, name:jgPlayerNames[i]||`${i}號`, role:seatRoleMap[i]||'villager', role2:null, identity1Dead:false, deadRole1:null, alive:true});
+  }
+  jgTotal=n;
+  // 機械狼／狼兄狼弟這類「沒有實體卡牌、原本需要法官另外手動記錄身分」的角色，這裡的身分
+  // 其實已經透過房間系統正確發過了（p.role 已經對了），不需要、也不應該再讓法官走一次
+  // 「記錄玩家身分」那個手動指認畫面（那個畫面預期身分還沒決定，會要求法官從頭重新指定，
+  // 等於把剛剛數位發牌的結果整個蓋掉）。這裡直接把該畫面判斷「已經做完」所需的旗標補上，
+  // 讓 jgProceedToNight() 正確跳過那一步，直接進入夜晚。
+  jgMechAssignDone=true;
+  jgMechAssign={};
+  for(let i=1;i<=n;i++){ if(jgPlayers[i-1]&&jgPlayers[i-1].role) jgMechAssign[i]=jgPlayers[i-1].role; }
+  // 注意：狼兄狼弟的「相認」不是這裡要處理的問題——那是場上兩位玩家在遊戲裡實際互相
+  // 看見對方身分的真實遊戲環節（wolfbrother-wake 步驟），不是法官行政記錄的問題，就算
+  // 身分是用連線房間發牌決定的，這個環節仍然要照常在第一夜發生，不能跳過。
+  document.querySelectorAll('#t-judge .pg').forEach(p=>p.classList.remove('on'));
+  document.getElementById('jg-p-main').classList.add('on');
+  const rw=document.getElementById('jg-roster-wrap'); if(rw) rw.style.display='';
+  jgRenderRoster();
+  jgProceedToNight();
+  switchTab('t-judge');
+}
 function jgRoomCreateFromSetup(){
   if(jgSetupDualMode){ alert('⚠️ 連線房間目前還不支援雙身分模式，請切換成一般模式再建立房間。'); return; }
   const minStart=6, maxStart=16;
