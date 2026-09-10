@@ -161,6 +161,17 @@ function jgNoSelfCutNoticeHtml(){
 // 所以光用 jgNoSelfCutNums() 抓不到剛剛選的號碼。這裡額外把畫面上還沒存檔的惡靈騎士／
 // 狼美人號碼欄位也一併算進「不能自刀」清單，並在法官填號碼的當下即時刷新下面的殺人名單
 // 跟提醒文字，不用等存檔重整才生效。
+// 占卜師標記技能生效當晚，狼隊只能從「標記號碼＋左右相鄰號碼」中選擇刀口（不會因為
+// 標記或相鄰號碼已出局而向外遞補），這裡回傳「除了這個範圍以外，全部要排除」的號碼清單，
+// 讓狼刀的選人畫面可以直接合併進原本的排除清單裡。沒有標記生效時回傳空陣列，不影響任何人。
+function jgDivinerMarkExcludeNums(){
+  if(!(jgDivinerMarkUsed&&jgDivinerMarkNight===jgNight&&jgDivinerMarkNum)) return [];
+  const total=jgTotal;
+  const allowed=new Set([jgDivinerMarkNum-1, jgDivinerMarkNum, jgDivinerMarkNum+1].filter(n=>n>=1&&n<=total));
+  const out=[];
+  for(let i=1;i<=total;i++){ if(!allowed.has(i)) out.push(i); }
+  return out;
+}
 function jgWolfWakeSelfCutInfo(){
   const numSet=new Set(jgNoSelfCutNums());
   const labelSet=new Set(jgNoSelfCutRoleLabel()?jgNoSelfCutRoleLabel().split('／').filter(Boolean):[]);
@@ -365,9 +376,98 @@ function jgIdFieldHtml(rn, existingP, whoId, nameId, onChangeFn){
     +'</div><div class="divider"></div>';
 }
 
+// ── 占卜師：整局限發動一次「標記技能」，法官可以選在任何一晚發動——發動當晚標記一個
+//    號碼，當晚狼隊只能從「這個號碼＋左右相鄰號碼」之中選擇刀口（或空刀），不會因為
+//    標記或相鄰號碼已出局而向外遞補。用過一次之後，之後每晚都只剩「已使用過」的提示。──
+function jgSaveDiviner(){
+  if(jgNight===1&&!jgRequireFirstId('jg-god-who-diviner','占卜師')) return;
+  if(jgNight===1){
+    const whoEl=document.getElementById('jg-god-who-diviner');
+    if(whoEl&&whoEl.value){
+      const p=jgFind(whoEl.value);
+      if(p) p.role='diviner';
+    }
+  }
+  if(!jgDivinerMarkUsed){
+    const mv=(document.getElementById('jg-diviner-mark')||{}).value?.trim()||'';
+    if(mv){
+      jgDivinerMarkUsed=true;
+      jgDivinerMarkNight=jgNight;
+      jgDivinerMarkNum=parseInt(mv);
+    }
+  }
+  jgGoStep(jgAfterDivinerStep());
+}
+// ── 大灰狼：全程單獨睜眼，法官會告知彼此位置（第一晚）。第二晚起可以選擇要不要發動
+//    「襲擊技能」額外刀一人，整局限一次；如果占卜師剛好同一晚也發動標記技能，大灰狼
+//    這一晚會受標記影響，且「一定要」用襲擊技能刀一人，不能選擇不發動。一旦其餘一般
+//    狼人全部陣亡，大灰狼改成負責正常狼刀（不再是額外一刀），這時候要走一般狼刀的
+//    選擇邏輯（包含被占卜師標記時的範圍限制），不再是襲擊技能的邏輯。──
+function jgBigGreyWolfOtherWolvesAlive(){
+  return jgPlayers.some(p=>typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(p.role)&&p.role!=='biggreywolf'&&p.alive);
+}
+function jgSaveBigGreyWolf(){
+  if(jgNight===1&&!jgRequireFirstId('jg-god-who-biggreywolf','大灰狼')) return;
+  if(jgNight===1){
+    const whoEl=document.getElementById('jg-god-who-biggreywolf');
+    if(whoEl&&whoEl.value){
+      const p=jgFind(whoEl.value);
+      if(p) p.role='biggreywolf';
+    }
+  }
+  if(!jgBigGreyWolfOtherWolvesAlive()){
+    // 接管狼刀：跟一般狼刀共用同一組欄位存檔，之後死亡結算／文字紀錄都走一般狼刀那一套，
+    // 不再是襲擊技能的獨立欄位。
+    const kv=(document.getElementById('jg-biggreywolf-kill')||{}).value?.trim()||'';
+    jgRecord.wolfKillRaw=kv||null;
+    jgRecord.wolfKill=jgMagicSwapNum(kv||null);
+  } else if(jgNight>=2&&!jgBigGreyWolfAssaultUsed){
+    const kv=(document.getElementById('jg-biggreywolf-assault')||{}).value?.trim()||'';
+    if(kv){
+      jgBigGreyWolfAssaultUsed=true;
+      jgBigGreyWolfAssaultNight=jgNight;
+      jgBigGreyWolfAssaultTarget=jgMagicSwapNum(kv);
+    }
+  }
+  jgGoStep(jgAfterBigGreyWolfStep());
+}
+// ── 殭屍：第三方獨立陣營，每晚可以感染0-2名玩家（不能感染自己，已經感染過的人不用重複
+//    選）。感染不會治癒，只會因為玩家死亡而失去意義。感染完當晚，接著會有「感染者」的
+//    共同睜眼畫面（如果目前有任何人已經被感染），讓所有感染者互相認識彼此。──
+function jgSaveZombie(){
+  if(jgNight===1&&!jgRequireFirstId('jg-god-who-zombie','殭屍')) return;
+  if(jgNight===1){
+    const whoEl=document.getElementById('jg-god-who-zombie');
+    if(whoEl&&whoEl.value){
+      const p=jgFind(whoEl.value);
+      if(p) p.role='zombie';
+    }
+  }
+  const zb=jgPlayers.find(p=>p.role==='zombie');
+  jgRecord.zombieInfectThisNight=[];
+  if(zb&&zb.alive&&!jgFeared(zb)){
+    const v1=(document.getElementById('jg-zombie-infect1')||{}).value?.trim()||'';
+    const v2=(document.getElementById('jg-zombie-infect2')||{}).value?.trim()||'';
+    [v1,v2].forEach(v=>{
+      if(!v) return;
+      const t=jgFind(v);
+      if(t){ t.infected=true; jgRecord.zombieInfectThisNight.push(t.num); }
+    });
+  }
+  jgGoStep(jgAfterZombieStep());
+}
+function jgAfterZombieStep(){
+  const anyInfected=jgPlayers.some(p=>p.infected);
+  if(anyInfected) return 'infected-wake';
+  return jgAfterInfectedStep();
+}
+function jgAfterInfectedStep(){
+  return 'wolf-wake';
+}
+
 function jgGodIdHtml(roleId,existingP){
   if(jgNight!==1) return '';
-  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面',littlegirl:'小女孩',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼'};
+  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面',littlegirl:'小女孩',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',diviner:'占卜師',biggreywolf:'大灰狼',zombie:'殭屍'};
   const rn=RZHMAP[roleId]||roleId;
   return jgIdFieldHtml(rn, existingP, 'jg-god-who-'+roleId, 'jg-god-name-'+roleId);
 }
@@ -1885,7 +1985,31 @@ function jgAfterBigMechWolfStep(){
 function jgAfterSmallMechWolfStep(){
   const hasMechWolf = (jgNight===1 ? (jgComp.mechanicalwolf>0) : jgHasRoleAny(['mechanicalwolf'])) || jgThiefBuriedActiveTonight('mechanicalwolf');
   if(hasMechWolf) return 'mechanicalwolf-wake';
-  return 'wolf-wake';
+  return jgAfterDivinerChainEntry();
+}
+// ── 大灰狼＋占卜師板：占卜師的標記技能要在狼隊出刀之前先決定（才能限制狼隊選人範圍），
+//    大灰狼則要在一般狼人睜眼之前先決定要不要發動襲擊技能／要不要接管狼刀——所以這兩個
+//    角色都排在一般狼人睜眼之前，占卜師又要排在大灰狼之前（大灰狼要知道占卜師這晚有沒有
+//    標記，才能判斷這一晚是不是「一定要」發動襲擊）。──
+function jgAfterDivinerChainEntry(){
+  const hasDiviner=(jgNight===1?(jgComp.diviner>0):jgHasRoleAny(['diviner']))||jgThiefBuriedActiveTonight('diviner');
+  if(hasDiviner) return 'diviner-wake';
+  return jgAfterDivinerStep();
+}
+function jgAfterDivinerStep(){
+  const hasBigGreyWolf=(jgNight===1?(jgComp.biggreywolf>0):jgHasRoleAny(['biggreywolf']))||jgThiefBuriedActiveTonight('biggreywolf');
+  if(hasBigGreyWolf) return 'biggreywolf-wake';
+  return jgAfterBigGreyWolfStep();
+}
+function jgAfterBigGreyWolfStep(){
+  return jgAfterZombieChainEntry();
+}
+// 殭屍不需要跟狼隊互動，排在大灰狼之後、一般狼人睜眼之前——這個位置本身沒有特別的
+// 先後依賴，純粹跟診斷師/大灰狼分在同一群「不跟主要狼群一起行動的特殊角色」裡。
+function jgAfterZombieChainEntry(){
+  const hasZombie=(jgNight===1?(jgComp.zombie>0):jgHasRoleAny(['zombie']))||jgThiefBuriedActiveTonight('zombie');
+  if(hasZombie) return 'zombie-wake';
+  return jgAfterZombieStep();
 }
 // True if 狼兄 has died and 狼弟 (still alive) hasn't had their one-time awakening kill yet.
 function jgWolfBrotherAwakenPending(){

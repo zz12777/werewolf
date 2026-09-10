@@ -3,8 +3,13 @@
 // 特別獎項計算（查狼專家、超強女巫、自刀專家、鋼鐵守衛、抿女巫專家、邱比特傳說）
 // ═══════════════════════════════════════════
 
-const AW_WOLF_CORE=new Set(['狼','狼人','王','黑狼王','狼兄']);      // 會一起商量刀口／見面的正牌狼（狼兄首夜就與其餘狼人一同睜眼執行狼刀，算見面狼；狼弟覺醒前不進狼窩，抿女巫只看首夜，故不列入）
-const AW_WOLF_SUPPORT=new Set(['月','血月使者','魘','夢魘']);       // 邪惡陣營但不參與刀口決策的支援角色
+// 這兩組清單原本只收錄了少數幾個角色的中文縮寫，跟 ROLE_ABBR 實際會寫進文字紀錄的縮寫
+// 對不起來（例如白狼王寫成「白狼」、狼美人寫成「狼美」、血月使者寫成「血月」，這幾個都不在
+// 舊清單裡），導致「查狼專家」只要驗到這些角色都不會被算進去，統計會少算。這裡直接對照
+// ROLE_ABBR，把 WOLF_ROLES 涵蓋的角色縮寫全部補齊，兩份清單的區分只是註解上的分類，
+// 實際判斷時是 OR 在一起用，不影響誰被歸在哪一組。
+const AW_WOLF_CORE=new Set(['狼','狼人','王','黑狼王','白狼','白狼王','狼美','狼美人','惡靈','惡靈騎士','石像','石像鬼','狼兄','狼弟','狼巫','假面','大野狼','大機','大機械狼','小機','小機械狼','大灰狼']);      // 會一起商量刀口／見面的正牌狼＋各種變體狼角色（狼弟覺醒前不進狼窩，抿女巫只看首夜，故實務上不太會命中，但清單本身要收錄，避免漏算）
+const AW_WOLF_SUPPORT=new Set(['月','血月','血月使者','魘','夢魘']);       // 邪惡陣營但不參與刀口決策的支援角色
 function awRoleParts(role){ return String(role||'').split('/'); }
 // 廣義狼隊（查狼／毒對狼命中判定用）：正牌狼 + 支援邪惡角色 + 機械狼
 // 注意：「機械民/機械巫/機械守/機械通」等都是機械狼目前「學到的技能」標籤，本體仍是狼隊，
@@ -80,7 +85,17 @@ function awTopTiers(dict, maxTiers){
 }
 
 function computeAwards(){
-  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={}, thirdPartyWins={}, hanTiaoStar={};
+  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={}, thirdPartyWins={}, hanTiaoStar={}, mvpStar={};
+
+  // 🏆 MVP之星：直接解析文字紀錄的【MVP: X號姓名】那一行（跟積分計算共用同一個
+  // pdGameMvpNum 解析函式，避免兩邊各寫一份 regex、之後改格式要改兩個地方）。
+  (GAMES||[]).forEach(g=>{
+    if(!g.players||!g.log) return;
+    const mvpNum=typeof pdGameMvpNum==='function'?pdGameMvpNum(g):null;
+    if(!mvpNum) return;
+    const p=g.players.find(pl=>String(pl.num)===String(mvpNum));
+    if(p) awAddCredit(mvpStar, p.name, g.id);
+  });
 
   // 💘 邱比特傳說：人狼鏈成立、成為第三方陣營，且該局第三方獲勝——不需要解析 g.log，
   // 直接看送出紀錄時標記在 g.players[].third 上的旗標（見 pdSubmitGameRecord）即可。
@@ -180,6 +195,8 @@ function computeAwards(){
       note:'【第三方獲勝】:邱比特與情侶配成人狼鏈、獨立成第三方陣營，該局由第三方獲勝時，三人都算1次。'},
     {icon:'🃏',title:'悍跳之星',top:awTopTiers(hanTiaoStar),
       note:'【悍跳預言家之星】:狼隊悍跳預言家，並且當選警長。'},
+    {icon:'🏆',title:'MVP之星',top:awTopTiers(mvpStar),
+      note:'【本場MVP】:法官在遊戲結束時選定的本場MVP，累計次數排名。'},
   ];
 }
 

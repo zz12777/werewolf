@@ -274,6 +274,98 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveBigBadWolf()">已紀錄，下一步 →</button>
     `,'🐺 大野狼');
   }
+  else if(step==='diviner-wake'){
+    const dvP=jgPlayers.find(p=>p.role==='diviner');
+    const needId=jgNight===1&&!dvP;
+    const dead=dvP&&!dvP.alive;
+    const feared=jgFeared(dvP);
+    jgShowPg(`
+      <h2>占卜師睜眼</h2>
+      ${jgGodIdHtml('diviner',dvP)}
+      <div class="speech">「<em>${needId?'占卜師請睜眼。':'你要發動標記技能嗎？'}</em>」</div>
+      ${dead?'<div class="info-warn">占卜師已出局，仍需走完流程</div>':''}
+      <div id="jg-god-diviner-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      ${(dead||feared)?'':(jgDivinerMarkUsed
+        ?'<div class="info" style="font-size:12px;">（法官搖頭）標記技能整局只能用一次，已經用過了。</div>'
+        :`<label>要標記的號碼（留空=本晚不發動）</label>${jgNumSelectHtml('jg-diviner-mark','')}
+          <div class="info" style="font-size:12px;margin-top:4px;">發動的話，今晚狼隊只能從這個號碼跟左右相鄰的號碼中選擇刀口（或空刀），整局限發動一次。</div>`)}
+      <div class="speech" style="margin-top:10px;">「<em>占卜師請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveDiviner()">已紀錄，下一步 →</button>
+    `,'🔯 占卜師');
+  }
+  else if(step==='biggreywolf-wake'){
+    const bgP=jgPlayers.find(p=>p.role==='biggreywolf');
+    const needId=jgNight===1&&!bgP;
+    const dead=bgP&&!bgP.alive;
+    const feared=jgFeared(bgP);
+    const otherWolvesAlive=jgBigGreyWolfOtherWolvesAlive();
+    const otherWolfNums=jgPlayers.filter(p=>typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(p.role)&&p.role!=='biggreywolf').map(p=>p.num);
+    // 第一晚額外告知彼此位置——只在第一晚講一次，不是每晚重複（跟其他「只講一次」的
+    // 大字報同樣的設計原則，第一晚知道了之後不用每晚再講一次）。
+    const positionNote=(jgNight===1&&otherWolfNums.length)
+      ?'<div class="info" style="font-size:12px;">法官告知：一般狼人是 '+otherWolfNums.join('、')+' 號。</div>'
+      :'';
+    const markedThisNight=jgDivinerMarkUsed&&jgDivinerMarkNight===jgNight;
+    let bodyHtml='';
+    if(!dead&&!feared){
+      if(!otherWolvesAlive){
+        bodyHtml='<div class="info-warn" style="margin-bottom:8px;">🔪 一般狼人已全部陣亡，大灰狼接管正常狼刀</div>'
+          +'<label>請選擇今晚要殺的對象（留空=空刀）</label>'+jgNumSelectHtml('jg-biggreywolf-kill','');
+      } else if(jgNight===1){
+        bodyHtml='<div class="info" style="font-size:12px;">第一晚不能發動襲擊技能，從第二晚開始才能選擇要不要發動。</div>';
+      } else if(jgBigGreyWolfAssaultUsed){
+        bodyHtml='<div class="info" style="font-size:12px;">（法官搖頭）襲擊技能整局只能用一次，已經用過了。</div>';
+      } else if(markedThisNight){
+        bodyHtml='<div class="info-danger" style="margin-bottom:8px;">⚠️ 占卜師今晚發動了標記技能，大灰狼今晚「一定要」用襲擊技能殺一人，不能選擇不發動。</div>'
+          +'<label>請選擇要襲擊的對象</label>'+jgNumSelectHtml('jg-biggreywolf-assault','');
+      } else {
+        bodyHtml='<label>要發動襲擊技能嗎？要的話請選擇對象（留空=不發動）</label>'+jgNumSelectHtml('jg-biggreywolf-assault','')
+          +'<div class="info" style="font-size:12px;margin-top:4px;">發動的話，這一刀跟一般狼刀是分開的，當晚可能造成兩人死亡；整局限發動一次。</div>';
+      }
+    }
+    jgShowPg(`
+      <h2>大灰狼睜眼</h2>
+      ${jgGodIdHtml('biggreywolf',bgP)}
+      <div class="speech">「<em>大灰狼請睜眼。</em>」</div>
+      ${positionNote}
+      ${dead?'<div class="info-warn">大灰狼已出局，仍需走完流程</div>':''}
+      <div id="jg-god-biggreywolf-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      ${bodyHtml}
+      <div class="speech" style="margin-top:10px;">「<em>大灰狼請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveBigGreyWolf()">已紀錄，下一步 →</button>
+    `,'🐺 大灰狼');
+  }
+  else if(step==='zombie-wake'){
+    const zbP=jgPlayers.find(p=>p.role==='zombie');
+    const needId=jgNight===1&&!zbP;
+    const dead=zbP&&!zbP.alive;
+    const feared=jgFeared(zbP);
+    const excludeNums=[];
+    if(zbP) excludeNums.push(zbP.num);
+    jgPlayers.forEach(p=>{ if(p.infected) excludeNums.push(p.num); });
+    jgShowPg(`
+      <h2>殭屍睜眼</h2>
+      ${jgGodIdHtml('zombie',zbP)}
+      <div class="speech">「<em>${needId?'殭屍請睜眼。':'今晚要感染的對象是？'}</em>」</div>
+      ${dead?'<div class="info-warn">殭屍已出局，仍需走完流程</div>':''}
+      <div id="jg-god-zombie-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      ${(dead||feared)?'':`<label>感染對象一（留空=不感染，不能選自己或已感染過的人）</label>${jgNumSelectHtml('jg-zombie-infect1','',null,null,excludeNums,'不能選自己或已感染過的人')}
+      <label style="margin-top:8px;">感染對象二（留空=不感染）</label>${jgNumSelectHtml('jg-zombie-infect2','',null,null,excludeNums,'不能選自己或已感染過的人')}
+      <div class="info" style="font-size:12px;margin-top:4px;">每晚最多感染2人，不能感染自己或已經感染過的人。</div>`}
+      <div class="speech" style="margin-top:10px;">「<em>殭屍請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveZombie()">已紀錄，下一步 →</button>
+    `,'🧟 殭屍');
+  }
+  else if(step==='infected-wake'){
+    const infectedNums=jgPlayers.filter(p=>p.infected).map(p=>p.num);
+    jgShowPg(`
+      <h2>感染者睜眼</h2>
+      <div class="speech">「<em>被殭屍感染的玩家請睜眼。</em>」</div>
+      <div class="info" style="font-size:13px;">法官告知：目前被感染的玩家是 ${infectedNums.join('、')} 號，請互相確認。</div>
+      <div class="speech" style="margin-top:10px;">「<em>感染者請閉眼。</em>」</div>
+      <button class="primary" onclick="jgGoStep(jgAfterInfectedStep())">已紀錄，下一步 →</button>
+    `,'🧟 感染者');
+  }
   else if(step==='bigmechwolf-wake'){
     jgRenderMechWolf2Step('bigmechwolf');
   }
@@ -522,7 +614,7 @@ function jgRenderStep(step){
     // 依規則8「回歸主狼群」，這時候他要算進來，才能在這個畫面選刀口。
     const _smallMechRejoined=jgMechWolf2State.smallmechwolf.rejoinedPack;
     const _excludedFromMainPack=(role)=>{
-      if(role==='gargoyle'||role==='mechanicalwolf'||role==='mask'||role==='bigmechwolf') return true;
+      if(role==='gargoyle'||role==='mechanicalwolf'||role==='mask'||role==='bigmechwolf'||role==='biggreywolf') return true;
       if(role==='smallmechwolf') return !_smallMechRejoined;
       return false;
     };
@@ -555,7 +647,8 @@ function jgRenderStep(step){
     }
     const wolfKillSectionHtml='<label>今晚獵殺的對象</label>'
       +'<div id="jg-wolf-selfcut-notice">'+jgWolfWakeSelfCutNoticeHtml()+'</div>'
-      +'<div id="jg-wolf-rec-wrap">'+jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgWolfWakeSelfCutInfo().nums)+'</div>';
+      +((jgDivinerMarkUsed&&jgDivinerMarkNight===jgNight&&jgDivinerMarkNum)?'<div class="info-warn" style="font-size:12px;margin-bottom:4px;">⚠️ 占卜師今晚發動了標記技能，狼隊只能從 '+jgDivinerMarkNum+' 號及其左右相鄰號碼中選擇刀口（或空刀）</div>':'')
+      +'<div id="jg-wolf-rec-wrap">'+jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgWolfWakeSelfCutInfo().nums.concat(jgDivinerMarkExcludeNums()))+'</div>';
     // 大野狼+小女孩板：第二夜起，狼隊選完殺人對象後，多一次指認小女孩的機會（一局限一次
     // 「這一晚」用，指認成功小女孩代替死亡，失敗則無事發生、原本刀口照常結算）。
     const hasLittlegirlRole=jgNight===1?(jgComp.littlegirl>0):jgHasRoleAny(['littlegirl']);
@@ -573,8 +666,8 @@ function jgRenderStep(step){
       <div id="jg-wolf-blocked-msg" style="${jgRecord.nightmareBlocksWolf?'':'display:none;'}"><div class="info-danger">⚠️ 夢魘恐懼到狼隊友，狼人今晚不得殺人</div></div>
       ${wbNote}
       <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}">${wolfKillSectionHtml}${identifySectionHtml}</div>`
-      :('<div class="info-warn">'+((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0)?'小狼已全滅，仍須走完流程':'狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程')+'</div>'
-        +((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0)?'<div class="speech" style="margin-top:8px;">「<em>今晚要殺的是？</em>」</div>':''))}
+      :('<div class="info-warn">'+((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0||jgComp.biggreywolf>0)?'小狼已全滅，仍須走完流程':'狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程')+'</div>'
+        +((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0||jgComp.biggreywolf>0)?'<div class="speech" style="margin-top:8px;">「<em>今晚要殺的是？</em>」</div>':''))}
       <div class="speech" style="margin-top:12px;">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
     `,'🐺 狼人');
@@ -1598,6 +1691,15 @@ function jgRenderStep(step){
       const mechGuardedThis=!!(jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===jgRecord.bigbadwolfBonusKillTarget.toString());
       if(bbt&&bbt.alive&&!guardedThis&&!mechGuardedThis&&!jgMechWolf2GuardProtects(jgRecord.bigbadwolfBonusKillTarget)){ bbt.alive=false; if(!deads.includes(bbt.num))deads.push(bbt.num); }
       jgRecord.bigbadwolfBonusKillTarget=null;
+    }
+    // 大灰狼＋占卜師板：大灰狼的襲擊技能是跟主要狼刀「分開」的額外一刀，整局只會在
+    // jgBigGreyWolfAssaultNight===jgNight 這一晚結算一次（之後的夜晚這個目標紀錄還在，
+    // 但不能再重複結算死亡）。只受守衛保護影響，跟大野狼的額外刀是同一套判斷邏輯。
+    if(jgBigGreyWolfAssaultNight===jgNight&&jgBigGreyWolfAssaultTarget){
+      const bgt=jgFind(jgBigGreyWolfAssaultTarget);
+      const guardedThis2=!!(jgRecord.guardTarget&&jgRecord.guardTarget.toString()===jgBigGreyWolfAssaultTarget.toString());
+      const mechGuardedThis2=!!(jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===jgBigGreyWolfAssaultTarget.toString());
+      if(bgt&&bgt.alive&&!guardedThis2&&!mechGuardedThis2&&!jgMechWolf2GuardProtects(jgBigGreyWolfAssaultTarget)){ bgt.alive=false; if(!deads.includes(bgt.num))deads.push(bgt.num); }
     }
     // 雙機械狼板：大／小機械狼各自輪到帶刀時選的目標（可能是「一般帶刀」或「雙刀其中一刀」，
     // 見 jgSaveMechWolf2）。這是跟主要狼刀「分開」的獨立目標，只受一般守衛/機械守衛保護

@@ -148,6 +148,10 @@ function jgDawnSheriffDirPickerHtml(){
 }
 function jgSetDawnSheriffStart(n){
   jgDayMeta[jgNight]=Object.assign({}, jgDayMeta[jgNight], {start:n, dir:jgSheriffLRAutoDir(n)});
+  // 這是「警長剛當選、緊接著在天亮公告畫面決定發言方向」這個時刻，第一次真正確立今天的
+  // 發言順序——強制清空計時器舊記錄，理由跟 jgSetDiscussStart 等其他同類地方一樣。這裡
+  // 之前漏掉這一步，導致第一天警長選完方向後，進入發言畫面計時器顯示的還是舊的殘留狀態。
+  jgSpeakTimerOrderKey='';
   const box=document.getElementById('jg-dawn-sheriff-dir-picker');
   if(box) box.innerHTML=jgDawnSheriffDirPickerHtml();
 }

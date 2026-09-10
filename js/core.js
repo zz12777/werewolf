@@ -6,9 +6,9 @@
 // ═══════════════════════════════════
 // SHARED DATA
 // ═══════════════════════════════════
-const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',sheriff:'警長',luckyone:'幸運兒'};
-const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs'};
-const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer'};
+const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',biggreywolf:'大灰狼',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',diviner:'占卜師',zombie:'殭屍',sheriff:'警長',luckyone:'幸運兒'};
+const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',biggreywolf:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs',diviner:'bs',zombie:'bcupid'};
+const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',biggreywolf:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer',diviner:'av-seer',zombie:'av-cupid'};
 
 function getComp(n){
   const t={
@@ -201,9 +201,9 @@ let jgGameCount=1; // increments each new game this session, used in the export 
 let jgHasStartedBefore=false;
 const ROLE_ABBR={
   villager:'民', hybrid:'混血', cupid:'邱比特', thief:'盜賊', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
-  gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面', bigbadwolf:'大野狼', bigmechwolf:'大機', smallmechwolf:'小機',
+  gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面', bigbadwolf:'大野狼', bigmechwolf:'大機', smallmechwolf:'小機', biggreywolf:'大灰狼',
   mechanicalwolf:'機', seer:'預', witch:'巫', hunter:'獵', guard:'守', dreamcatcher:'攝夢', knight:'騎士', magician:'魔術',
-  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', littlegirl:'小女孩', sheriff:'警長', luckyone:'幸運'
+  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', littlegirl:'小女孩', diviner:'占卜', zombie:'殭屍', sheriff:'警長', luckyone:'幸運'
 };
 // Builds a short label for the export header from whichever "special" (non-baseline) roles
 // appeared this game — e.g. 通靈師+機械狼 present → "通靈師機械狼".
@@ -289,6 +289,11 @@ function jgExportGameLog(){
   });
   const resultLabel=jgLastWinResult?(jgLastWinResult.winner==='good'?'好人陣營獲勝':(jgLastWinResult.winner==='third'?'第三方獲勝':'邪惡陣營獲勝')):'遊戲結束';
   out+='====='+resultLabel+'=====';
+  if(jgMvpNum){
+    const mvpP=jgByNum(jgMvpNum);
+    const mvpName=jgPlayerNames[jgMvpNum]||(mvpP?mvpP.name:'');
+    out+='\n\n【MVP: '+jgMvpNum+'號'+mvpName+'】';
+  }
   return out;
 }
 
@@ -594,6 +599,12 @@ function jgFormatNightLog(){
   }
   const bbP=jgPlayers.find(p=>p.role==='bigbadwolf');
   if(bbP&&bbP.alive) lines.push('野狼刀'+(jgRecord.bigbadwolfBonusKillTarget||'x'));
+  // 占卜師標記技能：只在真的發動的那一晚記一行，之後的夜晚不重複顯示（整局只會發動一次）。
+  if(jgDivinerMarkUsed&&jgDivinerMarkNight===jgNight) lines.push('占卜標記'+jgDivinerMarkNum);
+  // 殭屍感染：只記「這一晚」新感染的對象，不是每晚重複列出所有已感染的人。
+  if(jgRecord.zombieInfectThisNight&&jgRecord.zombieInfectThisNight.length) lines.push('感染'+jgRecord.zombieInfectThisNight.join('、'));
+  // 大灰狼襲擊技能：只在真的發動的那一晚記一行（跟占卜師標記同樣的邏輯，整局限一次）。
+  if(jgBigGreyWolfAssaultNight===jgNight&&jgBigGreyWolfAssaultTarget) lines.push('大灰狼襲擊'+jgBigGreyWolfAssaultTarget);
   const lgP2=jgPlayers.find(p=>p.role==='littlegirl');
   if(lgP2&&jgNight>=2) lines.push(jgRecord.wolfIdentifyGuessRaw?('指認'+jgRecord.wolfIdentifyGuessRaw+(jgRecord._littlegirlSubstituteKill?'(成功)':'(失敗)')):'指認x');
   // 雙機械狼板：大／小機械狼各自的刀口（可能雙刀）、若學到女巫/守衛則另外記下毒/守的對象
@@ -658,6 +669,22 @@ let jgMechWolf2State={bigmechwolf:jgMechWolf2NewState(), smallmechwolf:jgMechWol
 let jgWolfBrotherIdDone=false;  // 狼兄狼弟 night-1 mutual ID step completed
 let jgWolfBrotherAwakened=false; // 狼弟 has had their one-time awakening kill
 let jgWolfBrotherAwakenedNight=null; // night number the awakening kill happened on — the den only opens to 狼弟 starting the NEXT night, not that same night
+// 占卜師專用狀態：整局限發動一次「標記技能」，法官可以選在任何一晚發動——用 jgDivinerMarkUsed
+// 記錄「有沒有用過」（用過之後，之後每晚查驗頁只剩「已使用過」提示，不能再選）；
+// jgDivinerMarkNight／jgDivinerMarkNum 記錄「哪一晚標記了誰」，只有標記當晚才會真的限制
+// 狼刀範圍（過了那一晚就沒有持續效果，只是紀錄保留給文字紀錄／大灰狼互動判斷用）。
+let jgDivinerMarkUsed=false;
+let jgDivinerMarkNight=null;
+let jgDivinerMarkNum=null;
+// 大灰狼專用狀態：全程單獨睜眼，第二晚起可以自己選擇要不要發動「襲擊技能」額外刀一人，
+// 整局限發動一次（jgBigGreyWolfAssaultUsed）；jgBigGreyWolfAssaultNight／Target 記錄
+// 用在哪一晚、殺了誰，供文字紀錄與死亡結算使用。
+let jgBigGreyWolfAssaultUsed=false;
+let jgBigGreyWolfAssaultNight=null;
+let jgBigGreyWolfAssaultTarget=null;
+// 殭屍專用狀態：jgRecord.zombieInfectTargets 是「這一晚」選擇感染的對象（每晚重置，見
+// jgRecord 的預設值），實際的感染狀態是持續累積在每個玩家自己身上的 p.infected 旗標
+// （感染不會被治癒，只會隨玩家死亡而失去意義），不需要額外的全域狀態變數維護。
 let jgLastNightPeaceful=false; // true if the most recent night had zero deaths (平安夜)
 let jgSpeakDirection=null; // '順'|'逆', established by the peaceful-night wheel, persists for the game
 let jgBlackMarketUsed=false; // one-time trade flag
@@ -1373,6 +1400,8 @@ function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal){
   jgLastMechWolfGuardTarget=null; jgMechWolfGuardUsed=false; jgMechWolfLearnedNight=null;
   jgMechWolf2State={bigmechwolf:jgMechWolf2NewState(), smallmechwolf:jgMechWolf2NewState()};
   jgWolfBrotherIdDone=false; jgWolfBrotherAwakened=false; jgWolfBrotherAwakenedNight=null;
+  jgDivinerMarkUsed=false; jgDivinerMarkNight=null; jgDivinerMarkNum=null;
+  jgBigGreyWolfAssaultUsed=false; jgBigGreyWolfAssaultNight=null; jgBigGreyWolfAssaultTarget=null;
   jgMechAssign={}; jgMechAssignDone=false; jgBlackMarketUsed=false; jgLuckyOne=null;
   jgBlackMarketTradeNight=null; jgHybridChosen=false; jgHybridTarget=null;
   jgCupidChosen=false; jgLovers=null; jgThiefWheelDone=false; jgThiefWheelCand1=null;
@@ -1388,7 +1417,7 @@ function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal){
   jgSheriffDay2CandidatesAsked=false; jgSheriffFinalNight=null; jgEvilKnightRevengeUsed=false;
   jgLastVoteOutPlayer=null; jgLastNightPeaceful=false; jgSpeakDirection=null;
   jgHanTiaoCommitted=false; jgHanTiaoSheriffNote=''; jgHanTiaoDiscussNotes={};
-  jgNightLog={}; jgDayLog={}; jgDayMeta={}; jgDawnDeaths={}; jgLastWinResult=null;
+  jgNightLog={}; jgDayLog={}; jgDayMeta={}; jgDawnDeaths={}; jgLastWinResult=null; jgMvpNum=null;
   jgVoteTally={}; jgAbstainVoters={}; jgVotePkRound=false; jgVotePkCandidates=[];
   jgVotePkOrder=[]; jgSheriffPkOrder=[]; jgSheriffLogLines=[]; jgSheriffElectedNum=null;
   jgSheriffTransferPending=false; jgSheriffTransferDeadNum=null; jgSheriffTransferNextStep=null;
@@ -1397,7 +1426,7 @@ function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal){
   jgLiveSessionId=null;
   jgStepHistory=[]; jgStateHistory=[];
   for(let i=1;i<=n;i++){
-    jgPlayers.push({num:i, name:jgPlayerNames[i]||`${i}號`, role:seatRoleMap[i]||'villager', role2:null, identity1Dead:false, deadRole1:null, alive:true});
+    jgPlayers.push({num:i, name:jgPlayerNames[i]||`${i}號`, role:seatRoleMap[i]||'villager', role2:null, identity1Dead:false, deadRole1:null, alive:true, infected:false});
   }
   jgTotal=n;
   // 機械狼／狼兄狼弟這類「沒有實體卡牌、原本需要法官另外手動記錄身分」的角色，這裡的身分
@@ -1484,6 +1513,8 @@ function jgStart(){
   jgWolfBrotherIdDone=false;
   jgWolfBrotherAwakened=false;
   jgWolfBrotherAwakenedNight=null;
+  jgDivinerMarkUsed=false; jgDivinerMarkNight=null; jgDivinerMarkNum=null;
+  jgBigGreyWolfAssaultUsed=false; jgBigGreyWolfAssaultNight=null; jgBigGreyWolfAssaultTarget=null;
   jgMechAssign={};
   jgMechAssignDone=false;
   jgBlackMarketUsed=false;
@@ -1532,6 +1563,7 @@ function jgStart(){
   jgDayMeta={};
   jgDawnDeaths={};
   jgLastWinResult=null;
+  jgMvpNum=null;
   jgVoteTally={};
   jgAbstainVoters={};
   jgVotePkRound=false;
@@ -1549,7 +1581,7 @@ function jgStart(){
   jgStepHistory=[];
   jgStateHistory=[];
   // Pre-fill all players as unknown role (null = unconfirmed, will become villager if never woke)
-  for(let i=1;i<=n;i++) jgPlayers.push({num:i, name:jgPlayerNames[i]||`${i}號`, role:null, role2:null, identity1Dead:false, deadRole1:null, alive:true});
+  for(let i=1;i<=n;i++) jgPlayers.push({num:i, name:jgPlayerNames[i]||`${i}號`, role:null, role2:null, identity1Dead:false, deadRole1:null, alive:true, infected:false});
   document.querySelectorAll('#t-judge .pg').forEach(p=>p.classList.remove('on'));
   document.getElementById('jg-p-main').classList.add('on');
   const rw=document.getElementById('jg-roster-wrap'); if(rw) rw.style.display='';
@@ -1763,7 +1795,9 @@ function jgCaptureState(){
     jgVotePkRound, jgVotePkCandidates, jgVotePkOrder, jgSheriffPkOrder,
     jgBadgeMode, jgSheriffFirstBlowDone, jgSheriffFirstBlowNum, jgSheriffPostponedToDay2, jgSheriffDay2CandidatesAsked, jgSheriffFinalNight,
     jgHanTiaoSheriffNote, jgHanTiaoDiscussNotes, jgHanTiaoCommitted, jgNightmareForceMode,
-    jgLastMaskCheckTarget, jgLastMaskGrantTarget
+    jgLastMaskCheckTarget, jgLastMaskGrantTarget,
+    jgDivinerMarkUsed, jgDivinerMarkNight, jgDivinerMarkNum,
+    jgBigGreyWolfAssaultUsed, jgBigGreyWolfAssaultNight, jgBigGreyWolfAssaultTarget, jgMvpNum
   })), {
     // Set 不能用 JSON.stringify 序列化（會變成空物件），改用陣列另外存、restore 時再轉回 Set
     jgDancerEverDanced: [...jgDancerEverDanced]
@@ -1795,6 +1829,13 @@ function jgRestoreState(snap){
   jgWolfBrotherIdDone=snap.jgWolfBrotherIdDone;
   jgWolfBrotherAwakened=snap.jgWolfBrotherAwakened;
   jgWolfBrotherAwakenedNight=snap.jgWolfBrotherAwakenedNight;
+  jgDivinerMarkUsed=snap.jgDivinerMarkUsed;
+  jgDivinerMarkNight=snap.jgDivinerMarkNight;
+  jgDivinerMarkNum=snap.jgDivinerMarkNum;
+  jgBigGreyWolfAssaultUsed=snap.jgBigGreyWolfAssaultUsed;
+  jgBigGreyWolfAssaultNight=snap.jgBigGreyWolfAssaultNight;
+  jgBigGreyWolfAssaultTarget=snap.jgBigGreyWolfAssaultTarget;
+  jgMvpNum=snap.jgMvpNum;
   jgLastNightPeaceful=snap.jgLastNightPeaceful;
   jgSpeakDirection=snap.jgSpeakDirection;
   jgBlackMarketUsed=snap.jgBlackMarketUsed;
@@ -2370,12 +2411,24 @@ function jgTryEarlyEnd(){
 // 一旦第三方全滅，才會改用一般好人 vs 狼人規則（jgCheckWinNormal）判定剩下的人。
 // 其餘情形（人人鏈／狼狼鏈／沒有邱比特）本來就不會有非空的第三方名單，直接走一般規則。
 function jgCheckWin(){
+  const zombieResult=jgCheckWinZombie();
+  if(zombieResult) return zombieResult;
   const tp=jgLoverThirdPartyMembers();
   if(tp.length>0){
     const tpAlive=tp.filter(n=>{ const p=jgFind(n); return p&&p.alive; });
     if(tpAlive.length>0) return jgCheckWinThirdParty(tp, tpAlive);
   }
   return jgCheckWinNormal();
+}
+// 殭屍陣營勝負判定：場上「除了殭屍自己以外」的存活玩家全部被感染，殭屍就單獨獲勝——
+// 殭屍死亡的話，這個第三方陣營已經出局，不用再檢查（回傳 null，交給一般規則判定好人/狼人勝負）。
+function jgCheckWinZombie(){
+  const zb=jgPlayers.find(p=>p.role==='zombie');
+  if(!zb||!zb.alive) return null;
+  const others=jgAlive().filter(p=>p.num!==zb.num);
+  if(others.length===0) return null;
+  if(others.every(p=>p.infected)) return {winner:'third', msg:'場上存活玩家已全數被殭屍感染，殭屍單獨獲勝', icon:'🧟'};
+  return null;
 }
 
 // 人狼鏈成立時的專用勝負判定：tp＝third-party 完整名單（情侶兩人＋邱比特），
@@ -2410,7 +2463,10 @@ function jgCheckWinThirdParty(tp, tpAlive){
 }
 
 function jgCheckWinNormal(){
-  const a=jgAlive();
+  // 殭屍是獨立的第三方陣營，自己的勝負判定在 jgCheckWinZombie() 另外處理——這裡刻意把
+  // 殭屍從好人／狼人的人數統計裡排除掉，避免殭屍還活著、局面還沒分出勝負時，被誤算進
+  // 「好人」那一邊，導致好人陣營的人數優勢判斷提早、錯誤地觸發。
+  const a=jgAlive().filter(p=>p.role!=='zombie');
   const aw=a.filter(p=>jgIsWolfForWin(p)); // all wolf-team alive (incl. hidden 黑狼王 second-card in dual mode; 狼狼鏈時邱比特也算入)
   const ag=a.filter(p=>!jgIsWolfForWin(p)); // all good-team alive
   if(aw.length===0) return{winner:'good',msg:'所有狼人已被淘汰',icon:'🎉'};
@@ -2455,6 +2511,7 @@ function jgCheckWinNormal(){
 }
 
 let jgLastWinResult=null;
+let jgMvpNum=null; // 遊戲結束時法官選定的 MVP 號碼，會寫進匯出的文字紀錄
 // 血月殘局一鍵宣布：場上只剩「血月＋1神（非騎士）＋1民」時，血月已經穩贏、流程走完也是一樣的
 // 結果，這裡讓法官可以直接跳過白天投票／夜晚流程，一鍵公布狼人獲勝。點擊當下重新驗算一次條件，
 // 避免畫面顯示之後場上人數又有變動（理論上不太會發生，但保險起見還是重新檢查一次）。
@@ -2468,6 +2525,21 @@ function jgDeclareBloodmoonWin(){
   const ok=wolves.length===1&&wolves[0].role==='bloodmoon'&&gods.length===1&&gods[0].role!=='knight'&&vils.length===1;
   if(!ok){ alert('⚠️ 場上狀態已經不符合「血月＋1神（非騎士）＋1民」的殘局條件，請照正常流程繼續走。'); return; }
   jgShowWin({winner:'wolf', msg:'血月殘局：場上僅剩血月＋'+jgFullRoleName(gods[0].role)+'＋1民，好人已無翻盤機會，法官直接公布狼人獲勝', icon:'🌑'});
+}
+// 遊戲結束時法官選填 MVP——不是必填，選了才會出現在匯出的文字紀錄裡（【MVP: X號姓名】），
+// 也才會被積分／MVP之星那兩個統計採計到。可以重選，選單一直維持在畫面上，選了就直接生效。
+function jgMvpPickerHtml(){
+  const buttons=jgPlayers.map(p=>
+    '<button onclick="jgSetMvp('+p.num+')" style="margin:3px;width:auto;display:inline-block;padding:8px 14px;'
+    +(jgMvpNum===p.num?'background:var(--primary);color:#fff;':'')+'">'+p.num+'號 '+p.name+'</button>'
+  ).join('');
+  return '<div style="text-align:center;">'+buttons+'</div>'
+    +(jgMvpNum?'<div class="info-success" style="font-size:13px;margin-top:6px;text-align:center;">目前選定：'+jgMvpNum+'號</div>':'');
+}
+function jgSetMvp(num){
+  jgMvpNum=(jgMvpNum===num)?null:num; // 再點一次同一個人＝取消選定
+  const box=document.getElementById('jg-mvp-picker-wrap');
+  if(box) box.innerHTML=jgMvpPickerHtml();
 }
 function jgShowWin(res){
   jgLastWinResult=res;
@@ -2541,6 +2613,8 @@ function jgShowWin(res){
       <div class="win-side win-wolf"><div class="win-count">${jgAlive().filter(p=>jgIsWolfForWin(p)).length}</div><div class="win-label">存活狼人</div></div>
       <div class="win-side win-good"><div class="win-count">${jgAlive().filter(p=>!jgIsWolfForWin(p)).length}</div><div class="win-label">存活好人</div></div>
     </div>
+    <div class="section-title" style="margin-top:16px;">🏆 本場 MVP（選填）</div>
+    <div id="jg-mvp-picker-wrap">${jgMvpPickerHtml()}</div>
     <button onclick="jgShowExportModal()" style="margin-top:14px;">📋 匯出文字紀錄</button>
     <button onclick="pdSubmitGameRecord()" style="margin-top:8px;">🔒 送出到遊玩數據</button>
     <button class="primary" onclick="jgReset()" style="margin-top:8px;">再玩一局</button>

@@ -27,6 +27,12 @@ function classify(role){
 // ‧ 機械狼：學到的具體身分改成保留在括號內顯示（例如「機械狼(機械民)」「機械狼(機械守衛)」），
 //   不再直接收斂成單純的「機械狼」，方便在每人細項、每場紀錄裡看出他當時學到什麼。
 // ‧ 其餘角色：去掉括號附註後用完整名稱顯示。
+// 從文字紀錄裡解析這場的 MVP 號碼（【MVP: X號姓名】這一行，見 jgExportGameLog 的匯出格式）。
+// 沒有選填 MVP 的舊場次，這裡會拿到 null，積分／MVP之星都不會計入這場，不影響既有資料。
+function pdGameMvpNum(g){
+  const m=String(g.log||'').match(/【MVP[：:]\s*(\d+)號/);
+  return m?parseInt(m[1],10):null;
+}
 function pdDisplayRole(rawRole){
   if(rawRole.includes('混')){
     const m=rawRole.match(/[（(]([^）)]*)[）)]/);
@@ -396,10 +402,11 @@ function pdRebuildAndRender(){
 
   const players={};
   function getP(name){
-    if(!players[name]) players[name]={name,games:0,wins:0,unclearGames:0,thirdGames:0,thirdWins:0,points:0,pointsLockedTotal:0,totalGames:0,roleCounts:{},camp:{good:0,evil:0},campWins:{good:0,evil:0},history:[]};
+    if(!players[name]) players[name]={name,games:0,wins:0,unclearGames:0,thirdGames:0,thirdWins:0,points:0,pointsLockedTotal:0,totalGames:0,roleCounts:{},camp:{good:0,evil:0},campWins:{good:0,evil:0},history:[],mvpCount:0};
     return players[name];
   }
   GAMES.forEach(g=>{
+    const mvpNum=pdGameMvpNum(g);
     g.players.forEach(pl=>{
       const p=getP(pl.name);
       const roleDisp=pdDisplayRole(pl.role);
@@ -436,13 +443,18 @@ function pdRebuildAndRender(){
       } else {
         p.unclearGames++;
       }
+      // MVP 額外加分：不管這場輸贏，只要被法官選為 MVP 就固定加1分（兩種積分算法都一樣），
+      // 跟輸贏／陣營勝率完全無關，是獨立的加分項目。
+      if(mvpNum&&String(pl.num)===String(mvpNum)){
+        pointsDynamic+=1; pointsLocked+=1; p.mvpCount++;
+      }
       p.pointsLockedTotal+=pointsLocked;
       // 「玩過角色」統計用收斂過的身分：不管是機械狼學到什麼、還是混血兒混到哪邊，
       // 統計格都只看角色本身、去掉括號細節，避免被拆成機械民／機械女巫／混血兒(狼混)…
       // 太細碎；每局紀錄仍然用 roleDisp，保留括號內的具體資訊。
       const roleTally=roleDisp.replace(/\(.*?\)/,'');
       p.roleCounts[roleTally]=(p.roleCounts[roleTally]||0)+1;
-      p.history.push({date:g.date,label:g.id,board:g.board,role:roleDisp,result,resultText:g.resultText,pointsDynamic,pointsLocked,camp});
+      p.history.push({date:g.date,label:g.id,board:g.board,role:roleDisp,result,resultText:g.resultText,pointsDynamic,pointsLocked,camp,isMvp:!!(mvpNum&&String(pl.num)===String(mvpNum))});
     });
   });
   const boardCounts={};
@@ -461,7 +473,7 @@ function pdRebuildAndRender(){
     // 陣營勝率越低，代表那個陣營越難贏，贏一場就補越多分；第三方獲勝固定 2 分；輸／和局 0 分。
     // 目前 PD_POINTS_MODE='dynamic'，這裡維持原本方案A的算法，跟改動前完全一致；
     // p.pointsLockedTotal（方案B總分）已經在上面的迴圈裡算好、隨時可用，只是還沒有接上來顯示。
-    p.points = wg*(1-mGood) + we*(1-mEvil) + p.thirdWins*2;
+    p.points = wg*(1-mGood) + we*(1-mEvil) + p.thirdWins*2 + p.mvpCount*1;
     // 供趨勢圖使用：把這位玩家的單場積分序列（時間排序＋累積＋移動平均）算好存起來
     PD_TREND_SERIES[p.name]=pdBuildTrendSeries(p.history);
   });
@@ -626,6 +638,7 @@ function pdRenderGames(){
   if(!filtered.length){ list.innerHTML='<div class="empty">沒有符合條件的場次</div>'; return; }
   list.innerHTML=filtered.map((g,i)=>{
     const badgeCls = g.unclear?'bu':(g.winner==='evil'?'bw':(g.winner==='third'?'bthird':'bv'));
+    const mvpNum=typeof pdGameMvpNum==='function'?pdGameMvpNum(g):null;
     const roster=g.players.map(p=>{
       const disp=pdDisplayRole(p.role);
       // 第三方（人狼鏈成立時的情侶＋邱比特）：不歸類成好人/邪惡，直接標「第三方」、用粉色，
@@ -634,7 +647,8 @@ function pdRenderGames(){
       const badgeLabel=camp==='third'?'第三方':(camp==='evil'?'邪惡':'好人');
       const badgeColorCls=camp==='third'?'bthird':(camp==='evil'?'bw':'bv');
       const badge=g.unclear?'':`<span class="badge ${badgeColorCls}" style="padding:2px 8px;font-size:10px;">${badgeLabel}</span>`;
-      return `<tr><td>${p.num}</td><td>${p.name}</td><td>${disp}${p.role.includes('（')?'<span style="color:var(--text3);font-size:11px;"> '+p.role.match(/（(.*?)）/)[1]+'</span>':''}</td><td>${badge}</td></tr>`;
+      const mvpBadge=(mvpNum&&String(p.num)===String(mvpNum))?' <span style="font-size:12px;">🏆 MVP</span>':'';
+      return `<tr><td>${p.num}</td><td>${p.name}${mvpBadge}</td><td>${disp}${p.role.includes('（')?'<span style="color:var(--text3);font-size:11px;"> '+p.role.match(/（(.*?)）/)[1]+'</span>':''}</td><td>${badge}</td></tr>`;
     }).join('');
     return `
     <div class="gcard" onclick="pdToggleGame(${i})">

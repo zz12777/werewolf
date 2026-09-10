@@ -202,26 +202,29 @@ function jgRoomRenderDealLobby(){
 // 分配完身分後，加入的玩家（不含房主，房主已經跳回法官助手了）只會看到這個畫面：
 // 純粹顯示自己的身分，沒有任何操作按鈕——這個房間接下來的遊戲流程完全交給房主用
 // 法官助手主持，跟這支手機無關了。
-async function jgRoomRenderDealMyRole(){
+let jgRoomUnsubDealMyRole=null; // 發牌房「我的身分」即時監聽（避免用輪詢，減少延遲）
+// 原本這裡是「查一次、沒有的話等1秒再查一次」的輪詢寫法，在網路比較慢的裝置上，等於是
+// 額外多等最多1秒才會看到身分——改成真正的即時監聽（onSnapshot），身分一旦寫進資料庫，
+// 幾乎是立刻就會反映到畫面上，不用等輪詢的下一輪。
+function jgRoomRenderDealMyRole(){
   const root=document.getElementById('jg-room-content');
   if(!root) return;
+  root.innerHTML='<div class="info" style="text-align:center;margin-top:40px;">身分分配中，請稍候...</div>';
   const db=window.jgFirebaseDb;
-  const secretSnap=await getDoc(doc(db,'rooms',jgRoomCode,'secrets',window.jgFirebaseUid));
-  if(!secretSnap.exists()){
-    root.innerHTML='<div class="info" style="text-align:center;margin-top:40px;">身分分配中，請稍候...</div>';
-    setTimeout(()=>jgRoomRenderDealMyRole(),1000);
-    return;
-  }
-  const role=secretSnap.data().role;
-  const roleName=(typeof RNAME!=='undefined'&&RNAME[role])||role;
-  const icon=jgRoomRoleIconGuess(role);
-  root.innerHTML=`
-    <div style="text-align:center;padding:60px 20px;">
-      <div style="font-size:88px;">${icon}</div>
-      <div style="font-size:34px;font-weight:800;margin-top:20px;">你的身分是：${roleName}</div>
-    </div>
-    <button class="ghost" onclick="jgRoomLeave()">離開房間</button>
-  `;
+  if(jgRoomUnsubDealMyRole) jgRoomUnsubDealMyRole();
+  jgRoomUnsubDealMyRole=onSnapshot(doc(db,'rooms',jgRoomCode,'secrets',window.jgFirebaseUid),(snap)=>{
+    if(!snap.exists()) return; // 還沒分配到，保持「請稍候」畫面，等下一次快照推送
+    const role=snap.data().role;
+    const roleName=(typeof RNAME!=='undefined'&&RNAME[role])||role;
+    const icon=jgRoomRoleIconGuess(role);
+    root.innerHTML=`
+      <div style="text-align:center;padding:60px 20px;">
+        <div style="font-size:88px;">${icon}</div>
+        <div style="font-size:34px;font-weight:800;margin-top:20px;">你的身分是：${roleName}</div>
+      </div>
+      <button class="ghost" onclick="jgRoomLeave()">離開房間</button>
+    `;
+  });
 }
 // 粗略猜一個角色對應的 emoji（沒有的話用預設 🎴）——之後如果角色介紹資料裡本來就有
 // icon 欄位可以直接抓來用，這裡先用簡單對照表，涵蓋目前先做的四個板子＋常見角色。
@@ -1131,6 +1134,7 @@ window.jgRoomLeave=function(){
   if(jgRoomUnsubMyRole){ jgRoomUnsubMyRole(); jgRoomUnsubMyRole=null; }
   if(jgRoomUnsubRoom){ jgRoomUnsubRoom(); jgRoomUnsubRoom=null; }
   if(jgRoomUnsubVotes){ jgRoomUnsubVotes(); jgRoomUnsubVotes=null; }
+  if(jgRoomUnsubDealMyRole){ jgRoomUnsubDealMyRole(); jgRoomUnsubDealMyRole=null; }
   jgRoomCode=null; jgRoomComp=null; jgRoomTotal=null; jgRoomIsHost=false;
   jgMyRole=null; jgMySeatNum=null; jgRoomLatestPlayers=[]; jgRoomLatestRoomDoc=null;
   jgRoomLatestVotes=[]; jgRoomGodViewOn=false;
