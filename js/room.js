@@ -339,6 +339,13 @@ window.jgRoomJoin=async function(codeRaw, name){
   const { getDocs } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
   const playersSnap=await getDocs(collection(db,'rooms',code,'players'));
   const existing=playersSnap.docs.find(d=>d.id===uid);
+  // 房間設定是幾人局，就只能加入到那個人數——這裡原本只檢查「遊戲開始了沒」，沒檢查
+  // 「已經加入的人數是不是已經到齊了」，導致例如6人局可以一直有新的人加進來，超過6人。
+  // 已經加入過的人（重新整理、重新連線）不受這個限制，可以照樣回到原本的座位。
+  if(!existing&&jgRoomTotal&&playersSnap.size>=jgRoomTotal){
+    alert('⚠️ 這個房間是 '+jgRoomTotal+' 人局，已經到齊了，無法加入。');
+    return;
+  }
   const seatNum=existing?existing.data().seatNum:(playersSnap.size+1);
   await setDoc(doc(db,'rooms',code,'players',uid),{
     name:nm, seatNum:seatNum, joinedAt:serverTimestamp(), alive:true
@@ -620,12 +627,23 @@ async function jgRoomGetWolfUids(){
 //    號碼（跳確認視窗，比照查驗類角色），其餘隊友的畫面會即時同步看到「今晚要殺X號」，
 //    各自按「確認」表態；任何人都可以按「修改」，會清空目前的提議跟所有人的確認狀態，
 //    重新回到選人畫面——藉此確保狼刀是全員同意的結果，不是單一個人說了算。──
+let jgRoomWolfFinalizing=false; // 避免「全員到齊」的結算邏輯被同時觸發兩次（見下方註解）
 async function jgRoomWolfViewHtml(night){
   const wolfUids=await jgRoomGetWolfUids();
   const wolfCount=wolfUids.length;
   const rd=jgRoomLatestRoomDoc||{};
   if(rd.wolfKillNight===night&&rd.wolfKillTargetSeatNum!=null){
     const confirmedBy=rd.wolfKillConfirmedBy||[];
+    // 「全員到齊了嗎」的檢查，除了在按下確認的當下判斷一次，這裡（畫面重新渲染時，包含
+    // 收到其他隊友即時確認通知的那一刻）也要再檢查一次——原因是：如果兩位隊友幾乎同時
+        // 按下確認，各自那一瞬間讀到的資料庫狀態可能都還沒看到彼此的最新寫入（經典的競態
+    // 問題），導致「誰都沒有判斷出全員到齊」，遊戲卡在狼隊出刀，女巫永遠等不到。這裡
+    // 改成用即時監聽器（onSnapshot）最終一定會收斂到的正確狀態再檢查一次，當作安全網，
+    // 不會漏掉。jgRoomWolfFinalizing 這個旗標避免同一個瞬間被觸發兩次。
+    if(confirmedBy.length>=wolfCount&&!jgRoomWolfFinalizing){
+      jgRoomWolfFinalizing=true;
+      try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
+    }
     const iConfirmed=confirmedBy.includes(window.jgFirebaseUid);
     return {needsTimer:true, html: jgRoomTimerHtml(30,'今晚要殺的對象是？')
       +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>今晚要殺 '+rd.wolfKillTargetSeatNum+'號</h1>'
@@ -659,6 +677,24 @@ window.jgRoomWolfModify=async function(){
     wolfKillProposedBy:null, wolfKillConfirmedBy:[]
   },{ merge:true });
 };
+// 死亡結算＋推進下一步：不管是從「按下確認」的當下觸發，還是從畫面重新渲染時的安全網
+// 觸發，都走同一份邏輯，確保結果一致。
+async function jgRoomWolfFinalize(){
+  const db=window.jgFirebaseDb;
+  const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const fresh=freshSnap.data()||{};
+  if(!fresh.wolfKillTargetUid) return;
+  const hasWitch=jgRoomComp&&jgRoomComp.witch>0;
+  if(hasWitch){
+    // 板子有女巫：先不結算死亡，等女巫決定要不要救／毒之後再一起結算。currentStep 可能
+    // 已經被另一位隊友的安全網搶先改過了，這裡用條件式合併寫入不會有副作用（設成同一個
+    // 值兩次是無害的）。
+    await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'witch' },{ merge:true });
+  } else {
+    await jgRoomResolveNightDeaths();
+    await jgRoomAdvanceToCheckOrSheriff();
+  }
+}
 // 用 arrayUnion 而不是「先讀陣列、自己加一個、再整份寫回去」，是為了避免兩位隊友幾乎
 // 同時按確認時，其中一人的確認被另一人的寫入覆蓋掉、憑空少一票的競態問題。
 window.jgRoomWolfConfirm=async function(){
@@ -666,21 +702,16 @@ window.jgRoomWolfConfirm=async function(){
   await setDoc(doc(db,'rooms',jgRoomCode),{
     wolfKillConfirmedBy: arrayUnion(window.jgFirebaseUid)
   },{ merge:true });
-  // 讀回最新狀態確認是不是全員到齊了——可能好幾位隊友幾乎同時都判斷「到齊了」，導致
-  // currentStep／死亡狀態被重複寫入同一個值，這是無害的，不影響結果。
+  // 立刻嘗試結算一次（涵蓋「我是最後一個確認的人」這個常見情況，體感上比較即時）；
+  // 就算這次的讀取因為競態沒看到完整名單也沒關係，jgRoomWolfViewHtml 裡的安全網會在
+  // 監聽器收到最終正確狀態時再檢查一次，不會真的卡住。
   const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
   const fresh=freshSnap.data()||{};
   const wolfUids=await jgRoomGetWolfUids();
   const confirmedBy=fresh.wolfKillConfirmedBy||[];
-  if(confirmedBy.length>=wolfUids.length&&fresh.wolfKillTargetUid){
-    const hasWitch=jgRoomComp&&jgRoomComp.witch>0;
-    if(hasWitch){
-      // 板子有女巫：先不結算死亡，等女巫決定要不要救／毒之後再一起結算
-      await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'witch' },{ merge:true });
-    } else {
-      await jgRoomResolveNightDeaths();
-      await jgRoomAdvanceToCheckOrSheriff();
-    }
+  if(confirmedBy.length>=wolfUids.length&&fresh.wolfKillTargetUid&&!jgRoomWolfFinalizing){
+    jgRoomWolfFinalizing=true;
+    try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
   }
 };
 
