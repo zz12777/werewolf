@@ -515,7 +515,7 @@ function pdRebuildAndRender(){
   } else if(PD_SORT_MODE==='points'){
     const mGoodPctPt=Math.round(mGood*100), mEvilPctPt=Math.round(mEvil*100);
     formulaBox.innerHTML=`
-      <b>積分</b>：以「累積分數」排序，使贏面較低的陣營每贏一場拿到較多分，若「成為第三方並獲勝」則額外加分。分數相同時則場次多者排前面。
+      <b>積分</b>：以「累積分數」排序，使贏面較低的陣營每贏一場拿到較多分，若「成為第三方並獲勝」則額外加分；獲得單場MVP，不論輸贏都額外+1分。分數相同時則場次多者排前面。
       <code>好人陣營每贏一場　＝　(1 － 整體好人勝率) 分
 邪惡陣營每贏一場　＝　(1 － 整體邪惡勝率) 分
 第三方陣營每贏一場（人狼鏈成立且第三方獲勝）　＝　2 分

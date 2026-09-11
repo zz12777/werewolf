@@ -20,19 +20,19 @@ const ALL_ROLES = {
   wolfbrother_e:{icon:'👴', name:'狼兄', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>首夜相認：</strong>與狼弟優先睜眼互相確認身份，隨後狼弟先閉眼，狼兄再與其餘狼人一同睜眼執行狼刀。<br><strong>陣亡效果：</strong>狼兄以任何方式（票出、毒殺、被殺等）陣亡後，下一晚狼弟將「覺醒」，必須殺一人復仇。<br><strong>自刀自爆：</strong>狼兄可以被隊友自刀，但不可以自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">⚡ 常見板子搭配：黑市商人＋狼兄狼弟——狼弟覺醒前形同隱狼，黑市商人若誤與其交易會直接失敗身亡</span>'},
   wolfbrother_y:{icon:'👦', name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。<br><strong>帶刀手勢：</strong>狼弟每晚睜眼都要比兩個手勢——「技能使用狀況」（復仇刀，只有覺醒那一晚比讚，其餘每晚都是倒讚）跟「今晚的帶刀手勢」（只看狼弟以外的狼隊成員是否已經全滅，跟狼弟自己有沒有正式加入狼窩無關——就算是狼兄剛陣亡、狼弟正要覺醒的那一晚，只要其餘狼隊友也全滅了，帶刀手勢照樣比讚）。帶刀手勢比讚時，狼弟帶的就是原本「狼人睜眼」要選的那把正常狼刀（不是額外多一刀），可以當下直接選人，也可以留到「狼人睜眼」步驟再殺；覺醒當晚若同時符合帶刀條件，復仇刀跟正常狼刀是分開的兩刀，當晚可以兩刀都出。<br><strong>自刀自爆：</strong>狼弟可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。'},
   wolfshaman:{icon:'🔮', name:'狼巫', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>與狼隊一同刀人：</strong>與其餘狼人一同睜眼、參與商議選擇獵殺對象。<br><strong>查驗：</strong>刀口決定後，獨自睜眼查驗一名玩家的真實身份。<strong>第二夜起</strong>，若查驗到純白之女，純白之女立即死亡——守衛與女巫都無法保護被查驗出局的對象。<br><strong>自刀自爆：</strong>可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與純白之女搭配出現</span>'},
-  mask:{icon:'🎭', name:'假面', team:'wolf', teamLabel:'狼人陣營（假面舞會板專用）', desc:'<strong>不與狼隊見面：</strong>不與其他狼人相認、不可自爆（可自刀）。<br><strong>帶刀：</strong>當其餘正牌狼人（不含假面自己）全部出局時，假面開始獨自帶刀殺人（跟正常狼刀一樣，可被守衛/女巫解藥阻擋）。<br><strong>查驗：</strong>第二夜起，可先查驗一名玩家今晚是否在舞池中（舞者選出的3人共舞名單）。<br><strong>給予面具：</strong>查驗之後，可選擇1名玩家給予面具，改變該玩家「當夜」在舞池陣營判定中的陣營（用來干擾舞者共舞的死亡結果）。<br><strong>限制：</strong>免疫女巫的毒；查驗、給予面具都不能連續兩晚指定同一名玩家（兩者各自獨立計算）。<br><span style="color:var(--seer);font-size:12px;">⚡ 假面舞會板專屬角色，通常與舞者搭配出現</span>'},
+  mask:{icon:'🎭', name:'假面', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊見面：</strong>不與其他狼人相認、不可自爆（可自刀）。<br><strong>帶刀：</strong>當其餘正牌狼人（不含假面自己）全部出局時，假面開始獨自帶刀殺人（跟正常狼刀一樣，可被守衛/女巫解藥阻擋）。<br><strong>查驗：</strong>第二夜起，可先查驗一名玩家今晚是否在舞池中（舞者選出的3人共舞名單）。<br><strong>給予面具：</strong>查驗之後，可選擇1名玩家給予面具，改變該玩家「當夜」在舞池陣營判定中的陣營（用來干擾舞者共舞的死亡結果）。<br><strong>限制：</strong>免疫女巫的毒；查驗、給予面具都不能連續兩晚指定同一名玩家（兩者各自獨立計算）。<br><span style="color:var(--seer);font-size:12px;">⚡ 假面舞會板專屬角色，通常與舞者搭配出現</span>'},
   bigbadwolf:{icon:'🐺', name:'大野狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>與狼隊一同刀人：</strong>加入狼隊夜間討論，一同選擇擊殺對象，可以被隊友自刀，也可以自己自爆。<br><strong>額外一刀：</strong>只要場上四隻狼（狼人×3＋大野狼）全部存活，大野狼可以在女巫結束之後，額外選擇一名玩家擊殺（跟正常狼刀是分開的兩刀，當晚可能造成兩人死亡）。只要有任何一隻狼已經陣亡，這個額外技能就會失效，不能發動。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與小女孩搭配出現</span>'},
-  bigmechwolf:{icon:'🤖', name:'大機械狼', team:'wolf', teamLabel:'狼人陣營（雙機械狼板專用）', desc:'<strong>不與狼隊見面：</strong>夜晚不與其他狼見面，只在自己睜眼階段單獨睜眼，不可自爆。<br><strong>帶刀順序：</strong>狼隊帶刀優先順序是「一般狼人（小狼）→ 大機械狼 → 小機械狼」，小狼全滅後才輪到大機械狼帶刀；只有一個機械狼學到狼人時，該機械狼在自己第一次輪到帶刀的那一晚會帶雙刀；若大小機械狼都學到狼人，小機械狼下一晚直接回歸狼隊、且當夜狼隊刀無敵（可破守衛的盾），大機械狼仍照原本順序、輪到時第一晚帶雙刀。<br><strong>學習：</strong>第一晚可學習一名玩家的技能，通靈師查驗會顯示學到的身分；第二晚起法官會告知學到的身分（但不會說是跟誰學的）。學到通靈師/女巫/獵人/守衛/平民/另一機械狼，各自有不同效果，詳見板子介紹。<br><span style="color:var(--seer);font-size:12px;">⚡ 雙機械狼板專屬角色，通常與小機械狼一同出現</span>'},
-  smallmechwolf:{icon:'🤖', name:'小機械狼', team:'wolf', teamLabel:'狼人陣營（雙機械狼板專用）', desc:'<strong>不與狼隊見面：</strong>夜晚不與其他狼見面，只在自己睜眼階段單獨睜眼，不可自爆。<br><strong>帶刀順序：</strong>狼隊帶刀優先順序是「一般狼人（小狼）→ 大機械狼 → 小機械狼」，大機械狼也陣亡後才輪到小機械狼帶刀；只有一個機械狼學到狼人時，該機械狼在自己第一次輪到帶刀的那一晚會帶雙刀；若大小機械狼都學到狼人，小機械狼下一晚直接回歸狼隊、且當夜狼隊刀無敵（可破守衛的盾）。<br><strong>學習：</strong>規則與大機械狼相同，第一晚學習、第二晚起法官告知學到的身分（但不說是跟誰學的）。<br><span style="color:var(--seer);font-size:12px;">⚡ 雙機械狼板專屬角色，通常與大機械狼一同出現</span>'},
+  bigmechwolf:{icon:'🤖', name:'大機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊見面：</strong>夜晚不與其他狼見面，只在自己睜眼階段單獨睜眼，不可自爆。<br><strong>帶刀順序：</strong>狼隊帶刀優先順序是「一般狼人（小狼）→ 大機械狼 → 小機械狼」，小狼全滅後才輪到大機械狼帶刀；只有一個機械狼學到狼人時，該機械狼在自己第一次輪到帶刀的那一晚會帶雙刀；若大小機械狼都學到狼人，小機械狼下一晚直接回歸狼隊、且當夜狼隊刀無敵（可破守衛的盾），大機械狼仍照原本順序、輪到時第一晚帶雙刀。<br><strong>學習：</strong>第一晚可學習一名玩家的技能，通靈師查驗會顯示學到的身分；第二晚起法官會告知學到的身分（但不會說是跟誰學的）。學到通靈師/女巫/獵人/守衛/平民/另一機械狼，各自有不同效果，詳見板子介紹。<br><span style="color:var(--seer);font-size:12px;">⚡ 雙機械狼板專屬角色，通常與小機械狼一同出現</span>'},
+  smallmechwolf:{icon:'🤖', name:'小機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊見面：</strong>夜晚不與其他狼見面，只在自己睜眼階段單獨睜眼，不可自爆。<br><strong>帶刀順序：</strong>狼隊帶刀優先順序是「一般狼人（小狼）→ 大機械狼 → 小機械狼」，大機械狼也陣亡後才輪到小機械狼帶刀；只有一個機械狼學到狼人時，該機械狼在自己第一次輪到帶刀的那一晚會帶雙刀；若大小機械狼都學到狼人，小機械狼下一晚直接回歸狼隊、且當夜狼隊刀無敵（可破守衛的盾）。<br><strong>學習：</strong>規則與大機械狼相同，第一晚學習、第二晚起法官告知學到的身分（但不說是跟誰學的）。<br><span style="color:var(--seer);font-size:12px;">⚡ 雙機械狼板專屬角色，通常與大機械狼一同出現</span>'},
   // Good - villager
   villager: {icon:'🧑‍🌾',name:'平民',  team:'good', teamLabel:'好人陣營', desc:'沒有特殊技能，靠發言與推理找出狼人。白天投票是唯一武器。'},
-  fool:     {icon:'🃏', name:'傻瓜', team:'good', teamLabel:'神職（特殊）', desc:'<strong>本局採用哪一種規則，由法官在開局選角時用切換鈕決定：</strong><br>'
+  fool:     {icon:'🃏', name:'傻瓜', team:'good', teamLabel:'神職', desc:'<strong>本局採用哪一種規則，由法官在開局選角時用切換鈕決定：</strong><br>'
     +'<strong>🔺 要追刀（預設）：</strong>白天被投票出局時，可以翻牌自證身分，免於淘汰、留在場上繼續發言，但翻牌之後每一天都只能發言、不能再參與投票（不管一般投票還是 PK 投票）。狼隊若想達成「屠神」勝利條件，晚上必須額外對傻瓜補刀殺死他才算數——傻瓜這時候要算進神職人數裡。<br>'
     +'<strong>🔻 不需追刀：</strong>傻瓜被投票出局時直接淘汰、不能留在場上，沒有翻牌自證的機制；狼隊「屠神」不需要特地在夜裡殺死傻瓜。<br>'
     +'<strong>對夜晚攻擊沒有免疫：</strong>不論哪種規則，被狼刀或女巫毒死時都跟一般玩家一樣立即死亡；翻牌留場的效果只對「要追刀」規則下的「白天被投票出局」有效。'},
-  hybrid:   {icon:'🧬', name:'混血兒', team:'good', teamLabel:'好人陣營（特殊）', desc:'<strong>選擇支持對象：</strong>第一晚睜眼選擇一位玩家作為支持對象（不能選自己），此後不再有夜間動作。<br><strong>勝利條件：</strong>與支持對象的勝利陣營相同，但混血兒自己不會被告知對方是好人還是狼人，需自行從發言判斷。<br><strong>對外表現：</strong>被預言家查驗永遠顯示為好人（金水）；在人數統計與「屠民」判定上視為一般平民——狼隊若要屠民，仍必須刀死混血兒，就算他其實支持狼隊也一樣。'},
-  cupid:    {icon:'💘', name:'邱比特', team:'good', teamLabel:'特殊（陣營依情侶配對而定，不屬於神職也不屬於平民）', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>查驗：</strong>被預言家查驗永遠顯示為好人（金水）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同——但邱比特永遠不會帶狼刀、不參與狼人殺人決策，好人陣營要獲勝，除了原本的條件，也必須連邱比特一起淘汰。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營，邱比特本人也永遠是第三方一員。第三方需屠光除自己以外的所有玩家才算獲勝；若第三方存活人數「多於」場上其餘存活人數，直接判定第三方獲勝（例如第三方三人都在場，需要 3:2 才算獲勝；打平，例如 3:3，遊戲尚未結束）。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致則當晚強制變成平安夜（建議討論時間約20秒）。'},
-  thief:    {icon:'🎴', name:'盜賊', team:'good', teamLabel:'特殊（最終陣營依選擇的角色而定，開局前不屬於神職也不屬於平民）', desc:'<strong>整局第一個睜眼：</strong>比邱比特、夢魘還早，是全場第一個行動的角色。遊戲開始前，會多準備兩張額外的身分牌（例如12人局準備14張牌），這兩張牌不發給任何玩家，只保留給盜賊在第一夜選擇。<br><strong>選擇身分：</strong>法官在盜賊睜眼時，把手上另外準備的兩張候選身分告訴系統，用「大字報」的方式攤開讓盜賊看到這兩個角色，盜賊選一個成為自己最終真正的身分（另一張則直接「埋」掉，整局都不會有人是這個身分）。<br><strong>強制選狼：</strong>兩張候選身分中如果有狼人陣營的角色，盜賊「一定要」選擇狼人遊玩——這也讓盜賊多了一個資訊：場上「沒有」出現另一張候選卡代表的那個身分。正常設置下不會出現「兩張候選都是狼人」的情況。<br><strong>選完之後：</strong>盜賊立刻變成所選的身分，從這一夜開始完全依照新身分的規則遊玩（若變成狼人，之後與狼隊一起睜眼殺人；若變成神職，之後在該神職的步驟行動），原本的「盜賊」身分只在選擇之前短暫存在。'},
+  hybrid:   {icon:'🧬', name:'混血兒', team:'good', teamLabel:'好人陣營', desc:'<strong>選擇支持對象：</strong>第一晚睜眼選擇一位玩家作為支持對象（不能選自己），此後不再有夜間動作。<br><strong>勝利條件：</strong>與支持對象的勝利陣營相同，但混血兒自己不會被告知對方是好人還是狼人，需自行從發言判斷。<br><strong>對外表現：</strong>被預言家查驗永遠顯示為好人（金水）；在人數統計與「屠民」判定上視為一般平民——狼隊若要屠民，仍必須刀死混血兒，就算他其實支持狼隊也一樣。'},
+  cupid:    {icon:'💘', name:'邱比特', team:'good', teamLabel:'特殊', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>查驗：</strong>被預言家查驗永遠顯示為好人（金水）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同——但邱比特永遠不會帶狼刀、不參與狼人殺人決策，好人陣營要獲勝，除了原本的條件，也必須連邱比特一起淘汰。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營，邱比特本人也永遠是第三方一員。第三方需屠光除自己以外的所有玩家才算獲勝；若第三方存活人數「多於」場上其餘存活人數，直接判定第三方獲勝（例如第三方三人都在場，需要 3:2 才算獲勝；打平，例如 3:3，遊戲尚未結束）。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致則當晚強制變成平安夜（建議討論時間約20秒）。'},
+  thief:    {icon:'🎴', name:'盜賊', team:'good', teamLabel:'特殊', desc:'<strong>整局第一個睜眼：</strong>比邱比特、夢魘還早，是全場第一個行動的角色。遊戲開始前，會多準備兩張額外的身分牌（例如12人局準備14張牌），這兩張牌不發給任何玩家，只保留給盜賊在第一夜選擇。<br><strong>選擇身分：</strong>法官在盜賊睜眼時，把手上另外準備的兩張候選身分告訴系統，用「大字報」的方式攤開讓盜賊看到這兩個角色，盜賊選一個成為自己最終真正的身分（另一張則直接「埋」掉，整局都不會有人是這個身分）。<br><strong>強制選狼：</strong>兩張候選身分中如果有狼人陣營的角色，盜賊「一定要」選擇狼人遊玩——這也讓盜賊多了一個資訊：場上「沒有」出現另一張候選卡代表的那個身分。正常設置下不會出現「兩張候選都是狼人」的情況。<br><strong>選完之後：</strong>盜賊立刻變成所選的身分，從這一夜開始完全依照新身分的規則遊玩（若變成狼人，之後與狼隊一起睜眼殺人；若變成神職，之後在該神職的步驟行動），原本的「盜賊」身分只在選擇之前短暫存在。'},
   // Good - gods
   seer:     {icon:'🔮', name:'預言家', team:'good', teamLabel:'神職', desc:'每晚查驗一名玩家，得知「好人」或「狼人」。<br>可以重複查驗已經查過的號碼；不能查驗已經死亡的號碼。'},
   witch:    {icon:'🧪', name:'女巫',   team:'good', teamLabel:'神職', desc:'<strong>解藥：</strong>救活當晚被狼殺的玩家（整局限一次）。<br><strong>毒藥：</strong>毒殺任意玩家（整局限一次）。<br>兩瓶藥沒有時間限制，整局中任何一晚都能使用；但同一晚只能擇一使用，不能同時用解藥又用毒藥，且不能自救。'},
@@ -55,7 +55,7 @@ const ALL_ROLES = {
     +'<strong>PK 平票後還能退水嗎？</strong> 原則上不行——進入投票環節、出現平票之後，參與 PK 的候選人不能再退水。'},
   luckyone: {icon:'🍀', name:'幸運兒', team:'special', teamLabel:'附加身分', desc:'由黑市商人交易產生，並非開局直接分配的身分。獲得預言家查驗、女巫毒藥或獵人獵槍其中一項技能，自取得的下個夜晚（查驗／毒藥）或下個白天（獵槍）起可以使用。<br>若獲得查驗，每晚都可查；若獲得巫毒及獵槍，只能使用一次。'},
   purewhitemaiden:{icon:'🕊️', name:'純白之女', team:'good', teamLabel:'神職', desc:'<strong>查驗：</strong>每晚查驗一名玩家的真實身份。<strong>第二夜起</strong>，若查驗到狼人陣營，該名狼人立即死亡——守衛與女巫都無法保護被查驗出局的對象。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與狼巫搭配出現</span>'},
-  dancer:{icon:'💃', name:'舞者', team:'good', teamLabel:'神職（假面舞會板專用）', desc:'<strong>共舞：</strong>第二夜起，每晚強制選擇3名玩家共舞（可以選自己），組成當晚的舞池。<br><strong>舞池結果：</strong>這3人若陣營相同，無事發生；若不同，人數較少的一方死亡（例如2狼1好人，該名好人死亡）——這裡的「陣營」如果被假面給予面具改變過，以改變後的陣營為準。<br><strong>限制：</strong>每位玩家整局只能參與一次共舞，選過的人不能再選（人數不夠3人時當晚自動跳過共舞）。<br><strong>自我保護：</strong>免疫女巫的毒；若舞者選擇自己也進入舞池，當晚舞池中的所有玩家都免疫狼刀（但仍可能死於舞池本身的陣營判定）。<br><span style="color:var(--seer);font-size:12px;">⚡ 假面舞會板專屬角色，通常與假面搭配出現</span>'},
+  dancer:{icon:'💃', name:'舞者', team:'good', teamLabel:'神職', desc:'<strong>共舞：</strong>第二夜起，每晚強制選擇3名玩家共舞（可以選自己），組成當晚的舞池。<br><strong>舞池結果：</strong>這3人若陣營相同，無事發生；若不同，人數較少的一方死亡（例如2狼1好人，該名好人死亡）——這裡的「陣營」如果被假面給予面具改變過，以改變後的陣營為準。<br><strong>限制：</strong>每位玩家整局只能參與一次共舞，選過的人不能再選（人數不夠3人時當晚自動跳過共舞）。<br><strong>自我保護：</strong>免疫女巫的毒；若舞者選擇自己也進入舞池，當晚舞池中的所有玩家都免疫狼刀（但仍可能死於舞池本身的陣營判定）。<br><span style="color:var(--seer);font-size:12px;">⚡ 假面舞會板專屬角色，通常與假面搭配出現</span>'},
   littlegirl:{icon:'👧', name:'小女孩', team:'good', teamLabel:'神職', desc:'<strong>偷窺：</strong>狼人睜眼殺人時可以偷窺，混入狼隊一起睜眼——但陣營仍然是好人，不是狼隊一員。<br><strong>被指認：</strong>狼隊選完刀口後有一次指認她的機會：指認成功，小女孩代替原本刀口死亡（守衛女巫都擋不住）；指認失敗，原本刀口照常結算。<br><strong>單純被刀：</strong>若狼隊不是靠指認、單純把刀口選在她身上，這只是一般狼刀，女巫仍可正常救她。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與大野狼搭配出現</span>'},
   biggreywolf:{icon:'🐺', name:'大灰狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>全程單獨睜眼：</strong>不跟一般狼人一起睜眼，整場遊戲都是自己獨立行動；法官會告知大灰狼跟一般狼人彼此的號碼。<br><strong>襲擊技能：</strong>第二晚起可以選擇要不要發動，發動的話當晚可以「額外」刀一名玩家（跟一般狼刀是分開的兩刀，當晚可能造成兩人死亡）；整局只能發動一次。<br><strong>被標記時強制出刀：</strong>如果占卜師剛好也在同一晚發動標記技能，大灰狼當晚會受到標記影響，且這一晚「一定要」用襲擊技能刀一人，不能選擇不發動。<br><strong>接管狼刀：</strong>一旦其餘一般狼人全部陣亡，大灰狼改成跟一般狼人一樣，負責正常的狼刀（不再是額外一刀，是唯一的狼刀）。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與占卜師、預言家、女巫、獵人搭配出現</span>'},
   diviner:{icon:'🔯', name:'占卜師', team:'good', teamLabel:'神職', desc:'<strong>標記技能：</strong>整局限發動一次，法官可以選擇在任何一晚發動——發動的那一晚，占卜師選定一個號碼做標記，當晚狼人只能從「這個號碼、以及它左右相鄰的號碼」之中選擇刀口（或選擇空刀，不能刀範圍外的人）。<br><strong>號碼不順延：</strong>如果標記的號碼、或左右相鄰的號碼裡有人已經出局，可選範圍就直接變窄，不會因此往外延伸遞補。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與大灰狼、預言家、女巫、獵人搭配出現</span>'},
@@ -65,7 +65,7 @@ const ALL_ROLES = {
 const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask','bigbadwolf','bigmechwolf','smallmechwolf','biggreywolf'];
 const VIL_ROLES  = ['villager','hybrid'];
 const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer','littlegirl','diviner'];
-const SPECIAL_ROLES = ['sheriff','luckyone','cupid','thief'];
+const SPECIAL_ROLES = ['sheriff','luckyone','cupid','thief','zombie'];
 
 // 單身分限定的「板子」預設：每個板子固定包含一組常見搭配的特殊角色（狼隊或神職），
 // 選定板子後，法官還能依人數自由調整基本角色：
@@ -151,6 +151,73 @@ function renderRulesCards(){
   if(vEl) vEl.innerHTML=VIL_ROLES.map(makeCard).join('');
   if(gEl) gEl.innerHTML=GOD_ROLES.map(makeCard).join('');
   if(sEl) sEl.innerHTML=SPECIAL_ROLES.map(makeCard).join('');
+}
+
+// ══════════════════════════════════════
+// 角色說明文字可自行更新（跟「攻略參考」「專有名詞小辭典」同一套：Google 試算表 +
+// 發布成 CSV 的做法）——這裡只讓你覆寫「說明文字」跟「搭配建議」這兩個欄位，圖示／
+// 名稱／陣營這些會影響程式邏輯的欄位不開放透過試算表修改，避免改壞遊戲判定。
+// 設定方式：
+// 1. 開一份新的 Google 試算表，A／B／C 三欄放「角色代號」「說明文字」「搭配建議」，
+//    角色代號要打英文代號（例如 seer、witch、wolf、biggreywolf...），可以對照
+//    js/rules-ui.js 裡 ALL_ROLES 物件的 key 名稱；打錯代號那一列會被忽略，不會出錯。
+// 2. 說明文字欄位裡：想要粗體的地方用兩個星號包起來，例如「**查驗：**每晚可以...」；
+//    想換行的地方直接在儲存格裡按 Alt+Enter（Mac 是 Option+Enter）換行，不用打任何
+//    特殊符號，換行會自動轉成畫面上的分段。
+// 3. 搭配建議欄位可以留空（沒有的話原本卡片最後那行「⚡ 通常與...搭配出現」就不會顯示，
+//    或維持原本內建的版本，看你要不要覆寫）。
+// 4. 檔案 → 共用 → 發布到網路，格式選 CSV，把產生的網址貼進下面
+//    ROLE_DESC_SHEET_CSV_URL 的單引號中間即可。
+// 5. 之後在試算表改內容，重新整理網頁就會抓到最新版本；試算表沒填的角色，會維持
+//    程式內建的原始說明文字，不會被清空。
+const ROLE_DESC_SHEET_CSV_URL='';
+let roleDescOverridesLoaded=false;
+function roleDescMarkupToHtml(text){
+  // 先跳脫使用者可能不小心打進來的 HTML 標籤字元，避免試算表內容被當成程式碼執行；
+  // 再處理 **粗體** 語法跟換行轉 <br>。
+  const escaped=String(text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return escaped.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\r?\n/g,'<br>');
+}
+function roleDescRowsToMap(rows){
+  if(!rows.length) return {};
+  let start=0;
+  const first=(rows[0][0]||'').trim().toLowerCase();
+  if(first==='角色代號'||first==='role'||first==='') start=1;
+  const map={};
+  rows.slice(start).forEach(r=>{
+    const id=(r[0]||'').trim();
+    const desc=(r[1]||'').trim();
+    const note=(r[2]||'').trim();
+    if(id&&desc) map[id]={desc, note};
+  });
+  return map;
+}
+function applyRoleDescOverrides(map){
+  let anyApplied=false;
+  Object.entries(map).forEach(([id,v])=>{
+    if(!ALL_ROLES[id]) return; // 代號打錯或還沒有這個角色，直接跳過，不動原本的說明
+    let html=roleDescMarkupToHtml(v.desc);
+    if(v.note) html+='<br><span style="color:var(--seer);font-size:12px;">⚡ '+roleDescMarkupToHtml(v.note)+'</span>';
+    ALL_ROLES[id].desc=html;
+    anyApplied=true;
+  });
+  return anyApplied;
+}
+async function loadRoleDescOverrides(){
+  if(roleDescOverridesLoaded) return;
+  roleDescOverridesLoaded=true;
+  if(!ROLE_DESC_SHEET_CSV_URL) return;
+  try{
+    const res=await fetch(ROLE_DESC_SHEET_CSV_URL);
+    if(!res.ok) throw new Error('fetch failed');
+    const text=await res.text();
+    const rows=parseGuideCsv(text); // 沿用攻略參考同一套 CSV 解析器
+    const map=roleDescRowsToMap(rows);
+    const applied=applyRoleDescOverrides(map);
+    if(applied) renderRulesCards(); // 真的有套用到覆寫內容才重新渲染，避免沒有變化也閃一次畫面
+  }catch(e){
+    // 抓取失敗就靜靜維持程式內建的原始說明文字，不用跳錯誤訊息打擾使用者
+  }
 }
 
 function toggleRcol(hd){

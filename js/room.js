@@ -71,6 +71,30 @@ function jgRoomStopTimer(){
 function jgRoomGenCode(){
   return String(Math.floor(100000+Math.random()*900000));
 }
+// 複製邀請連結：網址帶 ?room=房號，別人點開會自動跳到連線房間分頁、房號也先幫他填好，
+// 只要打自己的名字（或直接選座位，發牌房的話）就能加入，不用手動問房號、輸入房號。
+window.jgRoomCopyInviteLink=async function(){
+  const url=window.location.origin+window.location.pathname+'?room='+jgRoomCode;
+  try{
+    await navigator.clipboard.writeText(url);
+    alert('已複製邀請連結：\n'+url);
+  }catch(e){
+    // 部分瀏覽器（尤其某些內嵌瀏覽器）不允許網頁直接寫入剪貼簿，退而求其次跳出網址讓
+    // 房主自己手動複製。
+    prompt('請手動複製這段連結：', url);
+  }
+};
+// 房主解散房間：跟「離開房間」不一樣——離開房間只是這支手機自己退出，房間本身還在，
+// 其他人不會受影響；解散房間是房主專屬操作，會讓所有人（含還沒操作的玩家）都被踢出去，
+// 整個房間結束。只標記 dissolved:true，不真的刪除 Firestore 文件（子集合沒辦法從前端
+// 一次砍乾淨，留著也無妨，反正房號不會再被使用）。
+window.jgRoomDissolve=async function(){
+  if(!jgRoomIsHost){ alert('只有房主可以解散房間'); return; }
+  if(!confirm('確定要解散這個房間嗎？所有人都會被踢出去，這個動作無法復原。')) return;
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode),{ dissolved:true },{ merge:true });
+  jgRoomLeave();
+};
 
 async function jgRoomWaitAuth(){
   await window.jgFirebaseReady;
@@ -194,9 +218,11 @@ function jgRoomRenderDealLobby(){
   root.innerHTML=`
     <div class="nbanner"><div class="nicon">🎴</div><h1>房間 ${jgRoomCode}（發牌）</h1>
       <p class="sub" style="text-align:center;margin-top:6px;">請從下面找到你的座位號碼，點下去認領</p></div>
+    <button onclick="jgRoomCopyInviteLink()" style="margin-top:8px;">🔗 複製邀請連結</button>
     <div class="card" style="margin-top:14px;">${rows}</div>
     ${hostBtn}
     <button class="ghost" style="margin-top:14px;" onclick="jgRoomLeave()">離開房間</button>
+    ${jgRoomIsHost?'<button class="ghost" style="margin-top:8px;color:var(--danger,#b91c1c);" onclick="jgRoomDissolve()">🗑️ 解散房間</button>':''}
   `;
 }
 // 分配完身分後，加入的玩家（不含房主，房主已經跳回法官助手了）只會看到這個畫面：
@@ -340,6 +366,14 @@ async function jgRoomEnterLobby(code){
   if(jgRoomUnsubRoom) jgRoomUnsubRoom();
   jgRoomUnsubRoom=onSnapshot(doc(db,'rooms',code),(snap)=>{
     jgRoomLatestRoomDoc=snap.exists()?snap.data():null;
+    // 房主解散房間：所有人（含房主自己，如果房主是先按解散再看到這次快照）的監聽都會收到
+    // dissolved:true，偵測到就提醒一下、把自己踢回建立/加入畫面——用 jgRoomCode 是否還在
+    // 判斷「我是不是已經離開了」，避免房主自己觸發解散後，這裡又重複跳一次提醒。
+    if(jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.dissolved&&jgRoomCode){
+      alert('🗑️ 房主已經解散這個房間。');
+      jgRoomLeave();
+      return;
+    }
     jgRoomRenderCurrentPhase();
   });
   if(jgRoomUnsubVotes) jgRoomUnsubVotes();
@@ -686,12 +720,14 @@ function jgRoomRenderShell(){
       <h1>房間 ${jgRoomCode}</h1>
       <p class="sub" style="text-align:center;margin-top:6px;">把這個房號給朋友，請他們輸入加入</p>
     </div>
+    <button onclick="jgRoomCopyInviteLink()" style="margin-top:8px;">🔗 複製邀請連結</button>
     ${jgRoomCompSummaryHtml()}
     <div id="jg-room-my-role"></div>
     <div class="section-title" style="margin-top:16px;">目前玩家</div>
     <div id="jg-room-player-list" class="card"></div>
     <div id="jg-room-host-controls" style="margin-top:14px;"></div>
     <button class="ghost" style="margin-top:14px;" onclick="jgRoomLeave()">離開房間</button>
+    ${jgRoomIsHost?'<button class="ghost" style="margin-top:8px;color:var(--danger,#b91c1c);" onclick="jgRoomDissolve()">🗑️ 解散房間</button>':''}
   `;
   // 身分快取（jgMyRole）已經有的話，這裡先補畫一次，不用等下一次 snapshot 觸發才顯示
   const box=document.getElementById('jg-room-my-role');
@@ -719,7 +755,7 @@ function jgRoomRenderLobby(players){
       } else {
         hostEl.innerHTML=need
           ? '<button class="primary" '+(ready?'':'disabled')+' onclick="jgRoomAssignRoles()">🎲 隨機分配身分（目前 '+have+' / '+need+' 人'+(ready?'，可以分配了':'）')+'</button>'
-          : '<div class="info-warn" style="font-size:12px;">這個房間沒有記錄板子配置，請改用「用這個板子設定建立連線房間」的方式重新建房。</div>';
+          : '<div class="info-warn" style="font-size:12px;">這個房間沒有記錄板子配置，請改用「建立連線房間」的方式重新建房。</div>';
       }
     } else {
       hostEl.innerHTML=roleAssigned
@@ -1207,7 +1243,7 @@ window.jgRoomRenderEntry=async function(){
       <p class="sub" style="text-align:center;margin-top:6px;">多支手機同時加入同一場，各自的手機只看得到自己的身分</p>
     </div>
     <div class="card" style="margin-top:14px;">
-      <div class="info" style="font-size:13px;">要建立新房間的話，請先到「法官の助手」分頁設定好人數跟板子，設定完會有「用這個板子設定建立連線房間」的按鈕。</div>
+      <div class="info" style="font-size:13px;">要建立新房間的話，請先到「法官の助手」分頁設定好人數跟板子，設定完會有「建立連線房間」的按鈕。</div>
       <button class="primary" style="margin-top:10px;" onclick="switchTab('t-judge')">前往設定板子 →</button>
     </div>
     <div class="card" style="margin-top:14px;">
@@ -1219,4 +1255,23 @@ window.jgRoomRenderEntry=async function(){
     </div>
     <div class="info" style="font-size:12px;margin-top:10px;">目前是第一階段測試：建房、加入、即時看到玩家名單、隨機分配身分（只有自己看得到自己的牌）。遊戲流程自動化跟語音播報還在開發中。</div>
   `;
+  // 如果是從邀請連結點進來的（網址帶 ?room=房號），直接把房號填好，玩家只要打名字就好，
+  // 不用自己找房號跟房主要。
+  try{
+    const urlRoom=new URLSearchParams(window.location.search).get('room');
+    if(urlRoom){
+      const codeInput=document.getElementById('jg-room-code-join');
+      if(codeInput) codeInput.value=urlRoom;
+    }
+  }catch(e){}
 };
+
+// ── 邀請連結：如果是帶著 ?room=房號 打開的網址，直接自動切到「連線房間」分頁，
+//    不用還要自己找到分頁按鈕點進去——房號已經在 jgRoomRenderEntry 那邊處理過了，
+//    這裡只負責「自動跳分頁」這件事。──
+(function jgRoomAutoOpenFromInviteLink(){
+  try{
+    const urlRoom=new URLSearchParams(window.location.search).get('room');
+    if(urlRoom&&typeof window.switchTab==='function') window.switchTab('t-room');
+  }catch(e){}
+})();

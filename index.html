@@ -40,7 +40,7 @@
     <a class="toc-btn" href="#sec-win">🏆 勝利條件</a>
     <a class="toc-btn" href="#sec-wolf">🐺 狼人陣營角色</a>
     <a class="toc-btn" href="#sec-good">🧑‍🌾 好人陣營角色</a>
-    <a class="toc-btn" href="#sec-special">⭐ 附加身分</a>
+    <a class="toc-btn" href="#sec-special">⭐ 附加/特殊身分</a>
     <a class="toc-btn" href="#sec-vote">🗳️ 投票放逐與吞警徽規則</a>
     <a class="toc-btn" href="#sec-glossary">📚 專有名詞小辭典</a>
   </nav>
@@ -167,11 +167,33 @@
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-icon">💘</span>
-      <span class="rcol-name">邱比特（情侶板）</span>
+      <span class="rcol-name">邱比特</span>
       <span class="rcol-arrow">▶</span>
     </div>
     <div class="rcol-body">
       <span class="board-role">邱比特</span>：全場第一個睜眼的角色，第一夜指定兩名玩家（可以鏈自己）成為情侶；兩人隨後互相確認彼此，但不知道誰是邱比特、也不知道對方陣營。若兩人陣營相同（人人鏈／狼狼鏈），邱比特的勝負跟著那個陣營走；若一人好人一人狼人（人狼鏈），邱比特與這對情侶會獨立成為第三方陣營，勝負規則完全不同（見下方「勝利條件」）。情侶其中一人死亡，另一人會立刻殉情，殉情者原本的技能不會發動。建議搭配 10 人（3神3民3狼+邱比特）或 13 人（4神4民4狼+邱比特）板子使用；本板狼隊刀人需刀型一致，不一致視為空刀。<br><span class="role-link" onclick="jumpToRole('cupid')">→ 查看邱比特完整規則</span>
+    </div>
+  </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🐺</span>
+      <span class="rcol-name">大灰狼＋占卜師</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">大灰狼</span>：全程單獨睜眼，法官會告知彼此位置。第二晚起可以選擇發動一次「襲擊技能」額外殺一人；若占卜師同一晚也發動標記技能，大灰狼當晚一定要用襲擊技能出刀。一旦一般狼人全滅，大灰狼改成負責正常狼刀。<br><span class="role-link" onclick="jumpToRole('biggreywolf')">→ 查看大灰狼完整規則</span>
+      <br><br>
+      <span class="board-role">占卜師</span>：整局限發動一次「標記技能」，可以選在任何一晚發動——發動當晚，狼隊只能從標記號碼及其左右相鄰號碼中選擇刀口（或空刀），標記或相鄰號碼已出局也不會向外遞補。<br><span class="role-link" onclick="jumpToRole('diviner')">→ 查看占卜師完整規則</span>
+    </div>
+  </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🧟</span>
+      <span class="rcol-name">殭屍</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body">
+      <span class="board-role">殭屍</span>：獨立於好人／狼人之外的第三方陣營，每晚可以感染0～2名玩家（不能感染自己）。被感染的玩家會互相認識彼此，感染是永久的，不會治癒。當場上除了殭屍自己以外的存活玩家都被感染，殭屍就單獨獲勝。被預言家查驗一律顯示金水，不會被驗成狼人。建議搭配黑狼王、預言家、女巫、獵人使用。<br><span class="role-link" onclick="jumpToRole('zombie')">→ 查看殭屍完整規則</span>
     </div>
   </div>
   <div class="rcol">
@@ -264,7 +286,7 @@
 
   <!-- 附加身分（含警長競選規則） -->
   <div class="rules-section" id="sec-special">
-  <div class="rules-h1">⭐ 附加身分</div>
+  <div class="rules-h1">⭐ 附加/特殊身分</div>
   <div id="rules-special-list" class="card-grid"></div>
   </div>
 
@@ -383,8 +405,10 @@
   <div class="big-section-title">開始遊戲</div>
   <button onclick="jgOpenRosterSetup()">👥 設定本局玩家名單（選填）</button>
   <button class="primary" style="margin-top:14px;" onclick="jgStart()">開始主持 →</button>
-  <button style="margin-top:8px;" onclick="jgRoomCreateFromSetup()">🎮 用這個板子設定建立連線房間</button>
-  <button style="margin-top:8px;" onclick="jgRoomDealFromSetup()">🎴 用連線房間發牌（其餘流程照常由法官主持）</button>
+  <div style="display:flex;gap:8px;margin-top:8px;">
+    <button style="flex:1;" onclick="jgRoomCreateFromSetup()">建立連線房間</button>
+    <button style="flex:1;" onclick="jgRoomDealFromSetup()">使用手機發牌</button>
+  </div>
 </div>
 
 <!-- 法官設定：玩家名單 -->
