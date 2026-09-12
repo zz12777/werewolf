@@ -550,7 +550,9 @@ function jgSaveTrickster(){
     const av=(document.getElementById('jg-trickster-swap-a')||{}).value?.trim()||'';
     const bv=(document.getElementById('jg-trickster-swap-b')||{}).value?.trim()||'';
     if(av&&bv&&av!==bv){
-      // 跟魔術師這一晚的交換抵消判定：兩組號碼一樣（不論順序）就都取消。
+      // 抵消判定：跟魔術師這一晚的交換是同一組號碼（不論順序）時，只有魔術師那邊的
+      // 換技能效果會失效；詭術師自己的換票效果不受影響，正常生效——這是這個板子的
+      // 魔術師變體跟一般魔術師唯一不同的地方，不是「兩邊互相抵消」。
       const mA=jgRecord.magicianSwapA, mB=jgRecord.magicianSwapB;
       const sameSet=mA&&mB&&(
         (mA.toString()===av&&mB.toString()===bv)||(mA.toString()===bv&&mB.toString()===av)
@@ -558,11 +560,10 @@ function jgSaveTrickster(){
       if(sameSet){
         jgTrickCancelledThisNight=true;
         jgRecord.magicianSwapA=null; jgRecord.magicianSwapB=null;
-      } else {
-        jgRecord.tricksterSwapVoteA=av; jgRecord.tricksterSwapVoteB=bv;
       }
-      // 不管這次交換最後有沒有被抵消，「詭術師自己選過這兩個號碼」這件事本身要記住，
-      // 下一晚這兩個號碼都不能再選——抵消是跟魔術師的巧合，不代表詭術師沒有選過。
+      jgRecord.tricksterSwapVoteA=av; jgRecord.tricksterSwapVoteB=bv;
+      // 不管魔術師那邊有沒有被抵消，「詭術師自己選過這兩個號碼」這件事本身要記住，
+      // 下一晚這兩個號碼都不能再選。
       jgTricksterLastSwapNums=[parseInt(av), parseInt(bv)];
     } else {
       jgTricksterLastSwapNums=[];

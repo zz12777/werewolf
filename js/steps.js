@@ -398,8 +398,9 @@ function jgRenderStep(step){
     const infectedNums=jgPlayers.filter(p=>p.infected).map(p=>p.num);
     jgShowPg(`
       <h2>感染者睜眼</h2>
-      <div class="speech">「<em>被殭屍感染的玩家請睜眼。</em>」</div>
-      <div class="info" style="font-size:13px;">法官告知：目前被感染的玩家是 ${infectedNums.join('、')} 號，請互相確認。</div>
+      <div class="speech">「<em>法官走一圈拍被感染者的肩膀。</em>」</div>
+      <div class="info" style="font-size:13px;margin-top:6px;">法官走一圈拍肩：目前被感染的玩家是 ${infectedNums.join('、')} 號。</div>
+      <div class="speech" style="margin-top:10px;">「<em>被殭屍感染的玩家請睜眼。</em>」</div>
       <div class="speech" style="margin-top:10px;">「<em>感染者請閉眼。</em>」</div>
       <button class="primary" onclick="jgGoStep(jgAfterInfectedStep())">已紀錄，下一步 →</button>
     `,'🧟 感染者');

@@ -59,8 +59,8 @@ const ALL_ROLES = {
   littlegirl:{icon:'👧', name:'小女孩', team:'good', teamLabel:'神職', desc:'<strong>偷窺：</strong>狼人睜眼殺人時可以偷窺，混入狼隊一起睜眼——但陣營仍然是好人，不是狼隊一員。<br><strong>被指認：</strong>狼隊選完刀口後有一次指認她的機會：指認成功，小女孩代替原本刀口死亡（守衛女巫都擋不住）；指認失敗，原本刀口照常結算。<br><strong>單純被刀：</strong>若狼隊不是靠指認、單純把刀口選在她身上，這只是一般狼刀，女巫仍可正常救她。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與大野狼搭配出現</span>'},
   biggreywolf:{icon:'🐺', name:'大灰狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>全程單獨睜眼：</strong>不跟一般狼人一起睜眼，整場遊戲都是自己獨立行動；法官會告知大灰狼跟一般狼人彼此的號碼。<br><strong>襲擊技能：</strong>第二晚起可以選擇要不要發動，發動的話當晚可以「額外」刀一名玩家（跟一般狼刀是分開的兩刀，當晚可能造成兩人死亡）；整局只能發動一次。<br><strong>被標記時強制出刀：</strong>如果占卜師剛好也在同一晚發動標記技能，大灰狼當晚會受到標記影響，且這一晚「一定要」用襲擊技能刀一人，不能選擇不發動。<br><strong>接管狼刀：</strong>一旦其餘一般狼人全部陣亡，大灰狼改成跟一般狼人一樣，負責正常的狼刀（不再是額外一刀，是唯一的狼刀）。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與占卜師、預言家、女巫、獵人搭配出現</span>'},
   diviner:{icon:'🔯', name:'占卜師', team:'good', teamLabel:'神職', desc:'<strong>標記技能：</strong>整局限發動一次，法官可以選擇在任何一晚發動——發動的那一晚，占卜師選定一個號碼做標記，當晚狼人只能從「這個號碼、以及它左右相鄰的號碼」之中選擇刀口（或選擇空刀，不能刀範圍外的人）。<br><strong>號碼不順延：</strong>如果標記的號碼、或左右相鄰的號碼裡有人已經出局，可選範圍就直接變窄，不會因此往外延伸遞補。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與大灰狼、預言家、女巫、獵人搭配出現</span>'},
-  trickster:{icon:'🎭', name:'詭術師', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>狼刀：</strong>每晚與狼隊一同睜眼、參與商議並選擇當晚的擊殺對象，可以選擇空刀或自刀。<br><strong>自爆：</strong>白天發言階段任何時候都可以自爆淘汰自己，強制進入夜晚。<br><strong>交換（換票）：</strong>每晚可以選擇交換兩個玩家的號碼牌（可以空換），交換後隔天白天，投給這兩個號碼的票數會互相對調——只在「交換後的那一個白天」有效，之後就失效。不能連續兩晚選同一個號碼。<br><strong>與魔術師的技能抵消：</strong>如果魔術師跟詭術師這一晚換的是同一組號碼（不論順序），兩邊的交換效果會互相抵消，視為都沒有交換。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，通常與魔術師、定序王子搭配出現</span>'},
-  trickmage:{icon:'🪄', name:'魔術師', team:'good', teamLabel:'神職', desc:'<strong>交換（換技能）：</strong>每晚優先行動（在詭術師之前），可以選擇交換兩個玩家的號碼牌（可以空換）——交換後，這兩個玩家「當晚」所有技能會互相對調，只對當晚有效，隔天就失效。<br><strong>每個號碼限用一次：</strong>整局遊戲中，每一個號碼牌最多只能被交換過一次，用過的號碼之後不能再被選進交換名單。<br><strong>與詭術師的技能抵消：</strong>如果詭術師跟魔術師這一晚換的是同一組號碼（不論順序），兩邊的交換效果會互相抵消，視為都沒有交換（但雙方「用過這個號碼」的紀錄仍然算數，不能重複使用）。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，是「詭術之境」板子裡的魔術師變體，跟一般魔術師規則不同，通常與詭術師、定序王子搭配出現</span>'},
+  trickster:{icon:'🎭', name:'詭術師', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>狼刀：</strong>每晚與狼隊一同睜眼、參與商議並選擇當晚的擊殺對象，可以選擇空刀或自刀。<br><strong>自爆：</strong>白天發言階段任何時候都可以自爆淘汰自己，強制進入夜晚。<br><strong>交換（換票）：</strong>每晚可以選擇交換兩個玩家的號碼牌（可以空換），交換後隔天白天，投給這兩個號碼的票數會互相對調——只在「交換後的那一個白天」有效，之後就失效。不能連續兩晚選同一個號碼。<br><strong>不受魔術師影響：</strong>就算魔術師這一晚剛好換了同一組號碼，詭術師自己的換票效果仍然正常生效（只有魔術師那邊會失效）。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，通常與魔術師、定序王子搭配出現</span>'},
+  trickmage:{icon:'🪄', name:'魔術師', team:'good', teamLabel:'神職', desc:'<strong>交換（換技能）：</strong>每晚優先行動（在詭術師之前），可以選擇交換兩個玩家的號碼牌（可以空換）——交換後，這兩個玩家「當晚」所有技能會互相對調，只對當晚有效，隔天就失效，其餘規則跟一般魔術師完全相同。<br><strong>每個號碼限用一次：</strong>整局遊戲中，每一個號碼牌最多只能被交換過一次，用過的號碼之後不能再被選進交換名單。<br><strong>唯一的差異：</strong>如果詭術師這一晚剛好也換了同一組號碼（不論順序），魔術師這次的交換效果就會失效、視為沒有交換（但「用過這個號碼」的紀錄仍然算數，不能重複使用）；詭術師自己的換票效果不受影響。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，是「詭術之境」板子裡的魔術師變體，通常與詭術師、定序王子搭配出現</span>'},
   sequenceprince:{icon:'👑', name:'定序王子', team:'good', teamLabel:'神職', desc:'<strong>翻牌重來：</strong>每天第一次放逐投票結束、公布結果後，可以選擇翻開身分牌發動技能——發動後時間倒轉回到這次投票前，所有人重新發言一次（王子自己享有額外一次發言機會），發言結束後重新進行一次放逐投票。<br><strong>整局限一次：</strong>這個技能整場遊戲只能發動一次，發動之後即使又遇到平票或其他放逐投票，也不能再次發動。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，通常與詭術師、魔術師搭配出現</span>'},
   zombie:{icon:'🧟', name:'殭屍', team:'third', teamLabel:'第三方陣營', desc:'<strong>感染：</strong>每晚可以選擇感染0～2名玩家（不能感染自己，已經感染過的人不用重複選）。感染是永久的，不會被治癒，只會因為被感染的玩家死亡而失去意義。<br><strong>感染者互相確認：</strong>被感染的玩家每晚會被拍肩叫醒，並在「感染者」共同睜眼的階段，看到目前所有感染者是誰。<br><strong>單獨獲勝：</strong>當場上除了殭屍自己以外，所有存活玩家都已經被感染，殭屍就單獨獲勝（好人、狼人都算輸）。<br><strong>免疫查驗：</strong>被預言家查驗一律顯示金水（好人），不會被驗成狼人。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常搭配黑狼王、預言家、女巫、獵人出現，是獨立於好人／狼人之外的第三方陣營</span>'},
 };
@@ -237,7 +237,12 @@ function roleDescMarkupToHtml(text){
   // 正確解析）時，儲存格內的真實換行常常會被誤判成新的一列，把一段話拆成好幕列、資料
   // 代號跟中文名稱只留在最後一列，導致對照混亂——用字面上的 \n 可以完全避開這個問題。
   const escaped=String(text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return escaped.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\r?\n/g,'<br>').replace(/\\n/g,'<br>');
+  let html=escaped.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\r?\n/g,'<br>').replace(/\\n/g,'<br>');
+  // [[角色代號:顯示文字]] 語法，轉成可以點擊跳轉到角色完整規則的連結，例如
+  // [[seer:→ 查看預言家完整規則]]——覆寫內容裡如果要保留原本「→ 查看XX完整規則」這種
+  // 跳轉連結，要用這個語法打，純文字沒辦法自動變回可以點擊的連結。
+  html=html.replace(/\[\[([a-zA-Z0-9_]+):(.+?)\]\]/g,'<span class="role-link" onclick="jumpToRole(\'$1\')">$2</span>');
+  return html;
 }
 function roleDescRowsToMap(rows){
   if(!rows.length) return {};
@@ -571,7 +576,7 @@ function renderPresetPicker(){
   const state=jgRolePick;
   const fixedKeys=Object.keys(preset.fixed);
   const fixedWolfKeys=fixedKeys.filter(k=>WOLF_ROLES.includes(k));
-  const fixedGodKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&k!=='villager');
+  const fixedGodKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&k!=='villager'&&k!=='zombie');
   const wolfCount=state.wolf||0;
   const vilCount=state.villager||0;
 
@@ -626,13 +631,14 @@ function renderPresetPicker(){
 
   // 混血兒、盜賊不算「神職」（各自陣營歸屬跟一般玩法不同），但任何板子都應該能自由加選——
   // 本板固定包含時已經在上面用鎖定格子顯示過了，這裡只用來讓「原本沒固定包含」的板子
-  // 也能自由加選這兩個角色。
+  // 也能自由加選這兩個角色。殭屍是獨立的第三方陣營，固定包含時也放在這裡顯示鎖定格子，
+  // 不跟「神職」混在一起。
   const specialTiles=['hybrid','thief'].filter(id=>!fixedKeys.includes(id)).map(id=>{
     const r=ALL_ROLES[id]; const cnt=state[id]||0;
     return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
       +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
       +(cnt>0?'<span class="rp-cnt">✓</span>':'')+'</div>';
-  }).join('');
+  }).join('') + (fixedKeys.includes('zombie')?jgPresetLockedTileHtml('zombie'):'');
   if(specialTiles){
     html+='<div style="font-size:11px;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:0.5px;">特殊角色</div>'
       +'<div class="rpick-grid">'+specialTiles+'</div>';
