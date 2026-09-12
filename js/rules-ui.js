@@ -238,6 +238,9 @@ function roleDescMarkupToHtml(text){
   // 代號跟中文名稱只留在最後一列，導致對照混亂——用字面上的 \n 可以完全避開這個問題。
   const escaped=String(text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   let html=escaped.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\r?\n/g,'<br>').replace(/\\n/g,'<br>');
+  // [[link:網址|顯示文字]] 語法，轉成會在新分頁打開的外部連結（例如YouTube影片）——
+  // 要先於角色跳轉連結處理，避免網址裡的冒號被誤判成角色代號的分隔符號。
+  html=html.replace(/\[\[link:(https?:\/\/[^|]+)\|(.+?)\]\]/g,'<a href="$1" target="_blank" rel="noopener">$2</a>');
   // [[角色代號:顯示文字]] 語法，轉成可以點擊跳轉到角色完整規則的連結，例如
   // [[seer:→ 查看預言家完整規則]]——覆寫內容裡如果要保留原本「→ 查看XX完整規則」這種
   // 跳轉連結，要用這個語法打，純文字沒辦法自動變回可以點擊的連結。
