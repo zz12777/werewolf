@@ -301,25 +301,28 @@ function jgRenderStep(step){
     const otherWolvesAlive=jgBigGreyWolfOtherWolvesAlive();
     let bodyHtml='';
     if(!dead&&!feared){
-      if(!otherWolvesAlive){
-        // 一般狼人已全滅，大灰狼接管正常狼刀——這時候就是照一般狼刀規則走（可以空刀），
-        // 用「今晚的帶刀手勢是？」這個跟其他「最後一位狼隊友接手」情境一致的比讚提示，
-        // 不再另外顯示「一般狼人已全部陣亡」這種會暴露場上狼隊死亡狀況的提示文字。
-        bodyHtml='<div class="speech">「<em>今晚的帶刀手勢是 👍</em>」</div>'
-          +'<label style="margin-top:8px;">請選擇今晚要殺的對象（留空=空刀）</label>'+jgNumSelectHtml('jg-biggreywolf-kill','');
-      } else if(jgBigGreyWolfAssaultUsed){
-        bodyHtml='<div class="info" style="font-size:12px;">（法官搖頭）襲擊技能整局只能用一次，已經用過了。</div>';
+      // 「你要使用技能嗎」（襲擊技能）跟「今晚的帶刀手勢」（接管狼刀狀況）是兩件獨立的事，
+      // 每晚都會一起出現，不是二選一——襲擊技能只要還沒用過就會問一次；帶刀手勢則單純
+      // 反映「狼隊友是否已經死光」的狀態，兩者互不影響彼此的出現與否。
+      let skillHtml;
+      if(jgBigGreyWolfAssaultUsed){
+        skillHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>'
+          +'<div class="info" style="font-size:12px;">（法官搖頭）襲擊技能整局只能用一次，已經用過了。</div>';
       } else {
         // 每次睜眼都要問一次要不要用技能，不能因為占卜師標記了就自動假設「一定要用」——
         // 只有大灰狼自己選了「要」，才會出現選人清單；占卜師的標記只影響「選了要用之後，
         // 能選的範圍」，不影響要不要用這個選擇本身。
-        bodyHtml='<label>你要使用技能嗎？</label>'
+        skillHtml='<div class="speech">「<em>你要使用技能嗎？</em>」</div>'
           +'<div style="display:flex;gap:8px;margin-top:6px;">'
           +'<button class="'+(jgBigGreyWolfWantsAssaultUI===true?'primary':'')+'" onclick="jgBigGreyWolfWantsAssaultBtn(true)" style="flex:1;">要</button>'
           +'<button class="'+(jgBigGreyWolfWantsAssaultUI===false?'primary':'')+'" onclick="jgBigGreyWolfWantsAssaultBtn(false)" style="flex:1;">不要</button>'
           +'</div>'
           +'<div id="jg-biggreywolf-assault-wrap">'+jgBigGreyWolfAssaultPickerHtml()+'</div>';
       }
+      const knifeGesture=otherWolvesAlive?'👎':'👍';
+      const knifeHtml='<div class="speech" style="margin-top:10px;">「<em>今晚的帶刀手勢是 '+knifeGesture+'</em>」</div>'
+        +(otherWolvesAlive?'':'<label style="margin-top:8px;">請選擇今晚要殺的對象（留空=空刀）</label>'+jgNumSelectHtml('jg-biggreywolf-kill',''));
+      bodyHtml=skillHtml+knifeHtml;
     }
     jgShowPg(`
       <h2>大灰狼睜眼</h2>
@@ -694,7 +697,8 @@ function jgRenderStep(step){
       :'';
     jgShowPg(`
       <h2>狼人睜眼</h2>
-      <div class="speech">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請睜眼。</em>」</div>
+      <div class="speech">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請睜眼。${(isFirst&&jgComp.biggreywolf>0)?'大灰狼請比讚，大灰狼請閉眼。':''}</em>」</div>
+      ${(isFirst&&jgComp.biggreywolf>0)?'<div class="info" style="font-size:12px;">（給法官的註記：大灰狼這裡僅確認身分並比讚，之後都不會參與殺人討論，除非狼隊友死光）</div>':''}
       ${needId?wolfFieldsInner+'<div class="divider" style="margin:12px 0 8px;"></div>':''}
       ${mainPackAlive?`<div class="speech">「<em>請選擇今晚要殺的對象。</em>」</div>
       ${compatNote}

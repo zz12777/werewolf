@@ -19,6 +19,7 @@ document.getElementById('jg-count').addEventListener('input',()=>{
 });
 renderRulesCards();
 loadRoleDescOverrides();
+loadContentBlockOverrides();
 loadGlossary();
 renderGuideTagInfo();
 

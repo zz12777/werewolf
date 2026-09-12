@@ -420,13 +420,23 @@ function jgDawnShootTargetNum(){
       const overhealHit=(gSaved||mgSaved)&&wSaved;
       if(overhealHit||(!gSaved&&!mgSaved&&!wSaved)) return jgRecord.wolfKill;
     }
+    // 走到這裡代表狼刀目標存在，但被守衛／女巫救下（沒有奶穿），或目標根本不是獵人資格者：
+    // 這一晚不會有人因為「被狼刀」觸發開槍，不能falls through到下面的機械狼判斷，也不能
+    // 誤回傳這個已經被救下的號碼——這正是先前的真實 bug：獵人被刀又被女巫救下、平安夜，
+    // 卻仍然被判定成「觸發開槍」，多開了一槍。
+    const victims2=jgRecord._mechwolf2KillVictims||[];
+    for(const num of victims2){
+      const v=jgFind(num);
+      if(v&&jgIsHunterCapable(v)&&!jgHunterSkillSealed(v)) return num;
+    }
+    return null;
   }
   const victims=jgRecord._mechwolf2KillVictims||[];
   for(const num of victims){
     const v=jgFind(num);
     if(v&&jgIsHunterCapable(v)&&!jgHunterSkillSealed(v)) return num;
   }
-  return jgRecord.wolfKill||null;
+  return null;
 }
 // 這位玩家「今晚」的獵人/黑狼王開槍技能是不是被封印了——不管他本身是不是真獵人／黑狼王，
 // 只要符合以下任一種情況，死亡時都不能開槍帶人（即使同時也被狼刀擊殺）：

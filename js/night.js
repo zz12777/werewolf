@@ -416,20 +416,23 @@ function jgSaveBigGreyWolf(){
       if(p) p.role='biggreywolf';
     }
   }
+  // 帶刀手勢（接管狼刀）：狼隊友全滅時才有這個欄位可選，可以空刀。
   if(!jgBigGreyWolfOtherWolvesAlive()){
-    // 接管狼刀：跟一般狼刀共用同一組欄位存檔（可以空刀，接管後就是照一般狼刀規則走）。
     const kv=(document.getElementById('jg-biggreywolf-kill')||{}).value?.trim()||'';
     jgRecord.wolfKillRaw=kv||null;
     jgRecord.wolfKill=jgMagicSwapNum(kv||null);
-  } else if(jgNight>=2&&!jgBigGreyWolfAssaultUsed&&jgBigGreyWolfWantsAssaultUI){
-    // 只有真的選了「要使用技能」才會走到這裡；選了就一定要指定對象，不能空刀
-    // （只有一般狼人的狼刀可以空刀）。
+  }
+  // 襲擊技能：跟帶刀手勢是兩件獨立的事，只要還沒用過、這一晚選了「要」就要檢查一定要
+  // 指定對象，沒選就擋下不能繼續下一步（只有一般狼人的狼刀可以空刀，這個不行）。
+  if(jgNight>=2&&!jgBigGreyWolfAssaultUsed&&jgBigGreyWolfWantsAssaultUI===true){
     const kv=(document.getElementById('jg-biggreywolf-assault')||{}).value?.trim()||'';
-    if(kv){
-      jgBigGreyWolfAssaultUsed=true;
-      jgBigGreyWolfAssaultNight=jgNight;
-      jgBigGreyWolfAssaultTarget=jgMagicSwapNum(kv);
+    if(!kv){
+      alert('已選擇要使用技能，請選擇襲擊的對象，不能空刀。');
+      return;
     }
+    jgBigGreyWolfAssaultUsed=true;
+    jgBigGreyWolfAssaultNight=jgNight;
+    jgBigGreyWolfAssaultTarget=jgMagicSwapNum(kv);
   }
   jgBigGreyWolfWantsAssaultUI=null;
   jgGoStep(jgAfterBigGreyWolfStep());

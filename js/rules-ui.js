@@ -159,12 +159,14 @@ function renderRulesCards(){
 
 // ══════════════════════════════════════
 // 角色說明文字可自行更新（跟「攻略參考」「專有名詞小辭典」同一套：Google 試算表 +
-// 發布成 CSV 的做法）——這裡只讓你覆寫「說明文字」跟「搭配建議」這兩個欄位，圖示／
-// 名稱／陣營這些會影響程式邏輯的欄位不開放透過試算表修改，避免改壞遊戲判定。
+// 發布成 CSV 的做法）——這裡讓你覆寫「中文名稱」「說明文字」「搭配建議」這三個欄位，
+// 圖示／陣營這些會影響程式邏輯的欄位不開放透過試算表修改，避免改壞遊戲判定。
 // 設定方式：
-// 1. 開一份新的 Google 試算表，A／B／C 三欄放「角色代號」「說明文字」「搭配建議」，
-//    角色代號要打英文代號（例如 seer、witch、wolf、biggreywolf...），可以對照
-//    js/rules-ui.js 裡 ALL_ROLES 物件的 key 名稱；打錯代號那一列會被忽略，不會出錯。
+// 1. 開一份新的 Google 試算表，A／B／C／D 四欄放「角色代號」「中文名稱」「說明文字」
+//    「搭配建議」，角色代號要打英文代號（例如 seer、witch、wolf、biggreywolf...），
+//    可以對照 js/rules-ui.js 裡 ALL_ROLES 物件的 key 名稱；打錯代號那一列會被忽略，
+//    不會出錯。中文名稱純粹方便你自己對照哪一列是哪個角色，留空的話畫面上的名稱、
+//    按鈕文字都會維持程式內建的版本；有填的話會直接覆寫過去。
 // 2. 說明文字欄位裡：想要粗體的地方用兩個星號包起來，例如「**查驗：**每晚可以...」；
 //    想換行的地方直接在儲存格裡按 Alt+Enter（Mac 是 Option+Enter）換行，不用打任何
 //    特殊符號，換行會自動轉成畫面上的分段。
@@ -174,7 +176,59 @@ function renderRulesCards(){
 //    ROLE_DESC_SHEET_CSV_URL 的單引號中間即可。
 // 5. 之後在試算表改內容，重新整理網頁就會抓到最新版本；試算表沒填的角色，會維持
 //    程式內建的原始說明文字，不會被清空。
-const ROLE_DESC_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA5OjCfXPH9iKiVzR_WvUFCLfqAjTHJRZeU8RwhXyMNKliM5lTn8-zfqjGpYwBv7IWgNKAtVjIaWG/pub?gid=1091918520&single=true&output=csv';
+const ROLE_DESC_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA5OjCfXPH9iKiVzR_WvUFCLfqAjTHJRZeU8RwhXyMNKliM5lTn8-zfqjGpYwBv7IWgNKAtVjIaWG/pub?gid=415239457&single=true&output=csv';
+// ══════════════════════════════════════
+// 板子介紹／勝利條件／投票放逐與吞警徽規則 也可以自行更新——用「內容區塊」試算表：
+// 另外開一個分頁（或整張新試算表都可以），A欄「區塊代號」、B欄「中文名稱」（純粹方便
+// 你自己對照哪一列是哪個區塊，程式不會用到這欄）、C欄「內容」，一樣支援 **粗體** 語法
+// 跟 Alt+Enter 換行。區塊代號要對照 index.html 裡標了 data-ov="..." 屬性的區塊，可以用
+// 瀏覽器「檢查元素」找到某段文字對應的代號，或參考下面清單：
+//   board-cupid／board-biggreywolf-diviner／board-zombie／board-trickery／
+//   board-wolfshaman-purewhitemaiden／board-mechwolf／wincond-wolf／wincond-good／
+//   wincond-cupid／wincond-zombie／voting-rules／sheriff-badge-rules
+// 發布成 CSV 後，把網址貼進下面 CONTENT_BLOCKS_SHEET_CSV_URL 的單引號中間即可，
+// 用法（發布到網路、CSV 格式）跟角色說明那份試算表完全一樣。
+const CONTENT_BLOCKS_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA5OjCfXPH9iKiVzR_WvUFCLfqAjTHJRZeU8RwhXyMNKliM5lTn8-zfqjGpYwBv7IWgNKAtVjIaWG/pub?gid=449558967&single=true&output=csv';
+let contentBlockOverridesLoaded=false;
+function contentBlockRowsToMap(rows){
+  if(!rows.length) return {};
+  let start=0;
+  const first=(rows[0][0]||'').trim().toLowerCase();
+  if(first==='區塊代號'||first==='id'||first==='') start=1;
+  const map={};
+  rows.slice(start).forEach(r=>{
+    const id=(r[0]||'').trim();
+    // 第二欄「中文名稱」純粹方便你自己對照哪一列是哪個區塊，程式不會用到這個欄位，
+    // 內容一律看第三欄。
+    const text=(r[2]||'').trim();
+    if(id&&text) map[id]=text;
+  });
+  return map;
+}
+function applyContentBlockOverrides(map){
+  let anyApplied=false;
+  Object.entries(map).forEach(([id,text])=>{
+    const el=document.querySelector('[data-ov="'+id+'"]');
+    if(!el) return; // 代號打錯或這個區塊還沒加上 data-ov 屬性，直接跳過，不動原本內容
+    el.innerHTML=roleDescMarkupToHtml(text); // 沿用同一套 **粗體**／換行 轉換規則
+    anyApplied=true;
+  });
+  return anyApplied;
+}
+async function loadContentBlockOverrides(){
+  if(contentBlockOverridesLoaded) return;
+  contentBlockOverridesLoaded=true;
+  if(!CONTENT_BLOCKS_SHEET_CSV_URL) return;
+  try{
+    const res=await fetch(CONTENT_BLOCKS_SHEET_CSV_URL);
+    if(!res.ok) throw new Error('fetch failed');
+    const text=await res.text();
+    const rows=parseGuideCsv(text);
+    applyContentBlockOverrides(contentBlockRowsToMap(rows));
+  }catch(e){
+    // 抓取失敗就靜靜維持頁面內建的原始文字，不用跳錯誤訊息打擾使用者
+  }
+}
 let roleDescOverridesLoaded=false;
 function roleDescMarkupToHtml(text){
   // 先跳脫使用者可能不小心打進來的 HTML 標籤字元，避免試算表內容被當成程式碼執行；
@@ -190,9 +244,10 @@ function roleDescRowsToMap(rows){
   const map={};
   rows.slice(start).forEach(r=>{
     const id=(r[0]||'').trim();
-    const desc=(r[1]||'').trim();
-    const note=(r[2]||'').trim();
-    if(id&&desc) map[id]={desc, note};
+    const chineseName=(r[1]||'').trim(); // 選填，方便法官自己對照；有填的話也會覆寫按鈕上的名稱
+    const desc=(r[2]||'').trim();
+    const note=(r[3]||'').trim();
+    if(id&&desc) map[id]={chineseName, desc, note};
   });
   return map;
 }
@@ -203,6 +258,7 @@ function applyRoleDescOverrides(map){
     let html=roleDescMarkupToHtml(v.desc);
     if(v.note) html+='<br><span style="color:var(--seer);font-size:12px;">⚡ '+roleDescMarkupToHtml(v.note)+'</span>';
     ALL_ROLES[id].desc=html;
+    if(v.chineseName) ALL_ROLES[id].name=v.chineseName; // 選填，有填就順便覆寫按鈕上顯示的名稱
     anyApplied=true;
   });
   return anyApplied;
