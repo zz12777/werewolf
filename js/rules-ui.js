@@ -174,7 +174,7 @@ function renderRulesCards(){
 //    ROLE_DESC_SHEET_CSV_URL 的單引號中間即可。
 // 5. 之後在試算表改內容，重新整理網頁就會抓到最新版本；試算表沒填的角色，會維持
 //    程式內建的原始說明文字，不會被清空。
-const ROLE_DESC_SHEET_CSV_URL='';
+const ROLE_DESC_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vSdA5OjCfXPH9iKiVzR_WvUFCLfqAjTHJRZeU8RwhXyMNKliM5lTn8-zfqjGpYwBv7IWgNKAtVjIaWG/pub?gid=1091918520&single=true&output=csv';
 let roleDescOverridesLoaded=false;
 function roleDescMarkupToHtml(text){
   // 先跳脫使用者可能不小心打進來的 HTML 標籤字元，避免試算表內容被當成程式碼執行；

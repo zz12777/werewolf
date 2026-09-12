@@ -282,7 +282,8 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>占卜師睜眼</h2>
       ${jgGodIdHtml('diviner',dvP)}
-      <div class="speech">「<em>${needId?'占卜師請睜眼。':'你要發動標記技能嗎？'}</em>」</div>
+      <div class="speech">「<em>占卜師請睜眼。</em>」</div>
+      ${needId?'':'<div class="speech" style="margin-top:6px;">「<em>你要發動標記技能嗎？</em>」</div>'}
       ${dead?'<div class="info-warn">占卜師已出局，仍需走完流程</div>':''}
       <div id="jg-god-diviner-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
       ${(dead||feared)?'':(jgDivinerMarkUsed
@@ -295,39 +296,35 @@ function jgRenderStep(step){
   }
   else if(step==='biggreywolf-wake'){
     const bgP=jgPlayers.find(p=>p.role==='biggreywolf');
-    const needId=jgNight===1&&!bgP;
     const dead=bgP&&!bgP.alive;
     const feared=jgFeared(bgP);
     const otherWolvesAlive=jgBigGreyWolfOtherWolvesAlive();
-    const otherWolfNums=jgPlayers.filter(p=>typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(p.role)&&p.role!=='biggreywolf').map(p=>p.num);
-    // 第一晚額外告知彼此位置——只在第一晚講一次，不是每晚重複（跟其他「只講一次」的
-    // 大字報同樣的設計原則，第一晚知道了之後不用每晚再講一次）。
-    const positionNote=(jgNight===1&&otherWolfNums.length)
-      ?'<div class="info" style="font-size:12px;">法官告知：一般狼人是 '+otherWolfNums.join('、')+' 號。</div>'
-      :'';
-    const markedThisNight=jgDivinerMarkUsed&&jgDivinerMarkNight===jgNight;
     let bodyHtml='';
     if(!dead&&!feared){
       if(!otherWolvesAlive){
-        bodyHtml='<div class="info-warn" style="margin-bottom:8px;">🔪 一般狼人已全部陣亡，大灰狼接管正常狼刀</div>'
-          +'<label>請選擇今晚要殺的對象（留空=空刀）</label>'+jgNumSelectHtml('jg-biggreywolf-kill','');
-      } else if(jgNight===1){
-        bodyHtml='<div class="info" style="font-size:12px;">第一晚不能發動襲擊技能，從第二晚開始才能選擇要不要發動。</div>';
+        // 一般狼人已全滅，大灰狼接管正常狼刀——這時候就是照一般狼刀規則走（可以空刀），
+        // 用「今晚的帶刀手勢是？」這個跟其他「最後一位狼隊友接手」情境一致的比讚提示，
+        // 不再另外顯示「一般狼人已全部陣亡」這種會暴露場上狼隊死亡狀況的提示文字。
+        bodyHtml='<div class="speech">「<em>今晚的帶刀手勢是 👍</em>」</div>'
+          +'<label style="margin-top:8px;">請選擇今晚要殺的對象（留空=空刀）</label>'+jgNumSelectHtml('jg-biggreywolf-kill','');
       } else if(jgBigGreyWolfAssaultUsed){
         bodyHtml='<div class="info" style="font-size:12px;">（法官搖頭）襲擊技能整局只能用一次，已經用過了。</div>';
-      } else if(markedThisNight){
-        bodyHtml='<div class="info-danger" style="margin-bottom:8px;">⚠️ 占卜師今晚發動了標記技能，大灰狼今晚「一定要」用襲擊技能殺一人，不能選擇不發動。</div>'
-          +'<label>請選擇要襲擊的對象</label>'+jgNumSelectHtml('jg-biggreywolf-assault','');
       } else {
-        bodyHtml='<label>要發動襲擊技能嗎？要的話請選擇對象（留空=不發動）</label>'+jgNumSelectHtml('jg-biggreywolf-assault','')
-          +'<div class="info" style="font-size:12px;margin-top:4px;">發動的話，這一刀跟一般狼刀是分開的，當晚可能造成兩人死亡；整局限發動一次。</div>';
+        // 每次睜眼都要問一次要不要用技能，不能因為占卜師標記了就自動假設「一定要用」——
+        // 只有大灰狼自己選了「要」，才會出現選人清單；占卜師的標記只影響「選了要用之後，
+        // 能選的範圍」，不影響要不要用這個選擇本身。
+        bodyHtml='<label>你要使用技能嗎？</label>'
+          +'<div style="display:flex;gap:8px;margin-top:6px;">'
+          +'<button class="'+(jgBigGreyWolfWantsAssaultUI===true?'primary':'')+'" onclick="jgBigGreyWolfWantsAssaultBtn(true)" style="flex:1;">要</button>'
+          +'<button class="'+(jgBigGreyWolfWantsAssaultUI===false?'primary':'')+'" onclick="jgBigGreyWolfWantsAssaultBtn(false)" style="flex:1;">不要</button>'
+          +'</div>'
+          +'<div id="jg-biggreywolf-assault-wrap">'+jgBigGreyWolfAssaultPickerHtml()+'</div>';
       }
     }
     jgShowPg(`
       <h2>大灰狼睜眼</h2>
       ${jgGodIdHtml('biggreywolf',bgP)}
       <div class="speech">「<em>大灰狼請睜眼。</em>」</div>
-      ${positionNote}
       ${dead?'<div class="info-warn">大灰狼已出局，仍需走完流程</div>':''}
       <div id="jg-god-biggreywolf-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
       ${bodyHtml}
@@ -617,7 +614,7 @@ function jgRenderStep(step){
       const excludeMaskNum=maskP?[maskP.num]:[];
       let wiIdx=0;
       wolfRoles.forEach(([roleId,cnt])=>{
-        const RNAME_L={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者',wolfshaman:'狼巫'};
+        const RNAME_L={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者',wolfshaman:'狼巫',biggreywolf:'大灰狼'};
         const assignedCount=jgPlayers.filter(p=>p.role===roleId).length;
         if(assignedCount<cnt) allWolfIdsAssigned=false;
         for(let i=0;i<cnt;i++){

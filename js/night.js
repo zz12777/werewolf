@@ -406,6 +406,7 @@ function jgSaveDiviner(){
 function jgBigGreyWolfOtherWolvesAlive(){
   return jgPlayers.some(p=>typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(p.role)&&p.role!=='biggreywolf'&&p.alive);
 }
+let jgBigGreyWolfWantsAssaultUI=null; // 這一晚「要不要使用技能」的暫時UI狀態（不是存檔用的欄位）
 function jgSaveBigGreyWolf(){
   if(jgNight===1&&!jgRequireFirstId('jg-god-who-biggreywolf','大灰狼')) return;
   if(jgNight===1){
@@ -416,12 +417,13 @@ function jgSaveBigGreyWolf(){
     }
   }
   if(!jgBigGreyWolfOtherWolvesAlive()){
-    // 接管狼刀：跟一般狼刀共用同一組欄位存檔，之後死亡結算／文字紀錄都走一般狼刀那一套，
-    // 不再是襲擊技能的獨立欄位。
+    // 接管狼刀：跟一般狼刀共用同一組欄位存檔（可以空刀，接管後就是照一般狼刀規則走）。
     const kv=(document.getElementById('jg-biggreywolf-kill')||{}).value?.trim()||'';
     jgRecord.wolfKillRaw=kv||null;
     jgRecord.wolfKill=jgMagicSwapNum(kv||null);
-  } else if(jgNight>=2&&!jgBigGreyWolfAssaultUsed){
+  } else if(jgNight>=2&&!jgBigGreyWolfAssaultUsed&&jgBigGreyWolfWantsAssaultUI){
+    // 只有真的選了「要使用技能」才會走到這裡；選了就一定要指定對象，不能空刀
+    // （只有一般狼人的狼刀可以空刀）。
     const kv=(document.getElementById('jg-biggreywolf-assault')||{}).value?.trim()||'';
     if(kv){
       jgBigGreyWolfAssaultUsed=true;
@@ -429,8 +431,25 @@ function jgSaveBigGreyWolf(){
       jgBigGreyWolfAssaultTarget=jgMagicSwapNum(kv);
     }
   }
+  jgBigGreyWolfWantsAssaultUI=null;
   jgGoStep(jgAfterBigGreyWolfStep());
 }
+// 「你要使用技能嗎？」的是／否按鈕——只更新畫面上這個子區塊，不整頁重新渲染，理由跟
+// 其他「按鈕先問要不要、要了才出現選人清單」的地方一樣（例如女巫的救人按鈕）。
+function jgBigGreyWolfWantsAssaultBtn(wants){
+  jgBigGreyWolfWantsAssaultUI=wants;
+  const box=document.getElementById('jg-biggreywolf-assault-wrap');
+  if(box) box.innerHTML=jgBigGreyWolfAssaultPickerHtml();
+}
+function jgBigGreyWolfAssaultPickerHtml(){
+  if(jgBigGreyWolfWantsAssaultUI!==true) return '';
+  const markedThisNight=jgDivinerMarkUsed&&jgDivinerMarkNight===jgNight;
+  const excludeNums=markedThisNight?jgDivinerMarkExcludeNums():[];
+  return '<label style="margin-top:8px;">請選擇要襲擊的對象（不能空刀）</label>'
+    +jgNumSelectHtml('jg-biggreywolf-assault','',null,null,excludeNums,'占卜師標記生效中，只能選標記號碼及左右相鄰號碼')
+    +(markedThisNight?'<div class="info-warn" style="font-size:12px;margin-top:4px;">⚠️ 占卜師今晚發動了標記技能，只能從標記號碼及左右相鄰號碼中選擇</div>':'');
+}
+
 // ── 殭屍：第三方獨立陣營，每晚可以感染0-2名玩家（不能感染自己，已經感染過的人不用重複
 //    選）。感染不會治癒，只會因為玩家死亡而失去意義。感染完當晚，接著會有「感染者」的
 //    共同睜眼畫面（如果目前有任何人已經被感染），讓所有感染者互相認識彼此。──
@@ -1829,9 +1848,16 @@ function jgSaveWolf(){
     // 不再跟狼人擠在同一個畫面裡（見上方 wolf-wake 的畫面已移除石像鬼欄位）。
     jgRenderRoster();
   }
-  { const wolfKillRawVal=(document.getElementById('jg-wolf-rec')||{}).value?.trim()||null;
-    jgRecord.wolfKillRaw=wolfKillRawVal;
-    jgRecord.wolfKill=jgMagicSwapNum(wolfKillRawVal); }
+  { const wolfRecEl=document.getElementById('jg-wolf-rec');
+    // 小狼已全滅（大灰狼／機械狼接管）時，這個畫面不會渲染 jg-wolf-rec 這個欄位，維持
+    // 接管者自己畫面已經寫進 jgRecord.wolfKill 的值，不要在這裡用「找不到欄位」的空值
+    // 把它蓋掉——這是先前的真實 bug：大灰狼接管刀死一人，白天卻變成平安夜。
+    if(wolfRecEl){
+      const wolfKillRawVal=wolfRecEl.value?.trim()||null;
+      jgRecord.wolfKillRaw=wolfKillRawVal;
+      jgRecord.wolfKill=jgMagicSwapNum(wolfKillRawVal);
+    }
+  }
   // 大野狼+小女孩板：狼隊指認小女孩的猜測號碼（只在第二夜起、板子有小女孩時才會有這個欄位）。
   // 猜對猜錯的實際判定跟死亡結算留到天亮處理（見 steps.js 的 dawn 區塊），這裡只負責記錄猜測值。
   { const identifyRawVal=(document.getElementById('jg-wolf-identify-rec')||{}).value?.trim()||null;
@@ -2080,7 +2106,11 @@ function jgAfterDivinerChainEntry(){
   return jgAfterDivinerStep();
 }
 function jgAfterDivinerStep(){
-  const hasBigGreyWolf=(jgNight===1?(jgComp.biggreywolf>0):jgHasRoleAny(['biggreywolf']))||jgThiefBuriedActiveTonight('biggreywolf');
+  // 第一晚大灰狼不會有自己獨立的睜眼畫面——他的身分是跟其他狼人一起在「狼人睜眼」畫面
+  // 指定號碼（比讚後閉眼，其餘狼人留著繼續討論刀口），從第二晚開始才會有自己獨立的
+  // 技能詢問畫面。
+  if(jgNight===1) return jgAfterBigGreyWolfStep();
+  const hasBigGreyWolf=jgHasRoleAny(['biggreywolf'])||jgThiefBuriedActiveTonight('biggreywolf');
   if(hasBigGreyWolf) return 'biggreywolf-wake';
   return jgAfterBigGreyWolfStep();
 }

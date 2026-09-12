@@ -6,6 +6,7 @@
   --witch:#7c3aed;--hunter:#5f3e96;--guard:#1e887a;
   --cupid:#c23b7a;
   --thief:#8a6d1f;
+  --diviner:#4338ca;
   --accent:#b83828;--gold:#9a7c28;
   --r:12px;--r-sm:8px;
 }
@@ -43,12 +44,13 @@ h3{font-size:16px;font-weight:700;color:var(--text);}
 .av-guard{background:rgba(30,136,122,0.12);color:var(--guard);}
 .av-cupid{background:rgba(194,59,122,0.12);color:var(--cupid);}
 .av-thief{background:rgba(138,109,31,0.14);color:var(--thief);}
+.av-diviner{background:rgba(67,56,202,0.12);color:var(--diviner);}
 .av-dead{background:rgba(0,0,0,0.06);color:var(--text3);}
 .nm{flex:1;font-size:15px;color:var(--text);}
 .dead-nm{text-decoration:line-through;color:var(--text3);}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.3px;}
 .bw{background:rgba(184,56,40,0.1);color:#922418;}.bv{background:rgba(58,122,42,0.1);color:#2a601c;}.bthird{background:rgba(194,59,122,0.1);color:#8f2a5e;}
-.bs{background:rgba(42,101,168,0.1);color:#1a4e88;}.bwt{background:rgba(124,58,237,0.1);color:#5b21b6;}
+.bs{background:rgba(42,101,168,0.1);color:#1a4e88;}.bwt{background:rgba(124,58,237,0.1);color:#5b21b6;}.bdiviner{background:rgba(67,56,202,0.1);color:#3730a3;}
 .bh{background:rgba(95,62,150,0.1);color:#4a2e80;}.bg2{background:rgba(30,136,122,0.1);color:#0e6a5e;}
 .bcupid{background:rgba(194,59,122,0.1);color:#8f2a5e;}
 .bthief{background:rgba(138,109,31,0.14);color:#6b5417;}
@@ -358,6 +360,7 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
   --witch:#7c3aed;--hunter:#5f3e96;--guard:#1e887a;
   --cupid:#c23b7a;
   --thief:#8a6d1f;
+  --diviner:#4338ca;
   --accent:#b83828;--gold:#9a7c28;
   --r:12px;--r-sm:8px;
 }
