@@ -59,12 +59,15 @@ const ALL_ROLES = {
   littlegirl:{icon:'👧', name:'小女孩', team:'good', teamLabel:'神職', desc:'<strong>偷窺：</strong>狼人睜眼殺人時可以偷窺，混入狼隊一起睜眼——但陣營仍然是好人，不是狼隊一員。<br><strong>被指認：</strong>狼隊選完刀口後有一次指認她的機會：指認成功，小女孩代替原本刀口死亡（守衛女巫都擋不住）；指認失敗，原本刀口照常結算。<br><strong>單純被刀：</strong>若狼隊不是靠指認、單純把刀口選在她身上，這只是一般狼刀，女巫仍可正常救她。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與大野狼搭配出現</span>'},
   biggreywolf:{icon:'🐺', name:'大灰狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>全程單獨睜眼：</strong>不跟一般狼人一起睜眼，整場遊戲都是自己獨立行動；法官會告知大灰狼跟一般狼人彼此的號碼。<br><strong>襲擊技能：</strong>第二晚起可以選擇要不要發動，發動的話當晚可以「額外」刀一名玩家（跟一般狼刀是分開的兩刀，當晚可能造成兩人死亡）；整局只能發動一次。<br><strong>被標記時強制出刀：</strong>如果占卜師剛好也在同一晚發動標記技能，大灰狼當晚會受到標記影響，且這一晚「一定要」用襲擊技能刀一人，不能選擇不發動。<br><strong>接管狼刀：</strong>一旦其餘一般狼人全部陣亡，大灰狼改成跟一般狼人一樣，負責正常的狼刀（不再是額外一刀，是唯一的狼刀）。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與占卜師、預言家、女巫、獵人搭配出現</span>'},
   diviner:{icon:'🔯', name:'占卜師', team:'good', teamLabel:'神職', desc:'<strong>標記技能：</strong>整局限發動一次，法官可以選擇在任何一晚發動——發動的那一晚，占卜師選定一個號碼做標記，當晚狼人只能從「這個號碼、以及它左右相鄰的號碼」之中選擇刀口（或選擇空刀，不能刀範圍外的人）。<br><strong>號碼不順延：</strong>如果標記的號碼、或左右相鄰的號碼裡有人已經出局，可選範圍就直接變窄，不會因此往外延伸遞補。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常與大灰狼、預言家、女巫、獵人搭配出現</span>'},
+  trickster:{icon:'🎭', name:'詭術師', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>狼刀：</strong>每晚與狼隊一同睜眼、參與商議並選擇當晚的擊殺對象，可以選擇空刀或自刀。<br><strong>自爆：</strong>白天發言階段任何時候都可以自爆淘汰自己，強制進入夜晚。<br><strong>交換（換票）：</strong>每晚可以選擇交換兩個玩家的號碼牌（可以空換），交換後隔天白天，投給這兩個號碼的票數會互相對調——只在「交換後的那一個白天」有效，之後就失效。不能連續兩晚選同一個號碼。<br><strong>與魔術師的技能抵消：</strong>如果魔術師跟詭術師這一晚換的是同一組號碼（不論順序），兩邊的交換效果會互相抵消，視為都沒有交換。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，通常與魔術師、定序王子搭配出現</span>'},
+  trickmage:{icon:'🪄', name:'魔術師', team:'good', teamLabel:'神職', desc:'<strong>交換（換技能）：</strong>每晚優先行動（在詭術師之前），可以選擇交換兩個玩家的號碼牌（可以空換）——交換後，這兩個玩家「當晚」所有技能會互相對調，只對當晚有效，隔天就失效。<br><strong>每個號碼限用一次：</strong>整局遊戲中，每一個號碼牌最多只能被交換過一次，用過的號碼之後不能再被選進交換名單。<br><strong>與詭術師的技能抵消：</strong>如果詭術師跟魔術師這一晚換的是同一組號碼（不論順序），兩邊的交換效果會互相抵消，視為都沒有交換（但雙方「用過這個號碼」的紀錄仍然算數，不能重複使用）。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，是「詭術之境」板子裡的魔術師變體，跟一般魔術師規則不同，通常與詭術師、定序王子搭配出現</span>'},
+  sequenceprince:{icon:'👑', name:'定序王子', team:'good', teamLabel:'神職', desc:'<strong>翻牌重來：</strong>每天第一次放逐投票結束、公布結果後，可以選擇翻開身分牌發動技能——發動後時間倒轉回到這次投票前，所有人重新發言一次（王子自己享有額外一次發言機會），發言結束後重新進行一次放逐投票。<br><strong>整局限一次：</strong>這個技能整場遊戲只能發動一次，發動之後即使又遇到平票或其他放逐投票，也不能再次發動。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，通常與詭術師、魔術師搭配出現</span>'},
   zombie:{icon:'🧟', name:'殭屍', team:'third', teamLabel:'第三方陣營', desc:'<strong>感染：</strong>每晚可以選擇感染0～2名玩家（不能感染自己，已經感染過的人不用重複選）。感染是永久的，不會被治癒，只會因為被感染的玩家死亡而失去意義。<br><strong>感染者互相確認：</strong>被感染的玩家每晚會被拍肩叫醒，並在「感染者」共同睜眼的階段，看到目前所有感染者是誰。<br><strong>單獨獲勝：</strong>當場上除了殭屍自己以外，所有存活玩家都已經被感染，殭屍就單獨獲勝（好人、狼人都算輸）。<br><strong>免疫查驗：</strong>被預言家查驗一律顯示金水（好人），不會被驗成狼人。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常搭配黑狼王、預言家、女巫、獵人出現，是獨立於好人／狼人之外的第三方陣營</span>'},
 };
 
-const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask','bigbadwolf','bigmechwolf','smallmechwolf','biggreywolf'];
+const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask','bigbadwolf','bigmechwolf','smallmechwolf','biggreywolf','trickster'];
 const VIL_ROLES  = ['villager','hybrid'];
-const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer','littlegirl','diviner'];
+const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer','littlegirl','diviner','trickmage','sequenceprince'];
 const SPECIAL_ROLES = ['sheriff','luckyone','cupid','thief','zombie'];
 
 // 單身分限定的「板子」預設：每個板子固定包含一組常見搭配的特殊角色（狼隊或神職），
@@ -86,7 +89,8 @@ const JG_BOARD_PRESETS = {
   bigbadwolf_littlegirl:{label:'大野狼+小女孩', fixed:{bigbadwolf:1, littlegirl:1}},
   bigmechwolf_smallmechwolf:{label:'雙機械狼', fixed:{bigmechwolf:1, smallmechwolf:1, medium:1}},
   biggreywolf_diviner:{label:'大灰狼+占卜師', fixed:{biggreywolf:1, diviner:1, seer:1, witch:1, hunter:1}},
-  zombie_board:{label:'殭屍上警局', fixed:{wolfking:1, seer:1, witch:1, hunter:1, zombie:1}},
+  zombie_board:{label:'殭屍', fixed:{wolfking:1, seer:1, witch:1, hunter:1, zombie:1}},
+  trickery_realm:{label:'詭術之境', fixed:{trickster:1, seer:1, witch:1, trickmage:1, sequenceprince:1}},
 };
 
 // 選板子的下拉選單以前是寫死在 index.html 裡的 <option>，跟這裡的 JG_BOARD_PRESETS 是兩份
@@ -278,9 +282,10 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   const hybridCount=isDual?0:(pickState.hybrid||0); // 混血兒不開放雙身分模式選用
   const cupidCount=isDual?0:(pickState.cupid||0); // 邱比特不開放雙身分模式選用
   const thiefCount=isDual?0:(pickState.thief||0); // 盜賊不開放雙身分模式選用
+  const zombieCount=isDual?0:(pickState.zombie||0); // 殭屍不開放雙身分模式選用
   // 注意：傻瓜現在算在 GOD_ROLES 裡，godCount 已經含傻瓜的數量了，這裡不再另外加一次，
   // 不然選了傻瓜的話，總數會被重複計算多算一個。
-  const totalPicked=wolfCount+godCount+vilCount+hybridCount+cupidCount+thiefCount;
+  const totalPicked=wolfCount+godCount+vilCount+hybridCount+cupidCount+thiefCount+zombieCount;
 
   let html=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">
     目前：${totalPicked}/${total} ${unitLabel}
@@ -330,6 +335,12 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
       <span class="rp-ico">${tf.icon}</span>
       <div class="rp-nm">${tf.name}</div>
       ${thiefCount>0?'<span class="rp-cnt">✓</span>':''}
+    </div>`;
+    const zb=ALL_ROLES.zombie;
+    html+=`<div class="rpick${zombieCount>0?' sel':''}" onclick="rpickTap('${containerId}','zombie')">
+      <span class="rp-ico">${zb.icon}</span>
+      <div class="rp-nm">${zb.name}</div>
+      ${zombieCount>0?'<span class="rp-cnt">✓</span>':''}
     </div>`;
     html+='</div>';
     if(thiefCount>0){

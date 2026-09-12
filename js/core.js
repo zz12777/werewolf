@@ -6,9 +6,9 @@
 // ═══════════════════════════════════
 // SHARED DATA
 // ═══════════════════════════════════
-const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',biggreywolf:'大灰狼',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',diviner:'占卜師',zombie:'殭屍',sheriff:'警長',luckyone:'幸運兒'};
-const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',biggreywolf:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs',diviner:'bs',zombie:'bcupid'};
-const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',biggreywolf:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer',diviner:'av-seer',zombie:'av-cupid'};
+const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',biggreywolf:'大灰狼',trickster:'詭術師',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',trickmage:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',diviner:'占卜師',zombie:'殭屍',sequenceprince:'定序王子',sheriff:'警長',luckyone:'幸運兒'};
+const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',biggreywolf:'bw',trickster:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs',diviner:'bs',zombie:'bcupid',trickmage:'bs',sequenceprince:'bg2'};
+const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',biggreywolf:'av-wolf',trickster:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer',diviner:'av-seer',zombie:'av-cupid',trickmage:'av-seer',sequenceprince:'av-guard'};
 
 function getComp(n){
   const t={
@@ -203,7 +203,7 @@ const ROLE_ABBR={
   villager:'民', hybrid:'混血', cupid:'邱比特', thief:'盜賊', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
   gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面', bigbadwolf:'大野狼', bigmechwolf:'大機', smallmechwolf:'小機', biggreywolf:'大灰狼',
   mechanicalwolf:'機', seer:'預', witch:'巫', hunter:'獵', guard:'守', dreamcatcher:'攝夢', knight:'騎士', magician:'魔術',
-  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', littlegirl:'小女孩', diviner:'占卜', zombie:'殭屍', sheriff:'警長', luckyone:'幸運'
+  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', littlegirl:'小女孩', diviner:'占卜', zombie:'殭屍', trickster:'詭術', trickmage:'魔術', sequenceprince:'定序', sheriff:'警長', luckyone:'幸運'
 };
 // Builds a short label for the export header from whichever "special" (non-baseline) roles
 // appeared this game — e.g. 通靈師+機械狼 present → "通靈師機械狼".
@@ -682,6 +682,29 @@ let jgDivinerMarkNum=null;
 let jgBigGreyWolfAssaultUsed=false;
 let jgBigGreyWolfAssaultNight=null;
 let jgBigGreyWolfAssaultTarget=null;
+// 詭術之境專用狀態：
+// 魔術師（trickmage，這個板子的變體，規則跟一般魔術師不同）換技能——每個號碼整局限
+// 換一次，jgTrickmageSwapUsedNums 記錄用過的號碼；jgTrickmageSwapA／B 是「這一晚」的
+// 交換對象（僅當晚有效，隔天重置）。
+let jgTrickmageSwapUsedNums=[];
+let jgTrickmageSwapA=null, jgTrickmageSwapB=null;
+// 詭術師換票——jgTricksterSwapA／B 是這一晚選定的換票對象（僅隔天白天有效）；
+// jgTricksterLastSwapNums 記錄「上一晚」選過的號碼，不能連續兩晚選其中之一。
+let jgTricksterSwapA=null, jgTricksterSwapB=null;
+let jgTricksterLastSwapNums=[];
+// 若魔術師跟詭術師這一晚換的是同一組號碼（不論順序），兩邊都會被判定抵消——這個旗標
+// 純粹給文字紀錄／法官參考用，抵消的判定邏輯本身看 jgTrickmageSwapA/B、jgTricksterSwapA/B
+// 是否還留著值（抵消後兩邊都會被清空）。
+let jgTrickCancelledThisNight=false;
+// 定序王子：整局限發動一次「翻牌重新投票」。
+let jgSequencePrinceUsed=false;
+// 白天目前是不是「王子發動技能後的重新投票」——這個旗標只影響這一輪要不要再次提供
+// 王子發動的選項（用過一次之後，當天同一輪不會再問第二次），下一個白天會恢復正常。
+let jgSequencePrinceRewindActive=false;
+// 記住「今天是不是已經走過一次『投票結果出爐』這個時間點」——王子的技能只能在每天
+// 「第一次」投票結果出爐時發動；王子自己發動重新投票之後，同一天不會再問第二次
+// （不然會變成無限循環）。這個旗標在每次進入新的一天（dawn → discuss）時要重置。
+let jgDayVoteOutResolvedOnce=false;
 // 殭屍專用狀態：jgRecord.zombieInfectTargets 是「這一晚」選擇感染的對象（每晚重置，見
 // jgRecord 的預設值），實際的感染狀態是持續累積在每個玩家自己身上的 p.infected 旗標
 // （感染不會被治癒，只會隨玩家死亡而失去意義），不需要額外的全域狀態變數維護。
@@ -1402,6 +1425,9 @@ function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal){
   jgWolfBrotherIdDone=false; jgWolfBrotherAwakened=false; jgWolfBrotherAwakenedNight=null;
   jgDivinerMarkUsed=false; jgDivinerMarkNight=null; jgDivinerMarkNum=null;
   jgBigGreyWolfAssaultUsed=false; jgBigGreyWolfAssaultNight=null; jgBigGreyWolfAssaultTarget=null;
+  jgTrickmageSwapUsedNums=[]; jgTrickmageSwapA=null; jgTrickmageSwapB=null;
+  jgTricksterSwapA=null; jgTricksterSwapB=null; jgTricksterLastSwapNums=[]; jgTrickCancelledThisNight=false;
+  jgSequencePrinceUsed=false; jgSequencePrinceRewindActive=false;
   jgMechAssign={}; jgMechAssignDone=false; jgBlackMarketUsed=false; jgLuckyOne=null;
   jgBlackMarketTradeNight=null; jgHybridChosen=false; jgHybridTarget=null;
   jgCupidChosen=false; jgLovers=null; jgThiefWheelDone=false; jgThiefWheelCand1=null;
@@ -1515,6 +1541,9 @@ function jgStart(){
   jgWolfBrotherAwakenedNight=null;
   jgDivinerMarkUsed=false; jgDivinerMarkNight=null; jgDivinerMarkNum=null;
   jgBigGreyWolfAssaultUsed=false; jgBigGreyWolfAssaultNight=null; jgBigGreyWolfAssaultTarget=null;
+  jgTrickmageSwapUsedNums=[]; jgTrickmageSwapA=null; jgTrickmageSwapB=null;
+  jgTricksterSwapA=null; jgTricksterSwapB=null; jgTricksterLastSwapNums=[]; jgTrickCancelledThisNight=false;
+  jgSequencePrinceUsed=false; jgSequencePrinceRewindActive=false;
   jgMechAssign={};
   jgMechAssignDone=false;
   jgBlackMarketUsed=false;
@@ -1797,7 +1826,10 @@ function jgCaptureState(){
     jgHanTiaoSheriffNote, jgHanTiaoDiscussNotes, jgHanTiaoCommitted, jgNightmareForceMode,
     jgLastMaskCheckTarget, jgLastMaskGrantTarget,
     jgDivinerMarkUsed, jgDivinerMarkNight, jgDivinerMarkNum,
-    jgBigGreyWolfAssaultUsed, jgBigGreyWolfAssaultNight, jgBigGreyWolfAssaultTarget, jgMvpNum
+    jgBigGreyWolfAssaultUsed, jgBigGreyWolfAssaultNight, jgBigGreyWolfAssaultTarget, jgMvpNum,
+    jgTrickmageSwapUsedNums, jgTrickmageSwapA, jgTrickmageSwapB,
+    jgTricksterSwapA, jgTricksterSwapB, jgTricksterLastSwapNums, jgTrickCancelledThisNight,
+    jgSequencePrinceUsed, jgSequencePrinceRewindActive
   })), {
     // Set 不能用 JSON.stringify 序列化（會變成空物件），改用陣列另外存、restore 時再轉回 Set
     jgDancerEverDanced: [...jgDancerEverDanced]
@@ -1836,6 +1868,15 @@ function jgRestoreState(snap){
   jgBigGreyWolfAssaultNight=snap.jgBigGreyWolfAssaultNight;
   jgBigGreyWolfAssaultTarget=snap.jgBigGreyWolfAssaultTarget;
   jgMvpNum=snap.jgMvpNum;
+  jgTrickmageSwapUsedNums=snap.jgTrickmageSwapUsedNums;
+  jgTrickmageSwapA=snap.jgTrickmageSwapA;
+  jgTrickmageSwapB=snap.jgTrickmageSwapB;
+  jgTricksterSwapA=snap.jgTricksterSwapA;
+  jgTricksterSwapB=snap.jgTricksterSwapB;
+  jgTricksterLastSwapNums=snap.jgTricksterLastSwapNums;
+  jgTrickCancelledThisNight=snap.jgTrickCancelledThisNight;
+  jgSequencePrinceUsed=snap.jgSequencePrinceUsed;
+  jgSequencePrinceRewindActive=snap.jgSequencePrinceRewindActive;
   jgLastNightPeaceful=snap.jgLastNightPeaceful;
   jgSpeakDirection=snap.jgSpeakDirection;
   jgBlackMarketUsed=snap.jgBlackMarketUsed;

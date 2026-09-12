@@ -356,6 +356,44 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveZombie()">已紀錄，下一步 →</button>
     `,'🧟 殭屍');
   }
+  else if(step==='trickmage-wake'){
+    const tmP=jgPlayers.find(p=>p.role==='trickmage');
+    const needId=jgNight===1&&!tmP;
+    const dead=tmP&&!tmP.alive;
+    const feared=jgFeared(tmP);
+    const usedExclude=jgTrickmageSwapUsedNums.slice();
+    jgShowPg(`
+      <h2>魔術師睜眼</h2>
+      ${jgGodIdHtml('trickmage',tmP)}
+      <div class="speech">「<em>${needId?'魔術師請睜眼。':'請選擇要交換的號碼'}</em>」</div>
+      ${dead?'<div class="info-warn">魔術師已出局，仍需走完流程</div>':''}
+      <div id="jg-god-trickmage-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      ${(dead||feared)?'':`<label>要交換的第一個號碼（留空=不交換，不能選已經交換過的號碼）</label>${jgNumSelectHtml('jg-trickmage-swap-a','',null,null,usedExclude,'這個號碼已經交換過了，不能再選')}
+      <label style="margin-top:8px;">要交換的第二個號碼</label>${jgNumSelectHtml('jg-trickmage-swap-b','',null,null,usedExclude,'這個號碼已經交換過了，不能再選')}
+      <div class="info" style="font-size:12px;margin-top:4px;">交換後這兩人當晚所有技能互相對調，只對當晚有效；每個號碼整局限交換一次。</div>`}
+      <div class="speech" style="margin-top:10px;">「<em>魔術師請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveTrickmage()">已紀錄，下一步 →</button>
+    `,'🪄 魔術師');
+  }
+  else if(step==='trickster-wake'){
+    const tsP=jgPlayers.find(p=>p.role==='trickster');
+    const needId=jgNight===1&&!tsP;
+    const dead=tsP&&!tsP.alive;
+    const feared=jgFeared(tsP);
+    const lastExclude=jgTricksterLastSwapNums.slice();
+    jgShowPg(`
+      <h2>詭術師睜眼（換票）</h2>
+      ${jgGodIdHtml('trickster',tsP)}
+      <div class="speech">「<em>${needId?'詭術師請睜眼。':'請選擇要交換的號碼'}</em>」</div>
+      ${dead?'<div class="info-warn">詭術師已出局，仍需走完流程（稍後狼人睜眼時還會再出現一次）</div>':''}
+      <div id="jg-god-trickster-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      ${(dead||feared)?'':`<label>要交換的第一個號碼（留空=不交換，不能選昨晚選過的號碼）</label>${jgNumSelectHtml('jg-trickster-swap-a','',null,null,lastExclude,'不能連續兩晚選同一個號碼')}
+      <label style="margin-top:8px;">要交換的第二個號碼</label>${jgNumSelectHtml('jg-trickster-swap-b','',null,null,lastExclude,'不能連續兩晚選同一個號碼')}
+      <div class="info" style="font-size:12px;margin-top:4px;">交換後隔天白天，投給這兩個號碼的票數互相對調，只對隔天有效；不能連續兩晚選同一個號碼。若跟魔術師這一晚換的號碼相同，兩邊都會抵消。</div>`}
+      <div class="speech" style="margin-top:10px;">「<em>詭術師請閉眼，稍等一下還會跟狼人一起睜眼。</em>」</div>
+      <button class="primary" onclick="jgSaveTrickster()">已紀錄，下一步 →</button>
+    `,'🎭 詭術師');
+  }
   else if(step==='infected-wake'){
     const infectedNums=jgPlayers.filter(p=>p.infected).map(p=>p.num);
     jgShowPg(`
@@ -1133,6 +1171,20 @@ function jgRenderStep(step){
       <div class="speech" style="margin-top:10px;">「<em>騎士請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveSimpleGod('knight','knight-wake')">下一步 →</button>
     `,'⚔️ 騎士');
+  }
+  else if(step==='sequenceprince-wake'){
+    const spP=jgPlayers.find(p=>p.role==='sequenceprince');
+    let idHtml=jgGodIdHtml('sequenceprince',spP);
+    const dead=spP&&!spP.alive;
+    jgShowPg(`
+      <h2>定序王子睜眼</h2>
+      ${dead?'<div class="info-warn">定序王子已出局，仍需走完流程</div>':''}
+      <div class="speech">「<em>定序王子請睜眼。</em>」</div>
+      ${idHtml}
+      <div class="info" style="font-size:13px;">定序王子技能在白天使用（第一次放逐投票結束後，可以翻牌重新投票，整局限一次）。今晚無動作。</div>
+      <div class="speech" style="margin-top:10px;">「<em>定序王子請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveSimpleGod('sequenceprince','sequenceprince-wake')">下一步 →</button>
+    `,'👑 定序王子');
   }
   else if(step==='fool-wake'){
     const isFirst=jgIsFirstNight();

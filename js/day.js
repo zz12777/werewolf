@@ -125,7 +125,7 @@ function jgApplyCompFix(){
     if(p) p.role=sel.value;
   }
   jgRenderRoster();
-  jgSpeakTimerOrderKey=''; // 進入這一天的發言是全新一輪，強制計時器從第一位重新起算
+  jgSpeakTimerOrderKey=''; jgDayVoteOutResolvedOnce=false; // 進入這一天的發言是全新一輪，強制計時器從第一位重新起算，順便重置王子技能的每日限定旗標
   jgGoStep('discuss');
 }
 
@@ -498,7 +498,7 @@ function jgLastWordsBtn(btn){
   jgShowPg(`
     <h2>遺言</h2>
     <div class="speech">「<em>${name} 可以發表遺言。</em>」</div>
-    <button class="primary" onclick="jgSpeakTimerOrderKey='';jgGoStep('discuss')">遺言結束，開始發言 →</button>
+    <button class="primary" onclick="jgSpeakTimerOrderKey='';jgDayVoteOutResolvedOnce=false;jgGoStep('discuss')">遺言結束，開始發言 →</button>
   `,'💬 遺言');
 }
 
@@ -602,6 +602,14 @@ function jgRenderVoteTally(){
 }
 
 function jgToggleVote(target,voter){
+  // 詭術之境板：詭術師換票效果只對「換票那一晚的隔天」這一次投票有效——任何人投給被
+  // 換過的兩個號碼其中一個，實際上要算給另一個號碼，在這裡（記錄投票的當下）直接轉換，
+  // 之後的票數統計、放逐結果自然就是正確的，不用另外在計票階段再處理一次。
+  const swapA=jgRecord.tricksterSwapVoteA, swapB=jgRecord.tricksterSwapVoteB;
+  if(swapA&&swapB){
+    if(target.toString()===swapA.toString()) target=parseInt(swapB);
+    else if(target.toString()===swapB.toString()) target=parseInt(swapA);
+  }
   const turningOn=!(jgVoteTally[target]&&jgVoteTally[target][voter]);
   if(turningOn){
     // Each voter may only vote for one target at a time — clear them from every other target first
@@ -736,6 +744,25 @@ function jgSaveVoteInner(){
   // 情況勾選即可（見 jgToggleFoolReveal，會依「要不要追刀」規則決定勾選後死亡狀態怎麼變）。
   if(found){
     const eliminatedRole=found.role; // capture BEFORE any dual-identity card-swap
+    // 定序王子：每天「第一次」投票出爐結果的當下，如果王子還活著且沒用過技能，給法官
+    // 一個選擇——要不要讓王子翻牌發動「重新投票」。發動的話這次出局作廢、全部重新發言
+    // 一輪（王子額外多一次發言機會，由法官自行掌握節奏）之後重新投票；整局限發動一次，
+    // 王子自己觸發的這次重新投票不會再問第二次（用 jgDayVoteOutResolvedOnce 擋住）。
+    if(!jgDayVoteOutResolvedOnce){
+      jgDayVoteOutResolvedOnce=true;
+      const spP=jgPlayers.find(p=>p.role==='sequenceprince');
+      if(spP&&spP.alive&&!jgSequencePrinceUsed){
+        if(confirm('👑 定序王子要不要翻牌，發動「重新投票」技能？\n\n目前投票結果：'+val+'號出局。\n\n選「確定」會讓 '+val+' 號免於出局，全部重新發言一輪（提醒法官：王子這輪額外多一次發言機會）後，重新進行一次放逐投票；這個技能整局只能發動一次。')){
+          jgSequencePrinceUsed=true;
+          jgDayLog[jgNight]=(jgDayLog[jgNight]||[]).concat(['王子翻牌，重新投票（原本'+val+'號出局作廢）']);
+          jgVoteTally={}; jgAbstainVoters={};
+          jgSpeakTimerOrderKey='';
+          alert('👑 定序王子發動技能！請讓所有人重新發言一輪（王子這輪額外多一次發言機會），發言結束後重新投票。');
+          jgGoStep('discuss');
+          return;
+        }
+      }
+    }
     const trulyDied=jgApplyDeath(found);
     jgRecord._voteOutTrulyDied=trulyDied;
     // 邱比特情侶殉情：被投票出局的人如果是情侶其中一人，另一人立刻跟著殉情
@@ -895,7 +922,7 @@ function jgSaveKnightDuel(){
     jgRenderRoster();
     alert('⚔️ '+target.num+'號是好人，騎士以死謝罪');
     const win=jgCheckWin(); if(win){jgShowWin(win);return;}
-    jgSpeakTimerOrderKey=''; // 進入這一天的發言是全新一輪，強制計時器從第一位重新起算
+    jgSpeakTimerOrderKey=''; jgDayVoteOutResolvedOnce=false; // 進入這一天的發言是全新一輪，強制計時器從第一位重新起算，順便重置王子技能的每日限定旗標
     jgGoStep('discuss');
   }
 }

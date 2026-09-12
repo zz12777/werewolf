@@ -462,12 +462,95 @@ function jgAfterZombieStep(){
   return jgAfterInfectedStep();
 }
 function jgAfterInfectedStep(){
+  return jgAfterTrickmageChainEntry();
+}
+// 詭術之境板：魔術師（換技能）優先行動，接著詭術師（換票，跟一般狼人睜眼是分開的
+// 獨立回合），再接一般狼人睜眼（詭術師會在那邊跟狼隊一起參與出刀決策，不是這裡）。
+function jgAfterTrickmageChainEntry(){
+  const hasTrickmage=(jgNight===1?(jgComp.trickmage>0):jgHasRoleAny(['trickmage']))||jgThiefBuriedActiveTonight('trickmage');
+  if(hasTrickmage) return 'trickmage-wake';
+  return jgAfterTrickmageStep();
+}
+function jgAfterTrickmageStep(){
+  const hasTrickster=(jgNight===1?(jgComp.trickster>0):jgHasRoleAny(['trickster']))||jgThiefBuriedActiveTonight('trickster');
+  if(hasTrickster) return 'trickster-wake';
+  return jgAfterTricksterStep();
+}
+function jgAfterTricksterStep(){
   return 'wolf-wake';
 }
 
+// ── 魔術師（trickmage，詭術之境板專屬變體）：每晚優先行動，交換兩個玩家的號碼牌，
+//    當晚所有技能互相對調——直接沿用一般魔術師既有的 jgRecord.magicianSwapA/B 欄位跟
+//    jgMagicSwapNum() 換算邏輯（這兩個欄位本來就是「這一晚」的紀錄，每晚都會重置，效果
+//    範圍本來就只有當晚，跟這個變體要的規則一致，不用另外寫一套）。這裡只多加「每個
+//    號碼整局限用一次」的檢查，跟一般魔術師不同的地方只有這一點。──
+function jgSaveTrickmage(){
+  if(jgNight===1&&!jgRequireFirstId('jg-god-who-trickmage','魔術師')) return;
+  if(jgNight===1){
+    const whoEl=document.getElementById('jg-god-who-trickmage');
+    if(whoEl&&whoEl.value){
+      const p=jgFind(whoEl.value);
+      if(p) p.role='trickmage';
+    }
+  }
+  const tmP=jgPlayers.find(p=>p.role==='trickmage');
+  jgRecord.magicianSwapA=null; jgRecord.magicianSwapB=null;
+  if(tmP&&tmP.alive&&!jgFeared(tmP)){
+    const av=(document.getElementById('jg-trickmage-swap-a')||{}).value?.trim()||'';
+    const bv=(document.getElementById('jg-trickmage-swap-b')||{}).value?.trim()||'';
+    if(av&&bv&&av!==bv){
+      jgRecord.magicianSwapA=av; jgRecord.magicianSwapB=bv;
+      jgTrickmageSwapUsedNums.push(parseInt(av), parseInt(bv));
+    }
+  }
+  jgGoStep(jgAfterTrickmageStep());
+}
+
+// ── 詭術師（trickster，詭術之境板專屬）：在魔術師之後、加入狼隊出刀之前，有自己獨立的
+//    「換票」回合——每晚可以選擇交換兩個玩家的號碼牌，交換後隔天白天投給這兩個號碼的
+//    票數互相對調，只對「交換後的那一個白天」有效。不能連續兩晚選同一個號碼（上一晚選過
+//    的兩個號碼，這一晚都不能再選）。如果這一晚選的兩個號碼跟魔術師這一晚換的號碼一樣
+//    （不論順序），兩邊的效果都會被判定抵消，視為都沒有交換。──
+function jgSaveTrickster(){
+  if(jgNight===1&&!jgRequireFirstId('jg-god-who-trickster','詭術師')) return;
+  if(jgNight===1){
+    const whoEl=document.getElementById('jg-god-who-trickster');
+    if(whoEl&&whoEl.value){
+      const p=jgFind(whoEl.value);
+      if(p) p.role='trickster';
+    }
+  }
+  const tsP=jgPlayers.find(p=>p.role==='trickster');
+  jgRecord.tricksterSwapVoteA=null; jgRecord.tricksterSwapVoteB=null;
+  jgTrickCancelledThisNight=false;
+  if(tsP&&tsP.alive&&!jgFeared(tsP)){
+    const av=(document.getElementById('jg-trickster-swap-a')||{}).value?.trim()||'';
+    const bv=(document.getElementById('jg-trickster-swap-b')||{}).value?.trim()||'';
+    if(av&&bv&&av!==bv){
+      // 跟魔術師這一晚的交換抵消判定：兩組號碼一樣（不論順序）就都取消。
+      const mA=jgRecord.magicianSwapA, mB=jgRecord.magicianSwapB;
+      const sameSet=mA&&mB&&(
+        (mA.toString()===av&&mB.toString()===bv)||(mA.toString()===bv&&mB.toString()===av)
+      );
+      if(sameSet){
+        jgTrickCancelledThisNight=true;
+        jgRecord.magicianSwapA=null; jgRecord.magicianSwapB=null;
+      } else {
+        jgRecord.tricksterSwapVoteA=av; jgRecord.tricksterSwapVoteB=bv;
+      }
+      // 不管這次交換最後有沒有被抵消，「詭術師自己選過這兩個號碼」這件事本身要記住，
+      // 下一晚這兩個號碼都不能再選——抵消是跟魔術師的巧合，不代表詭術師沒有選過。
+      jgTricksterLastSwapNums=[parseInt(av), parseInt(bv)];
+    } else {
+      jgTricksterLastSwapNums=[];
+    }
+  }
+  jgGoStep(jgAfterTricksterStep());
+}
 function jgGodIdHtml(roleId,existingP){
   if(jgNight!==1) return '';
-  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面',littlegirl:'小女孩',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',diviner:'占卜師',biggreywolf:'大灰狼',zombie:'殭屍'};
+  const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面',littlegirl:'小女孩',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',diviner:'占卜師',biggreywolf:'大灰狼',zombie:'殭屍',trickmage:'魔術師',trickster:'詭術師',sequenceprince:'定序王子'};
   const rn=RZHMAP[roleId]||roleId;
   return jgIdFieldHtml(rn, existingP, 'jg-god-who-'+roleId, 'jg-god-name-'+roleId);
 }
@@ -2107,6 +2190,7 @@ const GOD_CHAIN=[
   {step:'knight-wake',      role:'knight',       check:(n,c)=>(n===1&&c.knight>0)||jgThiefBuriedActiveTonight('knight')},
   {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>(n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter']))||jgThiefBuriedActiveTonight('demonhunter')},
   {step:'fool-wake',        role:'fool',         check:(n,c)=>(n===1&&c.fool>0)||jgThiefBuriedActiveTonight('fool')},
+  {step:'sequenceprince-wake', role:'sequenceprince', check:(n,c)=>n===1&&c.sequenceprince>0},
   // 狼巫第一晚排在整條神職鏈最後（其餘夜晚改成緊接狼刀決定之後，見 jgPostWolfStep／
   // jgWolfshamanPending，這裡的 check 只在第一晚生效）
   {step:'wolfshaman-check', role:'wolfshaman',   check:(n,c)=>jgIsFirstNight()&&((n===1?(c.wolfshaman>0):jgHasRoleAny(['wolfshaman']))||jgThiefBuriedActiveTonight('wolfshaman'))},
