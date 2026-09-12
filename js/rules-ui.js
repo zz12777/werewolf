@@ -232,9 +232,12 @@ async function loadContentBlockOverrides(){
 let roleDescOverridesLoaded=false;
 function roleDescMarkupToHtml(text){
   // 先跳脫使用者可能不小心打進來的 HTML 標籤字元，避免試算表內容被當成程式碼執行；
-  // 再處理 **粗體** 語法跟換行轉 <br>。
+  // 再處理 **粗體** 語法跟換行轉 <br>——換行同時支援「儲存格內真的按 Alt+Enter 換行」
+  // 跟「打字面上的兩個字元 \n」兩種寫法，因為直接複製貼上 CSV 文字（沒有用「檔案→匯入」
+  // 正確解析）時，儲存格內的真實換行常常會被誤判成新的一列，把一段話拆成好幕列、資料
+  // 代號跟中文名稱只留在最後一列，導致對照混亂——用字面上的 \n 可以完全避開這個問題。
   const escaped=String(text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return escaped.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\r?\n/g,'<br>');
+  return escaped.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\r?\n/g,'<br>').replace(/\\n/g,'<br>');
 }
 function roleDescRowsToMap(rows){
   if(!rows.length) return {};

@@ -561,7 +561,8 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
       const mark=h.result==='win'?'✓':(h.result==='lose'?'✗':'－');
       const title=h.result==='unclear'?' title="不列入戰績勝率"':'';
       const thirdTag=h.camp==='third'?'<span class="chip third" style="padding:1px 6px;font-size:11px;margin-left:4px;">💘 第三方</span>':'';
-      return `<div class="hist-item"><span class="hist-res ${cls}"${title}>${mark}</span><span class="hist-role">${h.role}</span>${thirdTag}<span>${h.board}</span><span class="hist-date">${pdDisplayDateShort(h.date)}</span></div>`;
+      const mvpTag=h.isMvp?'<span class="chip mvp" style="padding:1px 6px;font-size:11px;margin-left:4px;background:rgba(154,124,40,0.16);color:var(--gold);">⭐ MVP</span>':'';
+      return `<div class="hist-item"><span class="hist-res ${cls}"${title}>${mark}</span><span class="hist-role">${h.role}</span>${thirdTag}${mvpTag}<span>${h.board}</span><span class="hist-date">${pdDisplayDateShort(h.date)}</span></div>`;
     }).join('');
     const divider=(!isRanked&&i===pdRankedList.length)
       ?`<div class="pd-unranked-divider">⬇ 以下玩家遊玩場數未達門檻，僅供參考、不列入正式排名</div>`:'';
