@@ -2971,7 +2971,14 @@ window.jgRoomRenderEntry=async function(){
       <input type="text" id="jg-room-code-join" placeholder="輸入房號" inputmode="numeric">
       <button class="primary" style="margin-top:10px;" onclick="jgRoomCheckCodeThenJoin(document.getElementById('jg-room-code-join').value)">🚪 加入房間</button>
     </div>
-    <div class="info" style="font-size:12px;margin-top:10px;">目前是第一階段測試：建房、加入、即時看到玩家名單、隨機分配身分（只有自己看得到自己的牌）。遊戲流程自動化跟語音播報還在開發中。</div>
+    <div class="info" style="font-size:12px;margin-top:10px;">
+      <div>目前進度：</div>
+      <ul style="margin:6px 0 6px 18px;padding:0;">
+        <li>📱 手機發牌：全部板子都可用（只負責把身分發到手機上，之後交給法官用本機工具主持）。</li>
+        <li>🌐 連線房間全自動（含夜晚技能結算、白天警長競選／放逐投票／PK、被淘汰後的獵人/黑狼王/幸運兒開槍、上帝視角票型紀錄）：僅限機械狼＋通靈師、攝夢人＋夢魘、魔術師＋黑/白狼王、黑市商人＋狼兄狼弟、邱比特這五個板子，其餘板子請改用手機發牌＋本機主持；就算是這五個板子，連線房間目前也還不會自動判定勝負，要由法官／房主自己看場上情況宣布。</li>
+      </ul>
+      <div>⚠️ 以上功能都還沒經過完整實機測試，可能會有 bug，歡迎回報問題。</div>
+    </div>
   `;
   // 如果是從邀請連結點進來的（網址帶 ?room=房號），直接把房號填好，玩家只要打名字就好，
   // 不用自己找房號跟房主要。

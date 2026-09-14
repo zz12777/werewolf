@@ -319,12 +319,6 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rcol-body li{margin-bottom:4px;}
 .role-link{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
 .board-role{font-weight:700;color:var(--text);}
-/* 板子介紹卡片標題下方的「完成度」小標籤：本機法官／手機發牌一律綠色（全部板子都支援），
-   連線房間全自動則依實際支援狀況分綠色（已支援）跟橘色（尚未支援，請改用手機發牌或本機主持）。 */
-.board-status{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px;background:var(--bg2);}
-.status-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}
-.status-pill.ok{background:rgba(58,122,42,0.15);color:var(--vil);}
-.status-pill.pending{background:rgba(154,124,40,0.15);color:var(--gold);}
 /* 連線房間上帝視角的玩家狀態格子：橫向排列、自動換行成好幾排（人數多的話自然變成兩排以上），
    跟本機法官助手的「玩家狀態」欄位是同樣的用途（號碼＋姓名＋角色一目了然），只是排版改成
    適合手機小螢幕的格子狀，而不是本機版那種固定寬度的側欄。 */
