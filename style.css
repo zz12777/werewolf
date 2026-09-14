@@ -319,6 +319,27 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .rcol-body li{margin-bottom:4px;}
 .role-link{color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
 .board-role{font-weight:700;color:var(--text);}
+/* 板子介紹卡片標題下方的「完成度」小標籤：本機法官／手機發牌一律綠色（全部板子都支援），
+   連線房間全自動則依實際支援狀況分綠色（已支援）跟橘色（尚未支援，請改用手機發牌或本機主持）。 */
+.board-status{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px;background:var(--bg2);}
+.status-pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+.status-pill.ok{background:rgba(58,122,42,0.15);color:var(--vil);}
+.status-pill.pending{background:rgba(154,124,40,0.15);color:var(--gold);}
+/* 連線房間上帝視角的玩家狀態格子：橫向排列、自動換行成好幾排（人數多的話自然變成兩排以上），
+   跟本機法官助手的「玩家狀態」欄位是同樣的用途（號碼＋姓名＋角色一目了然），只是排版改成
+   適合手機小螢幕的格子狀，而不是本機版那種固定寬度的側欄。 */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:10px;}
+.pcell{border:1px solid var(--border);border-radius:10px;padding:8px 6px;text-align:center;background:var(--bg2);}
+.pcell.dead{opacity:0.55;}
+.pcell .pnum{font-size:12px;font-weight:800;color:var(--text3);}
+.pcell .pname{font-size:13px;font-weight:700;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pcell .prole{font-size:11px;margin-top:4px;}
+/* 上帝視角的文字紀錄：本機法官助手匯出格式的捲動視窗版本——等寬字體、可以上下滑動，
+   一行一件事，跟本機的匯出文字框視覺上是同一種東西。 */
+.godlog{max-height:320px;overflow-y:auto;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:12.5px;line-height:1.6;background:var(--bg2);border-radius:10px;padding:10px 12px;white-space:pre-wrap;}
+.godlog .gl-head{font-weight:800;color:var(--accent);margin-top:8px;}
+.godlog .gl-head:first-child{margin-top:0;}
+.godlog .gl-sub{padding-left:4px;color:var(--text2);}
 /* ── ROLE PICKER ── */
 .rpick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px;margin:10px 0;}
 .rpick{border:2px solid var(--border2);border-radius:var(--r-sm);padding:10px 6px 8px;text-align:center;cursor:pointer;background:var(--bg3);transition:border-color 0.15s,background 0.15s;-webkit-user-select:none;user-select:none;position:relative;}
