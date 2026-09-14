@@ -33,7 +33,7 @@ function awIsX(v){ return /^x$/i.test(String(v==null?'':v).trim()); }
 // 在最終顯示仍是「機械狼／機械黑狼王／機械狼人」（代表從未學到好人技能、或學到的仍是狼隊身分）時，
 // 才算命中；其餘「機械X」（機械女巫、機械守衛、機械獵人、機械通靈師、機械民……）一律不算。
 function awIsWolfForSeerCheck(role){
-  if(role==='機械狼'||role==='機械黑狼王'||role==='機械狼人') return true;
+  if(role==='機械狼'||role==='機械黑狼王'||role==='機械狼人'||role==='機') return true;
   if(/^機械/.test(role)) return false;
   return awRoleParts(role).some(r=>AW_WOLF_CORE.has(r)||AW_WOLF_SUPPORT.has(r));
 }
@@ -44,18 +44,18 @@ function awParseNight(block){
   const info={kill:null,witchSave:null,witchPoison:null,witchPoisonMachine:null,guardTarget:null,guardTargetMachine:null,checks:[]};
   for(const line of lines){
     let m;
-    if((m=line.match(/^通驗\s*(\d+|[xX])/))){ info.checks.push({type:'通驗',target:m[1]}); continue; }
+    if((m=line.match(/^通驗\s*(\d+|[xX])(?:→(\d+))?\s*(?:\((.+?)\))?/))){ info.checks.push({type:'通驗',target:m[2]||m[1],result:m[3]}); continue; }
     if((m=line.match(/^機驗\s*(\d+|[xX])/))){ info.checks.push({type:'機驗',target:m[1]}); continue; }
     if((m=line.match(/^石驗\s*(\d+|[xX])/))){ info.checks.push({type:'石驗',target:m[1]}); continue; }
     if((m=line.match(/^守墓\s*(\d+|[xX])/))){ info.checks.push({type:'守墓',target:m[1]}); continue; }
     if((m=line.match(/^機守\s*(\d+|[xX])/))){ info.guardTargetMachine=m[1]; continue; }
     if((m=line.match(/^機毒\s*(\d+|[xX])/))){ info.witchPoisonMachine=m[1]; continue; }
     if((m=line.match(/^機械刀刀?\s*(\d+|[xX])/))){ info.killMachine=m[1]; continue; }
-    if((m=line.match(/^驗\s*(\d+|[xX])/))){ info.checks.push({type:'驗',target:m[1]}); continue; }
-    if((m=line.match(/^守\s*(\d+|[xX])/))){ info.guardTarget=m[1]; continue; }
-    if((m=line.match(/^刀\s*(\d+|[xX])/))){ if(info.kill===null) info.kill=m[1]; else info.kill2=m[1]; continue; }
-    if((m=line.match(/^救\s*(\d+|[xX])/))){ info.witchSave=m[1]; continue; }
-    if((m=line.match(/^毒\s*(\d+|[xX])/))){ info.witchPoison=m[1]; continue; }
+    if((m=line.match(/^驗\s*(\d+|[xX])(?:→(\d+))?\s*(?:\((.+?)\))?/))){ info.checks.push({type:'驗',target:m[2]||m[1],result:m[3]}); continue; }
+    if((m=line.match(/^守\s*(\d+|[xX])(?:→(\d+))?/))){ info.guardTarget=m[2]||m[1]; continue; }
+    if((m=line.match(/^刀\s*(\d+|[xX])(?:→(\d+))?/))){ const t=m[2]||m[1]; if(info.kill===null) info.kill=t; else info.kill2=t; continue; }
+    if((m=line.match(/^救\s*(\d+|[xX])(?:→(\d+))?/))){ info.witchSave=m[2]||m[1]; continue; }
+    if((m=line.match(/^毒\s*(\d+|[xX])(?:→(\d+))?/))){ info.witchPoison=m[2]||m[1]; continue; }
   }
   return info;
 }
@@ -146,10 +146,20 @@ function computeAwards(){
 
     const n1=awParseNight(nights[0]);
 
-    // 🔪 自刀專家：首夜狼隊「刀」自己隊友（機械狼／石像鬼等不見面角色不算）
-    if(n1.kill && !awIsX(n1.kill)){
-      const victim=players.find(p=>String(p.num)===String(n1.kill));
-      if(victim && awIsWolfCore(victim.role)) awAddCredit(selfKillDict, victim.name, g.id);
+    // 🔪 自刀專家：女巫救 A，A 剛好是當晚狼刀目標，而且 A 本身也是見面狼隊友——代表「自刀
+    // 騙解藥」這招真的騙到女巫出手了（單純狼隊不小心刀到隊友、但女巫沒有跟著救，不能算，
+    // 因為騙解藥沒有成功）。逐夜檢查、不限首夜；整局只要成功騙過一次，當局所有見面狼隊友
+    // （機械狼、石像鬼等不見面角色不算）都算一次；抓到第一個符合的夜晚就停止，避免同一局
+    // 騙了不只一次卻被重複加分。
+    for(const seg of nights){
+      const info=awParseNight(seg);
+      if(info.witchSave && !awIsX(info.witchSave) && info.kill && info.witchSave===info.kill){
+        const victim=players.find(p=>String(p.num)===String(info.witchSave));
+        if(victim && awIsWolfCore(victim.role)){
+          players.filter(p=>awIsWolfCore(p.role)).forEach(w=>awAddCredit(selfKillDict, w.name, g.id));
+          break;
+        }
+      }
     }
     // 🤐 抿女巫專家：女巫座號 ＝ 首夜刀口號碼，同局所有正牌狼都算一次
     if(witchStd && n1.kill && String(witchStd.num)===String(n1.kill)){
@@ -167,12 +177,23 @@ function computeAwards(){
       if(guardStd && info.guardTarget && info.kill && !awIsX(info.guardTarget) && info.guardTarget===info.kill){
         awAddCredit(guardHits, guardStd.name, g.id);
       }
-      // 🔮 查狼專家：僅計「預言家／通靈師」的「驗／通驗」，查到廣義狼隊（機械狼限定：僅在
-      // 最終顯示仍為「機械狼／機械黑狼王／機械狼人」時才算，學到好人技能後查到不算）
+      // 🔮 查狼專家：僅計「預言家／通靈師」的「驗／通驗」，只要紀錄裡當下寫下的結果顯示是
+      // 狼隊就算一次（預言家只會顯示「(狼)」或「(好)」，通靈師顯示具體身分縮寫——兩種都用
+      // 同一個 awIsWolfForSeerCheck 判斷是不是狼隊，機械狼限定：僅在最終顯示仍為「機械狼／
+      // 機械黑狼王／機械狼人」（或縮寫「機」，還沒學到好人技能）時才算，學到好人技能後查到
+      // 不算）。優先直接比對紀錄裡的這個標註文字（c.result），而不是回頭去查玩家最終角色——
+      // 遇到魔術師換牌的情況，紀錄的號碼是查驗者原本點的號碼，但結果其實是換牌後真正生效
+      // 的對象，兩者對不起來；直接比對紀錄裡當下寫下的文字才會正確反映查驗當下真正看到的
+      // 結果。只有在舊資料沒有 result 欄位（沒記錄過標註文字）時，才退回用目標號碼查最終
+      // 角色這個舊邏輯。
       if(seerP){
         info.checks.forEach(c=>{
           if(c.type!=='驗' && c.type!=='通驗') return;
-          if(awIsX(c.target)) return;
+          if(awIsX(c.target)&&!c.result) return;
+          if(c.result){
+            if(awIsWolfForSeerCheck(c.result)) awAddCredit(seerHits, seerP.name, g.id);
+            return;
+          }
           const t=players.find(p=>String(p.num)===String(c.target));
           if(t && awIsWolfForSeerCheck(t.role)) awAddCredit(seerHits, seerP.name, g.id);
         });
@@ -186,7 +207,7 @@ function computeAwards(){
     {icon:'🔮',title:'查狼專家',top:awTopTiers(seerHits),
       note:'【預言家查到狼】:僅計「預言家／通靈師」的查驗結果，查到邪惡陣營即算命中；機械狼僅限最終顯示為「機械狼／機械黑狼王／機械狼人」時才算（學到女巫/守衛/獵人等好人技能後查到不算）。雙身分板若牌面顯示為好人則不算。'},
     {icon:'🔪',title:'自刀專家',top:awTopTiers(selfKillDict),
-      note:'【狼隊首晚自刀騙解藥】:首夜狼隊「刀」的目標本身也是見面狼隊友（機械狼、石像鬼等不見面角色不算）。'},
+      note:'【自刀騙解藥成功】:女巫救的對象剛好是當晚狼刀目標，而且目標本身也是見面狼隊友——代表騙解藥真的成功了，該局所有見面狼隊友（機械狼、石像鬼等不見面角色不算）都算1次。'},
     {icon:'🛡️',title:'鋼鐵守衛',top:awTopTiers(guardHits),
       note:'【守到狼刀】:逐晚比對「守X」與「刀X」，號碼相同才算守到刀口。'},
     {icon:'🤐',title:'抿女巫專家',top:awTopTiers(minWitchCredit),

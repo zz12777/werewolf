@@ -133,13 +133,15 @@ window.jgRoomDealCreate=async function(hostName, comp, total, presetNames){
 // 加入發牌房：不用打名字，直接從房主預先設好的座位清單裡點選「我是幾號」——
 // 一個座位只能被一個人認領，避免兩支手機都宣稱自己是同一號。
 window.jgRoomDealClaimSeat=async function(seatNum, seatName){
-  if(!confirm('確定你是 '+seatNum+'號 '+seatName+' 嗎？')) return;
+  const nm=(seatName||'').trim();
+  if(!nm){ alert('請先輸入你的全名'); return; }
+  if(!confirm('確定你是 '+seatNum+'號 '+nm+' 嗎？')) return;
   const uid=await jgRoomWaitAuth();
   const db=window.jgFirebaseDb;
   const existing=jgRoomLatestPlayers.find(p=>p.seatNum===seatNum);
   if(existing&&existing.uid!==uid){ alert('這個座位已經有人認領了，請確認座位號碼是否正確。'); return; }
   await setDoc(doc(db,'rooms',jgRoomCode,'players',uid),{
-    name:seatName, seatNum:seatNum, joinedAt:serverTimestamp(), alive:true
+    name:nm, seatNum:seatNum, joinedAt:serverTimestamp(), alive:true
   });
   jgRoomIsHost=false; // 加入者一律不是房主（房主是建房的那個人，已經在 jgRoomDealCreate 設過）
   const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
@@ -202,22 +204,34 @@ function jgRoomRenderDealLobby(){
   jgRoomLatestPlayers.forEach(p=>{ claimedBySeat[p.seatNum]=p; });
   const myUid=window.jgFirebaseUid;
   const myClaimed=jgRoomLatestPlayers.some(p=>p.uid===myUid);
+  // 房主如果在法官助手設定畫面沒有先填真名，座位姓名會全部是預設的「X號」佔位文字——
+  // 這種情況不該讓大家直接盲選一個「1號」「2號」這種號碼（誰也不知道哪個號碼是自己），
+  // 應該讓大家自己打全名（打完的全名會存成真正的玩家名字，之後遊玩紀錄／匯入玩家名單才
+  // 找得到人）；房主如果有先填好真名，才維持原本「找到自己的名字點下去認領」的體驗。
+  const hasRealNames=seats.some(s=>s.name&&s.name!==(s.num+'號'));
   const rows=seats.sort((a,b)=>a.num-b.num).map(s=>{
     const taken=claimedBySeat[s.num];
     const isMine=taken&&taken.uid===myUid;
     if(taken){
-      return '<div class="row"><div class="av av-vil">'+s.num+'</div><div class="nm">'+s.name+'</div>'
+      return '<div class="row"><div class="av av-vil">'+s.num+'</div><div class="nm">'+taken.name+'</div>'
         +'<span class="badge '+(isMine?'bv':'bw')+'">'+(isMine?'你':'已認領')+'</span></div>';
     }
-    return '<div class="row" style="cursor:pointer;" onclick="jgRoomDealClaimSeat('+s.num+',\''+s.name+'\')"><div class="av av-vil">'+s.num+'</div><div class="nm">'+s.name+'</div>'
-      +'<span class="badge">點我認領</span></div>';
+    if(hasRealNames){
+      return '<div class="row" style="cursor:pointer;" onclick="jgRoomDealClaimSeat('+s.num+',\''+s.name+'\')"><div class="av av-vil">'+s.num+'</div><div class="nm">'+s.name+'</div>'
+        +'<span class="badge">點我認領</span></div>';
+    }
+    // 沒有真名：每個座位旁邊直接放一個輸入框，打完全名按「認領」——這個座位號碼還是要選
+    // （發牌房本來就是「洗好牌之後把身分綁在座位上」，座位跟身分是綁定的），只是名字改成
+    // 自己打，不用被迫套用「X號」這種看不出是誰的預設名稱。
+    return '<div class="row" style="flex-wrap:wrap;gap:6px;"><div class="av av-vil">'+s.num+'</div>'
+      +'<input type="text" id="jg-deal-name-'+s.num+'" placeholder="輸入你的全名" style="flex:1;min-width:120px;">'
+      +'<button style="width:auto;padding:8px 14px;" onclick="jgRoomDealClaimSeat('+s.num+', document.getElementById(\'jg-deal-name-'+s.num+'\').value)">認領</button></div>';
   }).join('');
   const hostBtn=jgRoomIsHost
     ?'<button class="primary" style="margin-top:14px;" onclick="jgRoomDealAssignRoles()">🎴 分配身分（'+jgRoomLatestPlayers.length+' / '+seats.length+' 人）</button>'
-    :'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">'+(myClaimed?'已認領座位，等待房主分配身分...':'請從下面點選你的座位')+'</div>';
+    :'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">'+(myClaimed?'已認領座位，等待房主分配身分...':(hasRealNames?'請從上方點選你的姓名':'請選一個座位、輸入你的全名並按認領'))+'</div>';
   root.innerHTML=`
-    <div class="nbanner"><div class="nicon">🎴</div><h1>房間 ${jgRoomCode}（發牌）</h1>
-      <p class="sub" style="text-align:center;margin-top:6px;">請從下面找到你的座位號碼，點下去認領</p></div>
+    <div class="nbanner"><div class="nicon">🎴</div><h1>房間 ${jgRoomCode}（發牌）</h1></div>
     <button onclick="jgRoomCopyInviteLink()" style="margin-top:8px;">🔗 複製邀請連結</button>
     <div class="card" style="margin-top:14px;">${rows}</div>
     ${hostBtn}
@@ -2997,6 +3011,14 @@ window.jgRoomRenderEntry=async function(){
 (function jgRoomAutoOpenFromInviteLink(){
   try{
     const urlRoom=new URLSearchParams(window.location.search).get('room');
-    if(urlRoom&&typeof window.switchTab==='function') window.switchTab('t-room');
+    if(urlRoom&&typeof window.switchTab==='function'){
+      window.switchTab('t-room');
+      // 切完分頁、jgRoomRenderEntry() 也已經讀過網址上的房號、填進輸入框之後，把網址列的
+      // ?room=房號 清掉（用 replaceState，不會真的重新整理頁面）——不然瀏覽器重新整理
+      // 網址列還是帶著同一個房號，每次重新整理都會被這段程式碼再抓回連線房間分頁，
+      // 想單純重新整理回法官助手分頁會一直被拉回去，出不去。
+      const cleanUrl=window.location.pathname+window.location.hash;
+      window.history.replaceState({}, '', cleanUrl);
+    }
   }catch(e){}
 })();
