@@ -292,7 +292,18 @@ window.jgRoomRenderCreateDeal=function(comp, total, presetNames){
       <button class="primary" style="margin-top:10px;" onclick="jgRoomDealCreate(document.getElementById('jg-room-deal-name').value, window.jgRoomPendingDeal.comp, window.jgRoomPendingDeal.total, window.jgRoomPendingDeal.presetNames)">🎴 建立發牌房</button>
     </div>
     <button class="ghost" style="margin-top:10px;" onclick="switchTab('t-judge')">← 回去重新調整板子</button>
+    <button class="ghost" style="margin-top:8px;" onclick="jgRoomCancelPendingCreate()">❌ 取消建立房間</button>
   `;
+};
+// 取消建立房間：清掉「從法官助手帶過來、還沒真的送出建房請求」的暫存設定，回到一般的
+// 連線房間入口畫面（建立新房間／輸入房號加入）——不用整頁重新整理就能重來，解決原本
+// 「按到一次建立連線房間，就卡在建房確認畫面出不去（除非重新整理）」的問題。這個暫存
+// 設定只是 window 上的一個變數，還沒有實際寫進 Firestore、沒有建立任何房間文件，所以
+// 純粹清掉變數就好，不用額外清理資料庫。
+window.jgRoomCancelPendingCreate=function(){
+  window.jgRoomPendingDeal=null;
+  window.jgRoomPendingComp=null;
+  jgRoomRenderEntry();
 };
 
 
@@ -1033,7 +1044,7 @@ async function jgRoomGuardViewHtml(night){
   const buttons=jgRoomLatestPlayers.filter(p=>p.uid!==lastTarget).map(p=>
     '<button onclick="jgRoomConfirmCheck(\'guard\',\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'你要守護的對象是？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'你要守護的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🛡️</div><h1>請選擇守護對象</h1></div>'
     +(lastTarget?'<div class="info" style="font-size:12px;text-align:center;">不能連續兩晚守護同一人，上一晚守護的對象已排除</div>':'')
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
@@ -1073,7 +1084,7 @@ async function jgRoomWitchViewHtml(night){
   const wolfTargetUid=rd.wolfKillTargetUid;
   const wolfTargetSeatNum=rd.wolfKillTargetSeatNum;
   const canSaveThis=wolfTargetUid&&!saveUsed&&wolfTargetUid!==window.jgFirebaseUid;
-  let html=jgRoomTimerHtml(30,'你要使用解藥或毒藥嗎？')
+  let html=jgRoomTimerHtml(20,'你要使用解藥或毒藥嗎？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🧪</div><h1>狼隊今晚殺了 '+(wolfTargetSeatNum||'（無人）')+'號</h1></div>';
   if(canSaveThis){
     html+='<button class="primary" style="margin-top:10px;width:auto;display:inline-block;padding:10px 16px;" onclick="jgRoomWitchSave('+wolfTargetSeatNum+','+night+')">💊 使用解藥救 '+wolfTargetSeatNum+'號</button>';
@@ -1758,7 +1769,7 @@ async function jgRoomRenderDayOpen(){
       +jgRoomLiveVoteTallyHtml();
   }
   root.innerHTML=`<div class="section-title">白天</div>${bodyHtml}`;
-  if(needsTimer) jgRoomStartTimer(30); else jgRoomStopTimer();
+  if(needsTimer) jgRoomStartTimer(20); else jgRoomStopTimer();
 }
 // 活著的人在白天畫面（非投票中）也能看到「目前為止」最新一輪投票的即時票型——跟投票進行
 // 中看到的計票畫面是同一種資訊，只是投票結束、還沒進下一夜的這段時間也讓大家看得到，不用
@@ -1995,7 +2006,11 @@ async function jgRoomRenderNightShell(){
   }
   const hostAdvanceHtml=jgRoomIsHost?jgRoomHostAdvanceHtml(currentStep):'';
   root.innerHTML=`<div class="section-title">第 ${night} 夜</div>${bodyHtml}${hostAdvanceHtml}`;
-  if(needsTimer) jgRoomStartTimer(30); else jgRoomStopTimer();
+  // 狼人睜眼出刀維持 30 秒（隊友要互相商量，時間比較緊繃），其餘所有夜晚步驟都是 20 秒——
+  // 這裡要跟每個步驟自己 HTML 裡用 jgRoomTimerHtml() 顯示出來的秒數對應一致，不然畫面上
+  // 寫「倒數20秒」但計時器實際上跑30秒才會觸發自動跳下一步，會對不起來。
+  const timerSeconds=(currentStep==='wolf')?30:20;
+  if(needsTimer) jgRoomStartTimer(timerSeconds); else jgRoomStopTimer();
 }
 // 房主專用提示：狼隊出刀完成後，如果板子有查驗類角色（預言家/通靈師擇一）就會先進行查驗，
 // 查驗完（或本來就沒有查驗類角色）currentStep 會變成空，這裡改成直接顯示「開始警長競選」
@@ -2033,7 +2048,7 @@ async function jgRoomSeerViewHtml(night){
   const buttons=others.map(p=>
     '<button onclick="jgRoomConfirmCheck(\'seer\',\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'你要查驗的對象是？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'你要查驗的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🔮</div><h1>請選擇查驗對象</h1></div>'
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
 }
@@ -2091,7 +2106,7 @@ async function jgRoomMediumViewHtml(night){
   const buttons=others.map(p=>
     '<button onclick="jgRoomConfirmCheck(\'medium\',\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'你要查驗的對象是？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'你要查驗的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">👁️</div><h1>請選擇查驗對象</h1></div>'
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
 }
@@ -2140,7 +2155,7 @@ async function jgRoomNightmareViewHtml(night){
   const buttons=others.map(p=>
     '<button onclick="jgRoomNightmareAct(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'你要恐懼的對象是？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'你要恐懼的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">😈</div><h1>請選擇恐懼對象</h1></div>'
     +(lastTarget?'<div class="info" style="font-size:12px;text-align:center;">不能連續兩晚恐懼同一人，上一晚的對象已排除</div>':'')
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
@@ -2190,7 +2205,7 @@ async function jgRoomMagicianViewHtml(night){
     const buttons=others.map(p=>
       '<button onclick="jgRoomMagicianConfirmSwap(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
     ).join('');
-    return {needsTimer:true, html:jgRoomTimerHtml(30,'要跟哪個號碼交換？')
+    return {needsTimer:true, html:jgRoomTimerHtml(20,'要跟哪個號碼交換？')
       +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🎩</div><h1>已選 '+pendingSeat+'號，請選另一個要交換的號碼</h1></div>'
       +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'
       +'<button style="margin-top:14px;" onclick="jgRoomMagicianModify()">✏️ 重新選擇</button>'};
@@ -2199,7 +2214,7 @@ async function jgRoomMagicianViewHtml(night){
   const buttons=candidates.map(p=>
     '<button onclick="jgRoomMagicianPickFirst(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'要交換哪兩個號碼？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'要交換哪兩個號碼？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🎩</div><h1>請選擇要交換的第一個號碼（可以不換）</h1></div>'
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'
     +'<button style="margin-top:14px;" onclick="jgRoomMagicianSkip('+night+')">今晚不交換，跳過</button>'};
@@ -2268,7 +2283,7 @@ async function jgRoomDreamcatcherViewHtml(night){
   const buttons=jgRoomLatestPlayers.map(p=>
     '<button onclick="jgRoomDreamcatcherAct(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'今晚要夢到誰？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'今晚要夢到誰？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🌙</div><h1>請選擇今晚的夢遊對象（每晚必選）</h1></div>'
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
 }
@@ -2330,15 +2345,21 @@ async function jgRoomMechWolfViewHtml(night){
       const buttons=others.map(p=>
         '<button onclick="jgRoomMechWolfLearn(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
       ).join('');
-      return {needsTimer:true, html:jgRoomTimerHtml(30,'你要學習誰的身分？')
+      return {needsTimer:true, html:jgRoomTimerHtml(20,'你要學習誰的身分？')
         +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🤖</div><h1>請選擇今晚要學習的對象</h1></div>'
         +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
     }
   } else if(learned&&learned!=='villager'){
     const learnedName=(typeof RNAME!=='undefined'&&RNAME[learned])||learned;
     html+='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🤖</div><h1>你學到的身分：'+learnedName+'</h1></div>';
+    // 技能要「次晚起」才能用（跟幸運兒拿到技能是同一個道理：學到的當晚，這個身分的能力
+    // 還不算正式到位，第一晚只單純告知學到誰、直接給確認按鈕過這一步就好，不能馬上就對
+    // 那個學到的技能發動一次）。night===1 的話，不管學到什麼，一律不顯示任何技能操作區塊，
+    // 直接落到後面 doneAll 的「確認，沒有其他行動」分支。
     const skillDoneThisNight=rd.mechWolfSkillDoneNight===night;
-    if(skillDoneThisNight){
+    if(night===1){
+      html+='<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">技能要等下一晚才能開始使用，今晚先確認學到的身分就好</div>';
+    } else if(skillDoneThisNight){
       html+='<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">這一晚的技能已經行動過了</div>';
     } else if(learned==='witch'&&!(me&&me.mechWolfPoisonUsed)){
       doneAll=false;
@@ -2401,7 +2422,7 @@ async function jgRoomMechWolfViewHtml(night){
   } else if(doneAll&&learned==='hunter'){
     html+='<button class="primary" style="margin-top:14px;" onclick="jgRoomMechWolfSkillSkip('+night+')">✅ 確認，沒有其他行動</button>';
   }
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'機械狼請睜眼')+html};
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'機械狼請睜眼')+html};
 }
 window.jgRoomMechWolfLearn=async function(targetUid, targetSeatNum, night){
   if(!confirm('確定要學習 '+targetSeatNum+'號 的身分嗎？')) return;
@@ -2422,12 +2443,13 @@ window.jgRoomMechWolfLearn=async function(targetUid, targetSeatNum, night){
 window.jgRoomMechWolfSkillSkip=async function(night){
   const db=window.jgFirebaseDb;
   await setDoc(doc(db,'rooms',jgRoomCode),{ mechWolfSkillDoneNight:night },{ merge:true });
-  // 只有「真的學到某個有主動技能的身分、但這一晚選擇不用」才需要記一行 x（平民/獵人沒有
-  // 可以跳過的主動技能，不用記錄）。
+  // 只有「真的學到某個有主動技能的身分、這一晚技能也已經開放使用（次晚起）、但選擇不用」
+  // 才需要記一行 x——第一晚剛學到、技能還沒開放使用的那次「確認」不算「跳過技能」，不用
+  // 記錄（避免文字紀錄第一晚出現一行看起來像是「有技能可用卻放棄」的誤導訊息）。
   const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
   const learned=me?me.mechWolfLearnedRole:null;
   const skipAbbr={witch:'機毒',wolf:'機刀',wolfking:'機刀',guard:'機守',medium:'機驗'}[learned];
-  if(skipAbbr) await jgRoomAppendNightLog(night, skipAbbr+' x');
+  if(skipAbbr&&night>1) await jgRoomAppendNightLog(night, skipAbbr+' x');
   const eligible=await jgRoomMechWolfKillEligible();
   if(!eligible) await jgRoomAdvanceToWolfOrBeyond('mechwolf', night);
   jgRoomRenderNightShell();
@@ -2530,7 +2552,7 @@ async function jgRoomCupidViewHtml(night){
     const buttons=others.map(p=>
       '<button onclick="jgRoomCupidConfirmPair(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
     ).join('');
-    return {needsTimer:true, html:jgRoomTimerHtml(30,'另一位情侶是誰？')
+    return {needsTimer:true, html:jgRoomTimerHtml(20,'另一位情侶是誰？')
       +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">💘</div><h1>已選 '+pendingSeat+'號，請選另一位情侶</h1></div>'
       +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'
       +'<button style="margin-top:14px;" onclick="jgRoomCupidModify()">✏️ 重新選擇</button>'};
@@ -2538,7 +2560,7 @@ async function jgRoomCupidViewHtml(night){
   const buttons=candidatesA.map(p=>
     '<button onclick="jgRoomCupidPickFirst(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'今晚要指定哪兩位玩家成為情侶？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'今晚要指定哪兩位玩家成為情侶？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">💘</div><h1>請選擇第一位情侶（可以選自己）</h1></div>'
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
 }
@@ -2656,7 +2678,7 @@ async function jgRoomWolfbrotherViewHtml(night){
       const buttons=others.map(p=>
         '<button onclick="jgRoomWolfbrotherRevengeKill(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
       ).join('');
-      return {needsTimer:true, html:jgRoomTimerHtml(30,'狼兄已經陣亡，你要覺醒復仇殺誰？（不可空刀）')
+      return {needsTimer:true, html:jgRoomTimerHtml(20,'狼兄已經陣亡，你要覺醒復仇殺誰？（不可空刀）')
         +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">😡</div><h1>狼弟覺醒：必須殺一人復仇</h1></div>'
         +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
     }
@@ -2717,7 +2739,7 @@ async function jgRoomBlackmarketViewHtml(night){
   const pendingUid=rd.blackmarketPendingUid;
   if(pendingUid){
     const pendingSeat=rd.blackmarketPendingSeatNum;
-    return {needsTimer:true, html:jgRoomTimerHtml(30,'要給對方哪一項技能？')
+    return {needsTimer:true, html:jgRoomTimerHtml(20,'要給對方哪一項技能？')
       +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">💰</div><h1>已選 '+pendingSeat+'號，要給哪項技能？</h1></div>'
       +'<div style="text-align:center;margin-top:10px;">'
       +'<button onclick="jgRoomBlackmarketTrade(\'seer\','+night+')" style="margin:4px;">🔮 預言家查驗</button>'
@@ -2729,7 +2751,7 @@ async function jgRoomBlackmarketViewHtml(night){
   const buttons=jgRoomLatestPlayers.filter(p=>p.uid!==window.jgFirebaseUid).map(p=>
     '<button onclick="jgRoomBlackmarketPickTarget(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'今晚要交易嗎？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'今晚要交易嗎？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">💰</div><h1>請選擇交易對象（整局限一次）</h1></div>'
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'
     +'<button style="margin-top:14px;" onclick="jgRoomBlackmarketSkip('+night+')">今晚不交易，跳過</button>'};
@@ -2803,7 +2825,7 @@ async function jgRoomLuckyOneWitchViewHtml(night){
   const buttons=others.map(p=>
     '<button onclick="jgRoomLuckyOneWitchPoison(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:8px 14px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'你要使用毒藥嗎？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'你要使用毒藥嗎？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">☠️</div><h1>你是幸運兒：使用毒藥（整局限一次）</h1></div>'
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'
     +'<button style="margin-top:14px;" onclick="jgRoomLuckyOneWitchSkip('+night+')">今晚不用，跳過</button>'};
@@ -2836,7 +2858,7 @@ async function jgRoomShootViewHtml(night){
   const buttons=others.map(p=>
     '<button onclick="jgRoomShootAct(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
   ).join('');
-  return {needsTimer:true, html:jgRoomTimerHtml(30,'你被淘汰了，要開槍帶走一名玩家嗎？')
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'你被淘汰了，要開槍帶走一名玩家嗎？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🔫</div><h1>你被淘汰了，可以開槍帶走一人</h1></div>'
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'
     +'<button style="margin-top:14px;" onclick="jgRoomShootSkip('+night+')">不開槍</button>'};
@@ -2932,6 +2954,7 @@ window.jgRoomRenderCreateWithComp=function(comp, total){
       <button class="primary" style="margin-top:10px;" onclick="jgRoomCreate(document.getElementById('jg-room-name-create').value, window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, ${hasPresetNames?'document.getElementById(\'jg-room-use-preset-names\').checked':'false'})">🏠 建立房間</button>
     </div>
     <button class="ghost" style="margin-top:10px;" onclick="switchTab('t-judge')">← 回去重新調整板子</button>
+    <button class="ghost" style="margin-top:8px;" onclick="jgRoomCancelPendingCreate()">❌ 取消建立房間</button>
   `;
 };
 

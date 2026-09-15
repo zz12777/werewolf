@@ -58,7 +58,7 @@ function loadRoomLogicForGodView() {
     + 'function __setPlayers(p){ jgRoomLatestPlayers=p; }\n'
     + 'function __setRoomDoc(d){ jgRoomLatestRoomDoc=d; }\n'
     + 'function __setRoomCode(c){ jgRoomCode=c; }\n'
-    + 'module.exports={jgRoomRenderGodView,__setComp,__setPlayers,__setRoomDoc,__setRoomCode};';
+    + 'module.exports={jgRoomRenderGodView,jgRoomMechWolfViewHtml,jgRoomMechWolfKillEligible,__setComp,__setPlayers,__setRoomDoc,__setRoomCode};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
   fs.writeFileSync(tmpPath, wrapped);
@@ -293,7 +293,46 @@ async function runAsync() {
   await runAsync();
   await runGodViewTest();
   await runBadgeTest();
+  await runMechWolfNight1Test();
 })();
+
+async function runMechWolfNight1Test(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, cond)=>{ results.push({name, ok:!!cond}); };
+
+  mod.__setRoomCode('ROOM1');
+  mod.__setComp({ mechanicalwolf:1, wolf:1 });
+  mod.__setPlayers([
+    { uid:'mwUid', seatNum:1, name:'機械狼', alive:true, mechWolfLearnedRole:'wolf' },
+    { uid:'otherWolfUid', seatNum:2, name:'真狼', alive:true },
+    { uid:'p3', seatNum:3, name:'丙', alive:true },
+  ]);
+  global.window.jgFirebaseUid='mwUid';
+  // 板子裡還有一個活著的真狼隊友，機械狼不該有資格接管出刀（用來排除接管出刀分支的干擾，
+  // 單純測試「學到的技能第一晚不該出現」這件事本身）。
+  global.__mockCollections = {
+    'rooms/ROOM1/secrets': [
+      { id:'mwUid', data:()=>({role:'mechanicalwolf'}) },
+      { id:'otherWolfUid', data:()=>({role:'wolf'}) },
+    ],
+  };
+
+  mod.__setRoomDoc({ night:1 });
+  const r1 = await mod.jgRoomMechWolfViewHtml(1);
+  check('第一夜學到狼人技能：不該出現「發動額外一刀」的技能按鈕區塊', !r1.html.includes('發動額外一刀'));
+  check('第一夜：有提示技能要等下一晚才能用', r1.html.includes('技能要等下一晚才能開始使用'));
+  check('第一夜：有「確認，沒有其他行動」按鈕可以往下一步', r1.html.includes('jgRoomMechWolfSkillSkip'));
+
+  mod.__setRoomDoc({ night:2 });
+  const r2 = await mod.jgRoomMechWolfViewHtml(2);
+  check('第二夜起：學到狼人的技能（發動額外一刀）應該要出現', r2.html.includes('發動額外一刀'));
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail = results.some(r=>!r.ok);
+  if(anyFail){ console.error('機械狼第一夜技能限制測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項機械狼第一夜技能限制測試通過`);
+}
 
 async function runGodViewTest(){
   const { mod, fakeRoot } = loadRoomLogicForGodView();
