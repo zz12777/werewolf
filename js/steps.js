@@ -389,7 +389,7 @@ function jgRenderStep(step){
       <div id="jg-god-trickster-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
       ${(dead||feared)?'':`<label>要交換的第一個號碼（留空=不交換，不能選昨晚選過的號碼）</label>${jgNumSelectHtml('jg-trickster-swap-a','',null,null,lastExclude,'不能連續兩晚選同一個號碼')}
       <label style="margin-top:8px;">要交換的第二個號碼</label>${jgNumSelectHtml('jg-trickster-swap-b','',null,null,lastExclude,'不能連續兩晚選同一個號碼')}
-      <div class="info" style="font-size:12px;margin-top:4px;">交換後隔天白天，投給這兩個號碼的票數互相對調，只對隔天有效；不能連續兩晚選同一個號碼。若跟魔術師這一晚換的號碼相同，兩邊都會抵消。</div>`}
+      <div class="info" style="font-size:12px;margin-top:4px;">交換後隔天白天，投給這兩個號碼的票數互相對調，只對隔天有效；不能連續兩晚選同一個號碼。若跟魔術師這一晚換的號碼相同，只有魔術師那邊會失效，這裡的換票效果不受影響、正常生效。</div>`}
       <div class="speech" style="margin-top:10px;">「<em>詭術師請閉眼，稍等一下還會跟狼人一起睜眼。</em>」</div>
       <button class="primary" onclick="jgSaveTrickster()">已紀錄，下一步 →</button>
     `,'🎭 詭術師');
@@ -610,8 +610,12 @@ function jgRenderStep(step){
     let wolfFieldsInner='';
     let allWolfIdsAssigned=true;
     if(isFirst){
-      // Count wolf-team players (all wolf roles except gargoyle/mechanicalwolf/nightmare/wolfbrother/假面 who wake separately)
-      const wolfRoles=Object.entries(jgComp).filter(([k])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='nightmare'&&k!=='wolfbrother_e'&&k!=='wolfbrother_y'&&k!=='mask'&&k!=='bigmechwolf'&&k!=='smallmechwolf');
+      // Count wolf-team players (all wolf roles except gargoyle/mechanicalwolf/nightmare/wolfbrother/假面/詭術師
+      // 這幾個角色在這一步之前，已經各自有自己獨立的睜眼/身分確認步驟了——詭術師是在稍早的
+      // 'trickster-wake' 步驟用 jgRequireFirstId 記住身分的（見 jgSaveTrickster），這裡如果沒排除，
+      // 會被 RNAME_L 這份「只給沒有獨立步驟的狼隊角色用」的簡化對照表漏接、標籤退回顯示成
+      // 「狼人」而不是「詭術師」，讓法官誤以為這格要填的是另一個狼人的號碼。
+      const wolfRoles=Object.entries(jgComp).filter(([k])=>WOLF_ROLES.includes(k)&&k!=='gargoyle'&&k!=='mechanicalwolf'&&k!=='nightmare'&&k!=='wolfbrother_e'&&k!=='wolfbrother_y'&&k!=='mask'&&k!=='bigmechwolf'&&k!=='smallmechwolf'&&k!=='trickster');
       // 假面「不與狼隊見面」，身分已經在他自己的 mask-wake 畫面記錄過了，這裡不能再讓他的號碼
       // 出現在可選清單裡（不然法官可能誤選，等於洩露/搞混假面身分）。
       const maskP=jgPlayers.find(p=>p.role==='mask');
@@ -691,6 +695,11 @@ function jgRenderStep(step){
     // 大野狼+小女孩板：第二夜起，狼隊選完殺人對象後，多一次指認小女孩的機會（一局限一次
     // 「這一晚」用，指認成功小女孩代替死亡，失敗則無事發生、原本刀口照常結算）。
     const hasLittlegirlRole=jgNight===1?(jgComp.littlegirl>0):jgHasRoleAny(['littlegirl']);
+    // 詭術之境板：詭術師稍早已經自己睜過一次眼（見 trickster-wake，換票技能），但詭術師
+    // 本人也算狼隊一份子，要跟狼人一起在這一步睜眼、一起討論刀口——跟 hasTrickster 判斷
+    // 用同一套規則（jgNight===1 看 jgComp，之後看場上是否還有這個角色存活）。
+    const hasTricksterRole=(jgNight===1?(jgComp.trickster>0):jgHasRoleAny(['trickster']))||jgThiefBuriedActiveTonight('trickster');
+    const wolfWakeLabel=hasTricksterRole?(hasLittlegirlRole?'詭術師、狼人與小女孩':'詭術師與狼人'):(hasLittlegirlRole?'狼人與小女孩':'狼人');
     const identifySectionHtml=(hasLittlegirlRole&&jgNight>=2)
       ?'<div class="divider"></div><label>指認小女孩（留空=不指認；猜中：小女孩代替原本刀口死亡，守衛/女巫都無法阻止；猜錯：無事發生，原本刀口照常結算）</label>'
         +jgNumSelectHtml('jg-wolf-identify-rec', jgRecord.wolfIdentifyGuessRaw||'')
@@ -698,7 +707,7 @@ function jgRenderStep(step){
       :'';
     jgShowPg(`
       <h2>狼人睜眼</h2>
-      <div class="speech">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請睜眼。${(isFirst&&jgComp.biggreywolf>0)?'大灰狼請比讚，大灰狼請閉眼。':''}</em>」</div>
+      <div class="speech">「<em>${wolfWakeLabel}請睜眼。${(isFirst&&jgComp.biggreywolf>0)?'大灰狼請比讚，大灰狼請閉眼。':''}</em>」</div>
       ${(isFirst&&jgComp.biggreywolf>0)?'<div class="info" style="font-size:12px;">（給法官的註記：大灰狼這裡僅確認身分並比讚，之後都不會參與殺人討論，除非狼隊友死光）</div>':''}
       ${needId?wolfFieldsInner+'<div class="divider" style="margin:12px 0 8px;"></div>':''}
       ${mainPackAlive?`<div class="speech">「<em>請選擇今晚要殺的對象。</em>」</div>
@@ -1366,11 +1375,27 @@ function jgRenderStep(step){
   // ── 幸運兒睜眼（獨立步驟，不跟真預言家／真女巫共用畫面，避免彼此知道對方是誰）──
   else if(step==='luckyone-wake'){
     const ly=jgLuckyOne;
+    if(ly&&ly.gift==='hunter'){
+      // 拿到獵人獵槍的幸運兒：晚上的台詞（法官唸給全場聽的部分）要跟其他情況完全一樣，
+      // 不能讓其他玩家從台詞差異猜出誰是幸運兒、拿到哪種技能；但法官自己要知道這一晚
+      // 幸運兒的獵槍還能不能用（有沒有被毒、有沒有被恐懼封印…），所以額外多顯示一個
+      // 只有法官看得到的比讚／比倒讚提示，直接沿用獵人技能狀況判斷同一套邏輯
+      // （jgBuildHunterStatusHtml），確保跟本尊獵人、機械狼學得獵人的判斷結果一致。
+      const lp=jgByNum(ly.num);
+      jgShowPg(`
+        <h2>幸運兒睜眼</h2>
+        <div class="speech">「<em>幸運兒請睜眼，你要使用技能嗎？</em>」</div>
+        <div class="speech" style="margin-top:10px;">「<em>幸運兒請閉眼。</em>」</div>
+        <div class="info" style="font-size:12px;color:var(--text2);margin-top:6px;">（以下僅供法官參考，不要唸出來）拿到的是獵人獵槍，比給幸運兒看：</div>
+        ${jgBuildHunterStatusHtml(lp)}
+        <button class="primary" onclick="jgGoStep('dawn')">已紀錄，下一步 →</button>
+      `,'🍀 幸運兒');
+      return;
+    }
     if(!ly||(ly.gift!=='seer'&&ly.gift!=='witch')){
-      // 掩護畫面：沒有幸運兒、交易失敗，或幸運兒拿到的其實是獵人獵槍（被動技能，平常
-      // 晚上不用做任何事）時，法官一樣要照樣走一次「幸運兒請睜眼／請閉眼」的儀式，
-      // 外觀跟拿到查驗／毒藥的夜晚完全相同，玩家才聽不出這幾種狀況的差別，也才猜不出
-      // 幸運兒到底拿到哪個技能、甚至猜不出交易到底有沒有成功。
+      // 掩護畫面：沒有幸運兒、交易失敗時，法官一樣要照樣走一次「幸運兒請睜眼／請閉眼」
+      // 的儀式，外觀跟拿到查驗／毒藥的夜晚完全相同，玩家才聽不出這幾種狀況的差別，也才
+      // 猜不出幸運兒到底拿到哪個技能、甚至猜不出交易到底有沒有成功。
       jgShowPg(`
         <h2>幸運兒睜眼</h2>
         <div class="speech">「<em>幸運兒請睜眼，你要使用技能嗎？</em>」</div>
@@ -2133,6 +2158,33 @@ function jgRenderStep(step){
       <button class="danger" onclick="jgSaveVote()" style="margin-top:10px;">確認投票結果 →</button>
     `,'🗳 投票');
     jgRenderVoteTally();
+  }
+  else if(step==='sequenceprince-choice'){
+    // 投票已經出爐、但場上還有一位活著、還沒用過技能的定序王子——先不結算死亡，讓法官
+    // 決定王子要不要翻牌。兩個按鈕分別對應 jgSequencePrinceFlip()（翻牌重新投票）跟
+    // jgConfirmVoteOutResult()（不翻牌，照原本結果結算死亡），文字紀錄已經在
+    // jgSaveVoteInner() 裡把這一輪票型寫進 jgDayLog 了，這裡只是還沒真的套用死亡。
+    const outNum=jgRecord._pendingVoteOutNum;
+    const spP=jgPlayers.find(p=>p.role==='sequenceprince');
+    jgShowPg(`
+      <h2>投票結果 · 定序王子選擇</h2>
+      <div class="info-warn" style="font-size:15px;font-weight:700;padding:12px 14px;">目前投票結果：${outNum}號 出局</div>
+      <div class="info" style="font-size:13px;">場上還有定序王子（${spP?spP.num+'號':'?'}），整局限發動一次「翻牌重新投票」——要不要讓王子翻牌？</div>
+      <button class="primary" style="margin-top:10px;" onclick="jgSequencePrinceFlip()">👑 定序王子翻牌，重新投票</button>
+      <button class="danger" style="margin-top:8px;" onclick="jgConfirmVoteOutResult()">✅ 不翻牌，確認 ${outNum}號 出局</button>
+    `,'👑 定序王子');
+  }
+  else if(step==='sequenceprince-speech'){
+    // 王子翻牌後，額外給王子一次發言機會（用跟「最後遺言」同一套單人倒數計時元件），
+    // 發言結束後直接回到投票步驟重新投票——不跟全場重新討論一輪混在一起，避免拖太久，
+    // 也更貼近「王子翻牌」這個技能本身的效果範圍（只有他自己多一次發言，不是全場重講）。
+    const spP=jgPlayers.find(p=>p.role==='sequenceprince');
+    jgShowPg(`
+      <h2>定序王子發言</h2>
+      <div class="speech">「<em>定序王子翻牌，請王子發表意見。</em>」</div>
+      ${spP?jgSpeakTimerWidgetHtml([spP.num], true):''}
+      <button class="primary" style="margin-top:14px;" onclick="jgGoStep('vote')">發言結束，重新投票 →</button>
+    `,'👑 定序王子');
   }
   else if(step==='wolfking-shot'){
     const wkp=jgPlayers.find(p=>p.role==='wolfking')

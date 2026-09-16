@@ -4,18 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>🐺狼人殺小分隊🐺</title>
+<title>狼吞虎嚥</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- ════════════════ NAV ════════════════ -->
 <nav class="nav">
-  <button class="nav-btn" onclick="switchTab('t-rules')"><span class="nv-icon">📖</span>角色與規則</button>
-  <button class="nav-btn" onclick="switchTab('t-guide')"><span class="nv-icon">🧭</span>攻略參考</button>
-  <button class="nav-btn active" onclick="switchTab('t-judge')"><span class="nv-icon">📋</span>法官の助手</button>
-  <button class="nav-btn" onclick="switchTab('t-data')"><span class="nv-icon">📊</span>遊玩數據</button>
-  <button class="nav-btn" onclick="switchTab('t-room')"><span class="nv-icon">🎮</span>連線房間</button>
+  <span class="nav-brand">狼吞虎嚥</span>
+  <div class="nav-btns">
+    <button class="nav-btn" onclick="switchTab('t-rules')">角色與規則</button>
+    <button class="nav-btn" onclick="switchTab('t-guide')">攻略參考</button>
+    <button class="nav-btn active" onclick="switchTab('t-judge')">法官の助手</button>
+    <button class="nav-btn" onclick="switchTab('t-data')">遊玩數據</button>
+    <button class="nav-btn" onclick="switchTab('t-room')">連線房間</button>
+  </div>
 </nav>
 
 <!-- ══════════════════════════════════════
@@ -36,18 +42,18 @@
 
   <!-- 目錄 -->
   <nav class="rules-toc" id="rules-toc">
-    <a class="toc-btn" href="#sec-boards">🎴 板子介紹</a>
-    <a class="toc-btn" href="#sec-win">🏆 勝利條件</a>
-    <a class="toc-btn" href="#sec-wolf">🐺 狼人陣營角色</a>
-    <a class="toc-btn" href="#sec-good">🧑‍🌾 好人陣營角色</a>
-    <a class="toc-btn" href="#sec-special">⭐ 附加/特殊身分</a>
-    <a class="toc-btn" href="#sec-vote">🗳️ 其他規則</a>
-    <a class="toc-btn" href="#sec-glossary">📚 專有名詞小辭典</a>
+    <a class="toc-btn" href="#sec-boards">板子介紹</a>
+    <a class="toc-btn" href="#sec-win">勝利條件</a>
+    <a class="toc-btn" href="#sec-wolf">狼人陣營角色</a>
+    <a class="toc-btn" href="#sec-good">好人陣營角色</a>
+    <a class="toc-btn" href="#sec-special">附加/特殊身分</a>
+    <a class="toc-btn" href="#sec-vote">其他規則</a>
+    <a class="toc-btn" href="#sec-glossary">專有名詞小辭典</a>
   </nav>
 
   <!-- 板子介紹 -->
   <div class="rules-section" id="sec-boards">
-  <div class="rules-h1">🎴 板子介紹</div>
+  <div class="rules-h1">板子介紹</div>
   <div class="card-grid">
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
@@ -205,7 +211,7 @@
     <div class="rcol-body" data-ov="board-trickery">
       <span class="board-role">詭術師</span>：跟一般狼人一起睜眼參與出刀決策，可以自爆；每晚另外有自己獨立的「換票」回合，交換兩個玩家的號碼牌，隔天白天投給這兩個號碼的票數會互相對調（只對那一天有效），不能連續兩晚選同一個號碼。<br><span class="role-link" onclick="jumpToRole('trickster')">→ 查看詭術師完整規則</span>
       <br><br>
-      <span class="board-role">魔術師（詭術之境變體）</span>：每晚優先行動，交換兩個玩家的號碼牌，兩人當晚所有技能互相對調，只對當晚有效；每個號碼整局限交換一次。若跟詭術師這一晚換的號碼相同，兩邊效果互相抵消。<br><span class="role-link" onclick="jumpToRole('trickmage')">→ 查看魔術師（詭術之境變體）完整規則</span>
+      <span class="board-role">魔術師（詭術之境變體）</span>：每晚優先行動，交換兩個玩家的號碼牌，兩人當晚所有技能互相對調，只對當晚有效；每個號碼整局限交換一次。若跟詭術師這一晚換票的號碼相同（不論順序），只有魔術師這邊的換技能效果會失效，詭術師自己的換票效果不受影響、正常生效——不是兩邊都失效。<br><span class="role-link" onclick="jumpToRole('trickmage')">→ 查看魔術師（詭術之境變體）完整規則</span>
       <br><br>
       <span class="board-role">定序王子</span>：每天第一次放逐投票結束後，可以選擇翻牌發動「重新投票」——原本出局的人免於出局，全部重新發言一輪（王子額外多一次發言機會）後重新投票，整局限發動一次。<br><span class="role-link" onclick="jumpToRole('sequenceprince')">→ 查看定序王子完整規則</span>
       <br><br>
@@ -277,7 +283,7 @@
 
   <!-- 勝利條件 -->
   <div class="rules-section" id="sec-win">
-  <div class="rules-h1">🏆 勝利條件</div>
+  <div class="rules-h1">勝利條件</div>
   <div class="info-danger" style="margin-bottom:8px;" data-ov="wincond-wolf">🐺 狼人勝利：存活狼人數 ≥ 存活好人數，或所有神職死亡，或所有平民死亡</div>
   <div class="info-success" style="margin-bottom:8px;" data-ov="wincond-good">✓ 好人勝利：所有狼人被淘汰</div>
   <div class="info" style="margin-bottom:8px;" data-ov="wincond-cupid">💘 邱比特板（人狼鏈成立時）：邱比特＋情侶獨立成第三方陣營。第三方需屠光其餘所有玩家（屠城）才算獲勝；若第三方存活3人而場上其餘存活人數剩2人，直接判定第三方獲勝；若第三方人數少於3人，則與其餘玩家人數相當時，第三方獲勝。「狼人與好人陣營」除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。</div>
@@ -286,14 +292,14 @@
 
   <!-- 狼人陣營 -->
   <div class="rules-section" id="sec-wolf">
-  <div class="rules-h1">🐺 狼人陣營角色</div>
+  <div class="rules-h1">狼人陣營角色</div>
   <p class="sub">共同目標：殺光所有平民或神職人員（屠邊）</p>
   <div id="rules-wolf-list" class="card-grid"></div>
   </div>
 
   <!-- 好人陣營（平民＋神職） -->
   <div class="rules-section" id="sec-good">
-  <div class="rules-h1">🧑‍🌾 好人陣營角色</div>
+  <div class="rules-h1">好人陣營角色</div>
   <div class="rules-h2">平民</div>
   <div id="rules-vil-list" class="card-grid"></div>
 
@@ -303,13 +309,13 @@
 
   <!-- 附加身分（含警長競選規則） -->
   <div class="rules-section" id="sec-special">
-  <div class="rules-h1">⭐ 附加/特殊身分</div>
+  <div class="rules-h1">附加/特殊身分</div>
   <div id="rules-special-list" class="card-grid"></div>
   </div>
 
   <!-- 投票放逐規則 -->
   <div class="rules-section" id="sec-vote">
-  <div class="rules-h1" data-ov="section-title-other">🗳️ 其他規則</div>
+  <div class="rules-h1" data-ov="section-title-other">其他規則</div>
   <div class="card-grid">
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
@@ -364,7 +370,7 @@
 
   <!-- 專有名詞小辭典 -->
   <div class="rules-section" id="sec-glossary">
-  <div class="rules-h1">📚 專有名詞小辭典</div>
+  <div class="rules-h1">專有名詞小辭典</div>
   <div id="glossary-dynamic-list"></div>
   </div>
   <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
@@ -583,7 +589,7 @@
 <div id="t-room" class="tab">
   <div id="jg-room-content"></div>
   <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
-    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
+    <button class="ghost" onclick="jgRoomLeave()" style="width:auto;padding:8px 16px;font-size:13px;">🚪 離開房間</button>
   </div>
 </div>
 

@@ -702,9 +702,10 @@ let jgTrickmageSwapA=null, jgTrickmageSwapB=null;
 // jgTricksterLastSwapNums 記錄「上一晚」選過的號碼，不能連續兩晚選其中之一。
 let jgTricksterSwapA=null, jgTricksterSwapB=null;
 let jgTricksterLastSwapNums=[];
-// 若魔術師跟詭術師這一晚換的是同一組號碼（不論順序），兩邊都會被判定抵消——這個旗標
-// 純粹給文字紀錄／法官參考用，抵消的判定邏輯本身看 jgTrickmageSwapA/B、jgTricksterSwapA/B
-// 是否還留著值（抵消後兩邊都會被清空）。
+// 若魔術師跟詭術師這一晚換的是同一組號碼（不論順序），只有魔術師那邊會被判定抵消（詭術師
+// 自己的換票效果不受影響，正常生效）——這個旗標純粹給文字紀錄／法官參考用，抵消的判定
+// 邏輯本身看 jgTrickmageSwapA/B 是否被清空（抵消後只有魔術師這邊會被清空，詭術師的
+// jgTricksterSwapA/B 維持原值）。
 let jgTrickCancelledThisNight=false;
 // 定序王子：整局限發動一次「翻牌重新投票」。
 let jgSequencePrinceUsed=false;
@@ -1787,7 +1788,11 @@ function jgRenderRoster(){
       // 傻瓜被票出局翻牌自證：不算真正死亡，但用一個顯眼的標籤跟一般存活玩家區分開來，
       // 提醒法官這位玩家只能發言、不能再投票，要等被刀/毒/開槍等「補刀」才會真正出局。
       const foolRevealedTag=p.foolRevealed?'<span class="rp-tag-lover" style="color:var(--gold);" title="傻瓜已翻牌：免於淘汰，但不能再投票，需再被補刀才會真正死亡">🃏已翻牌</span>':'';
-      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}</div>`;
+      // 定序王子：整局限發動一次「翻牌重新投票」，用過之後在玩家狀態卡加個小標籤，
+      // 提醒法官不會再看到「定序王子翻牌」的選項（jgSequencePrinceUsed 是整局唯一的旗標，
+      // 不分是哪一天用掉的，用過就是用過）。
+      const princeUsedTag=(role==='sequenceprince'&&jgSequencePrinceUsed)?'<span class="rp-tag-lover" style="color:var(--gold);" title="定序王子已經翻過牌，整局限一次，不會再出現">👑已翻牌</span>':'';
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}${princeUsedTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <button type="button" class="rp-toggle-btn" title="手動修改死亡狀態（安全網，避免忘記勾選/漏改）" onclick="jgManualToggleAlive(${p.num})">⇄</button>

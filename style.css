@@ -14,12 +14,17 @@
 html,body{min-height:100vh;background:var(--bg);font-family:-apple-system,'PingFang TC','Noto Sans TC',sans-serif;color:var(--text);overscroll-behavior:none;}
 html{scroll-behavior:smooth;}
 
-/* ── NAV ── */
-.nav{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
-.nav-btn{flex:1;padding:14px 4px 12px;font-size:12px;color:var(--text3);background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color 0.15s;-webkit-user-select:none;}
-.nav-btn .nv-icon{font-size:20px;}
-.nav-btn.active{color:var(--text);}
-.nav-btn.active .nv-icon{filter:drop-shadow(0 0 6px rgba(200,75,58,0.6));}
+/* ── NAV ──
+   左邊固定放「狼吞虎嚥」品牌字（用跟內文不同的襯線字體 Noto Serif TC，做出區隔），右邊
+   是分頁按鈕群組（用 margin-left:auto 推到最右邊對齊）。分頁按鈕拿掉 emoji，改純文字；
+   手機版空間有限，用 overflow-x:auto 讓按鈕群組可以橫向捲動，避免五個按鈕塞不下時互相
+   擠壓變形。 */
+.nav{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 12px;gap:8px;}
+.nav-brand{font-family:'Noto Serif TC',serif;font-weight:900;font-size:19px;color:var(--accent);letter-spacing:1px;white-space:nowrap;flex-shrink:0;}
+.nav-btns{display:flex;margin-left:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.nav-btns::-webkit-scrollbar{display:none;}
+.nav-btn{flex-shrink:0;padding:16px 10px 14px;font-size:12.5px;font-weight:600;color:var(--text3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color 0.15s,border-color 0.15s;-webkit-user-select:none;white-space:nowrap;}
+.nav-btn.active{color:var(--text);border-bottom-color:var(--accent);}
 
 /* ── TABS ── */
 .tab{display:none;padding:20px 16px 60px;max-width:540px;margin:0 auto;}

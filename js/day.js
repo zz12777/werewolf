@@ -744,25 +744,33 @@ function jgSaveVoteInner(){
   // 情況勾選即可（見 jgToggleFoolReveal，會依「要不要追刀」規則決定勾選後死亡狀態怎麼變）。
   if(found){
     const eliminatedRole=found.role; // capture BEFORE any dual-identity card-swap
-    // 定序王子：每天「第一次」投票出爐結果的當下，如果王子還活著且沒用過技能，給法官
-    // 一個選擇——要不要讓王子翻牌發動「重新投票」。發動的話這次出局作廢、全部重新發言
-    // 一輪（王子額外多一次發言機會，由法官自行掌握節奏）之後重新投票；整局限發動一次，
-    // 王子自己觸發的這次重新投票不會再問第二次（用 jgDayVoteOutResolvedOnce 擋住）。
+    // 定序王子：每天「第一次」投票出爐結果的當下，如果王子還活著且沒用過技能，先不要
+    // 馬上結算死亡——改成跳到一個獨立畫面（見 steps.js 的 'sequenceprince-choice'），
+    // 顯示目前的投票結果，並給「👑 定序王子翻牌」跟「確認出局，繼續」兩個按鈕，不用
+    // 瀏覽器原生的 confirm() 彈窗（那個沒辦法好好排版、也沒辦法配合計時器元件）。整局
+    // 限發動一次，王子自己觸發的這次重新投票不會再問第二次（用 jgDayVoteOutResolvedOnce
+    // 擋住）。
     if(!jgDayVoteOutResolvedOnce){
       jgDayVoteOutResolvedOnce=true;
       const spP=jgPlayers.find(p=>p.role==='sequenceprince');
       if(spP&&spP.alive&&!jgSequencePrinceUsed){
-        if(confirm('👑 定序王子要不要翻牌，發動「重新投票」技能？\n\n目前投票結果：'+val+'號出局。\n\n選「確定」會讓 '+val+' 號免於出局，全部重新發言一輪（提醒法官：王子這輪額外多一次發言機會）後，重新進行一次放逐投票；這個技能整局只能發動一次。')){
-          jgSequencePrinceUsed=true;
-          jgDayLog[jgNight]=(jgDayLog[jgNight]||[]).concat(['王子翻牌，重新投票（原本'+val+'號出局作廢）']);
-          jgVoteTally={}; jgAbstainVoters={};
-          jgSpeakTimerOrderKey='';
-          alert('👑 定序王子發動技能！請讓所有人重新發言一輪（王子這輪額外多一次發言機會），發言結束後重新投票。');
-          jgGoStep('discuss');
-          return;
-        }
+        jgRecord._pendingVoteOutNum=found.num;
+        jgRecord._pendingVoteOutRole=eliminatedRole;
+        jgGoStep('sequenceprince-choice');
+        return;
       }
     }
+    jgFinishVoteOut(found, eliminatedRole);
+    return;
+  }
+  jgGoStep('next-night');
+}
+
+// 定序王子還沒決定翻不翻牌之前，先把「投票結果出爐要做的事」抽成獨立函式——「王子選擇
+// 不翻牌、確認出局」的按鈕，跟「board 上根本沒有定序王子／王子已經死了／已經用過技能」
+// 這幾種情況，都要走同一份收尾邏輯（開槍連鎖、血月封印、勝負判定……），不用維護兩份
+// 幾乎一樣的程式碼、以後改一邊忘記改另一邊。
+function jgFinishVoteOut(found, eliminatedRole){
     const trulyDied=jgApplyDeath(found);
     jgRecord._voteOutTrulyDied=trulyDied;
     // 邱比特情侶殉情：被投票出局的人如果是情侶其中一人，另一人立刻跟著殉情
@@ -807,10 +815,30 @@ function jgSaveVoteInner(){
     // 被票出局／被獵人開槍帶走都不行，所以這裡刻意不做任何 whitewolf 特殊處理，跟一般角色
     // 一樣直接走遺言／下一夜流程。（黑狼王被票出局可以帶人，見上面 wolfking 的處理。）
     // 雙身分模式：這只是換牌、不是真的離場，不用交代遺言，直接進入下一夜即可
-    jgGoStep(trulyDied?'vote-last-words':'next-night');return;
-  }
-  jgGoStep('next-night');
+    jgGoStep(trulyDied?'vote-last-words':'next-night');
 }
+
+// 定序王子選擇「翻牌，重新投票」：這次投票結果作廢，回到討論步驟重新發言一輪
+// （王子這輪額外多一次發言機會，由法官自行掌握節奏），發言結束後回到投票步驟。
+window.jgSequencePrinceFlip=function(){
+  jgSequencePrinceUsed=true;
+  const outNum=jgRecord._pendingVoteOutNum;
+  jgDayLog[jgNight]=(jgDayLog[jgNight]||[]).concat(['王子翻牌，重新投票（原本'+outNum+'號出局作廢）']);
+  jgVoteTally={}; jgAbstainVoters={};
+  jgSpeakTimerOrderKey='';
+  jgRecord._pendingVoteOutNum=null; jgRecord._pendingVoteOutRole=null;
+  jgRenderRoster(); // 更新玩家狀態卡片上定序王子的「已翻牌」標記
+  jgLiveSyncPush();
+  jgGoStep('sequenceprince-speech');
+};
+// 定序王子選擇不翻牌（或畫面上按「確認出局，繼續」）：照原本流程結算死亡。
+window.jgConfirmVoteOutResult=function(){
+  const found=jgFind(jgRecord._pendingVoteOutNum);
+  const eliminatedRole=jgRecord._pendingVoteOutRole;
+  jgRecord._pendingVoteOutNum=null; jgRecord._pendingVoteOutRole=null;
+  if(found) jgFinishVoteOut(found, eliminatedRole);
+  else jgGoStep('next-night');
+};
 
 function jgSaveWolfKingShot(){
   const val=(document.getElementById('jg-wolfking-shot-rec')||{}).value?.trim()||'';
