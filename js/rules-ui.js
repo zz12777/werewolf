@@ -727,7 +727,6 @@ function renderGlossary(entries){
     groups[e.category].push(e);
   });
   root.innerHTML=order.map(cat=>{
-    const icon=GLOSSARY_CATEGORY_ICON[cat]||'📁';
     const cards=groups[cat].map(item=>`<div class="rcol">
       <div class="rcol-hd" onclick="toggleRcol(this)">
         <span class="rcol-name">${item.term}</span>
@@ -735,7 +734,7 @@ function renderGlossary(entries){
       </div>
       <div class="rcol-body">${item.desc}</div>
     </div>`).join('');
-    return `<div class="rules-h2">${icon} ${cat}</div><div class="card-grid">${cards}</div>`;
+    return `<div class="rules-h2">${cat}</div><div class="card-grid">${cards}</div>`;
   }).join('');
 }
 async function loadGlossary(){
