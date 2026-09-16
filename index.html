@@ -15,7 +15,8 @@
 <!-- ════════════════ NAV ════════════════ -->
 <nav class="nav">
   <span class="nav-brand">🐺 狼吞虎嚥</span>
-  <div class="nav-btns">
+  <button class="nav-hamburger" onclick="toggleNavMenu()" aria-label="開啟選單">☰</button>
+  <div class="nav-btns" id="nav-btns">
     <button class="nav-btn" onclick="switchTab('t-rules')">角色與規則</button>
     <button class="nav-btn" onclick="switchTab('t-guide')">攻略參考</button>
     <button class="nav-btn active" onclick="switchTab('t-judge')">法官の助手</button>

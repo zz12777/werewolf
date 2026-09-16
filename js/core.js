@@ -25,12 +25,22 @@ function getComp(n){
 function buildPool(c){const p=[];for(const[r,n] of Object.entries(c))for(let i=0;i<n;i++)p.push(r);return p;}
 function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 
+// 手機版漢堡選單開合——桌機版沒有這顆按鈕（CSS 裡設成 display:none），這個函式只有在
+// 手機版點了「☰」才會被呼叫到。
+function toggleNavMenu(){
+  const navBtns=document.getElementById('nav-btns');
+  if(navBtns) navBtns.classList.toggle('open');
+}
 function switchTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   document.querySelectorAll('.nav-btn').forEach((b,i)=>{
     b.classList.toggle('active',['t-rules','t-guide','t-judge','t-data','t-room'][i]===id);
   });
+  // 手機版的漢堡選單：選完分頁之後自動收合，不用使用者自己再點一次關閉；桌機版沒有這個
+  // 選單（display:none），這裡直接拿掉 open class 也不會有任何影響。
+  const navBtns=document.getElementById('nav-btns');
+  if(navBtns) navBtns.classList.remove('open');
   if(id==='t-data') pdLoadCloudGames(); // 每次切到「遊玩數據」分頁都重新抓一次雲端最新場次
   if(id==='t-guide') loadGuideArticles(); // 第一次切到「攻略參考」才去抓資料，避免沒用到還耗流量
   if(id==='t-room'&&window.jgRoomShown!==true){
