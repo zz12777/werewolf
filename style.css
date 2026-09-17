@@ -13,6 +13,12 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{min-height:100vh;background:var(--bg);font-family:-apple-system,'PingFang TC','Noto Sans TC',sans-serif;color:var(--text);overscroll-behavior:none;}
 html{scroll-behavior:smooth;}
+/* 上次為了擋掉手機版某個元素意外撐寬畫面造成的空白，在 body 加了 overflow-x:hidden——
+   結果 html 跟 body 兩層都設、又多加了 max-width:100vw，這個組合在某些瀏覽器會讓垂直
+   滾輪跟著不順（100vw 沒有扣掉捲軸寬度，容易跟實際可視寬度對不起來，引發捲動計算問題）。
+   改成只在 body 這一層設 overflow-x:hidden、拿掉 max-width:100vw，一樣能擋住意外的水平
+   溢出，滑鼠滾輪垂直捲動就不會受影響了。 */
+body{overflow-x:hidden;}
 
 /* ── NAV ──
    左邊固定放「狼吞虎嚥」品牌字（用跟內文不同的襯線字體 Noto Serif TC 做出區隔），右邊
@@ -20,25 +26,33 @@ html{scroll-behavior:smooth;}
    overflow-x:auto／margin-left:auto 想做「靠右對齊＋可橫向捲動」，結果在某些瀏覽器上
    讓巢狀 flex 容器算錯寬度，五個按鈕擠成看起來只剩一個，所以這裡改回最單純、原本就
    驗證過沒問題的等寬排列方式，不用可能有相容性風險的寫法。 */
-.nav{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 10px;gap:6px;}
-.nav-brand{font-family:'Noto Serif TC',serif;font-weight:900;font-size:18px;color:var(--accent);letter-spacing:1px;white-space:nowrap;flex-shrink:0;}
-.nav-btns{display:flex;margin-left:auto;gap:2px;}
-.nav-btn{padding:14px 10px 12px;font-size:12px;color:var(--text3);background:none;border:none;cursor:pointer;text-align:center;transition:color 0.15s;-webkit-user-select:none;white-space:nowrap;}
+.nav{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;padding:0 10px;gap:6px;max-width:100%;box-sizing:border-box;}
+.nav-brand{display:flex;align-items:center;flex-shrink:0;}
+.nav-logo{height:52px;width:auto;display:block;}
+.nav-btns{display:flex;margin-left:auto;gap:6px;}
+.nav-btn{padding:14px 12px 12px;font-size:14px;color:var(--text3);background:none;border:none;cursor:pointer;text-align:center;transition:color 0.15s;-webkit-user-select:none;white-space:nowrap;}
 .nav-btn.active{color:var(--text);font-weight:700;}
-.nav-hamburger{display:none;background:none;border:none;font-size:22px;line-height:1;color:var(--text);cursor:pointer;padding:6px 4px;margin-left:auto;flex-shrink:0;-webkit-user-select:none;}
+.nav-hamburger{display:none;align-items:center;gap:6px;background:none;border:none;font-size:15px;font-weight:600;line-height:1;color:var(--text);cursor:pointer;padding:8px 4px;margin-left:auto;flex-shrink:0;-webkit-user-select:none;}
+.nav-hamburger .hb-icon{font-size:20px;}
 /* 手機版（螢幕較窄）：橫排五個分頁容易被 logo 擠到超出畫面、要左右滑動才看得到最後一個，
    乾脆改成「三條線」漢堡選單——平常收起來，點了才往下展開一個直排選單（每個分頁字比較
    大、方便手指點），選完分頁選單會自動收合。這樣不管螢幕多窄、以後分頁再增加，都不會有
-   排版擠不下的問題，不用再靠字體大小去硬湊寬度。 */
+   排版擠不下的問題，不用再靠字體大小去硬湊寬度。漢堡按鈕本身沒有另外再往右推——`.nav`
+   已經是 flex 兩端對齊（logo 靠左、`.nav-hamburger` 用 margin-left:auto 貼齊最右邊），
+   已經是視覺上能貼到的最右側了。 */
 @media (max-width:600px){
+  .nav-logo{height:44px;}
   .nav-btns{display:none;position:absolute;top:100%;left:0;right:0;flex-direction:column;margin-left:0;gap:0;background:var(--bg2);border-bottom:1px solid var(--border);box-shadow:0 4px 10px rgba(0,0,0,0.08);}
   .nav-btns.open{display:flex;}
   .nav-btn{width:100%;text-align:left;padding:14px 18px;font-size:15px;}
-  .nav-hamburger{display:block;}
+  .nav-hamburger{display:flex;}
 }
 
 /* ── TABS ── */
 .tab{display:none;padding:20px 16px 60px;max-width:540px;margin:0 auto;}
+/* 頁尾版權字：小小一行、不搶眼，放在所有分頁共用（不屬於任何一個 .tab，所以切分頁的時候
+   不會跟著消失）。 */
+.site-footer{text-align:center;font-size:11px;color:var(--text3);padding:16px 0 24px;}
 .tab.on{display:block;}
 
 /* ── TYPOGRAPHY ── */

@@ -14,8 +14,8 @@
 
 <!-- ════════════════ NAV ════════════════ -->
 <nav class="nav">
-  <span class="nav-brand">🐺 狼吞虎嚥</span>
-  <button class="nav-hamburger" onclick="toggleNavMenu()" aria-label="開啟選單">☰</button>
+  <a class="nav-brand" href="javascript:void(0)" onclick="switchTab('t-judge')"><img src="assets/logo.png" alt="狼吞虎嚥" class="nav-logo"></a>
+  <button class="nav-hamburger" onclick="toggleNavMenu()" aria-label="開啟選單"><span class="hb-icon">☰</span>選單</button>
   <div class="nav-btns" id="nav-btns">
     <button class="nav-btn" onclick="switchTab('t-rules')">角色與規則</button>
     <button class="nav-btn" onclick="switchTab('t-guide')">攻略參考</button>
@@ -593,6 +593,9 @@
   </div>
 </div>
 
+
+<!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
+<footer class="site-footer">© 2026 狼吞虎嚥</footer>
 
 <!-- 純資料檔先載入 -->
 <script src="data/games-history.js"></script>
