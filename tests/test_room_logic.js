@@ -32,7 +32,7 @@ function loadRoomLogic() {
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_' + Date.now() + '.js');
   fs.writeFileSync(tmpPath, wrapped);
-  global.document = { getElementById: () => null, createElement: () => ({}), head: { appendChild: () => {} }, querySelectorAll: () => [] };
+  global.document = { getElementById: () => null, createElement: () => ({ style:{}, appendChild(){}, remove(){} }), head: { appendChild: () => {} }, body: { appendChild(){}, }, querySelectorAll: () => [] };
   global.window = global;
   global.window.jgFirebaseDb = {};
   const mod = require(tmpPath);
@@ -70,7 +70,7 @@ function loadRoomLogicForGodView() {
   const fakeRoot = { innerHTML: '' };
   global.document = {
     getElementById: (id) => (id==='jg-room-content'?fakeRoot:null),
-    createElement: () => ({}), head: { appendChild: () => {} }, querySelectorAll: () => []
+    createElement: () => ({ style:{}, appendChild(){}, remove(){} }), head: { appendChild: () => {} }, body: { appendChild(){} }, querySelectorAll: () => []
   };
   global.window = global;
   global.window.jgFirebaseDb = {};
@@ -304,6 +304,8 @@ async function runAsync() {
   await runSoloWolfAutoFinalizeTest();
   await runNightChainTest();
   await runSpeechOrderTest();
+  await runDeadWolfNotBlockingTest();
+  await runMechWolfThenWolfChainTest();
 })();
 
 async function runMechWolfNight1Test(){
@@ -669,4 +671,103 @@ async function runSpeechOrderTest(){
   const anyFail=results.some(r=>!r.ok);
   if(anyFail){ console.error('發言順序抽籤測試有失敗！'); process.exit(1); }
   console.log(`全部 ${results.length} 項發言順序抽籤測試通過`);
+}
+
+// 抓到的真正 bug：jgRoomGetWolfUids() 原本沒有濾掉已經死掉的狼隊友，導致「全員到齊了嗎」
+// 的判斷把死人也算進分母，狼隊只要死過一個人，活著的狼永遠湊不滿人數、整場卡死。這裡驗證
+// 死掉的狼隊友不會被算進「需要確認的人數」裡。
+async function runDeadWolfNotBlockingTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOMD1');
+  mod.__setComp({ wolf:2, medium:1 });
+  mod.__setPlayers([
+    { uid:'wolfAlive', seatNum:1, name:'活狼', alive:true },
+    { uid:'wolfDead', seatNum:2, name:'死狼', alive:false }, // 已經死掉的狼隊友
+    { uid:'medUid', seatNum:3, name:'通靈師', alive:true },
+    { uid:'targetUid', seatNum:4, name:'丁', alive:true },
+  ]);
+  global.window.jgFirebaseUid='wolfAlive';
+  global.__mockCollections={
+    'rooms/ROOMD1/secrets':[
+      { id:'wolfAlive', data:()=>({role:'wolf'}) },
+      { id:'wolfDead', data:()=>({role:'wolf'}) },
+      { id:'medUid', data:()=>({role:'medium'}) },
+      { id:'targetUid', data:()=>({role:'villager'}) },
+    ],
+  };
+  global.__mockDocs={ 'rooms/ROOMD1':{ night:2, currentStep:'wolf' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/ROOMD1']);
+
+  await mod.jgRoomWolfPropose('targetUid', 4, 2);
+  const after=global.__mockDocs['rooms/ROOMD1']||{};
+  check('狼隊有一人已經死亡：唯一活著的狼提議之後，不用等死人確認，應該自動往下一步',
+    after.currentStep, 'medium');
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('死掉的狼隊友不該卡流程測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項死掉的狼隊友不該卡流程測試通過`);
+}
+
+// 完全比照使用者回報的確切場景：2狼2神2民，「狼」是一隻一般狼人＋一隻機械狼（不是機械狼
+// 自己單獨、也不是狼隊死過人），從機械狼學習開始，完整模擬到狼人提議殺人為止，確認整條
+// 鏈路（機械狼學習→接棒給狼人→狼人提議→自動結算→進女巫回合）每一步都正確銜接，不是只
+// 孤立測試「狼人提議」這一步本身。
+async function runMechWolfThenWolfChainTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOMC1');
+  mod.__setComp({ wolf:1, mechanicalwolf:1, seer:1, witch:1, villager:2 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'小狼', alive:true },
+    { uid:'mwUid', seatNum:2, name:'機械狼', alive:true },
+    { uid:'seerUid', seatNum:3, name:'預言家', alive:true },
+    { uid:'witchUid', seatNum:4, name:'女巫', alive:true },
+    { uid:'v1Uid', seatNum:5, name:'民甲', alive:true },
+    { uid:'v2Uid', seatNum:6, name:'民乙', alive:true },
+  ]);
+  global.window.confirm = global.window.confirm || (()=>true);
+  global.__mockCollections={
+    'rooms/ROOMC1/secrets':[
+      { id:'wolfUid', data:()=>({role:'wolf'}) },
+      { id:'mwUid', data:()=>({role:'mechanicalwolf'}) },
+      { id:'seerUid', data:()=>({role:'seer'}) },
+      { id:'witchUid', data:()=>({role:'witch'}) },
+      { id:'v1Uid', data:()=>({role:'villager'}) },
+      { id:'v2Uid', data:()=>({role:'villager'}) },
+    ],
+  };
+  global.__mockDocs={ 'rooms/ROOMC1':{ night:1, currentStep:'mechwolf' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/ROOMC1']);
+
+  // 第一步：機械狼學習（學民甲的平民身分），因為小狼還活著，機械狼不該接管出刀，
+  // 應該直接把流程交給 'wolf' 步驟。
+  global.window.jgFirebaseUid='mwUid';
+  await mod.jgRoomMechWolfLearn('v1Uid', 5, 1);
+  let roomState=global.__mockDocs['rooms/ROOMC1']||{};
+  check('機械狼學習完、小狼還活著：應該交棒到 wolf 步驟', roomState.currentStep, 'wolf');
+
+  // 第二步：小狼（board上唯一真正跟狼隊一起睜眼的人）提議殺 5 號民甲。
+  global.window.jgFirebaseUid='wolfUid';
+  mod.__setRoomDoc(roomState);
+  await mod.jgRoomWolfPropose('v1Uid', 5, 1);
+  roomState=global.__mockDocs['rooms/ROOMC1']||{};
+  check('小狼提議完（唯一的真狼，機械狼不算）：應該自動結算、進入女巫回合', roomState.currentStep, 'witch');
+  check('狼刀目標正確記錄成5號', roomState.wolfKillTargetSeatNum, 5);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('機械狼接棒狼人完整鏈路測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項機械狼接棒狼人完整鏈路測試通過`);
 }

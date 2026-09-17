@@ -483,6 +483,29 @@ window.jgRoomRenderJoinNameInput=function(code){
 };
 
 // ── 進入房間等待畫面，開始監聽玩家名單 + 房間本身的狀態（phase/currentStep）──
+// ── 右上角「確認自己身分」浮動按鈕：不管現在畫面切到哪個步驟都固定顯示（用 position:fixed
+//    直接掛在 body 上，不是掛在會被整個 innerHTML 換掉的 #jg-room-content 裡面，才不會
+//    每次重新渲染畫面就被清掉），點一下用大字報顯示「幾號、什麼身分」，忘記自己是誰的時候
+//    隨時可以確認，不用回頭找法官問。──
+function jgRoomAppendMyIdentityButton(){
+  if(document.getElementById('jg-room-myid-btn')) return; // 已經加過了，不要重複加
+  const btn=document.createElement('button');
+  btn.id='jg-room-myid-btn';
+  btn.textContent='確認身分';
+  btn.onclick=jgRoomShowMyIdentity;
+  btn.style.cssText='position:fixed;top:8px;right:8px;z-index:200;padding:6px 12px;font-size:12px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.08);';
+  document.body.appendChild(btn);
+}
+function jgRoomRemoveMyIdentityButton(){
+  const btn=document.getElementById('jg-room-myid-btn');
+  if(btn) btn.remove();
+}
+window.jgRoomShowMyIdentity=function(){
+  if(!jgMySeatNum){ alert('還沒有座位資料（可能還在大廳，尚未分配身分）'); return; }
+  const roleName=jgMyRole?((typeof RNAME!=='undefined'&&RNAME[jgMyRole])||jgMyRole):'（尚未分配身分）';
+  jgRoomShowBigCard(jgMySeatNum+'號', roleName);
+};
+
 async function jgRoomEnterLobby(code){
   jgRoomCode=code;
   const db=window.jgFirebaseDb;
@@ -491,6 +514,7 @@ async function jgRoomEnterLobby(code){
     jgRoomComp=roomSnap.data().comp||null;
     jgRoomTotal=roomSnap.data().total||null;
   }
+  jgRoomAppendMyIdentityButton();
   if(jgRoomUnsubPlayers) jgRoomUnsubPlayers();
   const q=query(collection(db,'rooms',code,'players'), orderBy('seatNum'));
   jgRoomUnsubPlayers=onSnapshot(q,(snap)=>{
@@ -983,6 +1007,57 @@ async function jgRoomApplyCupidCascade(){
 // uid——跟本機法官助手 jgMagicSwapNum() 是同一套邏輯，只是這裡是用 uid 而不是座位號碼。
 // 顯示給操作者自己看的「已選擇 X號」文字，要用他原本點的號碼（raw），不要用轉換後的結果
 // ——他自己並不知道號碼被換過，只有天亮結算、跟魔術師板子介紹卡片會提到換流的存在。
+// ── 圓點選號按鈕（比照本機法官助手 jgNumSelectHtml／jgNumGridPick 的視覺跟互動方式）：
+//    點號碼只是「在這支手機上先選起來、變綠色」，不會馬上送出，要另外按「確認」才會真的
+//    寫進資料庫——這樣使用者點錯可以自己改選，不用每點一次都跳出「確定嗎？」的對話框。
+function jgRoomNumGridHtml(gridId, curSeatNum){
+  const alive=jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum);
+  let html='<input type="hidden" id="'+gridId+'" value="'+(curSeatNum||'')+'">'
+    +'<div class="numgrid" id="'+gridId+'-grid" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px;">';
+  alive.forEach(p=>{
+    const dead=p.alive===false;
+    const sel=curSeatNum===p.seatNum;
+    html+='<button type="button" data-num="'+p.seatNum+'"'+(dead?' disabled':'')
+      +' onclick="jgRoomNumGridPick(\''+gridId+'\','+p.seatNum+')"'
+      +' style="width:auto;min-width:42px;height:42px;padding:0 8px;margin:0;border-radius:10px;font-size:14px;font-weight:700;'
+      +(dead?'background:var(--bg4);color:var(--text3);text-decoration:line-through;':(sel?'background:var(--success,#2e7d32);color:#fff;border-color:transparent;':''))
+      +'">'+p.seatNum+'</button>';
+  });
+  html+='</div>';
+  return html;
+}
+window.jgRoomNumGridPick=function(gridId, seatNum){
+  const hidden=document.getElementById(gridId);
+  if(!hidden) return;
+  const already=hidden.value&&parseInt(hidden.value)===seatNum;
+  hidden.value=already?'':seatNum.toString();
+  const grid=document.getElementById(gridId+'-grid');
+  if(grid){
+    grid.querySelectorAll('button').forEach(b=>{
+      const isSel=!already&&b.getAttribute('data-num')===seatNum.toString();
+      b.style.background=isSel?'var(--success,#2e7d32)':'';
+      b.style.color=isSel?'#fff':'';
+      b.style.borderColor=isSel?'transparent':'';
+    });
+  }
+};
+
+// ── 大字報（比照本機法官助手 jgShowBigCard，同樣是黑底滿版、超大字體）：機械狼學到身分
+//    這種「一定要讓他看清楚、不會漏看」的重要訊息，用這個顯示會比塞在一般頁面裡的標題
+//    醒目很多，手機上一眼就能看到「幾號、什麼身分」。──
+function jgRoomShowBigCard(mainText, subText){
+  let modal=document.getElementById('jg-room-bigcard-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='jg-room-bigcard-modal';
+    modal.style.cssText='position:fixed;inset:0;background:#0a0a0a;color:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;overflow-y:auto;';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML='<div style="font-size:14vw;font-weight:900;line-height:1.15;word-break:break-word;">'+mainText+'</div>'
+    +(subText?'<div style="font-size:8vw;font-weight:800;margin-top:18px;color:#ffd166;">'+subText+'</div>':'')
+    +'<button onclick="document.getElementById(\'jg-room-bigcard-modal\').remove()" style="margin-top:48px;padding:14px 36px;font-size:18px;border-radius:12px;border:none;background:#fff;color:#111;font-weight:700;flex-shrink:0;">關閉</button>';
+}
+
 function jgRoomEffectiveTarget(rd, night, uid){
   if(!uid) return uid;
   if(rd.magicianSwapNight===night&&rd.magicianSwapAUid&&rd.magicianSwapBUid){
@@ -1196,6 +1271,12 @@ async function jgRoomGetWolfUids(){
       return !!(p&&p.wolfbrotherJoinedPack);
     }
     return true;
+  // 只算「還活著」的狼隊友——這是這次抓到的真正 bug：之前這裡沒有濾掉死掉的狼隊友，
+  // 「全員到齊了嗎」的人數（wolfCount）會把已經死掉、永遠不可能再按確認的隊友也算進去，
+  // 狼隊只要死過一個人，活著的狼就算全部按了確認，人數也永遠湊不滿，直接卡死出不去。
+  }).filter(d=>{
+    const p=jgRoomLatestPlayers.find(pp=>pp.uid===d.id);
+    return !p||p.alive!==false; // 找不到玩家資料時保守當作還活著，不要誤判卡住
   }).map(d=>d.id);
 }
 // 機械狼獨自帶刀的條件：其餘「真正跟狼隊一起睜眼」的隊友（jgRoomGetWolfUids 排除掉機械狼
@@ -1261,22 +1342,48 @@ async function jgRoomWolfViewHtml(night){
       try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
     }
     const iConfirmed=confirmedBy.includes(window.jgFirebaseUid);
+    // 房主專用的「強制往下一步」安全閥：不管是什麼原因卡住（例如隊友的裝置斷線、退出
+    // 房間卻沒有人發現），房主永遠有辦法手動把流程推進下去，不用整場卡死等不到人回覆。
+    const hostOverrideHtml=jgRoomIsHost
+      ?'<div style="margin-top:16px;"><button style="font-size:12px;color:var(--text3);" onclick="jgRoomHostForceAdvanceWolf('+night+')">⚠️ 卡住了？房主強制往下一步</button></div>'
+      :'';
     return {needsTimer:true, html: jgRoomTimerHtml(30,'今晚要殺的對象是？')
       +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>今晚要殺 '+rd.wolfKillTargetSeatNum+'號</h1>'
       +'<p class="sub" style="text-align:center;margin-top:8px;">已確認 '+confirmedBy.length+' / '+wolfCount+' 人</p></div>'
       +'<div style="text-align:center;margin-top:10px;">'
       +(iConfirmed?'<div class="info" style="font-size:12px;">你已經確認了，等待其他隊友</div>':'<button class="primary" onclick="jgRoomWolfConfirm()" style="width:auto;display:inline-block;padding:10px 20px;">確認</button>')
       +'<button onclick="jgRoomWolfModify()" style="margin-left:8px;width:auto;display:inline-block;padding:10px 20px;">修改</button>'
-      +'</div>'};
+      +'</div>'+hostOverrideHtml};
   }
-  const others=jgRoomLatestPlayers.filter(p=>!wolfUids.includes(p.uid));
-  const buttons=others.map(p=>
-    '<button onclick="jgRoomWolfPropose(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
-  ).join('');
+  // 選人畫面改成跟本機法官助手一樣的圓點號碼按鈕（見 jgRoomNumGridHtml）：點號碼只是先
+  // 選起來變綠色，不會馬上送出；目標號碼包含所有活著的人（含自己、含其他狼隊友——狼隊
+  // 本來就可以選擇自刀或殺隊友，不應該把狼隊自己的號碼從選項裡排除掉）。
   return {needsTimer:true, html: jgRoomTimerHtml(30,'今晚要殺的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>請選擇今晚要殺的對象</h1></div>'
-    +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
+    +jgRoomNumGridHtml('jg-room-wolf-pick', null)
+    +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomWolfProposeFromGrid('+night+')">確認</button></div>'};
 }
+// 讀圓點號碼格選到的座位，換算成 uid 之後照原本的提議流程送出（見 jgRoomWolfPropose）。
+window.jgRoomWolfProposeFromGrid=function(night){
+  const hidden=document.getElementById('jg-room-wolf-pick');
+  const seatNum=hidden&&hidden.value?parseInt(hidden.value):null;
+  if(!seatNum){ alert('請先點選一個號碼'); return; }
+  const p=jgRoomLatestPlayers.find(pp=>pp.seatNum===seatNum);
+  if(!p) return;
+  window.jgRoomWolfPropose(p.uid, seatNum, night);
+};
+// 房主強制把卡住的狼隊出刀步驟往下推進——不管當下有沒有人選好目標，一律當成「今晚沒有
+// 選定目標」直接往下一步走（平安夜），寧可讓法官事後用口頭方式確認實際結果，也不要讓
+// 整場遊戲卡死在這裡出不去。
+window.jgRoomHostForceAdvanceWolf=async function(night){
+  if(!confirm('確定要強制跳過狼隊出刀嗎？這會把今晚視為「沒有選定目標」，直接往下一步。')) return;
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode),{
+    wolfKillNight:night, wolfKillTargetUid:null, wolfKillTargetSeatNum:null
+  },{ merge:true });
+  await jgRoomAfterKillDecided(night);
+  jgRoomRenderNightShell();
+};
 window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
   if(!confirm('確定要殺 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
@@ -2544,6 +2651,10 @@ window.jgRoomMechWolfLearn=async function(targetUid, targetSeatNum, night){
     mechWolfLearnedRole:role, mechWolfLearnedFromSeatNum:targetSeatNum
   },{ merge:true });
   await jgRoomAppendNightLog(night, '機學 '+targetSeatNum);
+  // 學到身分要用大字報清楚告知，格式比照本機法官助手：「X號」+ 學到的身分中文名稱，
+  // 不能只是塞在頁面標題裡讓他自己瞄到——這是整局唯一一次告知的機會，漏看了會很麻煩。
+  const roleName=(typeof RNAME!=='undefined'&&RNAME[role])||role;
+  jgRoomShowBigCard(targetSeatNum+'號', '學到「'+roleName+'」');
   // 學完身分之後，如果剛好板子上（或其餘狼隊友都死光了）沒有其他真正的狼隊出刀，機械狼
   // 這時就要自己接管出刀——這種情況一定要「留在」mechwolf 這一步，讓同一個畫面接著顯示
   // 出刀選人（見 jgRoomMechWolfViewHtml 最後那段 eligible 判斷），不能直接跳去 'wolf' 那
@@ -3031,6 +3142,7 @@ async function jgRoomShootResolve(night){
 
 window.jgRoomLeave=function(){
   jgRoomStopTimer();
+  jgRoomRemoveMyIdentityButton();
   if(jgRoomUnsubPlayers){ jgRoomUnsubPlayers(); jgRoomUnsubPlayers=null; }
   if(jgRoomUnsubMyRole){ jgRoomUnsubMyRole(); jgRoomUnsubMyRole=null; }
   if(jgRoomUnsubRoom){ jgRoomUnsubRoom(); jgRoomUnsubRoom=null; }
