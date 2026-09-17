@@ -235,8 +235,7 @@ function jgRoomRenderDealLobby(){
     <button onclick="jgRoomCopyInviteLink()" style="margin-top:8px;">複製邀請連結</button>
     <div class="card" style="margin-top:14px;">${rows}</div>
     ${hostBtn}
-    <button class="ghost" style="margin-top:14px;" onclick="jgRoomLeave()">離開房間</button>
-    ${jgRoomIsHost?'<button class="ghost" style="margin-top:8px;color:var(--danger,#b91c1c);" onclick="jgRoomDissolve()">解散房間</button>':''}
+    ${jgRoomIsHost?'<button class="ghost" style="margin-top:14px;color:var(--danger,#b91c1c);" onclick="jgRoomDissolve()">解散房間</button>':''}
   `;
 }
 // 分配完身分後，加入的玩家（不含房主，房主已經跳回法官助手了）只會看到這個畫面：
@@ -262,7 +261,6 @@ function jgRoomRenderDealMyRole(){
         <div style="font-size:88px;">${icon}</div>
         <div style="font-size:34px;font-weight:800;margin-top:20px;">你的身分是：${roleName}</div>
       </div>
-      <button class="ghost" onclick="jgRoomLeave()">離開房間</button>
     `;
   });
 }
@@ -491,9 +489,12 @@ function jgRoomAppendMyIdentityButton(){
   if(document.getElementById('jg-room-myid-btn')) return; // 已經加過了，不要重複加
   const btn=document.createElement('button');
   btn.id='jg-room-myid-btn';
-  btn.textContent='確認身分';
+  btn.textContent='確認自己身分';
   btn.onclick=jgRoomShowMyIdentity;
-  btn.style.cssText='position:fixed;top:8px;right:8px;z-index:200;padding:6px 12px;font-size:12px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.08);';
+  // 全站的按鈕預設樣式是 width:100%（鋪滿整行），這裡沒有明確蓋掉 width／margin-top 的話，
+  // 固定定位的按鈕會被撐成貼齊視窗左右兩側的一整條長條（這是上次截圖看到的那個 bug 的
+  // 真正原因），這裡把該蓋掉的都蓋掉，確保是貼在右上角的小按鈕。
+  btn.style.cssText='position:fixed;top:8px;right:8px;z-index:200;width:auto;margin:0;padding:6px 12px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.08);';
   document.body.appendChild(btn);
 }
 function jgRoomRemoveMyIdentityButton(){
@@ -1055,7 +1056,25 @@ function jgRoomShowBigCard(mainText, subText){
   }
   modal.innerHTML='<div style="font-size:14vw;font-weight:900;line-height:1.15;word-break:break-word;">'+mainText+'</div>'
     +(subText?'<div style="font-size:8vw;font-weight:800;margin-top:18px;color:#ffd166;">'+subText+'</div>':'')
-    +'<button onclick="document.getElementById(\'jg-room-bigcard-modal\').remove()" style="margin-top:48px;padding:14px 36px;font-size:18px;border-radius:12px;border:none;background:#fff;color:#111;font-weight:700;flex-shrink:0;">關閉</button>';
+    +'<button onclick="document.getElementById(\'jg-room-bigcard-modal\').remove()" style="width:auto;margin-top:48px;padding:14px 36px;font-size:18px;border-radius:12px;border:none;background:#fff;color:#111;font-weight:700;flex-shrink:0;">關閉</button>';
+}
+
+// ── 夜晚各種行動函式（提議/救人/查驗...）寫完資料庫之後，原本都是直接呼叫
+//    jgRoomRenderNightShell() 重新渲染——但那個函式讀的是 jgRoomLatestRoomDoc 這份畫面
+//    快取，快取要等即時監聽器（onSnapshot）收到剛剛那筆寫入才會更新。如果監聽器沒有
+//    馬上跟上（例如瀏覽器剛跳出 confirm() 對話框、網路狀況不穩），畫面會停在寫入之前的
+//    舊狀態，感覺就像卡住、要手動重新整理頁面才會恢復正常（這是這次抓到、確認過的真正
+//    問題）。這裡統一改成「自己重新讀一次資料庫最新狀態、更新快取，再交給總機判斷現在
+//    真正該顯示哪個畫面」，不要只憑空呼叫 jgRoomRenderNightShell()（那個假設現在還在
+//    夜晚，但這個動作也可能剛好是這一夜最後一步、已經進入白天了，用 jgRoomRenderCurrentPhase()
+//    才會正確判斷現在到底該顯示夜晚、白天、投票，還是警長競選畫面）。
+async function jgRoomRefreshAndRenderCurrent(){
+  const db=window.jgFirebaseDb;
+  try{
+    const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+    if(freshSnap.exists()) jgRoomLatestRoomDoc=freshSnap.data();
+  }catch(e){}
+  await jgRoomRenderCurrentPhase();
 }
 
 function jgRoomEffectiveTarget(rd, night, uid){
@@ -1133,14 +1152,23 @@ async function jgRoomGuardViewHtml(night){
   }
   const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
   const lastTarget=me?me.lastGuardTargetUid:null;
-  const buttons=jgRoomLatestPlayers.filter(p=>p.uid!==lastTarget).map(p=>
-    '<button onclick="jgRoomConfirmCheck(\'guard\',\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
-  ).join('');
+  const lastTargetSeat=lastTarget?(jgRoomLatestPlayers.find(p=>p.uid===lastTarget)||{}).seatNum:null;
   return {needsTimer:true, html:jgRoomTimerHtml(20,'你要守護的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🛡️</div><h1>請選擇守護對象</h1></div>'
-    +(lastTarget?'<div class="info" style="font-size:12px;text-align:center;">不能連續兩晚守護同一人，上一晚守護的對象已排除</div>':'')
-    +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
+    +(lastTarget?'<div class="info" style="font-size:12px;text-align:center;">不能連續兩晚守護同一人（'+lastTargetSeat+'號），上一晚守護的對象已排除</div>':'')
+    +jgRoomNumGridHtml('jg-room-guard-pick', null)
+    +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomGuardActFromGrid('+night+')">確認</button></div>'};
 }
+window.jgRoomGuardActFromGrid=function(night){
+  const hidden=document.getElementById('jg-room-guard-pick');
+  const seatNum=hidden&&hidden.value?parseInt(hidden.value):null;
+  if(!seatNum){ alert('請先點選一個號碼'); return; }
+  const p=jgRoomLatestPlayers.find(pp=>pp.seatNum===seatNum);
+  if(!p) return;
+  const me=jgRoomLatestPlayers.find(pp=>pp.uid===window.jgFirebaseUid);
+  if(me&&me.lastGuardTargetUid===p.uid){ alert('不能連續兩晚守護同一人，請選別人'); return; }
+  window.jgRoomGuardAct(p.uid, seatNum, night);
+};
 window.jgRoomGuardAct=async function(targetUid, targetSeatNum, night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
@@ -1151,7 +1179,7 @@ window.jgRoomGuardAct=async function(targetUid, targetSeatNum, night){
   await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ lastGuardTargetUid:targetUid },{ merge:true });
   await jgRoomAppendNightLog(night, '守 '+targetSeatNum);
   await jgRoomAdvanceToWolfOrBeyond('guard', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ── 女巫：狼隊確認出刀之後才輪到女巫，她會看到狼隊今晚殺了誰，可以選擇用解藥救（自己
@@ -1200,11 +1228,8 @@ async function jgRoomWitchViewHtml(night){
   }
   html+='<div class="speech" style="text-align:center;margin-top:14px;">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」</div>';
   if(!poisonUsed){
-    const others=jgRoomLatestPlayers.filter(p=>p.uid!==window.jgFirebaseUid);
-    const buttons=others.map(p=>
-      '<button onclick="jgRoomWitchPoison(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:8px 14px;">'+p.seatNum+'號 '+p.name+'</button>'
-    ).join('');
-    html+='<div style="text-align:center;margin-top:6px;">'+buttons+'</div>';
+    html+=jgRoomNumGridHtml('jg-room-witch-poison-pick', null)
+      +'<div style="text-align:center;"><button class="primary" style="margin-top:10px;" onclick="jgRoomWitchPoisonFromGrid('+night+')">下毒</button></div>';
   } else {
     html+='<div class="info" style="font-size:12px;text-align:center;margin-top:6px;">（法官搖頭）毒藥用完</div>';
   }
@@ -1212,7 +1237,6 @@ async function jgRoomWitchViewHtml(night){
   return {needsTimer:true, html:html};
 }
 window.jgRoomWitchSave=async function(targetSeatNum, night){
-  if(!confirm('確定要救 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   await setDoc(doc(db,'rooms',jgRoomCode),{ witchSavedUid: rd.wolfKillTargetUid },{ merge:true });
@@ -1221,8 +1245,15 @@ window.jgRoomWitchSave=async function(targetSeatNum, night){
   await jgRoomAppendNightLog(night, '毒 x');
   await jgRoomWitchFinish(night, true, null);
 };
+window.jgRoomWitchPoisonFromGrid=function(night){
+  const hidden=document.getElementById('jg-room-witch-poison-pick');
+  const seatNum=hidden&&hidden.value?parseInt(hidden.value):null;
+  if(!seatNum){ alert('請先點選一個號碼'); return; }
+  const p=jgRoomLatestPlayers.find(pp=>pp.seatNum===seatNum);
+  if(!p) return;
+  window.jgRoomWitchPoison(p.uid, seatNum, night);
+};
 window.jgRoomWitchPoison=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要毒 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
@@ -1245,7 +1276,7 @@ async function jgRoomWitchFinish(night, saved, poisonedSeatNum){
   });
   await jgRoomResolveNightDeaths();
   await jgRoomAdvanceToCheckOrSheriff();
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 }
 
 
@@ -1382,10 +1413,9 @@ window.jgRoomHostForceAdvanceWolf=async function(night){
     wolfKillNight:night, wolfKillTargetUid:null, wolfKillTargetSeatNum:null
   },{ merge:true });
   await jgRoomAfterKillDecided(night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要殺 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
@@ -1416,7 +1446,7 @@ window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
   // 顯示成「什麼都沒發生」，跟按了沒反應沒兩樣。等監聽器之後自己再收到一次同樣的資料、
   // 再渲染一次也沒關係，是安全、冪等的，不會有副作用。
   jgRoomLatestRoomDoc=fresh;
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomWolfModify=async function(){
   if(!confirm('確定要修改嗎？會清空所有人的確認。')) return;
@@ -1425,7 +1455,7 @@ window.jgRoomWolfModify=async function(){
     wolfKillNight:null, wolfKillTargetUid:null, wolfKillTargetSeatNum:null,
     wolfKillProposedBy:null, wolfKillConfirmedBy:[]
   },{ merge:true });
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 // 狼刀目標（不管是狼隊全員確認出的、還是夢魘恐懼導致的平安夜、還是機械狼獨自接管出刀、
 // 還是狼弟覺醒復仇刀）決定之後的共用去向：板子有黑市商人、且還沒交易過，就先進黑市商人
@@ -1494,7 +1524,7 @@ window.jgRoomWolfConfirm=async function(){
   // 手動更新畫面快取成最新資料再渲染，不要放著讓渲染函式讀到監聽器可能還沒同步到的舊快取
   // （理由跟 jgRoomWolfPropose 那邊一樣）。
   jgRoomLatestRoomDoc=fresh;
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ── 監聽「我自己」的身分（其他人的 secrets 文件，Firestore 安全規則會擋下，讀不到）──
@@ -1527,20 +1557,21 @@ function jgRoomCompSummaryHtml(){
 function jgRoomRenderShell(){
   const root=document.getElementById('jg-room-content');
   if(!root) return;
+  // 身分分配完之後，房號就不重要了（房間不再開放新人加入），邀請連結沒有用處，藏起來。
+  const roleAssigned=jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.status==='role-assigned';
   root.innerHTML=`
     <div class="nbanner">
       <div class="nicon">🎮</div>
       <h1>房間 ${jgRoomCode}</h1>
       <p class="sub" style="text-align:center;margin-top:6px;">把這個房號給朋友，請他們輸入加入</p>
     </div>
-    <button onclick="jgRoomCopyInviteLink()" style="margin-top:8px;">複製邀請連結</button>
+    ${roleAssigned?'':'<button onclick="jgRoomCopyInviteLink()" style="margin-top:8px;">複製邀請連結</button>'}
     ${jgRoomCompSummaryHtml()}
     <div id="jg-room-my-role"></div>
     <div class="section-title" style="margin-top:16px;">目前玩家</div>
     <div id="jg-room-player-list" class="card"></div>
     <div id="jg-room-host-controls" style="margin-top:14px;"></div>
-    <button class="ghost" style="margin-top:14px;" onclick="jgRoomLeave()">離開房間</button>
-    ${jgRoomIsHost?'<button class="ghost" style="margin-top:8px;color:var(--danger,#b91c1c);" onclick="jgRoomDissolve()">解散房間</button>':''}
+    ${jgRoomIsHost?'<button class="ghost" style="margin-top:14px;color:var(--danger,#b91c1c);" onclick="jgRoomDissolve()">解散房間</button>':''}
   `;
   // 身分快取（jgMyRole）已經有的話，這裡先補畫一次，不用等下一次 snapshot 觸發才顯示
   const box=document.getElementById('jg-room-my-role');
@@ -1563,11 +1594,10 @@ function jgRoomRenderLobby(players){
     const roleAssigned=jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.status==='role-assigned';
     if(jgRoomIsHost){
       if(roleAssigned){
-        hostEl.innerHTML='<button class="primary" onclick="jgRoomStartNight()">開始遊戲（進入第一夜）</button>'
-          +'<div class="info" style="font-size:12px;margin-top:6px;">目前做了狼隊出刀＋預言家/通靈師其中一種查驗當示範，警長競選會在夜晚結束後出現。</div>';
+        hostEl.innerHTML='<button class="primary" onclick="jgRoomStartNight()">開始遊戲（進入第一夜）</button>';
       } else {
         hostEl.innerHTML=need
-          ? '<button class="primary" '+(ready?'':'disabled')+' onclick="jgRoomAssignRoles()">隨機分配身分（目前 '+have+' / '+need+' 人'+(ready?'，可以分配了':'）')+'</button>'
+          ? '<button class="primary" '+(ready?'':'disabled')+' onclick="jgRoomAssignRoles()">'+(ready?'隨機分配身分':'隨機分配身分（目前 '+have+' / '+need+' 人）')+'</button>'
           : '<div class="info-warn" style="font-size:12px;">這個房間沒有記錄板子配置，請改用「建立連線房間」的方式重新建房。</div>';
       }
     } else {
@@ -2238,7 +2268,6 @@ function jgRoomHostAdvanceHtml(currentStep){
   if(currentStep==='guard') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">守衛選完之後，會自動往下一步。</div>';
   if(currentStep==='dreamcatcher') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">攝夢人選完夢遊對象之後，會自動往下一步。</div>';
   if(currentStep==='wolfbrother') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">第一夜是狼兄狼弟互相確認身分；其餘夜晚平常沒事，只有狼兄陣亡後狼弟覺醒復仇那一晚才需要操作，完成後會自動往下一步。</div>';
-  if(currentStep==='mechwolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">機械狼行動完之後，會自動往下一步（狼隊出刀，或機械狼已接管出刀直接往下）。</div>';
   if(currentStep==='wolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">狼隊全員同意目標後，會自動往下一步。</div>';
   if(currentStep==='blackmarket') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">黑市商人交易完（或選擇不交易）之後，會自動往下一步。獵人獵槍這項技能目前還沒自動化，請法官／房主用本機工具手動處理。</div>';
   if(currentStep==='witch') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">女巫（或持有女巫毒藥技能的幸運兒）行動完之後，會自動往下一步（查驗類角色，或直接接警長競選）。</div>';
@@ -2259,12 +2288,10 @@ async function jgRoomSeerViewHtml(night){
       +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請記住這個結果，等待其他人完成夜晚行動</div>'};
   }
   const others=jgRoomLatestPlayers.filter(p=>p.uid!==window.jgFirebaseUid);
-  const buttons=others.map(p=>
-    '<button onclick="jgRoomConfirmCheck(\'seer\',\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
-  ).join('');
   return {needsTimer:true, html:jgRoomTimerHtml(20,'你要查驗的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🔮</div><h1>請選擇查驗對象</h1></div>'
-    +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
+    +jgRoomNumGridHtml('jg-room-seer-pick', null)
+    +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomSubmitCheckFromGrid(\'seer\',\'jg-room-seer-pick\','+night+')">確認</button></div>'};
 }
 // 查驗結果直接讀 secrets/{targetUid}（全房都讀得到的真實身分，見 jgRoomAssignRoles 的
 // 註解），拿到真實角色後，預言家只需要換算成「好人/壞人」顯示——不用另外維護一份陣營資料。
@@ -2273,12 +2300,15 @@ async function jgRoomSeerViewHtml(night){
 //    確認文字統一走簡短的「確定要[動作] X號 嗎？」格式，不要加多餘的說明——之後加女巫
 //    （救/毒）、魔術師（交換）等角色時，一樣照這個格式：「確定要救 X號 嗎？」「確定要毒
 //    X號 嗎？」「確定要交換 X-Y號 嗎？」。──
-window.jgRoomConfirmCheck=function(kind, targetUid, targetSeatNum, night){
-  const verb=kind==='guard'?'守護':'查驗';
-  if(!confirm('確定要'+verb+' '+targetSeatNum+'號 嗎？')) return;
-  if(kind==='seer') jgRoomSeerCheck(targetUid, targetSeatNum, night);
-  else if(kind==='medium') jgRoomMediumCheck(targetUid, targetSeatNum, night);
-  else if(kind==='guard') jgRoomGuardAct(targetUid, targetSeatNum, night);
+window.jgRoomSubmitCheckFromGrid=function(kind, gridId, night){
+  const hidden=document.getElementById(gridId);
+  const seatNum=hidden&&hidden.value?parseInt(hidden.value):null;
+  if(!seatNum){ alert('請先點選一個號碼'); return; }
+  const p=jgRoomLatestPlayers.find(pp=>pp.seatNum===seatNum);
+  if(!p) return;
+  if(kind==='seer') jgRoomSeerCheck(p.uid, seatNum, night);
+  else if(kind==='medium') jgRoomMediumCheck(p.uid, seatNum, night);
+  else if(kind==='guard') jgRoomGuardAct(p.uid, seatNum, night);
 };
 
 window.jgRoomSeerCheck=async function(targetUid, targetSeatNum, night){
@@ -2299,7 +2329,7 @@ window.jgRoomSeerCheck=async function(targetUid, targetSeatNum, night){
   // 查完就代表這一夜的行動結束了，直接自動接白天（第一夜是警長競選，其餘夜晚直接公告
   // 死訊、開放發言／投票放逐），不用等房主按按鈕。
   await jgRoomAdvanceToDayPhase(night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ── 通靈師的查驗畫面：跟預言家幾乎一模一樣的結構，差別只在查驗結果顯示「完整真實身分」
@@ -2317,12 +2347,10 @@ async function jgRoomMediumViewHtml(night){
       +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請記住這個結果，等待其他人完成夜晚行動</div>'};
   }
   const others=jgRoomLatestPlayers.filter(p=>p.uid!==window.jgFirebaseUid);
-  const buttons=others.map(p=>
-    '<button onclick="jgRoomConfirmCheck(\'medium\',\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
-  ).join('');
   return {needsTimer:true, html:jgRoomTimerHtml(20,'你要查驗的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">👁️</div><h1>請選擇查驗對象</h1></div>'
-    +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
+    +jgRoomNumGridHtml('jg-room-medium-pick', null)
+    +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomSubmitCheckFromGrid(\'medium\',\'jg-room-medium-pick\','+night+')">確認</button></div>'};
 }
 // 查驗到機械狼：機械狼尚未學習技能時顯示「機械狼」，已經學習之後改顯示學到的具體身分
 // （見 ALL_ROLES.medium 的規則說明），學到的身分存在機械狼自己 players/{uid}.mechWolfLearnedRole。
@@ -2346,7 +2374,7 @@ window.jgRoomMediumCheck=async function(targetUid, targetSeatNum, night){
   const roleAbbr=(typeof ROLE_ABBR!=='undefined'&&ROLE_ABBR[resolvedRole])||roleName;
   await jgRoomAppendNightLog(night, '通驗 '+targetSeatNum+'('+roleAbbr+')');
   await jgRoomAdvanceToDayPhase(night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ═══════════════════════════════════════════
@@ -2375,7 +2403,6 @@ async function jgRoomNightmareViewHtml(night){
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
 }
 window.jgRoomNightmareAct=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要恐懼 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
   // secrets 全房可讀（見 jgRoomAssignRoles 的說明），夢魘自己的畫面可以直接查目標的真實
   // 身分，用來判斷這一刀是不是恐懼到狼隊自己人（會導致當晚狼隊無法殺人）。
@@ -2389,7 +2416,7 @@ window.jgRoomNightmareAct=async function(targetUid, targetSeatNum, night){
   await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ lastNightmareTargetUid:targetUid },{ merge:true });
   await jgRoomAppendNightLog(night, '恐 '+targetSeatNum);
   await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:jgRoomNextNightStep('nightmare', night) },{ merge:true });
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ═══════════════════════════════════════════
@@ -2438,19 +2465,18 @@ window.jgRoomMagicianPickFirst=async function(targetUid, targetSeatNum, night){
   await setDoc(doc(db,'rooms',jgRoomCode),{
     magicianPendingNight:night, magicianPendingUid:targetUid, magicianPendingSeatNum:targetSeatNum
   },{ merge:true });
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomMagicianModify=async function(){
   const db=window.jgFirebaseDb;
   await setDoc(doc(db,'rooms',jgRoomCode),{
     magicianPendingNight:null, magicianPendingUid:null, magicianPendingSeatNum:null
   },{ merge:true });
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomMagicianConfirmSwap=async function(targetUid, targetSeatNum, night){
   const rd=jgRoomLatestRoomDoc||{};
   const aUid=rd.magicianPendingUid, aSeat=rd.magicianPendingSeatNum;
-  if(!confirm('確定要交換 '+aSeat+'號 與 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
   await setDoc(doc(db,'rooms',jgRoomCode),{
     magicianSwapNight:night, magicianSwapAUid:aUid, magicianSwapASeatNum:aSeat,
@@ -2465,7 +2491,7 @@ window.jgRoomMagicianConfirmSwap=async function(targetUid, targetSeatNum, night)
   },{ merge:true });
   await jgRoomAppendNightLog(night, '換 '+aSeat+'-'+targetSeatNum);
   await jgRoomAdvanceToWolfOrBeyond('magician', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomMagicianSkip=async function(night){
   const db=window.jgFirebaseDb;
@@ -2475,7 +2501,7 @@ window.jgRoomMagicianSkip=async function(night){
   },{ merge:true });
   await jgRoomAppendNightLog(night, '換 x');
   await jgRoomAdvanceToWolfOrBeyond('magician', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ═══════════════════════════════════════════
@@ -2502,7 +2528,6 @@ async function jgRoomDreamcatcherViewHtml(night){
     +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
 }
 window.jgRoomDreamcatcherAct=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要夢 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
   const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
   const lastTarget=me?me.lastDreamcatcherTargetUid:null;
@@ -2522,7 +2547,7 @@ window.jgRoomDreamcatcherAct=async function(targetUid, targetSeatNum, night){
     await jgRoomApplyCupidCascade();
   }
   await jgRoomAdvanceToWolfOrBeyond('dreamcatcher', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ═══════════════════════════════════════════
@@ -2556,12 +2581,11 @@ async function jgRoomMechWolfViewHtml(night){
         +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請記住，等待其他人完成夜晚行動</div>';
     } else {
       const others=jgRoomLatestPlayers.filter(p=>p.uid!==window.jgFirebaseUid);
-      const buttons=others.map(p=>
-        '<button onclick="jgRoomMechWolfLearn(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+p.seatNum+'號 '+p.name+'</button>'
-      ).join('');
+      const dead=new Set(others.filter(p=>p.alive===false).map(p=>p.seatNum));
       return {needsTimer:true, html:jgRoomTimerHtml(20,'你要學習誰的身分？')
         +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🤖</div><h1>請選擇今晚要學習的對象</h1></div>'
-        +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>'};
+        +jgRoomNumGridHtml('jg-room-mechwolf-learn-pick', null)
+        +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomMechWolfLearnFromGrid('+night+')">確認</button></div>'};
     }
   } else if(learned&&learned!=='villager'){
     const learnedName=(typeof RNAME!=='undefined'&&RNAME[learned])||learned;
@@ -2638,8 +2662,16 @@ async function jgRoomMechWolfViewHtml(night){
   }
   return {needsTimer:true, html:jgRoomTimerHtml(20,'機械狼請睜眼')+html};
 }
+window.jgRoomMechWolfLearnFromGrid=function(night){
+  const hidden=document.getElementById('jg-room-mechwolf-learn-pick');
+  const seatNum=hidden&&hidden.value?parseInt(hidden.value):null;
+  if(!seatNum){ alert('請先點選一個號碼'); return; }
+  const p=jgRoomLatestPlayers.find(pp=>pp.seatNum===seatNum);
+  if(!p) return;
+  if(p.uid===window.jgFirebaseUid){ alert('不能學習自己的身分，請選別人'); return; }
+  window.jgRoomMechWolfLearn(p.uid, seatNum, night);
+};
 window.jgRoomMechWolfLearn=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要學習 '+targetSeatNum+'號 的身分嗎？')) return;
   const db=window.jgFirebaseDb;
   const secretSnap=await getDoc(doc(db,'rooms',jgRoomCode,'secrets',targetUid));
   let role=secretSnap.exists()?secretSnap.data().role:'villager';
@@ -2663,7 +2695,7 @@ window.jgRoomMechWolfLearn=async function(targetUid, targetSeatNum, night){
   // 這種情況就會沒有任何人看得到「wolf」這一步的畫面，整場卡住、誰都按不了下一步。
   const eligible=await jgRoomMechWolfKillEligible();
   if(!eligible) await jgRoomAdvanceToWolfOrBeyond('mechwolf', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomMechWolfSkillSkip=async function(night){
   const db=window.jgFirebaseDb;
@@ -2677,10 +2709,9 @@ window.jgRoomMechWolfSkillSkip=async function(night){
   if(skipAbbr&&night>1) await jgRoomAppendNightLog(night, skipAbbr+' x');
   const eligible=await jgRoomMechWolfKillEligible();
   if(!eligible) await jgRoomAdvanceToWolfOrBeyond('mechwolf', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomMechWolfPoison=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要對 '+targetSeatNum+'號 使用毒藥嗎？（整局限一次，不可被守衛/解藥阻擋）')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
@@ -2691,10 +2722,9 @@ window.jgRoomMechWolfPoison=async function(targetUid, targetSeatNum, night){
   await jgRoomAppendNightLog(night, '機毒 '+targetSeatNum);
   const eligible=await jgRoomMechWolfKillEligible();
   if(!eligible) await jgRoomAdvanceToWolfOrBeyond('mechwolf', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomMechWolfBonusKill=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要對 '+targetSeatNum+'號 發動額外一刀嗎？（整局限一次，不可被守衛/解藥阻擋）')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
@@ -2705,10 +2735,9 @@ window.jgRoomMechWolfBonusKill=async function(targetUid, targetSeatNum, night){
   await jgRoomAppendNightLog(night, '機刀 '+targetSeatNum);
   const eligible=await jgRoomMechWolfKillEligible();
   if(!eligible) await jgRoomAdvanceToWolfOrBeyond('mechwolf', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomMechWolfGuard=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要額外守護 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
@@ -2719,7 +2748,7 @@ window.jgRoomMechWolfGuard=async function(targetUid, targetSeatNum, night){
   await jgRoomAppendNightLog(night, '機守 '+targetSeatNum);
   const eligible=await jgRoomMechWolfKillEligible();
   if(!eligible) await jgRoomAdvanceToWolfOrBeyond('mechwolf', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomMechWolfMediumCheck=async function(targetUid, targetSeatNum, night){
   const db=window.jgFirebaseDb;
@@ -2736,12 +2765,11 @@ window.jgRoomMechWolfMediumCheck=async function(targetUid, targetSeatNum, night)
   await jgRoomAppendNightLog(night, '機驗 '+targetSeatNum+'('+roleAbbr+')');
   const eligible=await jgRoomMechWolfKillEligible();
   if(!eligible) await jgRoomAdvanceToWolfOrBeyond('mechwolf', night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 // 機械狼接管出刀：跟一般狼隊出刀共用同一組欄位（wolfKillTargetUid 等），不用另外走一次
 // 團隊確認流程（機械狼是唯一決定的人，不用等其他人），直接呼叫 jgRoomAfterKillDecided()。
 window.jgRoomMechWolfKill=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要殺 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
@@ -2749,7 +2777,7 @@ window.jgRoomMechWolfKill=async function(targetUid, targetSeatNum, night){
     wolfKillNight:night, wolfKillTargetUid:effective, wolfKillTargetSeatNum:targetSeatNum
   },{ merge:true });
   await jgRoomAfterKillDecided(night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ═══════════════════════════════════════════
@@ -2794,24 +2822,23 @@ window.jgRoomCupidPickFirst=async function(targetUid, targetSeatNum, night){
   await setDoc(doc(db,'rooms',jgRoomCode),{
     cupidPendingUid:targetUid, cupidPendingSeatNum:targetSeatNum
   },{ merge:true });
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomCupidModify=async function(){
   const db=window.jgFirebaseDb;
   await setDoc(doc(db,'rooms',jgRoomCode),{ cupidPendingUid:null, cupidPendingSeatNum:null },{ merge:true });
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomCupidConfirmPair=async function(targetUid, targetSeatNum, night){
   const rd=jgRoomLatestRoomDoc||{};
   const aUid=rd.cupidPendingUid, aSeat=rd.cupidPendingSeatNum;
-  if(!confirm('確定要指定 '+aSeat+'號 與 '+targetSeatNum+'號 成為情侶嗎？（配對後無法更改）')) return;
   const db=window.jgFirebaseDb;
   await setDoc(doc(db,'rooms',jgRoomCode),{
     cupidLoverAUid:aUid, cupidLoverASeatNum:aSeat, cupidLoverBUid:targetUid, cupidLoverBSeatNum:targetSeatNum,
     cupidPendingUid:null, cupidPendingSeatNum:null, cupidDoneNight:1, cupidRevealAckUids:[]
   },{ merge:true });
   await jgRoomAppendNightLog(1, '邱 '+aSeat+'-'+targetSeatNum);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 // 兩位情侶各自看到的「互相確認」卡片：只要我是配對到的其中一位、而且還沒按過確認，就會
 // 看到這張卡片蓋住原本的夜晚畫面；雙方都按過確認之後，才真的往下一步走（用陣列＋
@@ -2840,7 +2867,7 @@ window.jgRoomCupidRevealAck=async function(night){
     await setDoc(doc(db,'rooms',jgRoomCode),{ cupidRevealDone:true },{ merge:true });
     await jgRoomAdvanceToWolfOrBeyond('cupid', night);
   }
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ═══════════════════════════════════════════
@@ -2922,10 +2949,9 @@ window.jgRoomWolfbrotherIdAck=async function(night){
     await setDoc(doc(db,'rooms',jgRoomCode),{ wolfbrotherIdRevealDone:true },{ merge:true });
     await jgRoomAdvanceToWolfOrBeyond('wolfbrother', night);
   }
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomWolfbrotherRevengeKill=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要殺 '+targetSeatNum+'號 復仇嗎？（狼弟這一刀不能不選）')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
@@ -2935,7 +2961,7 @@ window.jgRoomWolfbrotherRevengeKill=async function(targetUid, targetSeatNum, nig
   },{ merge:true });
   await jgRoomAppendNightLog(night, '狼弟復仇刀 '+targetSeatNum);
   await jgRoomAfterKillDecided(night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 // 拿 Firestore db 實例的小工具，避免在同一段程式碼裡重複打 window.jgFirebaseDb。
 function db2(){ return window.jgFirebaseDb; }
@@ -2986,12 +3012,12 @@ window.jgRoomBlackmarketPickTarget=async function(targetUid, targetSeatNum, nigh
   await setDoc(doc(db,'rooms',jgRoomCode),{
     blackmarketPendingUid:targetUid, blackmarketPendingSeatNum:targetSeatNum
   },{ merge:true });
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomBlackmarketModify=async function(){
   const db=window.jgFirebaseDb;
   await setDoc(doc(db,'rooms',jgRoomCode),{ blackmarketPendingUid:null, blackmarketPendingSeatNum:null },{ merge:true });
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomBlackmarketSkip=async function(night){
   const db=window.jgFirebaseDb;
@@ -2999,13 +3025,12 @@ window.jgRoomBlackmarketSkip=async function(night){
   await setDoc(doc(db,'rooms',jgRoomCode),{ blackmarketDoneNight:night },{ merge:true });
   await jgRoomAppendNightLog(night, '易 x');
   await jgRoomAfterBlackmarketStep(night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomBlackmarketTrade=async function(skill, night){
   const rd=jgRoomLatestRoomDoc||{};
   const targetUid=rd.blackmarketPendingUid, targetSeatNum=rd.blackmarketPendingSeatNum;
   const skillLabel=skill==='seer'?'預言家查驗':(skill==='witch'?'女巫毒藥':'獵人獵槍');
-  if(!confirm('確定要跟 '+targetSeatNum+'號 交易「'+skillLabel+'」嗎？（整局限一次，交易失敗你會死亡）')) return;
   const db=window.jgFirebaseDb;
   const secretSnap=await getDoc(doc(db,'rooms',jgRoomCode,'secrets',targetUid));
   const role=secretSnap.exists()?secretSnap.data().role:'villager';
@@ -3027,7 +3052,7 @@ window.jgRoomBlackmarketTrade=async function(skill, night){
   }
   await jgRoomAppendNightLog(night, '易 '+targetSeatNum+(skillAbbr?'('+skillAbbr+')':''));
   await jgRoomAfterBlackmarketStep(night);
-  jgRoomRenderNightShell();
+  await jgRoomRefreshAndRenderCurrent();
 };
 
 // ═══════════════════════════════════════════
@@ -3056,7 +3081,6 @@ async function jgRoomLuckyOneWitchViewHtml(night){
     +'<button style="margin-top:14px;" onclick="jgRoomLuckyOneWitchSkip('+night+')">今晚不用，跳過</button>'};
 }
 window.jgRoomLuckyOneWitchPoison=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要毒 '+targetSeatNum+'號 嗎？（整局限一次）')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
@@ -3089,7 +3113,6 @@ async function jgRoomShootViewHtml(night){
     +'<button style="margin-top:14px;" onclick="jgRoomShootSkip('+night+')">不開槍</button>'};
 }
 window.jgRoomShootAct=async function(targetUid, targetSeatNum, night){
-  if(!confirm('確定要開槍帶走 '+targetSeatNum+'號 嗎？')) return;
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);

@@ -63,11 +63,12 @@ function loadRoomLogicForGodView() {
     + 'module.exports={jgRoomRenderGodView,jgRoomMechWolfViewHtml,jgRoomMechWolfKillEligible,jgRoomMechWolfLearn,'
     + 'jgRoomWolfViewHtml,jgRoomWolfPropose,jgRoomWitchSave,jgRoomWitchPoison,jgRoomWitchSkip,jgRoomSeerCheck,'
     + 'jgRoomMediumCheck,jgRoomResolveNightDeaths,jgRoomCaptureDeathLine,jgRoomHostSpinSpeechOrder,'
+    + 'jgRoomGuardActFromGrid,jgRoomSubmitCheckFromGrid,jgRoomGuardAct,'
     + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
   fs.writeFileSync(tmpPath, wrapped);
-  const fakeRoot = { innerHTML: '' };
+  const fakeRoot = { innerHTML: '', insertAdjacentHTML(pos, html){ this.innerHTML += html; } };
   global.document = {
     getElementById: (id) => (id==='jg-room-content'?fakeRoot:null),
     createElement: () => ({ style:{}, appendChild(){}, remove(){} }), head: { appendChild: () => {} }, body: { appendChild(){} }, querySelectorAll: () => []
@@ -306,6 +307,7 @@ async function runAsync() {
   await runSpeechOrderTest();
   await runDeadWolfNotBlockingTest();
   await runMechWolfThenWolfChainTest();
+  await runGridSubmitFunctionsTest();
 })();
 
 async function runMechWolfNight1Test(){
@@ -770,4 +772,67 @@ async function runMechWolfThenWolfChainTest(){
   const anyFail=results.some(r=>!r.ok);
   if(anyFail){ console.error('機械狼接棒狼人完整鏈路測試有失敗！'); process.exit(1); }
   console.log(`全部 ${results.length} 項機械狼接棒狼人完整鏈路測試通過`);
+}
+
+// 這次把好幾個夜晚選人畫面改成「點圓點號碼→變綠色→按確認才送出」的模式（不再跳
+// confirm() 對話框），驗證這幾個新的「讀格子、換算成uid、送出」函式真的能正確運作，
+// 不是只看語法有沒有通過。
+async function runGridSubmitFunctionsTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOMG1');
+  global.window.alert = global.alert = () => {}; // 避免夜晚流程跑到後面觸發到跟這個測試無關的 alert() 導致整個程序崩潰
+  mod.__setComp({ wolf:1, guard:1, seer:1, villager:3 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'狼', alive:true },
+    { uid:'guardUid', seatNum:2, name:'守衛', alive:true },
+    { uid:'seerUid', seatNum:3, name:'預言家', alive:true },
+    { uid:'v1Uid', seatNum:4, name:'甲', alive:true },
+  ]);
+  global.__mockCollections={
+    'rooms/ROOMG1/secrets':[
+      { id:'wolfUid', data:()=>({role:'wolf'}) },
+      { id:'guardUid', data:()=>({role:'guard'}) },
+      { id:'seerUid', data:()=>({role:'seer'}) },
+      { id:'v1Uid', data:()=>({role:'villager'}) },
+    ],
+  };
+  global.__mockDocs={
+    'rooms/ROOMG1':{ night:1 },
+    // jgRoomSeerCheck／jgRoomMediumCheck 是用單筆 getDoc 查對方的 secrets（不是查整個
+    // 集合），要另外補這份，跟上面 __mockCollections 那份不是同一個資料來源。
+    'rooms/ROOMG1/secrets/wolfUid':{ role:'wolf' },
+  };
+  mod.__setRoomDoc(global.__mockDocs['rooms/ROOMG1']);
+
+  // 模擬守衛在畫面上點了 4 號（用一個假的 hidden input 取代真的 DOM）
+  const fakeHiddenInputs={ 'jg-room-guard-pick': { value: '4' } };
+  const originalGetElementById = global.document.getElementById;
+  global.document.getElementById = (id) => fakeHiddenInputs[id] || originalGetElementById(id);
+
+  global.window.jgFirebaseUid='guardUid';
+  mod.jgRoomGuardActFromGrid(1);
+  await new Promise(r=>setTimeout(r, 50)); // 給非同步的 jgRoomGuardAct 一點時間跑完
+  const guardWrite=global.__mockDocs['rooms/ROOMG1']||{};
+  check('守衛從格子選4號送出：正確記錄守護目標', guardWrite.guardProtectedSeatNum, 4);
+
+  // 預言家點了 1 號（狼），用共用的 jgRoomSubmitCheckFromGrid
+  fakeHiddenInputs['jg-room-seer-pick']={ value: '1' };
+  global.window.jgFirebaseUid='seerUid';
+  mod.jgRoomSubmitCheckFromGrid('seer', 'jg-room-seer-pick', 1);
+  await new Promise(r=>setTimeout(r, 50));
+  const seerCheckDoc=global.__mockDocs['rooms/ROOMG1/seerChecks/seerUid']||{};
+  check('預言家從格子選1號（狼）送出：正確記錄查驗結果是狼', seerCheckDoc.team, 'wolf');
+
+  global.document.getElementById = originalGetElementById;
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('圓點格子送出函式測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項圓點格子送出函式測試通過`);
 }
