@@ -678,7 +678,10 @@ async function jgRoomStartNextNight(){
     phase:'night', night:nextNight, currentStep:firstStep,
     pendingShootUids:[], pendingShootContext:null,
     votingActive:false, dayVotePkRound:false,
-    daySpeechStart:null, daySpeechDir:null
+    // 發言方向（順/逆）整局只會決定一次，之後每天都沿用同一個方向，不能每晚重設——
+    // 只有「今天從幾號開始講」（daySpeechStart）才是每天都要重新決定的，跟本機法官助手
+    // 的 jgSpeakDirection（整局唯一）／jgDayMeta[night].start（每天都不同）是同一套規則。
+    daySpeechStart:null
   },{ merge:true });
 }
 // 這一晚查驗階段該輪到誰——板子裡有預言家就輪預言家，沒有的話看有沒有幸運兒目前正好
@@ -736,19 +739,33 @@ async function jgRoomCaptureDeathLine(night){
   const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
   const fresh=roomSnap.data()||{};
   const seatOfUid=(uid)=>{ const p=jgRoomLatestPlayers.find(pp=>pp.uid===uid); return p?p.seatNum:null; };
-  const isDeadSeat=(seat)=>{ const p=jgRoomLatestPlayers.find(pp=>pp.seatNum===seat); return !!(p&&p.alive===false); };
+  const uidOfSeat=(seat)=>{ const p=jgRoomLatestPlayers.find(pp=>pp.seatNum===seat); return p?p.uid:null; };
+  // 死訊是整晚最後一步才結算，前面女巫／機械狼等好幾個步驟剛寫完 alive:false，即時監聽器
+  // （onSnapshot）不一定來得及在這裡執行之前就把畫面快取（jgRoomLatestPlayers）更新好——
+  // 改成用資料庫最新狀態判斷「這個人是不是真的死了」，避免用還沒同步到的舊快取誤判成
+  // 平安夜（這個問題是這次補測試才抓到的：測試環境模擬「剛下毒」跟「結算死訊」這兩步
+  // 之間完全沒有時間讓監聽器同步，結果死訊真的被誤報成平安夜）。座位↔uid 的對應關係本身
+  // 是穩定不變的（一旦加入房間就不會再變），可以放心用快取查，只有「死活狀態」這種真的
+  // 會變動的欄位才需要重新讀資料庫。
+  const isDeadUid=async(uid)=>{
+    if(!uid) return false;
+    const pSnap=await getDoc(doc(db,'rooms',jgRoomCode,'players',uid));
+    return pSnap.exists()&&pSnap.data().alive===false;
+  };
   const seen=new Set(); const parts=[];
-  const add=(seat, note)=>{
-    if(!seat||seen.has(seat)||!isDeadSeat(seat)) return;
+  const add=async(uid, seat, note)=>{
+    if(!uid||!seat||seen.has(seat)) return;
+    if(!(await isDeadUid(uid))) return;
     seen.add(seat); parts.push(seat+'號死亡'+(note||''));
   };
-  if(fresh.wolfKillNight===night) add(fresh.wolfKillTargetSeatNum, '');
-  add(seatOfUid(fresh.witchPoisonUid), '');
-  if(fresh.mechWolfBonusKillNight===night) add(seatOfUid(fresh.mechWolfBonusKillUid), '');
-  if(fresh.mechWolfPoisonNight===night) add(seatOfUid(fresh.mechWolfPoisonUid), '');
-  if(fresh.blackmarketFailNight===night) add(seatOfUid(fresh.blackmarketFailUid), '（黑市商人交易失敗）');
-  if(fresh.dreamcatcherTargetNight===night) add(fresh.dreamcatcherTargetSeatNum, '（連續兩晚被夢，致死）');
-  [fresh.cupidLoverASeatNum, fresh.cupidLoverBSeatNum].forEach(seat=>{ if(seat) add(seat, '（情侶殉情）'); });
+  if(fresh.wolfKillNight===night) await add(fresh.wolfKillTargetUid, fresh.wolfKillTargetSeatNum, '');
+  await add(fresh.witchPoisonUid, seatOfUid(fresh.witchPoisonUid), '');
+  if(fresh.mechWolfBonusKillNight===night) await add(fresh.mechWolfBonusKillUid, seatOfUid(fresh.mechWolfBonusKillUid), '');
+  if(fresh.mechWolfPoisonNight===night) await add(fresh.mechWolfPoisonUid, seatOfUid(fresh.mechWolfPoisonUid), '');
+  if(fresh.blackmarketFailNight===night) await add(fresh.blackmarketFailUid, seatOfUid(fresh.blackmarketFailUid), '（黑市商人交易失敗）');
+  if(fresh.dreamcatcherTargetNight===night) await add(uidOfSeat(fresh.dreamcatcherTargetSeatNum), fresh.dreamcatcherTargetSeatNum, '（連續兩晚被夢，致死）');
+  await add(uidOfSeat(fresh.cupidLoverASeatNum), fresh.cupidLoverASeatNum, '（情侶殉情）');
+  await add(uidOfSeat(fresh.cupidLoverBSeatNum), fresh.cupidLoverBSeatNum, '（情侶殉情）');
   let line=parts.length?parts.join('、'):'平安夜';
   // 夜槍（獵人/黑狼王/幸運兒被狼刀淘汰後開的槍）的結果，在槍決定完的當下就先存進
   // shotNotes（見 jgRoomAppendShotNoteToDayLog 的說明），這裡讀出來接在死訊句子後面。
@@ -1084,25 +1101,39 @@ async function jgRoomWitchViewHtml(night){
   const wolfTargetUid=rd.wolfKillTargetUid;
   const wolfTargetSeatNum=rd.wolfKillTargetSeatNum;
   const canSaveThis=wolfTargetUid&&!saveUsed&&wolfTargetUid!==window.jgFirebaseUid;
-  let html=jgRoomTimerHtml(20,'你要使用解藥或毒藥嗎？')
-    +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🧪</div><h1>狼隊今晚殺了 '+(wolfTargetSeatNum||'（無人）')+'號</h1></div>';
-  if(canSaveThis){
-    html+='<button class="primary" style="margin-top:10px;width:auto;display:inline-block;padding:10px 16px;" onclick="jgRoomWitchSave('+wolfTargetSeatNum+','+night+')">💊 使用解藥救 '+wolfTargetSeatNum+'號</button>';
-  } else if(wolfTargetUid&&saveUsed){
-    html+='<div class="info" style="font-size:12px;margin-top:10px;">解藥已經用過了</div>';
-  } else if(wolfTargetUid&&wolfTargetUid===window.jgFirebaseUid){
-    html+='<div class="info" style="font-size:12px;margin-top:10px;">被殺的是你自己，不能自救</div>';
+  const targetP=wolfTargetUid?jgRoomLatestPlayers.find(p=>p.uid===wolfTargetUid):null;
+  // 畫面樣式比照本機法官助手的女巫睜眼畫面：有人被殺時用醒目的紅色提示框顯示座位＋姓名，
+  // 平安夜則只用一行淡淡的文字帶過（見 .killed-box／.killed-label／.killed-num／
+  // .killed-name 這幾個既有的 CSS class，本機那邊本來就在用，這裡直接沿用同一套視覺）。
+  let html=jgRoomTimerHtml(20,'你要使用解藥或毒藥嗎？');
+  if(wolfTargetSeatNum){
+    html+='<div class="killed-box"><div class="killed-label">今晚被狼人殺死</div>'
+      +'<div class="killed-num">'+wolfTargetSeatNum+'號</div>'
+      +(targetP&&targetP.name?'<div class="killed-name">'+targetP.name+'</div>':'')+'</div>'
+      +'<div class="speech" style="text-align:center;">「<em>今晚他被殺了，你要使用解藥嗎？</em>」</div>';
+  } else {
+    html+='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🧪</div><h1>女巫請睜眼</h1></div>'
+      +'<div class="speech" style="text-align:center;">「<em>今晚他被殺了，你要使用解藥嗎？</em>」</div>'
+      +'<div class="info" style="font-size:12px;text-align:center;margin-top:4px;color:var(--text2);">（今晚無人死亡）</div>';
   }
+  if(canSaveThis){
+    html+='<div style="text-align:center;margin-top:10px;"><button class="primary" style="width:auto;display:inline-block;padding:10px 16px;" onclick="jgRoomWitchSave('+wolfTargetSeatNum+','+night+')">💊 使用解藥救 '+wolfTargetSeatNum+'號</button></div>';
+  } else if(wolfTargetUid&&saveUsed){
+    html+='<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">（法官搖頭）解藥用完</div>';
+  } else if(wolfTargetUid&&wolfTargetUid===window.jgFirebaseUid){
+    html+='<div class="info-warn" style="text-align:center;margin-top:10px;">被殺的是你自己，不能自救（搖頭）</div>';
+  }
+  html+='<div class="speech" style="text-align:center;margin-top:14px;">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」</div>';
   if(!poisonUsed){
     const others=jgRoomLatestPlayers.filter(p=>p.uid!==window.jgFirebaseUid);
     const buttons=others.map(p=>
       '<button onclick="jgRoomWitchPoison(\''+p.uid+'\','+p.seatNum+','+night+')" style="margin:4px;width:auto;display:inline-block;padding:8px 14px;">'+p.seatNum+'號 '+p.name+'</button>'
     ).join('');
-    html+='<div class="section-title" style="margin-top:16px;">☠️ 使用毒藥</div><div style="text-align:center;">'+buttons+'</div>';
+    html+='<div style="text-align:center;margin-top:6px;">'+buttons+'</div>';
   } else {
-    html+='<div class="info" style="font-size:12px;margin-top:10px;">毒藥已經用過了</div>';
+    html+='<div class="info" style="font-size:12px;text-align:center;margin-top:6px;">（法官搖頭）毒藥用完</div>';
   }
-  html+='<button style="margin-top:14px;" onclick="jgRoomWitchSkip('+night+')">都不用，跳過</button>';
+  html+='<div style="text-align:center;"><button style="margin-top:14px;" onclick="jgRoomWitchSkip('+night+')">都不用，跳過</button></div>';
   return {needsTimer:true, html:html};
 }
 window.jgRoomWitchSave=async function(targetSeatNum, night){
@@ -1255,6 +1286,13 @@ window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
     wolfKillNight:night, wolfKillTargetUid:effective, wolfKillTargetSeatNum:targetSeatNum,
     wolfKillProposedBy:window.jgFirebaseUid, wolfKillConfirmedBy:[window.jgFirebaseUid]
   },{ merge:true });
+  // 提議完馬上重新渲染自己的畫面一次——「全員到齊了嗎」的自動判斷是寫在
+  // jgRoomWolfViewHtml 這個渲染函式裡面的，只有真的被呼叫到才會檢查。原本這裡沒有呼叫，
+  // 靠即時監聽器（onSnapshot）收到自己剛寫入的資料後自然觸發下一次渲染——多人狼隊沒什麼
+  // 感覺（反正還要等其他隊友確認），但「狼隊只有自己一個人」這種情況，會變成明明已經
+  // 「全員（1人）到齊」了，畫面卻要等監聽器來回一趟才會反應過來，感覺像卡住、按了沒反應。
+  // 補上跟守衛／預言家／女巫等其他行動函式一致的立即重新渲染，不用等監聽器。
+  jgRoomRenderNightShell();
 };
 window.jgRoomWolfModify=async function(){
   if(!confirm('確定要修改嗎？會清空所有人的確認。')) return;
@@ -1263,6 +1301,7 @@ window.jgRoomWolfModify=async function(){
     wolfKillNight:null, wolfKillTargetUid:null, wolfKillTargetSeatNum:null,
     wolfKillProposedBy:null, wolfKillConfirmedBy:[]
   },{ merge:true });
+  jgRoomRenderNightShell();
 };
 // 狼刀目標（不管是狼隊全員確認出的、還是夢魘恐懼導致的平安夜、還是機械狼獨自接管出刀、
 // 還是狼弟覺醒復仇刀）決定之後的共用去向：板子有黑市商人、且還沒交易過，就先進黑市商人
@@ -1326,6 +1365,7 @@ window.jgRoomWolfConfirm=async function(){
     jgRoomWolfFinalizing=true;
     try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
   }
+  jgRoomRenderNightShell();
 };
 
 // ── 監聽「我自己」的身分（其他人的 secrets 文件，Firestore 安全規則會擋下，讀不到）──
@@ -1761,9 +1801,18 @@ async function jgRoomRenderDayOpen(){
     // 「其實沒死的人」死亡。
     const dayLogSnap=await getDoc(doc(db,'rooms',jgRoomCode,'dayLog',String(night)));
     const nightMsg=dayLogSnap.exists()?('昨晚 '+dayLogSnap.data().deathLine):'（死訊結算中...）';
+    // 發言順序：daySpeechStart 每天都要重新決定（有人死亡就固定從死者下一位活人開始，
+    // 平安夜才隨機抽起點；方向一旦決定過，整局都不會再變，見 jgRoomHostSpinSpeechOrder
+    // 的說明）——這裡只有第一天、剛好有選出警長時才會直接有值（警長競選那邊會問要往
+    // 左還右發言，見 jgRoomSheriffPickDirection），其餘情況都要靠房主按「抽籤」才會有值。
+    const speechHtml=rd.daySpeechStart
+      ?'<p class="sub" style="text-align:center;margin-top:8px;">從 '+rd.daySpeechStart+'號 開始，'+dirLabel+'發言</p>'
+      :(jgRoomIsHost
+        ?'<div style="text-align:center;margin-top:10px;"><button onclick="jgRoomHostSpinSpeechOrder()" style="width:auto;display:inline-block;padding:10px 18px;">🎲 抽籤決定發言順序</button></div>'
+        :'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請等待房主抽籤決定發言順序</div>');
     bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">☀️</div><h1>白天開始</h1>'
       +'<p class="sub" style="text-align:center;margin-top:8px;">'+nightMsg+'</p></div>'
-      +(rd.daySpeechStart?'<p class="sub" style="text-align:center;margin-top:8px;">從 '+rd.daySpeechStart+'號 開始，'+dirLabel+'發言</p>':'')
+      +speechHtml
       +'<div class="info" style="font-size:12px;margin-top:10px;text-align:center;">請依序發言，討論誰是狼人</div>'
       +(jgRoomIsHost?'<button class="primary" style="margin-top:16px;" onclick="jgRoomHostStartDayVote()">大家都發言完了，開始投票放逐 →</button>':'')
       +jgRoomLiveVoteTallyHtml();
@@ -1795,6 +1844,42 @@ window.jgRoomSheriffPickDirection=async function(startSeatNum, dir){
   await setDoc(doc(db,'rooms',jgRoomCode),{
     sheriffPhase:null, daySpeechStart:startSeatNum, daySpeechDir:dir
   },{ merge:true });
+};
+// 房主抽籤決定「今天從幾號開始發言」——跟本機法官助手 jgSpinWheel／jgSpinDirectionOnly
+// 同一套規則：方向（順/逆）整局只會決定一次，決定過就不會再變，之後每天只重新抽起點；
+// 如果昨晚有人死亡，起點不是隨機的，是固定從「死者的下一個活人」（照已經定好的方向）
+// 開始——沒有死人的平安夜才會連起點一起隨機抽。這裡不做本機那種逐格跳動的抽籤動畫
+// （連線房間是好幾支手機同步看同一個結果，不是單一台裝置在演戲給大家看），房主按一下
+// 直接寫入最終結果，全部人的畫面會透過即時監聽器一起看到。
+window.jgRoomHostSpinSpeechOrder=async function(){
+  const db=window.jgFirebaseDb;
+  const rd=jgRoomLatestRoomDoc||{};
+  const night=rd.night||1;
+  const alive=jgRoomLatestPlayers.filter(p=>p.alive!==false);
+  if(!alive.length) return;
+  const dayLogSnap=await getDoc(doc(db,'rooms',jgRoomCode,'dayLog',String(night)));
+  const deathLine=(dayLogSnap.exists()&&dayLogSnap.data().deathLine)||'';
+  const deadNums=[...deathLine.matchAll(/(\d+)號死亡/g)].map(m=>parseInt(m[1]));
+  const total=jgRoomTotal||alive.length;
+  const aliveSet=new Set(alive.map(p=>p.seatNum));
+  let dir=rd.daySpeechDir;
+  if(!dir) dir=Math.random()<0.5?'順':'逆';
+  let start=null;
+  if(deadNums.length){
+    // 死者的下一個活人：照方向逐格找，找到活著的座位就是起點（跟死者本人同號碼跳過，
+    // 死人不能發言）。
+    let n=dir==='逆'?Math.min(...deadNums):Math.max(...deadNums);
+    for(let i=0;i<total;i++){
+      n=dir==='逆'?(n-1<1?total:n-1):(n+1>total?1:n+1);
+      if(aliveSet.has(n)){ start=n; break; }
+    }
+  }
+  if(start===null){
+    // 平安夜（或找不到有效起點時的保底）：直接從活人裡隨機抽一個當起點。
+    const pool=alive.map(p=>p.seatNum);
+    start=pool[Math.floor(Math.random()*pool.length)];
+  }
+  await setDoc(doc(db,'rooms',jgRoomCode),{ daySpeechStart:start, daySpeechDir:dir },{ merge:true });
 };
 // 房主開始放逐投票：候選人＝目前還活著的所有玩家，沒有人被排除在投票資格之外（跟警長
 // 競選不同，放逐投票不用先「報名」，活著的人都能投也都能被投）。
@@ -2437,7 +2522,14 @@ window.jgRoomMechWolfLearn=async function(targetUid, targetSeatNum, night){
     mechWolfLearnedRole:role, mechWolfLearnedFromSeatNum:targetSeatNum
   },{ merge:true });
   await jgRoomAppendNightLog(night, '機學 '+targetSeatNum);
-  await jgRoomAdvanceToWolfOrBeyond('mechwolf', night);
+  // 學完身分之後，如果剛好板子上（或其餘狼隊友都死光了）沒有其他真正的狼隊出刀，機械狼
+  // 這時就要自己接管出刀——這種情況一定要「留在」mechwolf 這一步，讓同一個畫面接著顯示
+  // 出刀選人（見 jgRoomMechWolfViewHtml 最後那段 eligible 判斷），不能直接跳去 'wolf' 那
+  // 一步：'wolf' 步驟的畫面 dispatch 是特別排除機械狼的（機械狼平常不跟狼隊一起睜眼），
+  // 如果這裡不管有沒有資格接管、無條件跳去 'wolf'，遇到「板子上只有機械狼、沒有其他狼人」
+  // 這種情況就會沒有任何人看得到「wolf」這一步的畫面，整場卡住、誰都按不了下一步。
+  const eligible=await jgRoomMechWolfKillEligible();
+  if(!eligible) await jgRoomAdvanceToWolfOrBeyond('mechwolf', night);
   jgRoomRenderNightShell();
 };
 window.jgRoomMechWolfSkillSkip=async function(night){
@@ -3018,9 +3110,11 @@ window.jgRoomRenderEntry=async function(){
     </div>
   `;
   // 如果是從邀請連結點進來的（網址帶 ?room=房號），直接把房號填好，玩家只要打名字就好，
-  // 不用自己找房號跟房主要。
+  // 不用自己找房號跟房主要。優先看 window.__jgRoomInviteCode（見下面
+  // jgRoomAutoOpenFromInviteLink 的說明——這個函式是 async 的，執行到這裡之前，網址列的
+  // ?room= 可能已經被清掉了，所以不能只看網址，要有這個備援）。
   try{
-    const urlRoom=new URLSearchParams(window.location.search).get('room');
+    const urlRoom=(new URLSearchParams(window.location.search).get('room'))||window.__jgRoomInviteCode;
     if(urlRoom){
       const codeInput=document.getElementById('jg-room-code-join');
       if(codeInput) codeInput.value=urlRoom;
@@ -3035,11 +3129,16 @@ window.jgRoomRenderEntry=async function(){
   try{
     const urlRoom=new URLSearchParams(window.location.search).get('room');
     if(urlRoom&&typeof window.switchTab==='function'){
+      // jgRoomRenderEntry() 是 async 的，中間會先 await 一次「有沒有上次留著沒退出的
+      // 房間」（jgRoomTryAutoReconnect），這個 await 完成之前，下面幾行會先同步執行完，
+      // 把網址列的房號清掉——如果只靠 jgRoomRenderEntry 自己重新讀網址，讀到的時候可能
+      // 已經被清空了，房號欄位就會是空的（使用者還是得自己打房號）。這裡先把房號存進一個
+      // window 變數當備援，不管非同步渲染跑到哪個時間點，jgRoomRenderEntry 都讀得到。
+      window.__jgRoomInviteCode=urlRoom;
       window.switchTab('t-room');
-      // 切完分頁、jgRoomRenderEntry() 也已經讀過網址上的房號、填進輸入框之後，把網址列的
-      // ?room=房號 清掉（用 replaceState，不會真的重新整理頁面）——不然瀏覽器重新整理
-      // 網址列還是帶著同一個房號，每次重新整理都會被這段程式碼再抓回連線房間分頁，
-      // 想單純重新整理回法官助手分頁會一直被拉回去，出不去。
+      // 切完分頁之後把網址列的 ?room=房號 清掉（用 replaceState，不會真的重新整理頁面）
+      // ——不然瀏覽器重新整理網址列還是帶著同一個房號，每次重新整理都會被這段程式碼再抓
+      // 回連線房間分頁，想單純重新整理回法官助手分頁會一直被拉回去，出不去。
       const cleanUrl=window.location.pathname+window.location.hash;
       window.history.replaceState({}, '', cleanUrl);
     }
