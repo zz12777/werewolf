@@ -423,7 +423,7 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   // 身分」，只要板子上有大/小機械狼，預言家就不會出現（避免跟通靈師的查驗定位重疊）。
   const seerCnt=pickState.seer||0, mediumCnt=pickState.medium||0, pwCnt=pickState.purewhitemaiden||0;
   const hasMechWolf2=(pickState.bigmechwolf||0)>0||(pickState.smallmechwolf||0)>0;
-  html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職（點選加入，再點移除）</div>';
+  html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職</div>';
   html+='<div class="rpick-grid">';
   gods.forEach(id=>{
     if(id==='seer'&&(mediumCnt>0||pwCnt>0||hasMechWolf2)) return;
