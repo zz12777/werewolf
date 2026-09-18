@@ -24,6 +24,7 @@ function awIsWolfCore(role){ return awRoleParts(role).some(r=>AW_WOLF_CORE.has(r
 function awIsWitchStd(role){ return /巫/.test(role) && !/^機械/.test(role); }
 function awIsGuardStd(role){ return /守/.test(role) && !/墓/.test(role) && !/^機械/.test(role); }
 function awIsSeerOrMedium(role){ return role==='預'||role==='預言家'||role==='通'||role==='通靈師'; } // 守墓人、石像鬼、機械通不算
+function awIsDemonhunter(role){ return role==='獵魔人'; } // 跟獵人(hunter)是完全不同的角色，只比對完整名稱，不用「獵」這種容易跟獵人搞混的縮寫
 function awIsX(v){ return /^x$/i.test(String(v==null?'':v).trim()); }
 // 查狼專家專用判定：機械狼算不算「查到狼」不能沿用 awIsWolfBroad（那是看牌面最終角色，不代表
 // 「查驗當下實際顯示的結果」）。預言家對機械狼永遠是二元好壞判斷、一律驗出「狼」；但通靈師驗到
@@ -56,6 +57,7 @@ function awParseNight(block){
     if((m=line.match(/^刀\s*(\d+|[xX])(?:→(\d+))?/))){ const t=m[2]||m[1]; if(info.kill===null) info.kill=t; else info.kill2=t; continue; }
     if((m=line.match(/^救\s*(\d+|[xX])(?:→(\d+))?/))){ info.witchSave=m[2]||m[1]; continue; }
     if((m=line.match(/^毒\s*(\d+|[xX])(?:→(\d+))?/))){ info.witchPoison=m[2]||m[1]; continue; }
+    if((m=line.match(/^狩\s*(\d+|[xX])/))){ info.checks.push({type:'狩',target:m[1]}); continue; }
   }
   return info;
 }
@@ -85,7 +87,7 @@ function awTopTiers(dict, maxTiers){
 }
 
 function computeAwards(){
-  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={}, thirdPartyWins={}, hanTiaoStar={}, mvpStar={};
+  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={}, thirdPartyWins={}, hanTiaoStar={}, mvpStar={}, demonhunterHits={};
 
   // 🏆 MVP之星：直接解析文字紀錄的【MVP: X號姓名】那一行（跟積分計算共用同一個
   // pdGameMvpNum 解析函式，避免兩邊各寫一份 regex、之後改格式要改兩個地方）。
@@ -143,6 +145,7 @@ function computeAwards(){
     const witchStd=players.find(p=>awIsWitchStd(p.role));
     const guardStd=players.find(p=>awIsGuardStd(p.role));
     const seerP=players.find(p=>awIsSeerOrMedium(p.role));
+    const demonhunterP=players.find(p=>awIsDemonhunter(p.role));
 
     const n1=awParseNight(nights[0]);
 
@@ -198,6 +201,17 @@ function computeAwards(){
           if(t && awIsWolfForSeerCheck(t.role)) awAddCredit(seerHits, seerP.name, g.id);
         });
       }
+      // 🗡️ 超會獵魔人：獵魔人「狩」的對象，該局屬於狼隊（含機械狼）即算命中1次。狩獵這個
+      // 動作的紀錄格式（--狩 N）本身沒有像驗/通驗那樣附註查驗結果，只有純號碼，所以只能
+      // 回頭查玩家最終角色，用跟查狼專家同一套「是不是狼隊」判斷（awIsWolfForSeerCheck）。
+      if(demonhunterP){
+        info.checks.forEach(c=>{
+          if(c.type!=='狩') return;
+          if(awIsX(c.target)) return;
+          const t=players.find(p=>String(p.num)===String(c.target));
+          if(t && awIsWolfForSeerCheck(t.role)) awAddCredit(demonhunterHits, demonhunterP.name, g.id);
+        });
+      }
     });
   });
 
@@ -206,6 +220,8 @@ function computeAwards(){
       note:'【女巫毒對狼】:女巫毒藥使用對象，該局屬於狼隊（含機械狼）即算命中1次。'},
     {icon:'🔮',title:'查狼專家',top:awTopTiers(seerHits),
       note:'【預言家查到狼】:僅計「預言家／通靈師」的查驗結果，查到邪惡陣營即算命中；機械狼僅限最終顯示為「機械狼／機械黑狼王／機械狼人」時才算（學到女巫/守衛/獵人等好人技能後查到不算）。雙身分板若牌面顯示為好人則不算。'},
+    {icon:'🗡️',title:'超會獵魔人',top:awTopTiers(demonhunterHits),
+      note:'【獵魔人獵對狼】:獵魔人把狼獵出去。逐一比對有獵魔人的板子，狩的對象＝該場狼隊號碼，算一次。'},
     {icon:'🔪',title:'自刀專家',top:awTopTiers(selfKillDict),
       note:'【自刀騙解藥成功】:女巫救的對象是狼隊見面狼隊友，代表成功騙解藥，該局所有見面狼隊友（機械狼、石像鬼等不見面角色不算）都算1次。'},
     {icon:'🛡️',title:'鋼鐵守衛',top:awTopTiers(guardHits),

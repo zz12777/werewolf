@@ -32,7 +32,7 @@ body{overflow-x:hidden;}
 .nav-btns{display:flex;margin-left:auto;gap:6px;}
 .nav-btn{padding:14px 12px 12px;font-size:14px;color:var(--text3);background:none;border:none;cursor:pointer;text-align:center;transition:color 0.15s;-webkit-user-select:none;white-space:nowrap;}
 .nav-btn.active{color:var(--text);font-weight:700;}
-.nav-hamburger{display:none;align-items:center;gap:6px;background:none;border:none;font-size:15px;font-weight:600;line-height:1;color:var(--text);cursor:pointer;padding:8px 4px;margin-left:auto;flex-shrink:0;-webkit-user-select:none;}
+.nav-hamburger{display:none;align-items:center;justify-content:center;gap:6px;width:auto;margin:0;background:none;border:none;font-size:15px;font-weight:600;line-height:1;color:var(--text);cursor:pointer;padding:8px 4px;margin-left:auto;flex-shrink:0;-webkit-user-select:none;}
 .nav-hamburger .hb-icon{font-size:20px;}
 /* 手機版（螢幕較窄）：橫排五個分頁容易被 logo 擠到超出畫面、要左右滑動才看得到最後一個，
    乾脆改成「三條線」漢堡選單——平常收起來，點了才往下展開一個直排選單（每個分頁字比較

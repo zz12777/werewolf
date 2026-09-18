@@ -276,7 +276,7 @@ function pdApplyFormulaVisibility(){
   const toggle=document.getElementById('pd-formula-toggle');
   if(!box||!toggle) return;
   box.style.display = PD_FORMULA_OPEN ? 'block' : 'none';
-  toggle.textContent = PD_FORMULA_OPEN ? '🧮 收起公式 ▴' : '🧮 點擊了解公式 ▾';
+  toggle.textContent = PD_FORMULA_OPEN ? '收起公式 ▴' : '點擊了解公式 ▾';
 }
 
 // 手動重新整理雲端場次（點排行榜標題旁的 🔄）

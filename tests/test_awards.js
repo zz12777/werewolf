@@ -136,6 +136,24 @@ function run(){
       (selfKillAward.top[0]||{}).count, 1);
   }
 
+  // ── 超會獵魔人：獵魔人狩獵的對象是狼隊，算一次；狩到好人不算 ──
+  const gameDemonhunter = {
+    id: 'g5',
+    players: [
+      { num:1, name:'獵魔人甲', role:'獵魔人' },
+      { num:2, name:'狼人乙', role:'狼人' },
+      { num:3, name:'平民丙', role:'平民' },
+    ],
+    log: '**夜晚1st\n--狩 2\n**白天1st\n>平安夜\n**夜晚2nd\n--狩 3\n**白天2nd\n>平安夜',
+  };
+  {
+    const computeAwards = loadAwards([gameDemonhunter]);
+    const awards = computeAwards();
+    const dhAward = awards.find(a=>a.title==='超會獵魔人');
+    check('超會獵魔人：狩到狼人算1次（狩到平民那次不算）', (dhAward.top[0]||{}).count, 1);
+    check('超會獵魔人：正確算到獵魔人甲', (dhAward.top[0]||{}).name, '獵魔人甲');
+  }
+
   console.log(JSON.stringify(results, null, 2));
   const anyFail = results.some(r=>!r.ok);
   if(anyFail){ console.error('特別獎項測試有失敗！'); process.exit(1); }
