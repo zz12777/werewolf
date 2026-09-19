@@ -60,11 +60,12 @@ function loadRoomLogicForGodView() {
     + 'function __setRoomDoc(d){ jgRoomLatestRoomDoc=d; }\n'
     + 'function __setRoomCode(c){ jgRoomCode=c; }\n'
     + 'function __setRoomTotal(t){ jgRoomTotal=t; }\n'
+    + 'function __setMyRole(r){ jgMyRole=r; }\n'
     + 'module.exports={jgRoomRenderGodView,jgRoomMechWolfViewHtml,jgRoomMechWolfKillEligible,jgRoomMechWolfLearn,'
     + 'jgRoomWolfViewHtml,jgRoomWolfPropose,jgRoomWitchSave,jgRoomWitchPoison,jgRoomWitchSkip,jgRoomSeerCheck,'
     + 'jgRoomMediumCheck,jgRoomResolveNightDeaths,jgRoomCaptureDeathLine,jgRoomHostSpinSpeechOrder,'
-    + 'jgRoomGuardActFromGrid,jgRoomSubmitCheckFromGrid,jgRoomGuardAct,'
-    + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal};';
+    + 'jgRoomGuardActFromGrid,jgRoomSubmitCheckFromGrid,jgRoomGuardAct,jgRoomRenderNightShell,'
+    + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal,__setMyRole};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
   fs.writeFileSync(tmpPath, wrapped);
@@ -303,6 +304,7 @@ async function runAsync() {
   await runMechWolfNight1Test();
   await runMechWolfSoloTakeoverTest();
   await runSoloWolfAutoFinalizeTest();
+  await runSoloWolfFullPipelineTest();
   await runNightChainTest();
   await runSpeechOrderTest();
   await runDeadWolfNotBlockingTest();
@@ -530,6 +532,75 @@ async function runSoloWolfAutoFinalizeTest(){
   const anyFail=results.some(r=>!r.ok);
   if(anyFail){ console.error('單一狼人自動全員到齊測試有失敗！'); process.exit(1); }
   console.log(`全部 ${results.length} 項單一狼人自動全員到齊測試通過`);
+}
+
+// 這次抓到的 bug 比上次更深一層：問題不是「畫面顯示過時資料」，是「巢狀重新渲染被上一層
+// 覆蓋掉」——jgRoomWolfViewHtml() 本身是被 jgRoomRenderNightShell() 呼叫、拿它的回傳值去
+// 組 innerHTML 的，如果 jgRoomWolfViewHtml() 在自己裡面又呼叫一次「完整」重新渲染，
+// 等它最終回傳（不管回傳什麼）之後，上一層還是會拿著回傳值「再蓋一次」innerHTML，把剛剛
+// 巢狀渲染出來的正確畫面整個蓋掉。這裡要透過「真的呼叫一次完整的 jgRoomRenderNightShell()」
+// （不是只呼叫 jgRoomWolfViewHtml 本身）才測得到這個問題——上次的測試只單獨呼叫
+// jgRoomWolfViewHtml，沒有透過完整渲染鏈路，所以沒抓到。
+async function runSoloWolfFullPipelineTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOM4');
+  mod.__setComp({ wolf:1, mechanicalwolf:1, medium:1, witch:1 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'狼人', alive:true },
+    { uid:'mwUid', seatNum:2, name:'機械狼', alive:true },
+    { uid:'medUid', seatNum:3, name:'通靈師', alive:true },
+    { uid:'witchUid', seatNum:4, name:'女巫', alive:true },
+  ]);
+  global.window.jgFirebaseUid='wolfUid';
+  global.__mockCollections={
+    'rooms/ROOM4/secrets':[
+      { id:'wolfUid', data:()=>({role:'wolf'}) },
+      { id:'mwUid', data:()=>({role:'mechanicalwolf'}) },
+      { id:'medUid', data:()=>({role:'medium'}) },
+      { id:'witchUid', data:()=>({role:'witch'}) },
+    ],
+  };
+  global.__mockDocs={ 'rooms/ROOM4':{ night:1, currentStep:'wolf' } };
+  mod.__setRoomDoc({ night:1, currentStep:'wolf' });
+
+  // 提議殺 3 號（board 上只有一隻真正的狼，這一步結束後應該自動結算、往下一步走）
+  await mod.jgRoomWolfPropose('medUid', 3, 1);
+
+  // 關鍵測試：透過「完整的」jgRoomRenderNightShell() 重新渲染一次（模擬即時監聽器收到
+  // 通知、觸發一次完整重新渲染的真實情境），檢查畫面最後到底寫了什麼進去——如果巢狀渲染
+  // 被上一層蓋掉，這裡應該會看到空白或殘破的畫面，而不是正確的「已確認，正在往下一步」
+  // 過渡畫面或下一步的內容。
+  await mod.jgRoomRenderNightShell();
+  const rootHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('完整重新渲染一次之後，畫面不應該是空白（巢狀渲染沒有被上一層蓋成空的）',
+    rootHtml.trim().length > 0, true);
+  check('畫面應該顯示「已確認」或已經是下一步的內容，不是還卡在「請選擇今晚要殺的對象」這個選人畫面',
+    !rootHtml.includes('請選擇今晚要殺的對象'), true);
+
+  // 更進一步：驗證「另一邊」——換成女巫的裝置（不同的 jgFirebaseUid／jgMyRole），重新走一次
+  // 完整渲染，這時候女巫應該要能看到自己的救人/下毒操作畫面，不是卡在空白或狼隊的畫面。
+  // 這一步確認的是「輪到女巫之後，女巫自己真的看得到操作畫面」，不是只確認資料庫欄位
+  // 有沒有變成 'witch' 而已。
+  global.window.jgFirebaseUid='witchUid';
+  mod.__setMyRole('witch');
+  const freshRoom=global.__mockDocs['rooms/ROOM4']||{};
+  mod.__setRoomDoc(freshRoom);
+  await mod.jgRoomRenderNightShell();
+  const witchRootHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('女巫換手機重新整理後，應該要看到自己的操作畫面（使用解藥或毒藥）',
+    witchRootHtml.includes('使用解藥')||witchRootHtml.includes('使用毒藥')||witchRootHtml.includes('女巫請睜眼'), true);
+  check('女巫的畫面不應該是空白', witchRootHtml.trim().length>0, true);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('單一狼人完整渲染鏈路測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項單一狼人完整渲染鏈路測試通過`);
 }
 
 // 端對端驗證：女巫救人/下毒是否真的影響死亡結算、通靈師查驗是否真的顯示正確身分、

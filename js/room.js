@@ -1380,15 +1380,23 @@ async function jgRoomWolfViewHtml(night){
     if(confirmedBy.length>=wolfCount&&!jgRoomWolfFinalizing){
       jgRoomWolfFinalizing=true;
       try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
-      // 抓到的真正 bug：jgRoomWolfFinalize() 結算完之後，房間已經被它自己推進到下一步
-      // （例如換女巫），但這個函式原本會「繼續往下執行」，用結算前、還沒更新過的舊
-      // confirmedBy／rd 資料組出「今晚要殺 X號、已確認 1/1人、等待其他隊友」這個畫面
-      // 傳回去——結果就是：資料庫其實已經正確往下走了，畫面卻硬是被這個函式蓋回舊的
-      // 「還在等」畫面，看起來像卡住、其實是這個函式自己「畫錯」了。改成結算完之後
-      // 重新讀一次最新狀態，交給總機（jgRoomRenderCurrentPhase）重新判斷現在真正該顯示
-      // 哪個畫面，不要再用結算前的舊資料硬畫下去。
-      await jgRoomRefreshAndRenderCurrent();
-      return {needsTimer:false, html:''};
+      // 抓到的真正 bug（這次又更深一層）：jgRoomWolfFinalize() 結算完之後，房間已經被它
+      // 自己推進到下一步（例如換女巫）。上一版的修法在這裡直接呼叫
+      // jgRoomRefreshAndRenderCurrent()，以為「重新渲染一次」就好——但這個函式本身正是
+      // 被上一層的 jgRoomRenderNightShell() 呼叫、拿它的回傳值去組 innerHTML 的（見
+      // `const r=await jgRoomWolfViewHtml(night); bodyHtml=r.html;` 那一行）。在這裡巢狀
+      // 呼叫一次「完整」重新渲染，會讓畫面先被正確畫出來一次，但等這個函式最終回傳
+      // （不管回傳什麼）之後，上一層還是會拿著回傳值「再蓋一次」innerHTML，把剛剛巢狀
+      // 渲染出來的正確畫面整個蓋掉、變成空白或殘破——這正是「點了確認，畫面完全沒反應」
+      // 的真正原因：不是沒反應，是反應完馬上又被蓋回去了。
+      // 正確做法：這裡不能觸發任何會寫 DOM 的巢狀渲染，只能先回傳一個「過渡用」的畫面
+      // 給上一層去寫（這次寫的內容不是空的，至少玩家看得到「已確認」，不會像空白畫面那樣
+      // 誤以為當機），然後用 setTimeout 把「真正的重新渲染」排到這一輪渲染流程完全結束
+      // （上一層也把 innerHTML 寫完）之後才執行，這樣才不會被上一層的舊資料蓋掉。
+      const freshRoomSnap=await getDoc(doc(window.jgFirebaseDb,'rooms',jgRoomCode));
+      jgRoomLatestRoomDoc=freshRoomSnap.data()||jgRoomLatestRoomDoc;
+      setTimeout(()=>{ jgRoomRefreshAndRenderCurrent(); }, 0);
+      return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>已確認，正在往下一步…</h1></div>'};
     }
     const iConfirmed=confirmedBy.includes(window.jgFirebaseUid);
     // 房主專用的「強制往下一步」安全閥：不管是什麼原因卡住（例如隊友的裝置斷線、退出
