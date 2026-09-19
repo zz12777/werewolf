@@ -493,8 +493,11 @@ function jgRoomAppendMyIdentityButton(){
   btn.onclick=jgRoomShowMyIdentity;
   // 全站的按鈕預設樣式是 width:100%（鋪滿整行），這裡沒有明確蓋掉 width／margin-top 的話，
   // 固定定位的按鈕會被撐成貼齊視窗左右兩側的一整條長條（這是上次截圖看到的那個 bug 的
-  // 真正原因），這裡把該蓋掉的都蓋掉，確保是貼在右上角的小按鈕。
-  btn.style.cssText='position:fixed;top:8px;right:8px;z-index:200;width:auto;margin:0;padding:6px 12px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.08);';
+  // 真正原因），這裡把該蓋掉的都蓋掉，確保是貼在右上角的小按鈕。top 改成放在導覽列
+  // 「下方」而不是導覽列本身的高度範圍內（原本 top:8px 剛好跟導覽列重疊，蓋住「遊玩數據」
+  // 「連線房間」那幾個字）——導覽列本身含 logo 大約 56px 高，這裡抓一個安全值讓按鈕貼在
+  // 導覽列下緣，不會再互相重疊。
+  btn.style.cssText='position:fixed;top:66px;right:8px;z-index:200;width:auto;margin:0;padding:6px 12px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.08);';
   document.body.appendChild(btn);
 }
 function jgRoomRemoveMyIdentityButton(){
@@ -1370,13 +1373,22 @@ async function jgRoomWolfViewHtml(night){
     const confirmedBy=rd.wolfKillConfirmedBy||[];
     // 「全員到齊了嗎」的檢查，除了在按下確認的當下判斷一次，這裡（畫面重新渲染時，包含
     // 收到其他隊友即時確認通知的那一刻）也要再檢查一次——原因是：如果兩位隊友幾乎同時
-        // 按下確認，各自那一瞬間讀到的資料庫狀態可能都還沒看到彼此的最新寫入（經典的競態
+    // 按下確認，各自那一瞬間讀到的資料庫狀態可能都還沒看到彼此的最新寫入（經典的競態
     // 問題），導致「誰都沒有判斷出全員到齊」，遊戲卡在狼隊出刀，女巫永遠等不到。這裡
     // 改成用即時監聽器（onSnapshot）最終一定會收斂到的正確狀態再檢查一次，當作安全網，
     // 不會漏掉。jgRoomWolfFinalizing 這個旗標避免同一個瞬間被觸發兩次。
     if(confirmedBy.length>=wolfCount&&!jgRoomWolfFinalizing){
       jgRoomWolfFinalizing=true;
       try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
+      // 抓到的真正 bug：jgRoomWolfFinalize() 結算完之後，房間已經被它自己推進到下一步
+      // （例如換女巫），但這個函式原本會「繼續往下執行」，用結算前、還沒更新過的舊
+      // confirmedBy／rd 資料組出「今晚要殺 X號、已確認 1/1人、等待其他隊友」這個畫面
+      // 傳回去——結果就是：資料庫其實已經正確往下走了，畫面卻硬是被這個函式蓋回舊的
+      // 「還在等」畫面，看起來像卡住、其實是這個函式自己「畫錯」了。改成結算完之後
+      // 重新讀一次最新狀態，交給總機（jgRoomRenderCurrentPhase）重新判斷現在真正該顯示
+      // 哪個畫面，不要再用結算前的舊資料硬畫下去。
+      await jgRoomRefreshAndRenderCurrent();
+      return {needsTimer:false, html:''};
     }
     const iConfirmed=confirmedBy.includes(window.jgFirebaseUid);
     // 房主專用的「強制往下一步」安全閥：不管是什麼原因卡住（例如隊友的裝置斷線、退出
@@ -2618,7 +2630,7 @@ async function jgRoomMechWolfViewHtml(night){
         +jgRoomNumGridHtml('jg-room-mechwolf-learn-pick', null)
         +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomMechWolfLearnFromGrid('+night+')">確認</button></div>'};
     }
-  } else if(learned&&learned!=='villager'){
+  } else if(learned){
     const learnedName=(typeof RNAME!=='undefined'&&RNAME[learned])||learned;
     html+='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🤖</div><h1>你學到的身分：'+learnedName+'</h1></div>';
     // 技能要「次晚起」才能用（跟幸運兒拿到技能是同一個道理：學到的當晚，這個身分的能力
@@ -2673,14 +2685,11 @@ async function jgRoomMechWolfViewHtml(night){
         +jgRoomNumGridHtml('jg-room-mechwolf-kill-pick', null)
         +'<div style="text-align:center;"><button class="primary" style="margin-top:10px;" onclick="jgRoomMechWolfKillFromGrid('+night+')">確認</button></div>';
     }
-  } else if(doneAll&&learned&&learned!=='villager'&&learned!=='hunter'){
-    // 這個身分本輪沒有剩下的技能可用、也還沒輪到接管出刀：給一個確認按鈕讓他明確結束
-    // 這一步（比起完全自動跳過，讓玩家自己按一下比較符合其餘步驟「需要互動才推進」的手感）。
-    html+='<button class="primary" style="margin-top:14px;" onclick="jgRoomMechWolfSkillSkip('+night+')">確認，沒有其他行動</button>';
-  } else if(doneAll&&(!learned||learned==='villager')){
-    html+='<button class="primary" style="margin-top:14px;" onclick="jgRoomMechWolfSkillSkip('+night+')">確認，沒有其他行動</button>';
-  } else if(doneAll&&learned==='hunter'){
-    html+='<button class="primary" style="margin-top:14px;" onclick="jgRoomMechWolfSkillSkip('+night+')">確認，沒有其他行動</button>';
+  } else if(doneAll){
+    // 這一晚沒有技能可用（或已經用過/沒有主動技能可用），也還沒輪到接管出刀：給一個確認
+    // 按鈕讓他明確結束這一步（比起完全自動跳過，讓玩家自己按一下比較符合其餘步驟「需要
+    // 互動才推進」的手感）。
+    html+='<button class="primary" style="margin-top:14px;" onclick="jgRoomMechWolfSkillSkip('+night+')">確認</button>';
   }
   return {needsTimer:true, html:jgRoomTimerHtml(20,'機械狼請睜眼')+html};
 }

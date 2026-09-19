@@ -342,6 +342,20 @@ async function runMechWolfNight1Test(){
   const r2 = await mod.jgRoomMechWolfViewHtml(2);
   check('第二夜起：學到狼人的技能（發動額外一刀）應該要出現', r2.html.includes('發動額外一刀'));
 
+  // 抓到的真正 bug：學到「平民」身分時，原本的判斷式是 learned&&learned!=='villager'，
+  // 平民會被直接排除在「你學到的身分：X」這個橫幅之外，整個跳過、直接顯示「你目前沒有
+  // 可用的主動技能」，完全沒告知玩家到底學到誰、學到什麼身分。
+  mod.__setPlayers([
+    { uid:'mwUid', seatNum:1, name:'機械狼', alive:true, mechWolfLearnedRole:'villager' },
+    { uid:'otherWolfUid', seatNum:2, name:'真狼', alive:true },
+    { uid:'p3', seatNum:3, name:'丙', alive:true },
+  ]);
+  mod.__setRoomDoc({ night:2 });
+  const r3 = await mod.jgRoomMechWolfViewHtml(2);
+  check('學到平民身分：應該要顯示「你學到的身分：平民」，不能整個跳過不提', r3.html.includes('你學到的身分'));
+  check('學到平民身分：技能按鈕確認文字應該只是「確認」，不是「確認，沒有其他行動」',
+    r3.html.includes('>確認<')&&!r3.html.includes('確認，沒有其他行動'));
+
   console.log(JSON.stringify(results, null, 2));
   const anyFail = results.some(r=>!r.ok);
   if(anyFail){ console.error('機械狼第一夜技能限制測試有失敗！'); process.exit(1); }
@@ -500,13 +514,17 @@ async function runSoloWolfAutoFinalizeTest(){
   const afterPropose=global.__mockDocs['rooms/ROOM3']||{};
   check('提議之後，自己已經自動算進確認名單裡（1人）', (afterPropose.wolfKillConfirmedBy||[]).length===1);
 
-  // 重新整理自己的畫面（這一步本身就會觸發「全員到齊了嗎」的檢查）
+  // 重新整理自己的畫面（這一步本身就會觸發「全員到齊了嗎」的檢查）——這是這次抓到的
+  // 真正 bug 的關鍵：結算完之後，這個函式原本會「繼續往下」用結算前的舊資料畫出
+  // 「已確認1/1人、等待其他隊友」這個過時畫面，即使資料庫其實已經正確往下走了。
   mod.__setRoomDoc(Object.assign({}, afterPropose));
-  await mod.jgRoomWolfViewHtml(1);
+  const viewResult=await mod.jgRoomWolfViewHtml(1);
 
   const afterFinalize=global.__mockDocs['rooms/ROOM3']||{};
   check('只有一個狼隊成員時，提議完不用等任何人確認，應該自動往下一步（板子有女巫，接女巫回合）',
     afterFinalize.currentStep==='witch');
+  check('結算完之後，這個函式回傳的畫面不應該還是「等待其他隊友」那個過時畫面',
+    !viewResult.html.includes('等待其他隊友'));
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail=results.some(r=>!r.ok);
