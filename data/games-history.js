@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════
 
 const GAMES=[
-{id:'0713_2',date:'2026-07-13',board:'攝夢人＋夢魘（雙身分）',resultText:'好人陣營獲勝',winner:'good',
+{id:'0713_2',date:'2026-07-13',board:'攝夢人+夢魘（雙身分）',resultText:'好人陣營獲勝',winner:'good',
  players:[
   {num:1,name:'吳柏霖',role:'民/攝'},
   {num:2,name:'李法順',role:'民/守'},
@@ -49,7 +49,7 @@ const GAMES=[
 --票6
 ###正義聯盟獲勝###`},
 
-{id:'0716_2',date:'2026-07-16',board:'魔術師＋黑/白狼王',resultText:'邪惡陣營獲勝',winner:'evil',
+{id:'0716_2',date:'2026-07-16',board:'魔術師+黑/白狼王',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
   {num:1,name:'陳玉堂',role:'民'},
   {num:2,name:'王悅謙',role:'王'},
@@ -100,7 +100,7 @@ $PK發言
 --刀4
 ===邪惡陣營獲勝===`},
 
-{id:'0723_1',date:'2026-07-23',board:'機械狼＋通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
+{id:'0723_1',date:'2026-07-23',board:'機械狼+通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
   {num:1,name:'李想成',role:'民'},
   {num:2,name:'何冠岳',role:'巫'},
@@ -137,7 +137,7 @@ $PK發言
 --刀5
 =====邪惡陣營獲勝=====`},
 
-{id:'0723_3',date:'2026-07-23',board:'機械狼＋通靈師',resultText:'好人陣營獲勝',winner:'good',
+{id:'0723_3',date:'2026-07-23',board:'機械狼+通靈師',resultText:'好人陣營獲勝',winner:'good',
  players:[
   {num:1,name:'李想成',role:'民'},
   {num:2,name:'蘇祐樂',role:'巫'},
@@ -187,7 +187,7 @@ $PK發言
 --票3
 =====好人陣營獲勝=====`},
 
-{id:'0723_2',date:'2026-07-23',board:'機械狼＋通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
+{id:'0723_2',date:'2026-07-23',board:'機械狼+通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
   {num:1,name:'李想成',role:'民'},
   {num:2,name:'何冠岳',role:'民'},
@@ -242,7 +242,7 @@ $PK發言
 --刀4
 =====邪惡陣營獲勝=====`},
 
-{id:'0730_1',date:'2026-07-30',board:'混血兒＋黑/白狼王＋血月',resultText:'好人陣營獲勝',winner:'good',time:'21:16',
+{id:'0730_1',date:'2026-07-30',board:'混血兒+黑/白狼王+血月',resultText:'好人陣營獲勝',winner:'good',time:'21:16',
  players:[
   {num:1,name:'陳冠竹',role:'守'},
   {num:2,name:'鄭文奇',role:'巫'},
@@ -278,7 +278,7 @@ $PK發言
 >票8：4
 =====好人陣營獲勝=====`},
 
-{id:'0730_2',date:'2026-07-30',board:'混血兒黑狼王血月',resultText:'邪惡陣營獲勝',winner:'evil',time:'10:56',
+{id:'0730_2',date:'2026-07-30',board:'混血兒+黑/白狼王+血月',resultText:'邪惡陣營獲勝',winner:'evil',time:'10:56',
  players:[
   {num:1,name:'巫嘉軒',role:'預'},
   {num:2,name:'鄭文奇',role:'民'},
@@ -319,7 +319,7 @@ $PK發言
 >票7：全票
 =====邪惡陣營獲勝=====`},
 
-{id:'0730_3',date:'2026-07-30',board:'黑狼王魔術師',resultText:'邪惡陣營獲勝',winner:'evil',time:'22:34',
+{id:'0730_3',date:'2026-07-30',board:'魔術師+黑/白狼王',resultText:'邪惡陣營獲勝',winner:'evil',time:'22:34',
  players:[
   {num:1,name:'陳冠竹',role:'民'},
   {num:2,name:'鄭文奇',role:'獵'},
@@ -356,7 +356,7 @@ $PK發言
 >票4：1,3,6,8,9
 =====邪惡陣營獲勝=====`},
 
-{id:'0730_4',date:'2026-07-30',board:'黑狼王魔術師',resultText:'邪惡陣營獲勝',winner:'evil',time:'10:46',
+{id:'0730_4',date:'2026-07-30',board:'魔術師+黑/白狼王',resultText:'邪惡陣營獲勝',winner:'evil',time:'10:46',
  players:[
   {num:1,name:'巫嘉軒',role:'民'},
   {num:2,name:'鄭文奇',role:'狼'},
@@ -401,7 +401,7 @@ $PK發言
 --刀9
 =====邪惡陣營獲勝=====`},
 
-{id:'0803_1',date:'2026-08-03',board:'機械狼通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
+{id:'0803_1',date:'2026-08-03',board:'機械狼+通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
   {num:1,name:'陳玉堂',role:'機械民'},
   {num:2,name:'巫嘉軒',role:'狼'},
@@ -444,7 +444,7 @@ pk
 --通驗 x
 =====邪惡陣營獲勝=====`},
 
-{id:'0803_2',date:'2026-08-03',board:'機械狼通靈師',resultText:'好人陣營獲勝',winner:'good',
+{id:'0803_2',date:'2026-08-03',board:'機械狼+通靈師',resultText:'好人陣營獲勝',winner:'good',
  players:[
   {num:1,name:'陳玉堂',role:'平民'},
   {num:2,name:'巫嘉軒',role:'平民'},
@@ -480,7 +480,7 @@ pk
 >票9：1,4,6,7,8
 =====好人陣營獲勝=====`},
 
-{id:'0803_3',date:'2026-08-03',board:'機械狼通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
+{id:'0803_3',date:'2026-08-03',board:'機械狼+通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
   {num:1,name:'潘彥誠',role:'機械守衛'},
   {num:2,name:'巫嘉軒',role:'狼人'},
@@ -535,7 +535,7 @@ pk
 --刀 8
 =====邪惡陣營獲勝=====`},
 
-{id:'0803_4',date:'2026-08-03',board:'機械狼通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
+{id:'0803_4',date:'2026-08-03',board:'機械狼+通靈師',resultText:'邪惡陣營獲勝',winner:'evil',
  players:[
   {num:1,name:'潘彥誠',role:'女巫'},
   {num:2,name:'巫嘉軒',role:'守衛'},

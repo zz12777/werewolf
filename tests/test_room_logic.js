@@ -305,6 +305,7 @@ async function runAsync() {
   await runMechWolfSoloTakeoverTest();
   await runSoloWolfAutoFinalizeTest();
   await runSoloWolfFullPipelineTest();
+  runWolfProposeSourceCodeCheck();
   await runNightChainTest();
   await runSpeechOrderTest();
   await runDeadWolfNotBlockingTest();
@@ -601,6 +602,29 @@ async function runSoloWolfFullPipelineTest(){
   const anyFail=results.some(r=>!r.ok);
   if(anyFail){ console.error('單一狼人完整渲染鏈路測試有失敗！'); process.exit(1); }
   console.log(`全部 ${results.length} 項單一狼人完整渲染鏈路測試通過`);
+}
+
+// 這次額外加強：jgRoomWolfPropose 判斷「要不要馬上結算」時，用的是「自己剛剛寫進資料庫
+// 的內容」（本來就知道，不用再讀一次），而不是「寫完馬上重新讀一次資料庫」——理論上這樣
+// 才能徹底排除「寫跟讀之間有沒有時間差」這個疑慮。這裡直接驗證原始碼確實照這個寫法：
+// 判斷式用的是本地變數 myConfirmedList，不是靠重新讀取資料庫拿到的 confirmedBy。
+function runWolfProposeSourceCodeCheck(){
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+  const src=fs.readFileSync(path.join(__dirname, '..', 'js', 'room.js'), 'utf8');
+  const fnMatch=src.match(/window\.jgRoomWolfPropose=async function[\s\S]*?\n};/);
+  const fnSrc=fnMatch?fnMatch[0]:'';
+  check('jgRoomWolfPropose 有找到（沒被誤刪或改名）', fnSrc.length>0, true);
+  check('判斷全員到齊時用的是自己剛寫的 myConfirmedList.length，不是重新讀取的 confirmedBy.length',
+    fnSrc.includes('myConfirmedList.length>=wolfUids.length'), true);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('狼隊提議原始碼檢查測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項狼隊提議原始碼檢查測試通過`);
 }
 
 // 端對端驗證：女巫救人/下毒是否真的影響死亡結算、通靈師查驗是否真的顯示正確身分、

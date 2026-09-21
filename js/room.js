@@ -1445,26 +1445,29 @@ window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
+  const myConfirmedList=[window.jgFirebaseUid];
   await setDoc(doc(db,'rooms',jgRoomCode),{
     wolfKillNight:night, wolfKillTargetUid:effective, wolfKillTargetSeatNum:targetSeatNum,
-    wolfKillProposedBy:window.jgFirebaseUid, wolfKillConfirmedBy:[window.jgFirebaseUid]
+    wolfKillProposedBy:window.jgFirebaseUid, wolfKillConfirmedBy:myConfirmedList
   },{ merge:true });
   // 提議完要馬上檢查一次「全員到齊了嗎」（涵蓋「狼隊只有自己一個人」這種一提議就等於全員
-  // 到齊的情況）——不能只靠呼叫 jgRoomRenderNightShell() 讓它「順便」檢查，因為那個渲染
-  // 函式讀的是 jgRoomLatestRoomDoc 這份畫面快取，快取要等即時監聽器（onSnapshot）收到
-  // 剛剛那筆寫入才會更新，這中間如果剛好有一點點時間差，渲染的時候讀到的還是「還沒提議」
-  // 的舊狀態，畫面就會顯示成什麼都沒發生、看起來像卡住。改成跟 jgRoomWolfConfirm 一樣，
-  // 自己直接重新讀一次資料庫最新狀態來判斷要不要結算，不要依賴快取有沒有跟上。
-  let freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-  let fresh=freshSnap.data()||{};
+  // 到齊的情況）——這裡不再靠「寫完馬上重新讀一次資料庫」來判斷 confirmedBy，因為即使是
+  // 「寫完立刻讀」，也不是 100%保證每個瀏覽器/網路環境下都不會有任何時間差（這是這次
+  // 為了徹底排除疑慮才做的加強：剛剛這筆 wolfKillConfirmedBy 是我自己這一行程式碼親自
+  // 寫下去的，內容是什麼我早就知道了，不需要透過「讀資料庫」這個間接、且理論上仍有極小
+  // 機率碰到時間差的方式，才能知道「confirmedBy 現在有幾個人」；狼隊人數（wolfUids）才
+  // 需要另外查，因為那不是這個函式自己剛剛寫入的東西）。
   const wolfUids=await jgRoomGetWolfUids();
-  const confirmedBy=fresh.wolfKillConfirmedBy||[];
-  if(confirmedBy.length>=wolfUids.length&&fresh.wolfKillTargetUid&&!jgRoomWolfFinalizing){
+  let fresh;
+  if(myConfirmedList.length>=wolfUids.length&&!jgRoomWolfFinalizing){
     jgRoomWolfFinalizing=true;
     try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
-    // jgRoomWolfFinalize() 可能又觸發了好幾筆後續寫入（結算死亡、換下一步...），要再讀一次
-    // 最新狀態，不能沿用結算前讀到的那份。
-    freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+    // jgRoomWolfFinalize() 觸發了好幾筆後續寫入（結算死亡、換下一步...），這些不是這個
+    // 函式自己知道內容的資料，這裡才需要真的重新讀一次資料庫最新狀態。
+    const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+    fresh=freshSnap.data()||{};
+  } else {
+    const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
     fresh=freshSnap.data()||{};
   }
   // 手動把畫面快取更新成剛剛讀到的最新資料，再呼叫重新渲染——不要只呼叫
