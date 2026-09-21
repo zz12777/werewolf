@@ -1092,7 +1092,14 @@ async function jgRoomRefreshAndRenderCurrent(){
   try{
     const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
     if(freshSnap.exists()) jgRoomLatestRoomDoc=freshSnap.data();
-  }catch(e){}
+  }catch(e){
+    // 這裡以前是完全吞掉錯誤（catch(e){}），任何讀取失敗（權限被擋、網路問題...）都會
+    // 無聲無息地被蓋過去，接下來還是照樣用可能是舊的 jgRoomLatestRoomDoc 硬渲染下去——
+    // 這個函式在整個房間系統裡被呼叫超過30次，幾乎每個動作按鈕的最後一步都會呼叫它，
+    // 如果真正的問題出在這裡，先前完全看不出任何痕跡。這裡改成至少印到瀏覽器主控台，
+        // 方便之後如果還有類似的「按了沒反應」的回報，可以請對方打開主控台看看有沒有這行。
+    console.error('jgRoomRefreshAndRenderCurrent 讀取房間資料失敗', e);
+  }
   await jgRoomRenderCurrentPhase();
 }
 
@@ -1329,6 +1336,21 @@ async function jgRoomGetWolfUids(){
     return !p||p.alive!==false; // 找不到玩家資料時保守當作還活著，不要誤判卡住
   }).map(d=>d.id);
 }
+// 指定「座號最小」的那一位見面狼隊友當作唯一負責操作出刀畫面的人——不只是讓畫面單純
+// 一點，更重要的是徹底避開「板子上不只一隻狼、好幾支手機同時都能操作」這整類多人同步
+// 問題的根源：只有一支手機真的會寫入資料庫，其他狼隊友的手機完全不會碰觸這筆資料，
+// 從結構上就不會有「兩支手機幾乎同時寫入互相干擾」的可能性。
+async function jgRoomWolfOperatorUid(){
+  const wolfUids=await jgRoomGetWolfUids();
+  if(!wolfUids.length) return null;
+  let best=null, bestSeat=Infinity;
+  wolfUids.forEach(uid=>{
+    const p=jgRoomLatestPlayers.find(pp=>pp.uid===uid);
+    const seat=p?p.seatNum:Infinity;
+    if(seat<bestSeat){ bestSeat=seat; best=uid; }
+  });
+  return best;
+}
 // 機械狼獨自帶刀的條件：其餘「真正跟狼隊一起睜眼」的隊友（jgRoomGetWolfUids 排除掉機械狼
 // 自己跟夢魘之後剩下的那些人）全部死亡——跟本機法官助手 jgMechWolf2KillEligible／
 // jgAfterGargoyleStep 系列判斷同一套邏輯的房間版本。
@@ -1425,39 +1447,49 @@ window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
-  // 先確認「現在還輪到狼隊出刀」才寫入目標——板子上不只一隻狼時，如果甲已經選完、遊戲
-  // 已經往下一步走了（比如換女巫），乙晚一點才點擊送出，不能讓乙這次遲來的點擊把甲已經
-  // 決定、已經記錄進文字紀錄的目標蓋成別的號碼（就算遊戲流程本身因為 currentStep 守門員
-  // 不會被推進兩次，這筆資料本身還是不該被蓋掉，不然畫面/紀錄跟實際結算的對象會對不起來）。
-  const preCheckSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-  const preCheck=preCheckSnap.data()||{};
-  if(preCheck.currentStep!=='wolf'){
-    // 已經有人決定過、遊戲往下走了：這次點擊不算數，直接帶他看最新畫面。
-    jgRoomLatestRoomDoc=preCheck;
-    await jgRoomRefreshAndRenderCurrent();
-    return;
-  }
-  // 接下來這一串是好幾筆連續的資料庫寫入（寫目標→可能還有記文字紀錄→進黑市商人／女巫
-  // 回合，或直接結算死亡＋往下一步），先把「暫停自動重畫」的旗標打開，避免這幾筆寫入
-  // 陸續觸發即時監聽器、把畫面重畫好幾次——這正是「選好的號碼會跳掉」「按了確認看起來
-  // 沒反應」這兩個症狀的真正原因：畫面在這串操作真正結束之前，就被中途的某一筆寫入
-  // 觸發的監聽器重畫過好幾次。
-  jgRoomSuppressAutoRender=true;
+  // 整個函式包一層 try/catch，把任何失敗（例如 Firestore 權限被擋、網路斷線）都用 alert
+  // 明確講出來——之前這裡沒有這一層，任何寫入失敗都是「без形消失」，畫面上完全看不出
+  // 發生了什麼事，跟真的卡住長得一模一樣，卻是完全不同的問題、需要完全不同的排查方式。
   try{
-    await setDoc(doc(db,'rooms',jgRoomCode),{
-      wolfKillNight:night, wolfKillTargetUid:effective, wolfKillTargetSeatNum:targetSeatNum,
-      wolfKillProposedBy:window.jgFirebaseUid
-    },{ merge:true });
-    if(!jgRoomWolfFinalizing){
-      jgRoomWolfFinalizing=true;
-      try{
-        const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-        const fresh=freshSnap.data()||{};
-        if(fresh.currentStep==='wolf'){ await jgRoomWolfFinalize(); }
-      } finally { jgRoomWolfFinalizing=false; }
+    // 先確認「現在還輪到狼隊出刀」才寫入目標——板子上不只一隻狼時，如果甲已經選完、遊戲
+    // 已經往下一步走了（比如換女巫），乙晚一點才點擊送出，不能讓乙這次遲來的點擊把甲已經
+    // 決定、已經記錄進文字紀錄的目標蓋成別的號碼（就算遊戲流程本身因為 currentStep 守門員
+    // 不會被推進兩次，這筆資料本身還是不該被蓋掉，不然畫面/紀錄跟實際結算的對象會對不起來）。
+    const preCheckSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+    const preCheck=preCheckSnap.data()||{};
+    if(preCheck.currentStep!=='wolf'){
+      // 已經有人決定過、遊戲往下走了：這次點擊不算數，直接帶他看最新畫面。
+      jgRoomLatestRoomDoc=preCheck;
+      await jgRoomRefreshAndRenderCurrent();
+      return;
     }
-  } finally { jgRoomSuppressAutoRender=false; }
-  await jgRoomRefreshAndRenderCurrent();
+    // 接下來這一串是好幾筆連續的資料庫寫入（寫目標→可能還有記文字紀錄→進黑市商人／女巫
+    // 回合，或直接結算死亡＋往下一步），先把「暫停自動重畫」的旗標打開，避免這幾筆寫入
+    // 陸續觸發即時監聽器、把畫面重畫好幾次——這正是「選好的號碼會跳掉」「按了確認看起來
+    // 沒反應」這兩個症狀的真正原因：畫面在這串操作真正結束之前，就被中途的某一筆寫入
+    // 觸發的監聽器重畫過好幾次。
+    jgRoomSuppressAutoRender=true;
+    try{
+      await setDoc(doc(db,'rooms',jgRoomCode),{
+        wolfKillNight:night, wolfKillTargetUid:effective, wolfKillTargetSeatNum:targetSeatNum,
+        wolfKillProposedBy:window.jgFirebaseUid
+      },{ merge:true });
+      if(!jgRoomWolfFinalizing){
+        jgRoomWolfFinalizing=true;
+        try{
+          const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+          const fresh=freshSnap.data()||{};
+          if(fresh.currentStep==='wolf'){ await jgRoomWolfFinalize(); }
+        } finally { jgRoomWolfFinalizing=false; }
+      }
+    } finally { jgRoomSuppressAutoRender=false; }
+    await jgRoomRefreshAndRenderCurrent();
+  }catch(err){
+    jgRoomSuppressAutoRender=false;
+    jgRoomWolfFinalizing=false;
+    alert('狼隊出刀時發生錯誤，請把這段文字截圖給法官：\n'+(err&&err.message?err.message:String(err)));
+    console.error('jgRoomWolfPropose error', err);
+  }
 };
 // 狼刀目標（不管是狼隊選出的、還是夢魘恐懼導致的平安夜、還是機械狼獨自接管出刀、還是
 // 回合（見 ALL_ROLES.blackmarket：黑市商人可以在任一晚交易，這裡簡化成固定排在狼刀之後、
@@ -2201,7 +2233,19 @@ async function jgRoomRenderNightShell(){
     const r=await jgRoomMechWolfViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(currentStep==='wolf'&&typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(jgMyRole)&&jgMyRole!=='nightmare'&&jgMyRole!=='mechanicalwolf'
     &&!(jgMyRole==='wolfbrother_y'&&!jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid&&p.wolfbrotherJoinedPack))){
-    const r=await jgRoomWolfViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
+    // 板子上如果不只一隻見面狼，只有「座號最小」的那一位（jgRoomWolfOperatorUid）的手機
+    // 會顯示真的可以操作的選人畫面；其餘狼隊友只會看到一行提示訊息，不會顯示任何互動
+    // 按鈕——這樣從結構上就不會有兩支手機同時寫入資料庫互相干擾的可能性，是目前最簡單、
+    // 最不容易出狀況的做法。
+    const opUid=await jgRoomWolfOperatorUid();
+    if(opUid===window.jgFirebaseUid){
+      const r=await jgRoomWolfViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
+    } else {
+      const opP=jgRoomLatestPlayers.find(p=>p.uid===opUid);
+      bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>殺人畫面在 '+(opP?opP.seatNum:'?')+'號 狼隊友手機</h1></div>'
+        +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請等 '+(opP?opP.seatNum:'?')+'號 操作完成，今晚殺了誰會另外出現在紀錄裡</div>';
+      needsTimer=false;
+    }
   } else if(currentStep==='blackmarket'&&jgMyRole==='blackmarket'){
     const r=await jgRoomBlackmarketViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(currentStep==='witch'&&jgMyRole==='witch'){

@@ -309,6 +309,7 @@ async function runAsync() {
   runWolfProposeSourceCodeCheck();
   await runMultiWolfFirstWinsTest();
   await runSuppressAutoRenderFlagTest();
+  await runWolfOperatorDispatchTest();
   await runNightChainTest();
   await runSpeechOrderTest();
   await runDeadWolfNotBlockingTest();
@@ -909,6 +910,55 @@ async function runMechWolfThenWolfChainTest(){
 // 或看起來像卡住）。這裡驗證新增的「暫停自動重畫」旗標（jgRoomSuppressAutoRender）確實
 // 有在這整串操作期間被打開，操作結束後（不管成功與否）一定會恢復成 false，不會讓監聽器
 // 從此被永久關閉。
+// 這次的簡化：板子上不只一隻見面狼時，只有「座號最小」的那一位手機會顯示真的可以操作的
+// 選人畫面，其餘狼隊友只看得到一行提示訊息（不會有任何互動按鈕）——徹底避開「好幾支手機
+// 同時可以操作、互相干擾」這整類問題的根源。這裡驗證兩邊的畫面內容都符合預期。
+async function runWolfOperatorDispatchTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOM8');
+  mod.__setComp({ wolf:2, medium:1 });
+  mod.__setPlayers([
+    { uid:'wolf1Uid', seatNum:3, name:'狼甲', alive:true },
+    { uid:'wolf2Uid', seatNum:1, name:'狼乙', alive:true }, // 座號比狼甲小，應該是操作者
+    { uid:'medUid', seatNum:5, name:'通靈師', alive:true },
+  ]);
+  global.__mockCollections={
+    'rooms/ROOM8/secrets':[
+      { id:'wolf1Uid', data:()=>({role:'wolf'}) },
+      { id:'wolf2Uid', data:()=>({role:'wolf'}) },
+      { id:'medUid', data:()=>({role:'medium'}) },
+    ],
+  };
+  global.__mockDocs={ 'rooms/ROOM8':{ night:1, currentStep:'wolf', phase:'night' } };
+  mod.__setRoomDoc({ night:1, currentStep:'wolf', phase:'night' });
+
+  // 座號較大的狼甲（3號）：應該只看到提示訊息，沒有選人畫面。
+  global.window.jgFirebaseUid='wolf1Uid';
+  mod.__setMyRole('wolf');
+  await mod.jgRoomRenderNightShell();
+  const wolf1Html=global.document.getElementById('jg-room-content').innerHTML;
+  check('座號較大的狼隊友：看到的是提示訊息，不是選人畫面', wolf1Html.includes('殺人畫面在'), true);
+  check('座號較大的狼隊友：畫面裡提到操作者是1號', wolf1Html.includes('1號'), true);
+  check('座號較大的狼隊友：畫面裡不應該出現選人的號碼格子', wolf1Html.includes('jg-room-wolf-pick'), false);
+
+  // 座號較小的狼乙（1號）：應該看到真的可以操作的選人畫面。
+  global.window.jgFirebaseUid='wolf2Uid';
+  await mod.jgRoomRenderNightShell();
+  const wolf2Html=global.document.getElementById('jg-room-content').innerHTML;
+  check('座號較小的狼隊友：看到的是真的選人畫面', wolf2Html.includes('請選擇今晚要殺的對象'), true);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('狼隊操作者畫面分派測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項狼隊操作者畫面分派測試通過`);
+}
+
 async function runSuppressAutoRenderFlagTest(){
   const { mod } = loadRoomLogicForGodView();
   const results=[];
