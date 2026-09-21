@@ -1367,58 +1367,20 @@ async function jgRoomWolfViewHtml(night){
     return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><div class="nicon">😱</div><h1>狼隊今晚無法殺人</h1></div>'
       +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">夢魘恐懼了狼隊的一位成員，今晚是平安夜，請安靜等待。</div>'};
   }
-  const wolfUids=await jgRoomGetWolfUids();
-  const wolfCount=wolfUids.length;
-  if(rd.wolfKillNight===night&&rd.wolfKillTargetSeatNum!=null){
-    const confirmedBy=rd.wolfKillConfirmedBy||[];
-    // 「全員到齊了嗎」的檢查，除了在按下確認的當下判斷一次，這裡（畫面重新渲染時，包含
-    // 收到其他隊友即時確認通知的那一刻）也要再檢查一次——原因是：如果兩位隊友幾乎同時
-    // 按下確認，各自那一瞬間讀到的資料庫狀態可能都還沒看到彼此的最新寫入（經典的競態
-    // 問題），導致「誰都沒有判斷出全員到齊」，遊戲卡在狼隊出刀，女巫永遠等不到。這裡
-    // 改成用即時監聽器（onSnapshot）最終一定會收斂到的正確狀態再檢查一次，當作安全網，
-    // 不會漏掉。jgRoomWolfFinalizing 這個旗標避免同一個瞬間被觸發兩次。
-    if(confirmedBy.length>=wolfCount&&!jgRoomWolfFinalizing){
-      jgRoomWolfFinalizing=true;
-      try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
-      // 抓到的真正 bug（這次又更深一層）：jgRoomWolfFinalize() 結算完之後，房間已經被它
-      // 自己推進到下一步（例如換女巫）。上一版的修法在這裡直接呼叫
-      // jgRoomRefreshAndRenderCurrent()，以為「重新渲染一次」就好——但這個函式本身正是
-      // 被上一層的 jgRoomRenderNightShell() 呼叫、拿它的回傳值去組 innerHTML 的（見
-      // `const r=await jgRoomWolfViewHtml(night); bodyHtml=r.html;` 那一行）。在這裡巢狀
-      // 呼叫一次「完整」重新渲染，會讓畫面先被正確畫出來一次，但等這個函式最終回傳
-      // （不管回傳什麼）之後，上一層還是會拿著回傳值「再蓋一次」innerHTML，把剛剛巢狀
-      // 渲染出來的正確畫面整個蓋掉、變成空白或殘破——這正是「點了確認，畫面完全沒反應」
-      // 的真正原因：不是沒反應，是反應完馬上又被蓋回去了。
-      // 正確做法：這裡不能觸發任何會寫 DOM 的巢狀渲染，只能先回傳一個「過渡用」的畫面
-      // 給上一層去寫（這次寫的內容不是空的，至少玩家看得到「已確認」，不會像空白畫面那樣
-      // 誤以為當機），然後用 setTimeout 把「真正的重新渲染」排到這一輪渲染流程完全結束
-      // （上一層也把 innerHTML 寫完）之後才執行，這樣才不會被上一層的舊資料蓋掉。
-      const freshRoomSnap=await getDoc(doc(window.jgFirebaseDb,'rooms',jgRoomCode));
-      jgRoomLatestRoomDoc=freshRoomSnap.data()||jgRoomLatestRoomDoc;
-      setTimeout(()=>{ jgRoomRefreshAndRenderCurrent(); }, 0);
-      return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>已確認，正在往下一步…</h1></div>'};
-    }
-    const iConfirmed=confirmedBy.includes(window.jgFirebaseUid);
-    // 房主專用的「強制往下一步」安全閥：不管是什麼原因卡住（例如隊友的裝置斷線、退出
-    // 房間卻沒有人發現），房主永遠有辦法手動把流程推進下去，不用整場卡死等不到人回覆。
-    const hostOverrideHtml=jgRoomIsHost
-      ?'<div style="margin-top:16px;"><button style="font-size:12px;color:var(--text3);" onclick="jgRoomHostForceAdvanceWolf('+night+')">⚠️ 卡住了？房主強制往下一步</button></div>'
-      :'';
-    return {needsTimer:true, html: jgRoomTimerHtml(30,'今晚要殺的對象是？')
-      +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>今晚要殺 '+rd.wolfKillTargetSeatNum+'號</h1>'
-      +'<p class="sub" style="text-align:center;margin-top:8px;">已確認 '+confirmedBy.length+' / '+wolfCount+' 人</p></div>'
-      +'<div style="text-align:center;margin-top:10px;">'
-      +(iConfirmed?'<div class="info" style="font-size:12px;">你已經確認了，等待其他隊友</div>':'<button class="primary" onclick="jgRoomWolfConfirm()" style="width:auto;display:inline-block;padding:10px 20px;">確認</button>')
-      +'<button onclick="jgRoomWolfModify()" style="margin-left:8px;width:auto;display:inline-block;padding:10px 20px;">修改</button>'
-      +'</div>'+hostOverrideHtml};
-  }
-  // 選人畫面改成跟本機法官助手一樣的圓點號碼按鈕（見 jgRoomNumGridHtml）：點號碼只是先
-  // 選起來變綠色，不會馬上送出；目標號碼包含所有活著的人（含自己、含其他狼隊友——狼隊
-  // 本來就可以選擇自刀或殺隊友，不應該把狼隊自己的號碼從選項裡排除掉）。
+  // 選人畫面：不再要求「狼隊全員確認」——任何一位狼隊友選定目標、按下確認，當下就是最終
+  // 決定，直接往下一步走，不用等其他隊友。跟機械狼接管出刀、其他單人技能是同一種互動
+  // 方式。「全員確認」這個額外的同步機制在多人同時操作、網路狀況不穩的真實環境下太容易
+  // 出狀況（反覆修都修不完），這裡直接拿掉，改成最簡單可靠的「先選先贏」——如果板子上
+  // 不只一隻狼，大家還是要先口頭商量好要殺誰，畫面上不會再另外做「投票/表決」這件事。
+  const hostOverrideHtml=jgRoomIsHost
+    ?'<div style="text-align:center;margin-top:16px;"><button style="font-size:12px;color:var(--text3);" onclick="jgRoomHostForceAdvanceWolf('+night+')">⚠️ 卡住了？房主強制往下一步</button></div>'
+    :'';
   return {needsTimer:true, html: jgRoomTimerHtml(30,'今晚要殺的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>請選擇今晚要殺的對象</h1></div>'
+    +'<div class="info" style="font-size:12px;text-align:center;">任何一位狼隊友選定並確認後，就是最終決定，會直接往下一步，不用等其他隊友再按一次</div>'
     +jgRoomNumGridHtml('jg-room-wolf-pick', null)
-    +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomWolfProposeFromGrid('+night+')">確認</button></div>'};
+    +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomWolfProposeFromGrid('+night+')">確認</button></div>'
+    +hostOverrideHtml};
 }
 // 讀圓點號碼格選到的座位，換算成 uid 之後照原本的提議流程送出（見 jgRoomWolfPropose）。
 window.jgRoomWolfProposeFromGrid=function(night){
@@ -1441,53 +1403,42 @@ window.jgRoomHostForceAdvanceWolf=async function(night){
   await jgRoomAfterKillDecided(night);
   await jgRoomRefreshAndRenderCurrent();
 };
+// 任何一位狼隊友選定目標、按下確認，就是最終決定：寫入目標之後立刻結算，不用等任何人
+// 確認。用房間文件本身的 currentStep 當守門員（結算前先重新讀一次，確認「還沒有人結算
+// 過」）＋ jgRoomWolfFinalizing 這個旗標，兩層一起擋住「板子上不只一隻狼、兩人幾乎同時
+// 按下確認」這種邊緣情況——萬一真的兩邊都通過守門員檢查，jgRoomWolfFinalize() 內部
+// 也會再檢查一次 wolfKillTargetUid 是否存在，不會真的把死亡結算跑兩次讓遊戲状態壞掉。
 window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
-  const myConfirmedList=[window.jgFirebaseUid];
+  // 先確認「現在還輪到狼隊出刀」才寫入目標——板子上不只一隻狼時，如果甲已經選完、遊戲
+  // 已經往下一步走了（比如換女巫），乙晚一點才點擊送出，不能讓乙這次遲來的點擊把甲已經
+  // 決定、已經記錄進文字紀錄的目標蓋成別的號碼（就算遊戲流程本身因為 currentStep 守門員
+  // 不會被推進兩次，這筆資料本身還是不該被蓋掉，不然畫面/紀錄跟實際結算的對象會對不起來）。
+  const preCheckSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const preCheck=preCheckSnap.data()||{};
+  if(preCheck.currentStep!=='wolf'){
+    // 已經有人決定過、遊戲往下走了：這次點擊不算數，直接帶他看最新畫面。
+    jgRoomLatestRoomDoc=preCheck;
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
   await setDoc(doc(db,'rooms',jgRoomCode),{
     wolfKillNight:night, wolfKillTargetUid:effective, wolfKillTargetSeatNum:targetSeatNum,
-    wolfKillProposedBy:window.jgFirebaseUid, wolfKillConfirmedBy:myConfirmedList
+    wolfKillProposedBy:window.jgFirebaseUid
   },{ merge:true });
-  // 提議完要馬上檢查一次「全員到齊了嗎」（涵蓋「狼隊只有自己一個人」這種一提議就等於全員
-  // 到齊的情況）——這裡不再靠「寫完馬上重新讀一次資料庫」來判斷 confirmedBy，因為即使是
-  // 「寫完立刻讀」，也不是 100%保證每個瀏覽器/網路環境下都不會有任何時間差（這是這次
-  // 為了徹底排除疑慮才做的加強：剛剛這筆 wolfKillConfirmedBy 是我自己這一行程式碼親自
-  // 寫下去的，內容是什麼我早就知道了，不需要透過「讀資料庫」這個間接、且理論上仍有極小
-  // 機率碰到時間差的方式，才能知道「confirmedBy 現在有幾個人」；狼隊人數（wolfUids）才
-  // 需要另外查，因為那不是這個函式自己剛剛寫入的東西）。
-  const wolfUids=await jgRoomGetWolfUids();
-  let fresh;
-  if(myConfirmedList.length>=wolfUids.length&&!jgRoomWolfFinalizing){
+  if(!jgRoomWolfFinalizing){
     jgRoomWolfFinalizing=true;
-    try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
-    // jgRoomWolfFinalize() 觸發了好幾筆後續寫入（結算死亡、換下一步...），這些不是這個
-    // 函式自己知道內容的資料，這裡才需要真的重新讀一次資料庫最新狀態。
-    const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-    fresh=freshSnap.data()||{};
-  } else {
-    const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-    fresh=freshSnap.data()||{};
+    try{
+      const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+      const fresh=freshSnap.data()||{};
+      if(fresh.currentStep==='wolf'){ await jgRoomWolfFinalize(); }
+    } finally { jgRoomWolfFinalizing=false; }
   }
-  // 手動把畫面快取更新成剛剛讀到的最新資料，再呼叫重新渲染——不要只呼叫
-  // jgRoomRenderNightShell() 卻放著讓它讀還沒被監聽器更新過的舊快取，那樣畫面還是可能
-  // 顯示成「什麼都沒發生」，跟按了沒反應沒兩樣。等監聽器之後自己再收到一次同樣的資料、
-  // 再渲染一次也沒關係，是安全、冪等的，不會有副作用。
-  jgRoomLatestRoomDoc=fresh;
   await jgRoomRefreshAndRenderCurrent();
 };
-window.jgRoomWolfModify=async function(){
-  if(!confirm('確定要修改嗎？會清空所有人的確認。')) return;
-  const db=window.jgFirebaseDb;
-  await setDoc(doc(db,'rooms',jgRoomCode),{
-    wolfKillNight:null, wolfKillTargetUid:null, wolfKillTargetSeatNum:null,
-    wolfKillProposedBy:null, wolfKillConfirmedBy:[]
-  },{ merge:true });
-  await jgRoomRefreshAndRenderCurrent();
-};
-// 狼刀目標（不管是狼隊全員確認出的、還是夢魘恐懼導致的平安夜、還是機械狼獨自接管出刀、
-// 還是狼弟覺醒復仇刀）決定之後的共用去向：板子有黑市商人、且還沒交易過，就先進黑市商人
+// 狼刀目標（不管是狼隊選出的、還是夢魘恐懼導致的平安夜、還是機械狼獨自接管出刀、還是
 // 回合（見 ALL_ROLES.blackmarket：黑市商人可以在任一晚交易，這裡簡化成固定排在狼刀之後、
 // 女巫之前，法官／房主如果想在更早的夜晚交易，一樣可以正常運作，只是畫面出現的時間點
 // 固定，不像本機法官助手可以每晚都問）；沒有黑市商人（或已經用過）就接 jgRoomAfterBlackmarketStep。
@@ -1521,8 +1472,7 @@ async function jgRoomAfterBlackmarketStep(night){
     await jgRoomAdvanceToCheckOrSheriff();
   }
 }
-// 死亡結算＋推進下一步：不管是從「按下確認」的當下觸發，還是從畫面重新渲染時的安全網
-// 觸發，都走同一份邏輯，確保結果一致。
+// 死亡結算＋推進下一步：從「按下確認」的當下直接觸發。
 async function jgRoomWolfFinalize(){
   const db=window.jgFirebaseDb;
   const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
@@ -1530,31 +1480,6 @@ async function jgRoomWolfFinalize(){
   if(!fresh.wolfKillTargetUid) return;
   await jgRoomAfterKillDecided(fresh.night);
 }
-// 用 arrayUnion 而不是「先讀陣列、自己加一個、再整份寫回去」，是為了避免兩位隊友幾乎
-// 同時按確認時，其中一人的確認被另一人的寫入覆蓋掉、憑空少一票的競態問題。
-window.jgRoomWolfConfirm=async function(){
-  const db=window.jgFirebaseDb;
-  await setDoc(doc(db,'rooms',jgRoomCode),{
-    wolfKillConfirmedBy: arrayUnion(window.jgFirebaseUid)
-  },{ merge:true });
-  // 立刻嘗試結算一次（涵蓋「我是最後一個確認的人」這個常見情況，體感上比較即時）；
-  // 就算這次的讀取因為競態沒看到完整名單也沒關係，jgRoomWolfViewHtml 裡的安全網會在
-  // 監聽器收到最終正確狀態時再檢查一次，不會真的卡住。
-  let freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-  let fresh=freshSnap.data()||{};
-  const wolfUids=await jgRoomGetWolfUids();
-  const confirmedBy=fresh.wolfKillConfirmedBy||[];
-  if(confirmedBy.length>=wolfUids.length&&fresh.wolfKillTargetUid&&!jgRoomWolfFinalizing){
-    jgRoomWolfFinalizing=true;
-    try{ await jgRoomWolfFinalize(); }finally{ jgRoomWolfFinalizing=false; }
-    freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-    fresh=freshSnap.data()||{};
-  }
-  // 手動更新畫面快取成最新資料再渲染，不要放著讓渲染函式讀到監聽器可能還沒同步到的舊快取
-  // （理由跟 jgRoomWolfPropose 那邊一樣）。
-  jgRoomLatestRoomDoc=fresh;
-  await jgRoomRefreshAndRenderCurrent();
-};
 
 // ── 監聽「我自己」的身分（其他人的 secrets 文件，Firestore 安全規則會擋下，讀不到）──
 // 除了畫面顯示，也把角色快取進 jgMyRole，讓夜晚畫面可以直接判斷「現在是不是輪到我」。
@@ -2297,7 +2222,7 @@ function jgRoomHostAdvanceHtml(currentStep){
   if(currentStep==='guard') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">守衛選完之後，會自動往下一步。</div>';
   if(currentStep==='dreamcatcher') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">攝夢人選完夢遊對象之後，會自動往下一步。</div>';
   if(currentStep==='wolfbrother') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">第一夜是狼兄狼弟互相確認身分；其餘夜晚平常沒事，只有狼兄陣亡後狼弟覺醒復仇那一晚才需要操作，完成後會自動往下一步。</div>';
-  if(currentStep==='wolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">狼隊全員同意目標後，會自動往下一步。</div>';
+  if(currentStep==='wolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">任何一位狼隊友選定目標後，會直接往下一步，不用等其他隊友。</div>';
   if(currentStep==='blackmarket') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">黑市商人交易完（或選擇不交易）之後，會自動往下一步。獵人獵槍這項技能目前還沒自動化，請法官／房主用本機工具手動處理。</div>';
   if(currentStep==='witch') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">女巫（或持有女巫毒藥技能的幸運兒）行動完之後，會自動往下一步（查驗類角色，或直接接警長競選）。</div>';
   if(!currentStep) return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">這一夜已經結束，正在自動接警長競選...</div>';

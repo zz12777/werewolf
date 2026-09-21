@@ -306,6 +306,7 @@ async function runAsync() {
   await runSoloWolfAutoFinalizeTest();
   await runSoloWolfFullPipelineTest();
   runWolfProposeSourceCodeCheck();
+  await runMultiWolfFirstWinsTest();
   await runNightChainTest();
   await runSpeechOrderTest();
   await runDeadWolfNotBlockingTest();
@@ -512,22 +513,24 @@ async function runSoloWolfAutoFinalizeTest(){
   global.__mockDocs={ 'rooms/ROOM3':{ night:1, currentStep:'wolf' } };
   mod.__setRoomDoc({ night:1, currentStep:'wolf' });
 
-  // 狼人（board 上唯一一個真正跟狼隊一起睜眼的人，機械狼不算）提議殺 3 號
+  // 狼人（board 上唯一一個真正跟狼隊一起睜眼的人，機械狼不算）提議殺 3 號——新版不再要求
+  // 「全員確認」，提議的當下就是最終決定，直接結算，不會再有 wolfKillConfirmedBy 這種
+  // 等待名單的概念了。
   await mod.jgRoomWolfPropose('medUid', 3, 1);
   const afterPropose=global.__mockDocs['rooms/ROOM3']||{};
-  check('提議之後，自己已經自動算進確認名單裡（1人）', (afterPropose.wolfKillConfirmedBy||[]).length===1);
+  check('提議之後，目標正確記錄下來', afterPropose.wolfKillTargetSeatNum===3);
+  check('提議之後，currentStep 已經直接往下一步（不用等任何人確認）', afterPropose.currentStep==='witch');
 
-  // 重新整理自己的畫面（這一步本身就會觸發「全員到齊了嗎」的檢查）——這是這次抓到的
-  // 真正 bug 的關鍵：結算完之後，這個函式原本會「繼續往下」用結算前的舊資料畫出
-  // 「已確認1/1人、等待其他隊友」這個過時畫面，即使資料庫其實已經正確往下走了。
+  // 重新整理自己的畫面，確認畫面也正確反映「已經結算完畢」的狀態，不會卡在選人畫面。
   mod.__setRoomDoc(Object.assign({}, afterPropose));
-  const viewResult=await mod.jgRoomWolfViewHtml(1);
+  await mod.jgRoomRenderNightShell();
+  const rootHtml=global.document.getElementById('jg-room-content').innerHTML;
 
   const afterFinalize=global.__mockDocs['rooms/ROOM3']||{};
   check('只有一個狼隊成員時，提議完不用等任何人確認，應該自動往下一步（板子有女巫，接女巫回合）',
     afterFinalize.currentStep==='witch');
-  check('結算完之後，這個函式回傳的畫面不應該還是「等待其他隊友」那個過時畫面',
-    !viewResult.html.includes('等待其他隊友'));
+  check('重新渲染後畫面不應該還停在「請選擇今晚要殺的對象」這個選人畫面（輪到女巫了，狼人應該看到通用等待畫面）',
+    !rootHtml.includes('請選擇今晚要殺的對象'));
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail=results.some(r=>!r.ok);
@@ -604,10 +607,10 @@ async function runSoloWolfFullPipelineTest(){
   console.log(`全部 ${results.length} 項單一狼人完整渲染鏈路測試通過`);
 }
 
-// 這次額外加強：jgRoomWolfPropose 判斷「要不要馬上結算」時，用的是「自己剛剛寫進資料庫
-// 的內容」（本來就知道，不用再讀一次），而不是「寫完馬上重新讀一次資料庫」——理論上這樣
-// 才能徹底排除「寫跟讀之間有沒有時間差」這個疑慮。這裡直接驗證原始碼確實照這個寫法：
-// 判斷式用的是本地變數 myConfirmedList，不是靠重新讀取資料庫拿到的 confirmedBy。
+// 這次改動更徹底：拿掉「狼隊全員確認」這個機制本身，任何一位狼隊友選定目標、按下確認，
+// 當下就是最終決定，不用等其他隊友——這個機制在真實的多人連線環境下（不管理論上邏輯
+// 多正確）反覆出狀況，乾脆直接拿掉整個同步機制，改成最簡單可靠的「先選先贏」。這裡直接
+// 驗證原始碼確實已經不再依賴 wolfKillConfirmedBy 這個「等待名單」的概念。
 function runWolfProposeSourceCodeCheck(){
   const results=[];
   const check=(name, actual, expected)=>{
@@ -618,8 +621,12 @@ function runWolfProposeSourceCodeCheck(){
   const fnMatch=src.match(/window\.jgRoomWolfPropose=async function[\s\S]*?\n};/);
   const fnSrc=fnMatch?fnMatch[0]:'';
   check('jgRoomWolfPropose 有找到（沒被誤刪或改名）', fnSrc.length>0, true);
-  check('判斷全員到齊時用的是自己剛寫的 myConfirmedList.length，不是重新讀取的 confirmedBy.length',
-    fnSrc.includes('myConfirmedList.length>=wolfUids.length'), true);
+  check('已經不再使用 wolfKillConfirmedBy 這個「等待全員確認」的欄位',
+    !src.includes('wolfKillConfirmedBy'), true);
+  check('已經沒有 jgRoomWolfConfirm（跟其他隊友確認用的按鈕函式）這個函式了，證明真的拿掉了整個確認機制',
+    !src.includes('window.jgRoomWolfConfirm'), true);
+  check('提議之後會用 currentStep 是否還是 wolf 當守門員，避免兩人幾乎同時提議時重複結算兩次',
+    fnSrc.includes("fresh.currentStep==='wolf'"), true);
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail=results.some(r=>!r.ok);
@@ -890,6 +897,61 @@ async function runMechWolfThenWolfChainTest(){
 // 這次把好幾個夜晚選人畫面改成「點圓點號碼→變綠色→按確認才送出」的模式（不再跳
 // confirm() 對話框），驗證這幾個新的「讀格子、換算成uid、送出」函式真的能正確運作，
 // 不是只看語法有沒有通過。
+// 多狼情境：板子上有2隻真正的狼，其中一隻先選定目標並確認——應該立刻就是最終決定，
+// 不用等另一隻狼。接著模擬「另一隻狼晚一點也點了（不同的目標）」——這時候應該要嘛被
+// 忽略（遊戲已經往下走了，不該再改變結果），要嘛至少不能把死亡結算或步驟推進跑兩次、
+// 讓遊戲狀態壞掉。
+async function runMultiWolfFirstWinsTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOM6');
+  mod.__setComp({ wolf:2, medium:1, villager:2 });
+  mod.__setPlayers([
+    { uid:'wolf1Uid', seatNum:1, name:'狼甲', alive:true },
+    { uid:'wolf2Uid', seatNum:2, name:'狼乙', alive:true },
+    { uid:'medUid', seatNum:3, name:'通靈師', alive:true },
+    { uid:'v1Uid', seatNum:4, name:'民甲', alive:true },
+    { uid:'v2Uid', seatNum:5, name:'民乙', alive:true },
+  ]);
+  global.__mockCollections={
+    'rooms/ROOM6/secrets':[
+      { id:'wolf1Uid', data:()=>({role:'wolf'}) },
+      { id:'wolf2Uid', data:()=>({role:'wolf'}) },
+      { id:'medUid', data:()=>({role:'medium'}) },
+      { id:'v1Uid', data:()=>({role:'villager'}) },
+      { id:'v2Uid', data:()=>({role:'villager'}) },
+    ],
+  };
+  global.__mockDocs={ 'rooms/ROOM6':{ night:1, currentStep:'wolf' } };
+  mod.__setRoomDoc({ night:1, currentStep:'wolf' });
+
+  // 狼甲先選 4號 並確認——這隻狼隊只有他一個人按，應該直接結算，不用等狼乙。
+  global.window.jgFirebaseUid='wolf1Uid';
+  await mod.jgRoomWolfPropose('v1Uid', 4, 1);
+  let state=global.__mockDocs['rooms/ROOM6']||{};
+  check('狼甲選完就直接結算，不用等狼乙', state.currentStep, 'medium');
+  check('目標正確記錄成狼甲選的4號', state.wolfKillTargetSeatNum, 4);
+
+  // 狼乙晚一點也點了（選了不同的目標 5號）——遊戲已經往下走了，這次點擊不應該把已經
+  // 結算過的結果或流程弄壞（例如不能讓死亡結算或步驟推進又跑一次）。
+  global.window.jgFirebaseUid='wolf2Uid';
+  mod.__setRoomDoc(state);
+  await mod.jgRoomWolfPropose('v2Uid', 5, 1);
+  state=global.__mockDocs['rooms/ROOM6']||{};
+  check('狼乙晚一點點擊，不會把已經往下走的 currentStep 弄壞成別的東西',
+    state.currentStep, 'medium');
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('多狼情境先選先贏測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項多狼情境先選先贏測試通過`);
+}
+
 async function runGridSubmitFunctionsTest(){
   const { mod } = loadRoomLogicForGodView();
   const results=[];
