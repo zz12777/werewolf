@@ -61,11 +61,12 @@ function loadRoomLogicForGodView() {
     + 'function __setRoomCode(c){ jgRoomCode=c; }\n'
     + 'function __setRoomTotal(t){ jgRoomTotal=t; }\n'
     + 'function __setMyRole(r){ jgMyRole=r; }\n'
+    + 'function __getSuppressFlag(){ return jgRoomSuppressAutoRender; }\n'
     + 'module.exports={jgRoomRenderGodView,jgRoomMechWolfViewHtml,jgRoomMechWolfKillEligible,jgRoomMechWolfLearn,'
     + 'jgRoomWolfViewHtml,jgRoomWolfPropose,jgRoomWitchSave,jgRoomWitchPoison,jgRoomWitchSkip,jgRoomSeerCheck,'
     + 'jgRoomMediumCheck,jgRoomResolveNightDeaths,jgRoomCaptureDeathLine,jgRoomHostSpinSpeechOrder,'
     + 'jgRoomGuardActFromGrid,jgRoomSubmitCheckFromGrid,jgRoomGuardAct,jgRoomRenderNightShell,'
-    + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal,__setMyRole};';
+    + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal,__setMyRole,__getSuppressFlag};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
   fs.writeFileSync(tmpPath, wrapped);
@@ -307,6 +308,7 @@ async function runAsync() {
   await runSoloWolfFullPipelineTest();
   runWolfProposeSourceCodeCheck();
   await runMultiWolfFirstWinsTest();
+  await runSuppressAutoRenderFlagTest();
   await runNightChainTest();
   await runSpeechOrderTest();
   await runDeadWolfNotBlockingTest();
@@ -901,6 +903,47 @@ async function runMechWolfThenWolfChainTest(){
 // 不用等另一隻狼。接著模擬「另一隻狼晚一點也點了（不同的目標）」——這時候應該要嘛被
 // 忽略（遊戲已經往下走了，不該再改變結果），要嘛至少不能把死亡結算或步驟推進跑兩次、
 // 讓遊戲狀態壞掉。
+// 這次抓到的另一個根本原因：狼隊出刀背後其實是好幾筆連續的資料庫寫入（不像機械狼學習
+// 只有一筆），每一筆寫入都會讓即時監聽器再觸發一次重畫——如果玩家剛好還在畫面上（例如
+// 選好號碼但還沒送出、或是動作進行到一半），連續好幾次重畫會把畫面弄亂（選好的號碼跳掉、
+// 或看起來像卡住）。這裡驗證新增的「暫停自動重畫」旗標（jgRoomSuppressAutoRender）確實
+// 有在這整串操作期間被打開，操作結束後（不管成功與否）一定會恢復成 false，不會讓監聽器
+// 從此被永久關閉。
+async function runSuppressAutoRenderFlagTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOM7');
+  mod.__setComp({ wolf:1, medium:1 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'狼人', alive:true },
+    { uid:'medUid', seatNum:2, name:'通靈師', alive:true },
+  ]);
+  global.window.jgFirebaseUid='wolfUid';
+  global.__mockCollections={
+    'rooms/ROOM7/secrets':[
+      { id:'wolfUid', data:()=>({role:'wolf'}) },
+      { id:'medUid', data:()=>({role:'medium'}) },
+    ],
+  };
+  global.__mockDocs={ 'rooms/ROOM7':{ night:1, currentStep:'wolf' } };
+  mod.__setRoomDoc({ night:1, currentStep:'wolf' });
+
+  check('操作開始前，暫停重畫旗標是關閉的', mod.__getSuppressFlag(), false);
+  await mod.jgRoomWolfPropose('medUid', 2, 1);
+  check('整串操作結束後，暫停重畫旗標一定要恢復成關閉，不能卡在開啟狀態',
+    mod.__getSuppressFlag(), false);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('暫停自動重畫旗標測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項暫停自動重畫旗標測試通過`);
+}
+
 async function runMultiWolfFirstWinsTest(){
   const { mod } = loadRoomLogicForGodView();
   const results=[];

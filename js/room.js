@@ -536,6 +536,16 @@ async function jgRoomEnterLobby(code){
       jgRoomLeave();
       return;
     }
+    // 有些操作（例如狼隊出刀：寫目標→記文字紀錄→進黑市商人／女巫回合→…）背後其實是好幾筆
+    // 連續的資料庫寫入，不是像機械狼學習那樣一次寫完。每一筆寫入都會讓這個監聽器再觸發
+    // 一次、整個畫面重畫一次——如果剛好使用者還在同一個選人畫面上（例如另一隻狼隊友的
+    // 選人畫面），連續好幾次重畫會讓他剛選好、還沒送出的號碼被畫面重畫成初始狀態，變成
+    // 「選了又跳掉」；如果剛好是自己那筆操作觸發到一半的中間狀態，也可能讓畫面在動作真正
+    // 結束前就被重畫、看起來像卡住。jgRoomSuppressAutoRender 是這次新增的旗標，讓「一次
+    // 操作背後有好幾筆連續寫入」的函式（見 jgRoomWolfPropose）可以先把這個旗標打開，
+    // 請監聽器這段期間只更新快取、先不要跟著重畫，等它自己那串操作全部做完，再由它自己
+    // 呼叫一次重新渲染，畫面才不會被中途的重畫打斷。
+    if(jgRoomSuppressAutoRender) return;
     jgRoomRenderCurrentPhase();
   });
   if(jgRoomUnsubVotes) jgRoomUnsubVotes();
@@ -1343,11 +1353,14 @@ async function jgRoomBlackmarketUsed(){
   return !!(p&&p.blackmarketUsed);
 }
 
-// ── 狼隊出刀畫面：狼隊必須全員同意同一個目標，才會真的定案。任何一位隊友先提議一個
-//    號碼（跳確認視窗，比照查驗類角色），其餘隊友的畫面會即時同步看到「今晚要殺X號」，
-//    各自按「確認」表態；任何人都可以按「修改」，會清空目前的提議跟所有人的確認狀態，
-//    重新回到選人畫面——藉此確保狼刀是全員同意的結果，不是單一個人說了算。──
+// ── 狼隊出刀畫面：任何一位狼隊友選定目標並按下確認，就是最終決定，不用等其他隊友
+//    （跟其他單人技能是同一種互動方式）。──
 let jgRoomWolfFinalizing=false; // 避免「全員到齊」的結算邏輯被同時觸發兩次（見下方註解）
+// 「一次操作背後有好幾筆連續寫入」的函式（狼隊出刀是目前最明顯的例子）用這個旗標暫時
+// 請即時監聽器不要跟著每一筆中間寫入重畫畫面（見 jgRoomEnterLobby 裡監聽器的說明），
+// 等整串操作都做完再自己呼叫一次重新渲染。務必用 try/finally 包起來，確保不管中途有沒有
+// 出錯，這個旗標最後都會被重設回 false，不會讓畫面從此卡死不再跟著監聽器更新。
+let jgRoomSuppressAutoRender=false;
 let jgRoomNightmareWolfSkipping=false; // 避免「夢魘恐懼到狼隊友、狼隊今晚不能殺人」的自動跳過邏輯被同時觸發兩次
 async function jgRoomWolfViewHtml(night){
   const rd=jgRoomLatestRoomDoc||{};
@@ -1424,18 +1437,26 @@ window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
     await jgRoomRefreshAndRenderCurrent();
     return;
   }
-  await setDoc(doc(db,'rooms',jgRoomCode),{
-    wolfKillNight:night, wolfKillTargetUid:effective, wolfKillTargetSeatNum:targetSeatNum,
-    wolfKillProposedBy:window.jgFirebaseUid
-  },{ merge:true });
-  if(!jgRoomWolfFinalizing){
-    jgRoomWolfFinalizing=true;
-    try{
-      const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-      const fresh=freshSnap.data()||{};
-      if(fresh.currentStep==='wolf'){ await jgRoomWolfFinalize(); }
-    } finally { jgRoomWolfFinalizing=false; }
-  }
+  // 接下來這一串是好幾筆連續的資料庫寫入（寫目標→可能還有記文字紀錄→進黑市商人／女巫
+  // 回合，或直接結算死亡＋往下一步），先把「暫停自動重畫」的旗標打開，避免這幾筆寫入
+  // 陸續觸發即時監聽器、把畫面重畫好幾次——這正是「選好的號碼會跳掉」「按了確認看起來
+  // 沒反應」這兩個症狀的真正原因：畫面在這串操作真正結束之前，就被中途的某一筆寫入
+  // 觸發的監聽器重畫過好幾次。
+  jgRoomSuppressAutoRender=true;
+  try{
+    await setDoc(doc(db,'rooms',jgRoomCode),{
+      wolfKillNight:night, wolfKillTargetUid:effective, wolfKillTargetSeatNum:targetSeatNum,
+      wolfKillProposedBy:window.jgFirebaseUid
+    },{ merge:true });
+    if(!jgRoomWolfFinalizing){
+      jgRoomWolfFinalizing=true;
+      try{
+        const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+        const fresh=freshSnap.data()||{};
+        if(fresh.currentStep==='wolf'){ await jgRoomWolfFinalize(); }
+      } finally { jgRoomWolfFinalizing=false; }
+    }
+  } finally { jgRoomSuppressAutoRender=false; }
   await jgRoomRefreshAndRenderCurrent();
 };
 // 狼刀目標（不管是狼隊選出的、還是夢魘恐懼導致的平安夜、還是機械狼獨自接管出刀、還是
