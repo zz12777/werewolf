@@ -154,6 +154,43 @@ function run(){
     check('超會獵魔人：正確算到獵魔人甲', (dhAward.top[0]||{}).name, '獵魔人甲');
   }
 
+  // ── 滴滴之星：預言家第一晚查的對象拿到警徽，且預言家自己有上警又退水，算一分；
+  //    若該場好人陣營獲勝，再加一分（合計最多兩分） ──
+  const gameDiDi = {
+    id: 'g6',
+    players: [
+      { num:1, name:'預言家甲', role:'預言家' },
+      { num:2, name:'平民乙', role:'平民' },
+      { num:3, name:'狼人丙', role:'狼人' },
+    ],
+    winner: 'good',
+    log: '**夜晚1st\n--驗 2(好)\n**警長競選\n>候選人：1號、2號\n>退水：1號\n>2號自動當選警長（候選人退到只剩一人，不需投票）\n**白天1st\n>平安夜',
+  };
+  {
+    const computeAwards = loadAwards([gameDiDi]);
+    const awards = computeAwards();
+    const diDiAward = awards.find(a=>a.title==='滴滴之星');
+    check('滴滴之星：查驗對象拿到警徽+預言家退水+好人獲勝，共算2分', (diDiAward.top[0]||{}).count, 2);
+    check('滴滴之星：正確算到預言家甲', (diDiAward.top[0]||{}).name, '預言家甲');
+  }
+
+  // 反例：預言家查驗對象雖然拿到警徽，但預言家自己沒有退水（沒上警，或上警沒退），不該算。
+  const gameDiDiNoWithdraw = {
+    id: 'g7',
+    players: [
+      { num:1, name:'預言家丁', role:'預言家' },
+      { num:2, name:'平民戊', role:'平民' },
+    ],
+    winner: 'good',
+    log: '**夜晚1st\n--驗 2(好)\n**警長競選\n>候選人：2號\n>只一人上警，不需投票，2號自動當選警長\n**白天1st\n>平安夜',
+  };
+  {
+    const computeAwards = loadAwards([gameDiDiNoWithdraw]);
+    const awards = computeAwards();
+    const diDiAward = awards.find(a=>a.title==='滴滴之星');
+    check('滴滴之星反例：預言家自己沒退水，不該算分', diDiAward.top.length, 0);
+  }
+
   console.log(JSON.stringify(results, null, 2));
   const anyFail = results.some(r=>!r.ok);
   if(anyFail){ console.error('特別獎項測試有失敗！'); process.exit(1); }

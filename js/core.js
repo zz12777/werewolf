@@ -43,6 +43,9 @@ function switchTab(id){
   if(navBtns) navBtns.classList.remove('open');
   if(id==='t-data') pdLoadCloudGames(); // 每次切到「遊玩數據」分頁都重新抓一次雲端最新場次
   if(id==='t-guide') loadGuideArticles(); // 第一次切到「攻略參考」才去抓資料，避免沒用到還耗流量
+  // 「確認自己身分」按鈕是連線房間專用的，只在「連線房間」分頁顯示，切到其他分頁（角色
+  // 與規則、遊玩數據...）先藏起來，避免讓人誤以為那些分頁也要確認身分。
+  if(window.jgRoomSetIdentityButtonVisible) window.jgRoomSetIdentityButtonVisible(id==='t-room');
   if(id==='t-room'&&window.jgRoomShown!==true){
     window.jgRoomShown=true;
     // js/room.js 是用 <script type="module"> 載入的，執行時機比一般 script 稍晚，
@@ -1400,9 +1403,11 @@ function jgRoomDealFromSetup(){
   const n=Math.min(maxStart,Math.max(minStart,parseInt(document.getElementById('jg-count').value)||minStart));
   const compCheck=getPickComp(jgRolePick);
   const compTotal=Object.values(compCheck).reduce((a,b)=>a+b,0);
-  if(compCheck.thief>0){ alert('⚠️ 連線房間發牌目前還不支援盜賊板子，請調整角色配置。'); return; }
-  if(compTotal!==n){
-    alert('⚠️ 目前選了 '+compTotal+' 個角色，但玩家人數是 '+n+' 人（需選滿 '+n+' 個角色）才能發牌，請調整角色數量。');
+  // 有盜賊時，要選的角色總數是「人數+2」（2張候選身分不算在人數裡），跟本機「開始主持」
+  // 那邊的規則一致，見 jgProceedToNight 附近 targetTotal 的算法。
+  const targetTotal=compCheck.thief>0?n+2:n;
+  if(compTotal!==targetTotal){
+    alert('⚠️ 目前選了 '+compTotal+' 個角色，但玩家人數是 '+n+' 人'+(compCheck.thief>0?'（有盜賊，需選滿 '+targetTotal+' 個角色，比玩家人數多 2 個）':'（需選滿 '+targetTotal+' 個角色）')+'才能發牌，請調整角色數量。');
     return;
   }
   // 玩家名單（座位號碼對應姓名）要先設定過，這樣玩家用手機加入時才能「認自己是幾號」，
@@ -1425,7 +1430,7 @@ function jgRoomDealFromSetup(){
 // 房主的裝置在「連線房間發牌」分配完身分後呼叫這個函式：跳過本機原本「發牌‧確認身分」
 // 那一步需要法官手動一個一個對牌的流程，直接把房間系統洗好、發給每支手機的身分結果，
 // 套進本機的 jgPlayers，然後照 jgStart() 原本的完整重置邏輯走一遍、直接跳去睜眼流程。
-function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal){
+function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal, thiefCand1, thiefCand2){
   // 人數／角色配置一律以「房間系統實際發出去的那份」為準（呼叫端傳進來的 dealtComp/
   // dealtTotal），不要在這裡重新去讀 jgRolePick／jgTotal 這些全域 UI 狀態——房主從按下
   // 「用連線房間發牌」到大家都認領完座位、真的按下分配身分，中間可能等了一段時間，這段
@@ -1454,6 +1459,14 @@ function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal){
   jgCupidChosen=false; jgLovers=null; jgThiefWheelDone=false; jgThiefWheelCand1=null;
   jgThiefWheelCand2=null; jgThiefChosen=false; jgThiefFinalNum=null; jgThiefFinalRole=null;
   jgThiefBuriedRole=null;
+  // 如果是連線房間發牌（不是本機正常流程），盜賊的 2 張候選身分早在房間系統那邊、把牌
+  // 發給玩家之前就先抽好、放一邊了（不然候選池會跟「已經發給某玩家的牌」重複算兩次）。
+  // 呼叫端把那 2 張候選傳進來的話，這裡直接沿用，不要再讓本機重新從 jgComp 抽一次
+  // （這裡的 jgComp 是「發牌當下設定的完整 n+2 張」，重新抽的話可能抽出已經在某玩家
+  // 手上的牌，變成場上多一個角色出來）。
+  if(thiefCand1&&thiefCand2){
+    jgThiefWheelCand1=thiefCand1; jgThiefWheelCand2=thiefCand2; jgThiefWheelDone=true;
+  }
   jgSheriffEnabled=!!(document.getElementById('jg-sheriff-enabled')||{}).checked;
   jgSheriff=null; jgSheriffElectionDone=false; jgSheriffCandidatesAsked=false;
   jgSheriffCampaignHappened=false; jgSheriffCandidates=[]; jgSheriffWithdrawn=[];
@@ -1500,9 +1513,11 @@ function jgRoomCreateFromSetup(){
   const n=Math.min(maxStart,Math.max(minStart,parseInt(document.getElementById('jg-count').value)||minStart));
   const compCheck=getPickComp(jgRolePick);
   const compTotal=Object.values(compCheck).reduce((a,b)=>a+b,0);
-  if(compCheck.thief>0){ alert('⚠️ 連線房間目前還不支援盜賊板子，請調整角色配置後再建立房間。'); return; }
-  if(compTotal!==n){
-    alert('⚠️ 目前選了 '+compTotal+' 個角色，但玩家人數是 '+n+' 人（需選滿 '+n+' 個角色）才能建立房間，請調整角色數量。');
+  // 有盜賊時，要選的角色總數是「人數+2」（2張候選身分不算在人數裡），跟「開始主持」
+  // 那邊的規則一致。
+  const targetTotal=compCheck.thief>0?n+2:n;
+  if(compTotal!==targetTotal){
+    alert('⚠️ 目前選了 '+compTotal+' 個角色，但玩家人數是 '+n+' 人'+(compCheck.thief>0?'（有盜賊，需選滿 '+targetTotal+' 個角色，比玩家人數多 2 個）':'（需選滿 '+targetTotal+' 個角色）')+'才能建立房間，請調整角色數量。');
     return;
   }
   window.jgRoomPendingComp={comp:compCheck, total:n};

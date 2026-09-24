@@ -25,6 +25,7 @@ function awIsWitchStd(role){ return /巫/.test(role) && !/^機械/.test(role); }
 function awIsGuardStd(role){ return /守/.test(role) && !/墓/.test(role) && !/^機械/.test(role); }
 function awIsSeerOrMedium(role){ return role==='預'||role==='預言家'||role==='通'||role==='通靈師'; } // 守墓人、石像鬼、機械通不算
 function awIsDemonhunter(role){ return role==='獵魔人'; } // 跟獵人(hunter)是完全不同的角色，只比對完整名稱，不用「獵」這種容易跟獵人搞混的縮寫
+function awIsSeerOnly(role){ return role==='預'||role==='預言家'; } // 這個獎項只算預言家，通靈師不算（跟 awIsSeerOrMedium 不同）
 function awIsX(v){ return /^x$/i.test(String(v==null?'':v).trim()); }
 // 查狼專家專用判定：機械狼算不算「查到狼」不能沿用 awIsWolfBroad（那是看牌面最終角色，不代表
 // 「查驗當下實際顯示的結果」）。預言家對機械狼永遠是二元好壞判斷、一律驗出「狼」；但通靈師驗到
@@ -87,7 +88,7 @@ function awTopTiers(dict, maxTiers){
 }
 
 function computeAwards(){
-  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={}, thirdPartyWins={}, hanTiaoStar={}, mvpStar={}, demonhunterHits={};
+  const poisonHits={}, seerHits={}, guardHits={}, minWitchCredit={}, selfKillDict={}, thirdPartyWins={}, hanTiaoStar={}, mvpStar={}, demonhunterHits={}, diDiStar={};
 
   // 🏆 MVP之星：直接解析文字紀錄的【MVP: X號姓名】那一行（跟積分計算共用同一個
   // pdGameMvpNum 解析函式，避免兩邊各寫一份 regex、之後改格式要改兩個地方）。
@@ -146,8 +147,36 @@ function computeAwards(){
     const guardStd=players.find(p=>awIsGuardStd(p.role));
     const seerP=players.find(p=>awIsSeerOrMedium(p.role));
     const demonhunterP=players.find(p=>awIsDemonhunter(p.role));
+    const seerOnlyP=players.find(p=>awIsSeerOnly(p.role));
 
     const n1=awParseNight(nights[0]);
+
+    // 💊 滴滴之星：預言家第一晚查的對象拿到警徽，而且預言家自己有上警又退水——代表預言家
+    // 選擇不自己競選，而是把信任「代跳」給查驗結果，讓對方順利當選警長。從 **警長競選
+    // 區塊裡直接解析「退水：X號」跟「當選警長」兩種資訊（跟本機法官助手 jgFormatSheriffBlock
+    // 輸出的格式一致），不用額外的結構化資料。
+    if(seerOnlyP && n1.checks && n1.checks.length){
+      const seerCheck=n1.checks.find(c=>c.type==='驗');
+      const seerCheckSeat=seerCheck?String(seerCheck.target):null;
+      const seerNum=players.find(p=>p.name===seerOnlyP.name);
+      const seerOwnSeat=seerNum?String(seerNum.num):null;
+      const sheriffBlockMatch=String(g.log).match(/\*\*警長競選\n([\s\S]*?)(?=\n\*\*|$)/);
+      const sheriffBlock=sheriffBlockMatch?sheriffBlockMatch[1]:'';
+      const withdrawnMatch=sheriffBlock.match(/退水：([\d、]+)號/);
+      const withdrawnSeats=withdrawnMatch?withdrawnMatch[1].split('、'):[];
+      const electedMatch=sheriffBlock.match(/(\d+)號(?:自動)?當選警長|（當選警長）/);
+      let electedSeat=null;
+      if(electedMatch&&electedMatch[1]){ electedSeat=electedMatch[1]; }
+      else {
+        const voteLineMatch=sheriffBlock.match(/警長票(\d+)：[^\n]*（當選警長）/);
+        if(voteLineMatch) electedSeat=voteLineMatch[1];
+      }
+      if(seerCheckSeat && seerOwnSeat && electedSeat
+        && withdrawnSeats.includes(seerOwnSeat) && electedSeat===seerCheckSeat){
+        awAddCredit(diDiStar, seerOnlyP.name, g.id);
+        if(g.winner==='good') awAddCredit(diDiStar, seerOnlyP.name, g.id); // 好人獲勝再加一分
+      }
+    }
 
     // 🔪 自刀專家：女巫救 A，A 剛好是當晚狼刀目標，而且 A 本身也是見面狼隊友——代表「自刀
     // 騙解藥」這招真的騙到女巫出手了（單純狼隊不小心刀到隊友、但女巫沒有跟著救，不能算，
@@ -222,6 +251,8 @@ function computeAwards(){
       note:'【預言家查到狼】:僅計「預言家／通靈師」的查驗結果，查到邪惡陣營即算命中；機械狼僅限最終顯示為「機械狼／機械黑狼王／機械狼人」時才算（學到女巫/守衛/獵人等好人技能後查到不算）。雙身分板若牌面顯示為好人則不算。'},
     {icon:'🗡️',title:'超會獵魔人',top:awTopTiers(demonhunterHits),
       note:'【獵魔人獵對狼】:獵魔人把狼獵出去。逐一比對有獵魔人的板子，狩的對象＝該場狼隊號碼，算一次。'},
+    {icon:'D',title:'滴滴之星',top:awTopTiers(diDiStar),
+      note:'【滴滴代跳預言家】:預言家第一晚查的對象拿到警徽，且預言家有上警又退水，算一分；若該場好人陣營獲勝，再加一分。'},
     {icon:'🔪',title:'自刀專家',top:awTopTiers(selfKillDict),
       note:'【自刀騙解藥成功】:女巫救的對象是狼隊見面狼隊友，代表成功騙解藥，該局所有見面狼隊友（機械狼、石像鬼等不見面角色不算）都算1次。'},
     {icon:'🛡️',title:'鋼鐵守衛',top:awTopTiers(guardHits),

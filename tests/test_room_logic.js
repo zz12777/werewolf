@@ -17,9 +17,10 @@ function loadRoomLogic() {
     + '// 讓 jgRoomCheckShootEligible 這種會呼叫 getDoc(doc(...)) 的函式也能在這裡單獨測試。\n'
     + 'function doc(db, ...segs){ return segs.join("/"); }\n'
     + 'async function getDoc(ref){ const d=(global.__mockDocs||{})[ref]; return { exists:()=>d!==undefined, data:()=>d }; }\n'
-    + 'async function setDoc(ref, data, opts){ global.__mockDocs=global.__mockDocs||{}; global.__mockDocs[ref]=opts&&opts.merge?Object.assign({},global.__mockDocs[ref]||{},data):data; }\n'
+    + 'async function setDoc(ref, data, opts){ global.__mockDocs=global.__mockDocs||{}; const existing=global.__mockDocs[ref]||{}; const base=opts&&opts.merge?Object.assign({},existing):{}; for(const k in data){ const v=data[k]; if(v&&typeof v===\'object\'&&v.__jgArrayUnion){ const cur=Array.isArray(existing[k])?existing[k]:[]; const toAdd=v.__jgArrayUnion.filter(x=>!cur.includes(x)); base[k]=cur.concat(toAdd); } else if(v&&typeof v===\'object\'&&v.__jgArrayRemove){ const cur=Array.isArray(existing[k])?existing[k]:[]; base[k]=cur.filter(x=>!v.__jgArrayRemove.includes(x)); } else { base[k]=v; } } global.__mockDocs[ref]=base; }\n'
     + 'function collection(){ return "collection"; }\n'
-    + 'function arrayUnion(v){ return v; }\n';
+    + 'function arrayUnion(...vals){ return {__jgArrayUnion: vals}; }\n'
+    + 'function arrayRemove(...vals){ return {__jgArrayRemove: vals}; }\n';
   const exportsFooter = '\nfunction __setComp(c){ jgRoomComp=c; }\n'
     + 'function __setPlayers(p){ jgRoomLatestPlayers=p; }\n'
     + 'function __setRoomDoc(d){ jgRoomLatestRoomDoc=d; }\n'
@@ -51,9 +52,10 @@ function loadRoomLogicForGodView() {
     + 'const RNAME={wolf:"狼人",wolfking:"黑狼王",whitewolf:"白狼王",wolfbeauty:"狼美人",evilknight:"惡靈騎士",gargoyle:"石像鬼",bloodmoon:"血月使者",mechanicalwolf:"機械狼",nightmare:"夢魘",wolfbrother_e:"狼兄",wolfbrother_y:"狼弟",wolfshaman:"狼巫",mask:"假面",bigbadwolf:"大野狼",bigmechwolf:"大機械狼",smallmechwolf:"小機械狼",biggreywolf:"大灰狼",trickster:"詭術師",villager:"平民",hybrid:"混血兒",cupid:"邱比特",thief:"盜賊",fool:"傻瓜",seer:"預言家",witch:"女巫",hunter:"獵人",guard:"守衛",dreamcatcher:"攝夢人",knight:"騎士",magician:"魔術師",trickmage:"魔術師",demonhunter:"獵魔人",gravkeeper:"守墓人",medium:"通靈師",blackmarket:"黑市商人",purewhitemaiden:"純白之女",dancer:"舞者",littlegirl:"小女孩",diviner:"占卜師",zombie:"殭屍",sequenceprince:"定序王子",sheriff:"警長",luckyone:"幸運兒"};\n'
     + 'function doc(db, ...segs){ return segs.join("/"); }\n'
     + 'async function getDoc(ref){ const d=(global.__mockDocs||{})[ref]; return { exists:()=>d!==undefined, data:()=>d }; }\n'
-    + 'async function setDoc(ref, data, opts){ global.__mockDocs=global.__mockDocs||{}; global.__mockDocs[ref]=opts&&opts.merge?Object.assign({},global.__mockDocs[ref]||{},data):data; }\n'
+    + 'async function setDoc(ref, data, opts){ global.__mockDocs=global.__mockDocs||{}; const existing=global.__mockDocs[ref]||{}; const base=opts&&opts.merge?Object.assign({},existing):{}; for(const k in data){ const v=data[k]; if(v&&typeof v===\'object\'&&v.__jgArrayUnion){ const cur=Array.isArray(existing[k])?existing[k]:[]; const toAdd=v.__jgArrayUnion.filter(x=>!cur.includes(x)); base[k]=cur.concat(toAdd); } else if(v&&typeof v===\'object\'&&v.__jgArrayRemove){ const cur=Array.isArray(existing[k])?existing[k]:[]; base[k]=cur.filter(x=>!v.__jgArrayRemove.includes(x)); } else { base[k]=v; } } global.__mockDocs[ref]=base; }\n'
     + 'function collection(db, ...segs){ return segs.join("/"); }\n'
-    + 'function arrayUnion(v){ return v; }\n'
+    + 'function arrayUnion(...vals){ return {__jgArrayUnion: vals}; }\n'
+    + 'function arrayRemove(...vals){ return {__jgArrayRemove: vals}; }\n'
     + 'async function __mockGetDocs(collRef){ return { docs: (global.__mockCollections||{})[collRef]||[] }; }\n';
   const exportsFooter = '\nfunction __setComp(c){ jgRoomComp=c; }\n'
     + 'function __setPlayers(p){ jgRoomLatestPlayers=p; }\n'
@@ -62,10 +64,14 @@ function loadRoomLogicForGodView() {
     + 'function __setRoomTotal(t){ jgRoomTotal=t; }\n'
     + 'function __setMyRole(r){ jgMyRole=r; }\n'
     + 'function __getSuppressFlag(){ return jgRoomSuppressAutoRender; }\n'
+    + 'function buildPool(c){const p=[];for(const[r,n] of Object.entries(c))for(let i=0;i<n;i++)p.push(r);return p;}\n'
+    + 'function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}\n'
     + 'module.exports={jgRoomRenderGodView,jgRoomMechWolfViewHtml,jgRoomMechWolfKillEligible,jgRoomMechWolfLearn,'
     + 'jgRoomWolfViewHtml,jgRoomWolfPropose,jgRoomWitchSave,jgRoomWitchPoison,jgRoomWitchSkip,jgRoomSeerCheck,'
     + 'jgRoomMediumCheck,jgRoomResolveNightDeaths,jgRoomCaptureDeathLine,jgRoomHostSpinSpeechOrder,'
     + 'jgRoomGuardActFromGrid,jgRoomSubmitCheckFromGrid,jgRoomGuardAct,jgRoomRenderNightShell,'
+    + 'jgRoomAdvanceToDayPhase,jgRoomJoinSheriff,jgRoomLockSheriffJoin,jgRoomRenderSheriffCampaign,jgRoomWolfConfirm,'
+    + 'jgRoomAssignRoles,jgRoomThiefChoose,jgRoomThiefViewHtml,jgRoomNextNightStep,jgRoomStepPresent,jgRoomCupidPickFirst,jgRoomCupidConfirmPair,jgRoomDealAssignRoles,'
     + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal,__setMyRole,__getSuppressFlag};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
@@ -307,9 +313,13 @@ async function runAsync() {
   await runSoloWolfAutoFinalizeTest();
   await runSoloWolfFullPipelineTest();
   runWolfProposeSourceCodeCheck();
-  await runMultiWolfFirstWinsTest();
+  await runMultiWolfConsensusTest();
+  await runThiefWithCupidTest();
+  await runDealAllRolesTest();
   await runSuppressAutoRenderFlagTest();
-  await runWolfOperatorDispatchTest();
+  await runWolfAllMembersSeeScreenTest();
+  await runSheriffEnabledGateTest();
+  await runSheriffCampaignFlowTest();
   await runNightChainTest();
   await runSpeechOrderTest();
   await runDeadWolfNotBlockingTest();
@@ -610,10 +620,10 @@ async function runSoloWolfFullPipelineTest(){
   console.log(`全部 ${results.length} 項單一狼人完整渲染鏈路測試通過`);
 }
 
-// 這次改動更徹底：拿掉「狼隊全員確認」這個機制本身，任何一位狼隊友選定目標、按下確認，
-// 當下就是最終決定，不用等其他隊友——這個機制在真實的多人連線環境下（不管理論上邏輯
-// 多正確）反覆出狀況，乾脆直接拿掉整個同步機制，改成最簡單可靠的「先選先贏」。這裡直接
-// 驗證原始碼確實已經不再依賴 wolfKillConfirmedBy 這個「等待名單」的概念。
+// 這次確認根本問題是 Firestore 安全規則擋住寫入（不是多人同步邏輯本身），已經恢復成
+// 「板子上不只一隻狼時，全員確認才算數」的原始設計，只有一隻狼才會提議完直接結算。這裡
+// 直接驗證原始碼確實照這個寫法：propose 會正確寫入 wolfKillConfirmedBy，jgRoomWolfConfirm
+// 這個給其他隊友按確認用的函式也確實還在。
 function runWolfProposeSourceCodeCheck(){
   const results=[];
   const check=(name, actual, expected)=>{
@@ -624,12 +634,12 @@ function runWolfProposeSourceCodeCheck(){
   const fnMatch=src.match(/window\.jgRoomWolfPropose=async function[\s\S]*?\n};/);
   const fnSrc=fnMatch?fnMatch[0]:'';
   check('jgRoomWolfPropose 有找到（沒被誤刪或改名）', fnSrc.length>0, true);
-  check('已經不再使用 wolfKillConfirmedBy 這個「等待全員確認」的欄位',
-    !src.includes('wolfKillConfirmedBy'), true);
-  check('已經沒有 jgRoomWolfConfirm（跟其他隊友確認用的按鈕函式）這個函式了，證明真的拿掉了整個確認機制',
-    !src.includes('window.jgRoomWolfConfirm'), true);
-  check('提議之後會用 currentStep 是否還是 wolf 當守門員，避免兩人幾乎同時提議時重複結算兩次',
-    fnSrc.includes("fresh.currentStep==='wolf'"), true);
+  check('提議時會正確寫入 wolfKillConfirmedBy（全員確認名單的第一筆）',
+    fnSrc.includes('wolfKillConfirmedBy'), true);
+  check('jgRoomWolfConfirm（給其他隊友按確認用的函式）確實還在',
+    src.includes('window.jgRoomWolfConfirm'), true);
+  check('提議之後會用「自己剛寫的確認名單長度」跟狼隊總人數比較，狼隊只有自己一人時直接結算',
+    fnSrc.includes('myConfirmedList.length>=wolfUids.length'), true);
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail=results.some(r=>!r.ok);
@@ -913,7 +923,95 @@ async function runMechWolfThenWolfChainTest(){
 // 這次的簡化：板子上不只一隻見面狼時，只有「座號最小」的那一位手機會顯示真的可以操作的
 // 選人畫面，其餘狼隊友只看得到一行提示訊息（不會有任何互動按鈕）——徹底避開「好幾支手機
 // 同時可以操作、互相干擾」這整類問題的根源。這裡驗證兩邊的畫面內容都符合預期。
-async function runWolfOperatorDispatchTest(){
+// 房主建房時沒有勾選「本局開放上警競選」，第一夜結束後不應該出現警長競選畫面，要直接
+// 進白天——這是這次抓到的真正 bug：jgRoomAdvanceToDayPhase 原本完全沒檢查這個設定，
+// 第一夜結束一律強制進警長競選。
+async function runSheriffEnabledGateTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  // 情境1：房主沒有勾選開放上警——第一夜結束應該直接進白天，不會出現警長競選。
+  mod.__setRoomCode('ROOM9');
+  mod.__setPlayers([{ uid:'p1', seatNum:1, name:'甲', alive:true }]);
+  global.__mockDocs={ 'rooms/ROOM9':{ night:1, sheriffEnabled:false } };
+  mod.__setRoomDoc({ night:1, sheriffEnabled:false });
+  await mod.jgRoomAdvanceToDayPhase(1);
+  let state=global.__mockDocs['rooms/ROOM9']||{};
+  check('沒有開放上警：第一夜結束後應該直接進 day-open，不是警長競選', state.phase, 'day-open');
+  check('沒有開放上警：sheriffPhase 應該是 null（沒有進警長競選）', state.sheriffPhase, null);
+
+  // 情境2：房主有勾選開放上警——第一夜結束才應該進警長競選。
+  global.__mockDocs={ 'rooms/ROOM9':{ night:1, sheriffEnabled:true } };
+  mod.__setRoomDoc({ night:1, sheriffEnabled:true });
+  await mod.jgRoomAdvanceToDayPhase(1);
+  state=global.__mockDocs['rooms/ROOM9']||{};
+  check('有開放上警：第一夜結束後應該進警長競選（joining 階段）', state.sheriffPhase, 'joining');
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('警長開關測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項警長開關測試通過`);
+}
+
+// 警長競選完整流程：候選人在時間內按參選按鈕→時間到鎖定名單→鎖定後所有人（含候選人
+// 自己）都看不到參選按鈕、只看得到候選人名單文字。
+async function runSheriffCampaignFlowTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOM10');
+  mod.__setPlayers([
+    { uid:'p1', seatNum:1, name:'甲', alive:true },
+    { uid:'p2', seatNum:2, name:'乙', alive:true },
+    { uid:'p3', seatNum:3, name:'丙', alive:true },
+  ]);
+  global.__mockDocs={ 'rooms/ROOM10':{ night:1, phase:'sheriff', sheriffPhase:'joining', sheriffCandidates:[], sheriffEverCandidates:[], sheriffJoinDeadline: Date.now()+10000 } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/ROOM10']);
+
+  // 甲在時間內按下參選
+  global.window.jgFirebaseUid='p1';
+  await mod.jgRoomJoinSheriff();
+  let state=global.__mockDocs['rooms/ROOM10']||{};
+  check('甲參選後，候選人名單裡有甲', (state.sheriffCandidates||[]).includes('p1'), true);
+
+  mod.__setRoomDoc(state);
+  // 鎖定前，換乙（還沒參選）看畫面：應該看得到「參選警長」按鈕。
+  global.window.jgFirebaseUid='p2';
+  await mod.jgRoomRenderSheriffCampaign();
+  const beforeLockHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('鎖定前：還沒參選的乙應該看得到「參選警長」按鈕', beforeLockHtml.includes('參選警長'), true);
+
+  // 時間到，觸發鎖定（模擬房主或任一玩家的倒數計時器跑完）
+  global.window.jgFirebaseUid='p1';
+  await mod.jgRoomLockSheriffJoin();
+  state=global.__mockDocs['rooms/ROOM10']||{};
+  check('時間到之後，sheriffPhase 應該變成 locked', state.sheriffPhase, 'locked');
+
+  // 鎖定後，換乙（沒參選過的人）看畫面——不應該再看到參選按鈕
+  global.window.jgFirebaseUid='p2';
+  mod.__setRoomDoc(state);
+  await mod.jgRoomRenderSheriffCampaign();
+  const afterLockHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('鎖定後，沒參選過的乙不應該再看到「參選警長」按鈕', afterLockHtml.includes('參選警長'), false);
+  check('鎖定後，畫面上應該看得到候選人甲的名字', afterLockHtml.includes('甲'), true);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('警長競選完整流程測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項警長競選完整流程測試通過`);
+}
+
+// 恢復全員確認流程後，板子上每一位見面狼隊友（不分座號大小）都應該看得到真的可以操作
+// 的選人畫面，不會再有「只有座號最小的人能操作、其他人只看提示訊息」這種限制了。
+async function runWolfAllMembersSeeScreenTest(){
   const { mod } = loadRoomLogicForGodView();
   const results=[];
   const check=(name, actual, expected)=>{
@@ -925,7 +1023,7 @@ async function runWolfOperatorDispatchTest(){
   mod.__setComp({ wolf:2, medium:1 });
   mod.__setPlayers([
     { uid:'wolf1Uid', seatNum:3, name:'狼甲', alive:true },
-    { uid:'wolf2Uid', seatNum:1, name:'狼乙', alive:true }, // 座號比狼甲小，應該是操作者
+    { uid:'wolf2Uid', seatNum:1, name:'狼乙', alive:true },
     { uid:'medUid', seatNum:5, name:'通靈師', alive:true },
   ]);
   global.__mockCollections={
@@ -938,25 +1036,21 @@ async function runWolfOperatorDispatchTest(){
   global.__mockDocs={ 'rooms/ROOM8':{ night:1, currentStep:'wolf', phase:'night' } };
   mod.__setRoomDoc({ night:1, currentStep:'wolf', phase:'night' });
 
-  // 座號較大的狼甲（3號）：應該只看到提示訊息，沒有選人畫面。
   global.window.jgFirebaseUid='wolf1Uid';
   mod.__setMyRole('wolf');
   await mod.jgRoomRenderNightShell();
   const wolf1Html=global.document.getElementById('jg-room-content').innerHTML;
-  check('座號較大的狼隊友：看到的是提示訊息，不是選人畫面', wolf1Html.includes('殺人畫面在'), true);
-  check('座號較大的狼隊友：畫面裡提到操作者是1號', wolf1Html.includes('1號'), true);
-  check('座號較大的狼隊友：畫面裡不應該出現選人的號碼格子', wolf1Html.includes('jg-room-wolf-pick'), false);
+  check('座號較大的狼甲：一樣看得到真的選人畫面', wolf1Html.includes('請選擇今晚要殺的對象'), true);
 
-  // 座號較小的狼乙（1號）：應該看到真的可以操作的選人畫面。
   global.window.jgFirebaseUid='wolf2Uid';
   await mod.jgRoomRenderNightShell();
   const wolf2Html=global.document.getElementById('jg-room-content').innerHTML;
-  check('座號較小的狼隊友：看到的是真的選人畫面', wolf2Html.includes('請選擇今晚要殺的對象'), true);
+  check('座號較小的狼乙：一樣看得到真的選人畫面', wolf2Html.includes('請選擇今晚要殺的對象'), true);
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail=results.some(r=>!r.ok);
-  if(anyFail){ console.error('狼隊操作者畫面分派測試有失敗！'); process.exit(1); }
-  console.log(`全部 ${results.length} 項狼隊操作者畫面分派測試通過`);
+  if(anyFail){ console.error('狼隊每個人都看得到畫面測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項狼隊每個人都看得到畫面測試通過`);
 }
 
 async function runSuppressAutoRenderFlagTest(){
@@ -994,7 +1088,142 @@ async function runSuppressAutoRenderFlagTest(){
   console.log(`全部 ${results.length} 項暫停自動重畫旗標測試通過`);
 }
 
-async function runMultiWolfFirstWinsTest(){
+// 多狼情境（恢復全員確認流程後）：狼甲先提議一個目標，這時候不該直接結算（因為狼隊還有
+// 狼乙沒確認）；狼乙按下確認之後，全員到齊，才應該真的結算、往下一步。
+// 盜賊＋邱比特板子的完整測試（照使用者要求，盜賊搭配邱比特一起測）：6人局，狼2、
+// 預言家1、邱比特1、盜賊1、平民1（共6個角色名額）——有盜賊時角色總數要是人數+2=8，
+// 這裡用 狼2/預言家1/邱比特1/盜賊1/平民1/平民1/平民1 = 8 個驗證分牌、候選、選擇、
+// 交棒給邱比特的完整鏈路。
+// 「發牌」功能的定位比連線房間單純很多——只需要「隨機分配身分＋讓每個人手機看得到自己
+// 的身分卡」，之後整場遊戲交給房主用本機法官助手主持，不需要每個角色都有專屬的夜晚操作
+// 畫面（那是連線房間才需要的）。這裡驗證：不管板子裡有哪些角色（包含先前列過、連線房間
+// 還沒支援互動流程的那一長串角色），只要不是雙身分模式，分配＋顯示這兩件事都能正常運作，
+// 不會半路壞掉、也不會有角色顯示不出正確的中文名稱或圖示（退回顯示原始英文代號）。
+async function runDealAllRolesTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  // 涵蓋一大批先前列為「連線房間未支援互動流程」的角色，確認發牌（純分配+顯示）不受影響。
+  const boards=[
+    { name:'白狼王+惡靈騎士板', comp:{ whitewolf:1, evilknight:1, seer:1, witch:1, villager:2 } },
+    { name:'狼美人+騎士板', comp:{ wolfbeauty:1, knight:1, seer:1, witch:1, hunter:1, villager:1 } },
+    { name:'石像鬼+守墓人板', comp:{ gargoyle:1, gravkeeper:1, wolf:1, seer:1, villager:2 } },
+    { name:'血月使者+獵魔人板', comp:{ bloodmoon:1, demonhunter:1, wolf:1, seer:1, villager:2 } },
+    { name:'混血兒+占卜師+殭屍板', comp:{ hybrid:1, diviner:1, zombie:1, wolf:2, villager:1 } },
+    { name:'詭術師+純白之女+舞者+小女孩板', comp:{ trickster:1, purewhitemaiden:1, dancer:1, littlegirl:1, wolf:2 } },
+    { name:'大野狼+大灰狼+假面+狼巫板', comp:{ bigbadwolf:1, biggreywolf:1, mask:1, wolfshaman:1, seer:1, villager:1 } },
+  ];
+
+  for(const board of boards){
+    const total=Object.values(board.comp).reduce((a,b)=>a+b,0);
+    mod.__setRoomCode('ROOM_'+board.name);
+    mod.__setComp(board.comp);
+    const players=[];
+    for(let i=1;i<=total;i++) players.push({ uid:'u'+i, seatNum:i, name:'P'+i });
+    mod.__setPlayers(players);
+    global.__mockDocs={};
+    const presetNames={}; players.forEach(p=>{ presetNames[p.seatNum]=p.name; });
+    mod.__setRoomDoc({ presetNames });
+    global.__mockCollections={};
+
+    let threw=false;
+    try{ await mod.jgRoomDealAssignRoles(); }
+    catch(e){ threw=true; console.error(board.name+' 分配時發生例外：', e); }
+    check(board.name+'：分配過程沒有拋出例外', threw, false);
+
+    const dealtRoles=players.map(p=>{
+      const doc=global.__mockDocs['rooms/ROOM_'+board.name+'/secrets/'+p.uid];
+      return doc?doc.role:null;
+    });
+    check(board.name+'：每個人都拿到了角色（沒有 null）', dealtRoles.every(r=>!!r), true);
+  }
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('發牌涵蓋各種角色測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項發牌涵蓋各種角色測試通過`);
+}
+
+async function runThiefWithCupidTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOM11');
+  const comp={ wolf:2, seer:1, cupid:1, thief:1, villager:3 }; // 總數 2+1+1+1+3=8，人數6+2=8 ✓
+  mod.__setComp(comp);
+  mod.__setRoomTotal(6);
+  const players=[
+    { uid:'p1', seatNum:1, name:'甲' },
+    { uid:'p2', seatNum:2, name:'乙' },
+    { uid:'p3', seatNum:3, name:'丙' },
+    { uid:'p4', seatNum:4, name:'丁' },
+    { uid:'p5', seatNum:5, name:'戊' },
+    { uid:'p6', seatNum:6, name:'己' },
+  ];
+  mod.__setPlayers(players);
+  global.__mockDocs={};
+  global.__mockCollections={ 'rooms/ROOM11/players': players.map(p=>({ id:p.uid, data:()=>p })) };
+
+  // 步驟1：分配身分——驗證「人數+2」的牌池正確運作：6個人剛好拿到6張牌（其中一定
+  // 包含'thief'本身），另外2張候選身分被放到房間文件裡（thiefCand1/thiefCand2），
+  // 不會被發給任何玩家、也不會憑空消失。
+  await mod.jgRoomAssignRoles();
+  const roomAfterAssign=global.__mockDocs['rooms/ROOM11']||{};
+  check('分配身分後，房間文件裡有記錄2張候選身分（thiefCand1）', !!roomAfterAssign.thiefCand1, true);
+  check('分配身分後，房間文件裡有記錄2張候選身分（thiefCand2）', !!roomAfterAssign.thiefCand2, true);
+  check('thiefResolved 初始應該是 false（還沒選）', roomAfterAssign.thiefResolved, false);
+
+  const dealtRoles=players.map(p=>{
+    const secretDoc=global.__mockDocs['rooms/ROOM11/secrets/'+p.uid]||{};
+    return secretDoc.role;
+  });
+  check('6個人剛好都拿到牌（沒有人是 undefined）', dealtRoles.every(r=>!!r), true);
+  check('剛好有一個人拿到「盜賊」這張暫時身分', dealtRoles.filter(r=>r==='thief').length, 1);
+  // 候選的2張＋發出去的6張，應該剛好等於原始8張牌池的角色種類分佈（用排序後比對）。
+  const allDealtOrCand=dealtRoles.concat([roomAfterAssign.thiefCand1, roomAfterAssign.thiefCand2])
+    .map(r=>r==='thief'?'thief':r).sort();
+  const originalPool=[]; Object.entries(comp).forEach(([r,n])=>{ for(let i=0;i<n;i++) originalPool.push(r); });
+  check('發出去的6張＋放一邊的2張候選，合計起來要跟原始板子配置的8張角色完全一致（不多不少，沒有角色憑空消失或變出來）',
+    allDealtOrCand.sort().join(','), originalPool.sort().join(','));
+
+  // 步驟2：第一夜第一步應該是盜賊（比邱比特還早）。
+  mod.__setRoomDoc(roomAfterAssign);
+  const firstStep=mod.jgRoomNextNightStep(null, 1);
+  check('第一夜第一步應該是盜賊（比邱比特還早睜眼）', firstStep, 'thief');
+
+  // 步驟3：找到拿到「盜賊」暫時身分的那個人，模擬他看到候選畫面、選一個身分。
+  const thiefPlayer=players.find(p=>{
+    const secretDoc=global.__mockDocs['rooms/ROOM11/secrets/'+p.uid]||{};
+    return secretDoc.role==='thief';
+  });
+  global.window.jgFirebaseUid=thiefPlayer.uid;
+  const rdForView={ night:1, thiefCand1:roomAfterAssign.thiefCand1, thiefCand2:roomAfterAssign.thiefCand2 };
+  const viewResult=mod.jgRoomThiefViewHtml(rdForView, 1);
+  check('盜賊的畫面確實顯示了2個候選身分名稱其中一個', viewResult.html.includes('請選擇一個身分'), true);
+
+  global.window.confirm=()=>true;
+  await mod.jgRoomThiefChoose(roomAfterAssign.thiefCand1, 1);
+  const roomAfterChoose=global.__mockDocs['rooms/ROOM11']||{};
+  const thiefSecretAfter=global.__mockDocs['rooms/ROOM11/secrets/'+thiefPlayer.uid]||{};
+  check('盜賊選完之後，自己的 secrets 身分正確改成選中的那張', thiefSecretAfter.role, roomAfterAssign.thiefCand1);
+  check('thiefResolved 應該變成 true', roomAfterChoose.thiefResolved, true);
+  check('盜賊選完之後，下一步應該接邱比特（板子上有邱比特）', roomAfterChoose.currentStep, 'cupid');
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('盜賊搭配邱比特測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項盜賊搭配邱比特測試通過`);
+}
+
+async function runMultiWolfConsensusTest(){
   const { mod } = loadRoomLogicForGodView();
   const results=[];
   const check=(name, actual, expected)=>{
@@ -1023,26 +1252,25 @@ async function runMultiWolfFirstWinsTest(){
   global.__mockDocs={ 'rooms/ROOM6':{ night:1, currentStep:'wolf' } };
   mod.__setRoomDoc({ night:1, currentStep:'wolf' });
 
-  // 狼甲先選 4號 並確認——這隻狼隊只有他一個人按，應該直接結算，不用等狼乙。
+  // 狼甲先選 4號 並提議——狼隊有兩人，狼乙還沒確認，不該直接結算。
   global.window.jgFirebaseUid='wolf1Uid';
   await mod.jgRoomWolfPropose('v1Uid', 4, 1);
   let state=global.__mockDocs['rooms/ROOM6']||{};
-  check('狼甲選完就直接結算，不用等狼乙', state.currentStep, 'medium');
+  check('狼甲提議後，還有狼乙沒確認，不應該直接結算（currentStep還是wolf）', state.currentStep, 'wolf');
+  check('已確認名單裡目前只有狼甲自己1人', (state.wolfKillConfirmedBy||[]).length, 1);
   check('目標正確記錄成狼甲選的4號', state.wolfKillTargetSeatNum, 4);
 
-  // 狼乙晚一點也點了（選了不同的目標 5號）——遊戲已經往下走了，這次點擊不應該把已經
-  // 結算過的結果或流程弄壞（例如不能讓死亡結算或步驟推進又跑一次）。
+  // 狼乙按下確認——全員（2人）到齊，這時候才應該真的結算、往下一步。
   global.window.jgFirebaseUid='wolf2Uid';
   mod.__setRoomDoc(state);
-  await mod.jgRoomWolfPropose('v2Uid', 5, 1);
+  await mod.jgRoomWolfConfirm();
   state=global.__mockDocs['rooms/ROOM6']||{};
-  check('狼乙晚一點點擊，不會把已經往下走的 currentStep 弄壞成別的東西',
-    state.currentStep, 'medium');
+  check('狼乙確認後，全員到齊，應該真的結算往下一步', state.currentStep, 'medium');
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail=results.some(r=>!r.ok);
-  if(anyFail){ console.error('多狼情境先選先贏測試有失敗！'); process.exit(1); }
-  console.log(`全部 ${results.length} 項多狼情境先選先贏測試通過`);
+  if(anyFail){ console.error('多狼情境全員確認測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項多狼情境全員確認測試通過`);
 }
 
 async function runGridSubmitFunctionsTest(){

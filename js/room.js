@@ -174,17 +174,38 @@ window.jgRoomDealAssignRoles=async function(){
     return;
   }
   const db=window.jgFirebaseDb;
-  const pool=shuffle(buildPool(jgRoomComp));
   const players=jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum);
   const seatRoleMap={};
-  await Promise.all(players.map((p,i)=>{
-    const role=pool[i]||'villager';
-    seatRoleMap[p.seatNum]=role;
-    return setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:role, seatNum:p.seatNum });
-  }));
+  let thiefCand1=null, thiefCand2=null;
+  if(jgRoomComp.thief>0){
+    // 跟一般連線房間的邏輯一樣：有盜賊時板子設定的角色總數是「人數+2」，要先抽出2張
+    // 候選身分放一邊，剩下人數-1張＋盜賊本身湊成人數張才發給玩家（詳見
+    // jgRoomAssignRoles 那邊的完整說明，這裡是同一套邏輯，只是接下來要把結果交給房主
+    // 的本機法官助手接手，所以候選身分也要一起傳過去，見 jgApplyDealtRoles）。
+    const fullPool=buildPool(jgRoomComp);
+    const thiefIdx=fullPool.indexOf('thief');
+    fullPool.splice(thiefIdx,1);
+    const shuffledRest=shuffle(fullPool.slice());
+    thiefCand1=shuffledRest[0]; thiefCand2=shuffledRest[1];
+    const pool=shuffle(shuffledRest.slice(2).concat(['thief']));
+    await Promise.all(players.map((p,i)=>{
+      const role=pool[i]||'villager';
+      seatRoleMap[p.seatNum]=role;
+      return setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:role, seatNum:p.seatNum });
+    }));
+  } else {
+    const pool=shuffle(buildPool(jgRoomComp));
+    await Promise.all(players.map((p,i)=>{
+      const role=pool[i]||'villager';
+      seatRoleMap[p.seatNum]=role;
+      return setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:role, seatNum:p.seatNum });
+    }));
+  }
   await setDoc(doc(db,'rooms',jgRoomCode),{ dealtDone:true, status:'role-assigned' },{ merge:true });
   // 房主自己的裝置：直接把這份結果套進本機法官助手，跳回去繼續主持，不用再看發牌房畫面。
-  if(window.jgApplyDealtRoles) window.jgApplyDealtRoles(seatRoleMap, jgRoomComp, jgRoomTotal);
+  // 有盜賊的話，把已經抽好的 2 張候選一起帶過去，本機才不會又重新抽一次（見
+  // jgApplyDealtRoles 裡的說明）。
+  if(window.jgApplyDealtRoles) window.jgApplyDealtRoles(seatRoleMap, jgRoomComp, jgRoomTotal, thiefCand1, thiefCand2);
 };
 function jgRoomRenderDealPhase(){
   const rd=jgRoomLatestRoomDoc||{};
@@ -307,7 +328,7 @@ window.jgRoomCancelPendingCreate=function(){
 
 // comp/total 是「已經在法官助手設定畫面確認過」的板子配置——房間建立時就把這份配置存進
 // 房間文件，之後「隨機分配身分」要照這份配置洗牌，而不是憑加入人數臨時套用預設板子。
-window.jgRoomCreate=async function(hostName, comp, total, usePresetNames){
+window.jgRoomCreate=async function(hostName, comp, total, usePresetNames, sheriffEnabled){
   const name=(hostName||'').trim();
   if(!comp||!total){ alert('請先從法官助手的設定畫面，配置好板子跟人數再建立房間。'); return; }
   const uid=await jgRoomWaitAuth();
@@ -330,7 +351,7 @@ window.jgRoomCreate=async function(hostName, comp, total, usePresetNames){
   const finalHostName=presetNames?presetNames[1]:name;
   if(!finalHostName){ alert('請先輸入你的全名'); return; }
   await setDoc(doc(db,'rooms',code),Object.assign(
-    { hostUid:uid, status:'lobby', createdAt:serverTimestamp(), comp:comp, total:total },
+    { hostUid:uid, status:'lobby', createdAt:serverTimestamp(), comp:comp, total:total, sheriffEnabled:!!sheriffEnabled },
     presetNames?{presetNames:presetNames}:{}
   ));
   await setDoc(doc(db,'rooms',code,'players',uid),{
@@ -504,6 +525,14 @@ function jgRoomRemoveMyIdentityButton(){
   const btn=document.getElementById('jg-room-myid-btn');
   if(btn) btn.remove();
 }
+// 這顆按鈕本來是掛在 body 上、不跟著分頁內容一起被清掉，但這也代表切到「角色與規則」
+// 「遊玩數據」等其他分頁時，它還是會一直飄在畫面右上角，容易讓人以為那些分頁也需要
+// 確認身分。改成用顯示/隱藏控制，只在「連線房間」這個分頁時看得到——由 core.js 的
+// switchTab() 切分頁時呼叫這個函式決定要不要顯示，見那邊的呼叫。
+window.jgRoomSetIdentityButtonVisible=function(visible){
+  const btn=document.getElementById('jg-room-myid-btn');
+  if(btn) btn.style.display=visible?'block':'none';
+};
 window.jgRoomShowMyIdentity=function(){
   if(!jgMySeatNum){ alert('還沒有座位資料（可能還在大廳，尚未分配身分）'); return; }
   const roleName=jgMyRole?((typeof RNAME!=='undefined'&&RNAME[jgMyRole])||jgMyRole):'（尚未分配身分）';
@@ -645,11 +674,31 @@ window.jgRoomAssignRoles=async function(){
     alert('⚠️ 這個房間設定的是 '+jgRoomTotal+' 人局，目前只有 '+players.length+' 人加入，請等所有人到齊再分配身分。');
     return;
   }
-  const pool=shuffle(buildPool(jgRoomComp));
-  await Promise.all(players.map((p,i)=>
-    setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:pool[i]||'villager', seatNum:p.seatNum })
-  ));
-  await setDoc(doc(db,'rooms',jgRoomCode),{ status:'role-assigned', phase:'lobby' },{ merge:true });
+  let extra={};
+  if(jgRoomComp.thief>0){
+    // 有盜賊時，板子設定的角色總數是「人數+2」（比對照 jgRoomComp 本身，不是另外算），
+    // 其中一張一定是『盜賊』本身（保證有人先暫時是盜賊身分，之後才自己選），剩下人數+1
+    // 張裡隨機抽 2 張當「候選身分」另外放一邊（不發給任何人），其餘人數-1 張＋盜賊
+    // 這張湊成人數張，才是真的要發給玩家的牌——這跟本機法官助手的規則一致：盜賊選中的
+    // 候選角色本來就已經算在板子配置的總數裡，選完不會讓場上多一個原本沒設定的角色出來。
+    const fullPool=buildPool(jgRoomComp);
+    const thiefIdx=fullPool.indexOf('thief');
+    fullPool.splice(thiefIdx,1);
+    const shuffledRest=shuffle(fullPool.slice());
+    const candidates=shuffledRest.slice(0,2);
+    const dealPool=shuffle(shuffledRest.slice(2).concat(['thief']));
+    extra={ thiefCand1:candidates[0], thiefCand2:candidates[1], thiefResolved:false };
+    const pool=dealPool;
+    await Promise.all(players.map((p,i)=>
+      setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:pool[i]||'villager', seatNum:p.seatNum })
+    ));
+  } else {
+    const pool=shuffle(buildPool(jgRoomComp));
+    await Promise.all(players.map((p,i)=>
+      setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:pool[i]||'villager', seatNum:p.seatNum })
+    ));
+  }
+  await setDoc(doc(db,'rooms',jgRoomCode),Object.assign({ status:'role-assigned', phase:'lobby' },extra),{ merge:true });
 };
 
 // ── 房主開始遊戲：進入第一夜。完整順序（跟本機法官助手 jgAfterXStep 那一串固定順序的
@@ -671,9 +720,13 @@ window.jgRoomAssignRoles=async function(){
 // 卡在同一步無限迴圈）。黑市商人／女巫／查驗類角色不放進這個表——它們是在「狼刀目標決定
 // 之後」才會用到的另一條鏈（見 jgRoomAfterKillDecided／jgRoomAfterBlackmarketStep），跟
 // 這裡「狼隊出刀之前」的鏈是兩段獨立的邏輯，用法官助手既有的兩段式設計沿用即可。──
-const JG_ROOM_NIGHT_STEP_ORDER=['cupid','nightmare','magician','guard','dreamcatcher','wolfbrother','mechwolf','wolf'];
+const JG_ROOM_NIGHT_STEP_ORDER=['thief','cupid','nightmare','magician','guard','dreamcatcher','wolfbrother','mechwolf','wolf'];
 function jgRoomStepPresent(step, night){
   const c=jgRoomComp||{};
+  // 盜賊要整局最先睜眼（比邱比特還早——盜賊選完身分之後，接下來所有角色才知道自己「最終」
+  // 是誰，邱比特配對等後面的步驟才不會用到還沒定案的身分），而且只有還沒選過（沒有
+  // thiefResolved）的時候才需要這一步。
+  if(step==='thief') return c.thief>0&&night===1&&!(jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.thiefResolved);
   if(step==='cupid') return c.cupid>0&&night===1;
   if(step==='nightmare') return c.nightmare>0;
   if(step==='magician') return c.magician>0;
@@ -755,12 +808,16 @@ async function jgRoomAdvanceToSheriffCampaign(){
     sheriffPkRound:false, sheriffJoinDeadline: Date.now()+10000
   },{ merge:true });
 }
-// 查驗類角色結束（或本來就沒有）之後，第一夜要接警長競選，第二夜起（本局已經選過警長，
-// 不會再選第二次）直接進入白天公告死訊、開放發言／投票放逐——共用這個判斷。
+// 查驗類角色結束（或本來就沒有）之後，第一夜要接警長競選（僅限房主建房時有勾選「本局
+// 開放上警競選」——沒勾選的話，第一夜不會出現參選警長畫面，直接跟第二夜起一樣進白天），
+// 第二夜起（本局已經選過警長，不會再選第二次）直接進入白天公告死訊、開放發言／投票放逐
+// ——共用這個判斷。
 async function jgRoomAdvanceToDayPhase(night){
   const db=window.jgFirebaseDb;
   await jgRoomCaptureDeathLine(night);
-  if(night===1){
+  const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const sheriffEnabled=!!(roomSnap.exists()&&roomSnap.data().sheriffEnabled);
+  if(night===1&&sheriffEnabled){
     await jgRoomAdvanceToSheriffCampaign();
   } else {
     await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:null, phase:'day-open', sheriffPhase:null },{ merge:true });
@@ -1264,8 +1321,22 @@ async function jgRoomWitchViewHtml(night){
 }
 window.jgRoomWitchSave=async function(targetSeatNum, night){
   const db=window.jgFirebaseDb;
-  const rd=jgRoomLatestRoomDoc||{};
-  await setDoc(doc(db,'rooms',jgRoomCode),{ witchSavedUid: rd.wolfKillTargetUid },{ merge:true });
+  // 這裡以前是讀 jgRoomLatestRoomDoc（畫面快取）拿 wolfKillTargetUid，沒有用 targetSeatNum
+  // 這個「使用者實際點的是哪個座位」來源核對——如果快取剛好跟畫面顯示時不一樣（例如即時
+  // 監聽器在「畫面畫出來」跟「使用者按下按鈕」這兩個時間點之間收到了新資料），會變成
+  // 「救的其實不是畫面上顯示、玩家點的那個人」，玩家看起來明明救了、實際上救的 uid 卻
+  // 對不上，天亮死訊自然對不起來。改成重新讀一次資料庫最新狀態，並且拿使用者實際點的
+  // 座位（targetSeatNum）去核對，確保存進去的 witchSavedUid 真的是玩家看到、點下去的
+  // 那個人，不是憑空信任一份可能已經過期的快取。
+  const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const fresh=freshSnap.data()||{};
+  const targetP=jgRoomLatestPlayers.find(p=>p.seatNum===targetSeatNum);
+  if(!targetP||fresh.wolfKillTargetUid!==targetP.uid){
+    alert('目標已經改變（可能是頁面資料還沒同步完成），請重新整理頁面再試一次，避免救錯人。');
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
+  await setDoc(doc(db,'rooms',jgRoomCode),{ witchSavedUid: fresh.wolfKillTargetUid },{ merge:true });
   await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ witchSaveUsed:true },{ merge:true });
   await jgRoomAppendNightLog(night, '救 '+targetSeatNum);
   await jgRoomAppendNightLog(night, '毒 x');
@@ -1336,21 +1407,6 @@ async function jgRoomGetWolfUids(){
     return !p||p.alive!==false; // 找不到玩家資料時保守當作還活著，不要誤判卡住
   }).map(d=>d.id);
 }
-// 指定「座號最小」的那一位見面狼隊友當作唯一負責操作出刀畫面的人——不只是讓畫面單純
-// 一點，更重要的是徹底避開「板子上不只一隻狼、好幾支手機同時都能操作」這整類多人同步
-// 問題的根源：只有一支手機真的會寫入資料庫，其他狼隊友的手機完全不會碰觸這筆資料，
-// 從結構上就不會有「兩支手機幾乎同時寫入互相干擾」的可能性。
-async function jgRoomWolfOperatorUid(){
-  const wolfUids=await jgRoomGetWolfUids();
-  if(!wolfUids.length) return null;
-  let best=null, bestSeat=Infinity;
-  wolfUids.forEach(uid=>{
-    const p=jgRoomLatestPlayers.find(pp=>pp.uid===uid);
-    const seat=p?p.seatNum:Infinity;
-    if(seat<bestSeat){ bestSeat=seat; best=uid; }
-  });
-  return best;
-}
 // 機械狼獨自帶刀的條件：其餘「真正跟狼隊一起睜眼」的隊友（jgRoomGetWolfUids 排除掉機械狼
 // 自己跟夢魘之後剩下的那些人）全部死亡——跟本機法官助手 jgMechWolf2KillEligible／
 // jgAfterGargoyleStep 系列判斷同一套邏輯的房間版本。
@@ -1402,17 +1458,32 @@ async function jgRoomWolfViewHtml(night){
     return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><div class="nicon">😱</div><h1>狼隊今晚無法殺人</h1></div>'
       +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">夢魘恐懼了狼隊的一位成員，今晚是平安夜，請安靜等待。</div>'};
   }
-  // 選人畫面：不再要求「狼隊全員確認」——任何一位狼隊友選定目標、按下確認，當下就是最終
-  // 決定，直接往下一步走，不用等其他隊友。跟機械狼接管出刀、其他單人技能是同一種互動
-  // 方式。「全員確認」這個額外的同步機制在多人同時操作、網路狀況不穩的真實環境下太容易
-  // 出狀況（反覆修都修不完），這裡直接拿掉，改成最簡單可靠的「先選先贏」——如果板子上
-  // 不只一隻狼，大家還是要先口頭商量好要殺誰，畫面上不會再另外做「投票/表決」這件事。
+  // 板子上不只一隻真正見面的狼時，回到「全員確認」流程：任何一位隊友先提議一個目標，
+  // 其餘隊友的畫面會看到「今晚要殺X號、已確認Y/Z人」，各自按確認表態，全部確認完才會
+  // 真的結算、往下一步——這是這次房主調整過 Firestore 安全規則之後，確認根本問題是
+  // 規則擋住好幾個子集合的寫入（不是這裡的邏輯本身），才恢復的原始設計；只有一隻狼的
+  // 情況還是提議完直接結算，不用等自己按第二次。
+  if(rd.wolfKillNight===night&&rd.wolfKillTargetSeatNum!=null){
+    const confirmedBy=rd.wolfKillConfirmedBy||[];
+    const iConfirmed=confirmedBy.includes(window.jgFirebaseUid);
+    const wolfUids=await jgRoomGetWolfUids();
+    const hostOverrideHtml2=jgRoomIsHost
+      ?'<div style="margin-top:16px;"><button style="font-size:12px;color:var(--text3);" onclick="jgRoomHostForceAdvanceWolf('+night+')">⚠️ 卡住了？房主強制往下一步</button></div>'
+      :'';
+    return {needsTimer:true, html: jgRoomTimerHtml(30,'今晚要殺的對象是？')
+      +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>今晚要殺 '+rd.wolfKillTargetSeatNum+'號</h1>'
+      +'<p class="sub" style="text-align:center;margin-top:8px;">已確認 '+confirmedBy.length+' / '+wolfUids.length+' 人</p></div>'
+      +'<div style="text-align:center;margin-top:10px;">'
+      +(iConfirmed?'<div class="info" style="font-size:12px;">你已經確認了，等待其他隊友</div>':'<button class="primary" onclick="jgRoomWolfConfirm()" style="width:auto;display:inline-block;padding:10px 20px;">確認</button>')
+      +'<button onclick="jgRoomWolfModify()" style="margin-left:8px;width:auto;display:inline-block;padding:10px 20px;">修改</button>'
+      +'</div>'+hostOverrideHtml2};
+  }
   const hostOverrideHtml=jgRoomIsHost
     ?'<div style="text-align:center;margin-top:16px;"><button style="font-size:12px;color:var(--text3);" onclick="jgRoomHostForceAdvanceWolf('+night+')">⚠️ 卡住了？房主強制往下一步</button></div>'
     :'';
   return {needsTimer:true, html: jgRoomTimerHtml(30,'今晚要殺的對象是？')
     +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>請選擇今晚要殺的對象</h1></div>'
-    +'<div class="info" style="font-size:12px;text-align:center;">任何一位狼隊友選定並確認後，就是最終決定，會直接往下一步，不用等其他隊友再按一次</div>'
+    +'<div class="info" style="font-size:12px;text-align:center;">只有一隻狼的話，選定並確認後就是最終決定；不只一隻狼要全員確認才會真的定案</div>'
     +jgRoomNumGridHtml('jg-room-wolf-pick', null)
     +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomWolfProposeFromGrid('+night+')">確認</button></div>'
     +hostOverrideHtml};
@@ -1438,49 +1509,33 @@ window.jgRoomHostForceAdvanceWolf=async function(night){
   await jgRoomAfterKillDecided(night);
   await jgRoomRefreshAndRenderCurrent();
 };
-// 任何一位狼隊友選定目標、按下確認，就是最終決定：寫入目標之後立刻結算，不用等任何人
-// 確認。用房間文件本身的 currentStep 當守門員（結算前先重新讀一次，確認「還沒有人結算
-// 過」）＋ jgRoomWolfFinalizing 這個旗標，兩層一起擋住「板子上不只一隻狼、兩人幾乎同時
-// 按下確認」這種邊緣情況——萬一真的兩邊都通過守門員檢查，jgRoomWolfFinalize() 內部
-// 也會再檢查一次 wolfKillTargetUid 是否存在，不會真的把死亡結算跑兩次讓遊戲状態壞掉。
+// 提議一個目標：只有自己算進確認名單。如果狼隊只有自己一個人，這一寫完就已經是「全員
+// 到齊」，直接結算、往下一步；不只一隻狼的話，其餘隊友的畫面會看到「已確認1/N人」，
+// 各自按確認表態。整個函式包一層 try/catch，把任何失敗（例如 Firestore 權限被擋、網路
+// 斷線）都用 alert 明確講出來，不要無聲無息地消失。
 window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
-  // 整個函式包一層 try/catch，把任何失敗（例如 Firestore 權限被擋、網路斷線）都用 alert
-  // 明確講出來——之前這裡沒有這一層，任何寫入失敗都是「без形消失」，畫面上完全看不出
-  // 發生了什麼事，跟真的卡住長得一模一樣，卻是完全不同的問題、需要完全不同的排查方式。
   try{
-    // 先確認「現在還輪到狼隊出刀」才寫入目標——板子上不只一隻狼時，如果甲已經選完、遊戲
-    // 已經往下一步走了（比如換女巫），乙晚一點才點擊送出，不能讓乙這次遲來的點擊把甲已經
-    // 決定、已經記錄進文字紀錄的目標蓋成別的號碼（就算遊戲流程本身因為 currentStep 守門員
-    // 不會被推進兩次，這筆資料本身還是不該被蓋掉，不然畫面/紀錄跟實際結算的對象會對不起來）。
     const preCheckSnap=await getDoc(doc(db,'rooms',jgRoomCode));
     const preCheck=preCheckSnap.data()||{};
     if(preCheck.currentStep!=='wolf'){
-      // 已經有人決定過、遊戲往下走了：這次點擊不算數，直接帶他看最新畫面。
       jgRoomLatestRoomDoc=preCheck;
       await jgRoomRefreshAndRenderCurrent();
       return;
     }
-    // 接下來這一串是好幾筆連續的資料庫寫入（寫目標→可能還有記文字紀錄→進黑市商人／女巫
-    // 回合，或直接結算死亡＋往下一步），先把「暫停自動重畫」的旗標打開，避免這幾筆寫入
-    // 陸續觸發即時監聽器、把畫面重畫好幾次——這正是「選好的號碼會跳掉」「按了確認看起來
-    // 沒反應」這兩個症狀的真正原因：畫面在這串操作真正結束之前，就被中途的某一筆寫入
-    // 觸發的監聽器重畫過好幾次。
     jgRoomSuppressAutoRender=true;
     try{
+      const myConfirmedList=[window.jgFirebaseUid];
       await setDoc(doc(db,'rooms',jgRoomCode),{
         wolfKillNight:night, wolfKillTargetUid:effective, wolfKillTargetSeatNum:targetSeatNum,
-        wolfKillProposedBy:window.jgFirebaseUid
+        wolfKillProposedBy:window.jgFirebaseUid, wolfKillConfirmedBy:myConfirmedList
       },{ merge:true });
-      if(!jgRoomWolfFinalizing){
+      const wolfUids=await jgRoomGetWolfUids();
+      if(myConfirmedList.length>=wolfUids.length&&!jgRoomWolfFinalizing){
         jgRoomWolfFinalizing=true;
-        try{
-          const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-          const fresh=freshSnap.data()||{};
-          if(fresh.currentStep==='wolf'){ await jgRoomWolfFinalize(); }
-        } finally { jgRoomWolfFinalizing=false; }
+        try{ await jgRoomWolfFinalize(); } finally { jgRoomWolfFinalizing=false; }
       }
     } finally { jgRoomSuppressAutoRender=false; }
     await jgRoomRefreshAndRenderCurrent();
@@ -1489,6 +1544,42 @@ window.jgRoomWolfPropose=async function(targetUid, targetSeatNum, night){
     jgRoomWolfFinalizing=false;
     alert('狼隊出刀時發生錯誤，請把這段文字截圖給法官：\n'+(err&&err.message?err.message:String(err)));
     console.error('jgRoomWolfPropose error', err);
+  }
+};
+window.jgRoomWolfModify=async function(){
+  if(!confirm('確定要修改嗎？會清空所有人的確認。')) return;
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode),{
+    wolfKillNight:null, wolfKillTargetUid:null, wolfKillTargetSeatNum:null,
+    wolfKillProposedBy:null, wolfKillConfirmedBy:[]
+  },{ merge:true });
+  await jgRoomRefreshAndRenderCurrent();
+};
+// 用 arrayUnion 而不是「先讀陣列、自己加一個、再整份寫回去」，是為了避免兩位隊友幾乎
+// 同時按確認時，其中一人的確認被另一人的寫入覆蓋掉、憑空少一票的競態問題。
+window.jgRoomWolfConfirm=async function(){
+  const db=window.jgFirebaseDb;
+  try{
+    jgRoomSuppressAutoRender=true;
+    try{
+      await setDoc(doc(db,'rooms',jgRoomCode),{
+        wolfKillConfirmedBy: arrayUnion(window.jgFirebaseUid)
+      },{ merge:true });
+      const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+      const fresh=freshSnap.data()||{};
+      const wolfUids=await jgRoomGetWolfUids();
+      const confirmedBy=fresh.wolfKillConfirmedBy||[];
+      if(confirmedBy.length>=wolfUids.length&&fresh.wolfKillTargetUid&&!jgRoomWolfFinalizing){
+        jgRoomWolfFinalizing=true;
+        try{ await jgRoomWolfFinalize(); } finally { jgRoomWolfFinalizing=false; }
+      }
+    } finally { jgRoomSuppressAutoRender=false; }
+    await jgRoomRefreshAndRenderCurrent();
+  }catch(err){
+    jgRoomSuppressAutoRender=false;
+    jgRoomWolfFinalizing=false;
+    alert('確認出刀時發生錯誤，請把這段文字截圖給法官：\n'+(err&&err.message?err.message:String(err)));
+    console.error('jgRoomWolfConfirm error', err);
   }
 };
 // 狼刀目標（不管是狼隊選出的、還是夢魘恐懼導致的平安夜、還是機械狼獨自接管出刀、還是
@@ -1641,6 +1732,10 @@ window.jgRoomJoinSheriff=async function(){
     sheriffCandidates: arrayUnion(window.jgFirebaseUid),
     sheriffEverCandidates: arrayUnion(window.jgFirebaseUid)
   },{ merge:true });
+  // 補上明確重新渲染——原本這裡沒有呼叫，完全依賴即時監聽器自己觸發下一次渲染，跟這次
+  // 修過的其他好幾個地方是同一類問題：不主動觸發的話，自己按下去的當下畫面不會馬上更新，
+  // 要等監聽器自己反應過來，體感上會像「按了沒反應」。
+  await jgRoomRefreshAndRenderCurrent();
 };
 window.jgRoomWithdrawSheriff=async function(){
   if(!confirm('確定要退水嗎？')) return;
@@ -1648,6 +1743,7 @@ window.jgRoomWithdrawSheriff=async function(){
   const { arrayRemove } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
   // 只從「目前候選人」名單移除，sheriffEverCandidates 不動——退水過的人這輪投票還是不能投。
   await setDoc(doc(db,'rooms',jgRoomCode),{ sheriffCandidates: arrayRemove(window.jgFirebaseUid) },{ merge:true });
+  await jgRoomRefreshAndRenderCurrent();
 };
 // 鎖定參選名單、隨機抽籤決定候選人裡誰先發言／方向——任何一位玩家的倒數計時器跑到 0
 // 都可能觸發，用 sheriffPhase 檢查避免被觸發兩次、抽籤結果被蓋掉。
@@ -1663,6 +1759,7 @@ window.jgRoomLockSheriffJoin=async function(){
     const nightMsg=killedSeatNum?('昨晚 '+killedSeatNum+'號 死了'):'昨晚是平安夜';
     alert('🎖️ 沒有人參選警長，本局無警長\n\n'+nightMsg);
     await setDoc(doc(db,'rooms',jgRoomCode),{ phase:'day-open', sheriffPhase:null, sheriffWinnerSeatNum:null },{ merge:true });
+    await jgRoomRefreshAndRenderCurrent();
     return;
   }
   const startUid=candidates[Math.floor(Math.random()*candidates.length)];
@@ -1671,6 +1768,7 @@ window.jgRoomLockSheriffJoin=async function(){
   await setDoc(doc(db,'rooms',jgRoomCode),{
     sheriffPhase:'locked', sheriffSpeechStart: startP?startP.seatNum:null, sheriffSpeechDir:dir
   },{ merge:true });
+  await jgRoomRefreshAndRenderCurrent();
 };
 function jgRoomRenderSheriffCampaign(){
   const root=document.getElementById('jg-room-content');
@@ -1979,7 +2077,6 @@ async function jgRoomRenderDayOpen(){
     bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">☀️</div><h1>白天開始</h1>'
       +'<p class="sub" style="text-align:center;margin-top:8px;">'+nightMsg+'</p></div>'
       +speechHtml
-      +'<div class="info" style="font-size:12px;margin-top:10px;text-align:center;">請依序發言，討論誰是狼人</div>'
       +(jgRoomIsHost?'<button class="primary" style="margin-top:16px;" onclick="jgRoomHostStartDayVote()">大家都發言完了，開始投票放逐 →</button>':'')
       +jgRoomLiveVoteTallyHtml();
   }
@@ -2217,6 +2314,8 @@ async function jgRoomRenderNightShell(){
   const cupidReveal=jgRoomCupidRevealHtml(rd, night);
   if(cupidReveal){
     bodyHtml=cupidReveal.html; needsTimer=cupidReveal.needsTimer;
+  } else if(currentStep==='thief'&&jgMyRole==='thief'){
+    const r=jgRoomThiefViewHtml(rd, night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(currentStep==='cupid'&&jgMyRole==='cupid'){
     const r=await jgRoomCupidViewHtml(night); bodyHtml=r?r.html:''; needsTimer=r?r.needsTimer:false;
   } else if(currentStep==='nightmare'&&jgMyRole==='nightmare'){
@@ -2233,19 +2332,9 @@ async function jgRoomRenderNightShell(){
     const r=await jgRoomMechWolfViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(currentStep==='wolf'&&typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(jgMyRole)&&jgMyRole!=='nightmare'&&jgMyRole!=='mechanicalwolf'
     &&!(jgMyRole==='wolfbrother_y'&&!jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid&&p.wolfbrotherJoinedPack))){
-    // 板子上如果不只一隻見面狼，只有「座號最小」的那一位（jgRoomWolfOperatorUid）的手機
-    // 會顯示真的可以操作的選人畫面；其餘狼隊友只會看到一行提示訊息，不會顯示任何互動
-    // 按鈕——這樣從結構上就不會有兩支手機同時寫入資料庫互相干擾的可能性，是目前最簡單、
-    // 最不容易出狀況的做法。
-    const opUid=await jgRoomWolfOperatorUid();
-    if(opUid===window.jgFirebaseUid){
-      const r=await jgRoomWolfViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
-    } else {
-      const opP=jgRoomLatestPlayers.find(p=>p.uid===opUid);
-      bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🐺</div><h1>殺人畫面在 '+(opP?opP.seatNum:'?')+'號 狼隊友手機</h1></div>'
-        +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請等 '+(opP?opP.seatNum:'?')+'號 操作完成，今晚殺了誰會另外出現在紀錄裡</div>';
-      needsTimer=false;
-    }
+    // 已經確認先前卡住的根本原因是 Firestore 安全規則擋住了好幾個子集合的寫入（不是這裡
+    // 的多人同步邏輯本身），規則調整過後恢復成每一位見面狼隊友都能操作的畫面。
+    const r=await jgRoomWolfViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(currentStep==='blackmarket'&&jgMyRole==='blackmarket'){
     const r=await jgRoomBlackmarketViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(currentStep==='witch'&&jgMyRole==='witch'){
@@ -2287,7 +2376,7 @@ function jgRoomHostAdvanceHtml(currentStep){
   if(currentStep==='guard') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">守衛選完之後，會自動往下一步。</div>';
   if(currentStep==='dreamcatcher') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">攝夢人選完夢遊對象之後，會自動往下一步。</div>';
   if(currentStep==='wolfbrother') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">第一夜是狼兄狼弟互相確認身分；其餘夜晚平常沒事，只有狼兄陣亡後狼弟覺醒復仇那一晚才需要操作，完成後會自動往下一步。</div>';
-  if(currentStep==='wolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">任何一位狼隊友選定目標後，會直接往下一步，不用等其他隊友。</div>';
+  if(currentStep==='wolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">只有一隻狼的話，選定並確認後就是最終決定；不只一隻狼要全員確認才會真的定案。</div>';
   if(currentStep==='blackmarket') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">黑市商人交易完（或選擇不交易）之後，會自動往下一步。獵人獵槍這項技能目前還沒自動化，請法官／房主用本機工具手動處理。</div>';
   if(currentStep==='witch') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">女巫（或持有女巫毒藥技能的幸運兒）行動完之後，會自動往下一步（查驗類角色，或直接接警長競選）。</div>';
   if(!currentStep) return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">這一夜已經結束，正在自動接警長競選...</div>';
@@ -2345,6 +2434,9 @@ window.jgRoomSeerCheck=async function(targetUid, targetSeatNum, night){
   // 卻能呼叫到這裡，代表我是持有查驗技能的幸運兒。
   const abbr=(jgMyRole==='seer')?'驗':'幸驗';
   await jgRoomAppendNightLog(night, abbr+' '+targetSeatNum+(team==='wolf'?'(狼)':'(好)'));
+  // 查驗結果用大字報清楚告知，比照機械狼學到身分、通靈師查驗的呈現方式：「X號」+ 查到的
+  // 陣營（預言家只會知道好人/狼人陣營，不會知道確切角色，跟通靈師不一樣）。
+  jgRoomShowBigCard(targetSeatNum+'號', team==='wolf'?'狼人':'好人');
   // 查完就代表這一夜的行動結束了，直接自動接白天（第一夜是警長競選，其餘夜晚直接公告
   // 死訊、開放發言／投票放逐），不用等房主按按鈕。
   await jgRoomAdvanceToDayPhase(night);
@@ -2392,6 +2484,9 @@ window.jgRoomMediumCheck=async function(targetUid, targetSeatNum, night){
   });
   const roleAbbr=(typeof ROLE_ABBR!=='undefined'&&ROLE_ABBR[resolvedRole])||roleName;
   await jgRoomAppendNightLog(night, '通驗 '+targetSeatNum+'('+roleAbbr+')');
+  // 查驗結果一樣用大字報清楚告知，比照機械狼學到身分的呈現方式：「X號」+ 查到的身分
+  // 中文名稱——原本這裡查完什麼都沒顯示，直接跳下一步，玩家根本不知道查到了什麼。
+  jgRoomShowBigCard(targetSeatNum+'號', roleName);
   await jgRoomAdvanceToDayPhase(night);
   await jgRoomRefreshAndRenderCurrent();
 };
@@ -2862,6 +2957,57 @@ window.jgRoomMechWolfKill=async function(targetUid, targetSeatNum, night){
 // 的提示卡片，兩人都按下確認之後才會真正往下一步走（idempotent 寫法，仿照狼隊「全員確認」
 // 那一套，避免兩人幾乎同時按下時互相漏算）。
 // ═══════════════════════════════════════════
+// ── 盜賊：整局唯一一次行動，比邱比特還早睜眼（配對／後面所有角色都要用「最終」身分，
+//    盜賊要先選完）。畫面顯示 2 張候選身分卡，其中一張如果是狼人陣營，規則規定盜賊
+//    必須選狼（另一張直接埋掉，不能反悔）；兩張都不是狼的話可以自由選其中一張。選完
+//    之後直接把自己的 secrets 文件覆寫成選中的身分——不用等任何人核准，因為這本來就是
+//    盜賊自己一個人的行動，不影響其他人；secrets 文件本來就允許任何登入者寫入（連線
+//    房間安全規則本來就是這樣設計，見 firestore.rules 的 secrets 那一段）。──
+function jgRoomThiefViewHtml(rd, night){
+  const cand1=rd.thiefCand1, cand2=rd.thiefCand2;
+  if(!cand1||!cand2){
+    return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🎴</div><h1>候選身分資料異常</h1></div>'
+      +'<div class="info" style="font-size:12px;text-align:center;">請聯絡房主確認房間設定，或用房主的強制跳過功能繼續。</div>'};
+  }
+  const name1=(typeof RNAME!=='undefined'&&RNAME[cand1])||cand1;
+  const name2=(typeof RNAME!=='undefined'&&RNAME[cand2])||cand2;
+  const wolf1=typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(cand1);
+  const wolf2=typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(cand2);
+  // 兩張都是狼、或都不是狼：自由選；只有一張是狼：規則規定必須選那張狼，另一張直接鎖住
+  // 不能選（跟本機法官助手同一條規則）。
+  const mustWolf=wolf1!==wolf2;
+  const disabled1=mustWolf&&!wolf1;
+  const disabled2=mustWolf&&!wolf2;
+  return {needsTimer:true, html: jgRoomTimerHtml(30,'請選擇一個身分')
+    +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🎴</div><h1>盜賊請睜眼</h1></div>'
+    +'<div class="speech" style="text-align:center;">「<em>這是你的兩個候選身分，請選一個，另一個會直接埋掉。</em>」</div>'
+    +(mustWolf?'<div class="info-warn" style="text-align:center;margin-top:8px;">其中一個是狼人陣營，規則規定必須選狼，另一個不能選</div>':'')
+    +'<div style="display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap;">'
+    +'<button'+(disabled1?' disabled':'')+' onclick="jgRoomThiefChoose(\''+cand1+'\','+night+')" style="width:auto;min-width:140px;padding:16px;font-size:18px;font-weight:800;'+(disabled1?'opacity:0.35;':'')+'">'+name1+'</button>'
+    +'<button'+(disabled2?' disabled':'')+' onclick="jgRoomThiefChoose(\''+cand2+'\','+night+')" style="width:auto;min-width:140px;padding:16px;font-size:18px;font-weight:800;'+(disabled2?'opacity:0.35;':'')+'">'+name2+'</button>'
+    +'</div>'};
+}
+window.jgRoomThiefChoose=async function(chosenRole, night){
+  if(!confirm('確定要選「'+((typeof RNAME!=='undefined'&&RNAME[chosenRole])||chosenRole)+'」嗎？選完不能反悔。')) return;
+  const db=window.jgFirebaseDb;
+  try{
+    jgRoomSuppressAutoRender=true;
+    try{
+      await setDoc(doc(db,'rooms',jgRoomCode,'secrets',window.jgFirebaseUid),{ role:chosenRole },{ merge:true });
+      jgMyRole=chosenRole; // 手動先更新自己這支手機的快取，不用等監聽器來回一趟才反應過來
+      await setDoc(doc(db,'rooms',jgRoomCode),{ thiefResolved:true },{ merge:true });
+      await jgRoomAppendNightLog(night, '盜賊選 '+((typeof RNAME!=='undefined'&&RNAME[chosenRole])||chosenRole));
+      const nextStep=jgRoomNextNightStep('thief', night);
+      await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:nextStep },{ merge:true });
+    } finally { jgRoomSuppressAutoRender=false; }
+    await jgRoomRefreshAndRenderCurrent();
+  }catch(err){
+    jgRoomSuppressAutoRender=false;
+    alert('盜賊選擇身分時發生錯誤，請把這段文字截圖給法官：\n'+(err&&err.message?err.message:String(err)));
+    console.error('jgRoomThiefChoose error', err);
+  }
+};
+
 async function jgRoomCupidViewHtml(night){
   const rd=jgRoomLatestRoomDoc||{};
   if(rd.cupidDoneNight===1&&rd.cupidRevealDone){
@@ -3306,7 +3452,8 @@ window.jgRoomRenderCreateWithComp=function(comp, total){
       <label>你的全名（房主）</label>
       <input type="text" id="jg-room-name-create" placeholder="輸入你的全名">
       ${hasPresetNames?'<label style="margin-top:10px;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="jg-room-use-preset-names" checked style="width:auto;"> 沿用法官助手裡已經填好的座位姓名（其他人加入時用點選的，不用自己打名字）</label>':''}
-      <button class="primary" style="margin-top:10px;" onclick="jgRoomCreate(document.getElementById('jg-room-name-create').value, window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, ${hasPresetNames?'document.getElementById(\'jg-room-use-preset-names\').checked':'false'})">建立房間</button>
+      <label style="margin-top:10px;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="jg-room-sheriff-enabled" style="width:auto;"> 本局開放上警競選（第一夜結束後出現參選警長畫面）</label>
+      <button class="primary" style="margin-top:10px;" onclick="jgRoomCreate(document.getElementById('jg-room-name-create').value, window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, ${hasPresetNames?'document.getElementById(\'jg-room-use-preset-names\').checked':'false'}, document.getElementById('jg-room-sheriff-enabled').checked)">建立房間</button>
     </div>
     <button class="ghost" style="margin-top:10px;" onclick="switchTab('t-judge')">← 回去重新調整板子</button>
     <button class="ghost" style="margin-top:8px;" onclick="jgRoomCancelPendingCreate()">取消建立房間</button>
@@ -3350,7 +3497,6 @@ window.jgRoomRenderEntry=async function(){
   if(reconnected) return;
   root.innerHTML=`
     <div class="nbanner">
-      <div class="nicon">🎮</div>
       <h1>連線房間</h1>
       <p class="sub" style="text-align:center;margin-top:6px;">多支手機同時加入同一場，各自的手機只看得到自己的身分</p>
     </div>
