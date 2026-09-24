@@ -1163,7 +1163,7 @@ function jgRenderStep(step){
       ${dead?'':`<div id="jg-god-dreamcatcher-action" style="${feared?'display:none;':''}"><label>夢遊者號碼（一定要夢遊，不能選自己）</label>
       ${jgNumSelectHtml('jg-dc-target', cur, 'jgDreamcatcherCheck')}
       <div id="jg-dc-warn"></div>
-      <div class="info" style="font-size:12px;margin-top:6px;">第一次夢遊某人，該人免疫當晚所有夜間傷害（含狼刀與女巫毒）。<br>若攝夢人死亡，該夢遊者同死。<br>若連續兩晚夢遊同一人，則夢遊者死亡。</div></div>`}
+      <div class="info" style="font-size:12px;margin-top:6px;">第一次夢遊某人，該人免疫當晚所有夜間傷害（含狼刀與女巫毒）。<br>若攝夢人在夜裡死亡，該夢遊者同死；白天投票出局、出局後開槍等白天死亡不會觸發這條。<br>若連續兩晚夢遊同一人，則夢遊者死亡。</div></div>`}
       <div class="speech" style="margin-top:10px;">「<em>攝夢人請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveDreamcatcher()">已紀錄，下一步 →</button>
     `,'🌙 攝夢人');

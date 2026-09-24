@@ -2441,7 +2441,12 @@ function jgSaveHunter(){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      const dcTargetNumN=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      // jgSaveHunter 雖然放在 night.js 這個檔案裡，但實際上只會在「獵人白天被投票出局」
+      // 這個情境下被呼叫到——'hunter-shot' 這個步驟只從 jgFinishVoteOut（白天投票結算，
+      // 見 day.js）觸發，沒有任何夜晚流程會走到這裡；真正的「夜裡被狼刀殺死、天亮才開槍」
+      // 是另一個函式 jgSaveDawnHunterShot（放在 day.js，卻才是夜裡觸發的那一個）。這裡
+      // 固定是白天死亡，攝夢人陪葬規則不適用，一律傳 false。
+      const dcTargetNumN=jgCascadeDreamcatcherDeath(wasRole, trulyDied, false);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');

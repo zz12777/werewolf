@@ -377,8 +377,12 @@ function jgCascadeWolfBeautyDeath(wasRole, trulyDied){
 // 某玩家「真的被淘汰」時，若他原本的身分是攝夢人，當晚夢遊（所睡）的玩家跟著同死。
 // 回傳連動死亡的號碼（比照 jgCascadeWolfBeautyDeath 的做法），讓呼叫端可以額外跳出提醒，
 // 不是只有默默把人設成死亡、法官卻不知道發生了什麼事。
-function jgCascadeDreamcatcherDeath(wasRole, trulyDied){
-  if(trulyDied&&wasRole==='dreamcatcher'&&jgRecord.dreamcatcherTarget){
+// isNightDeath：這個死亡是不是真的發生在「夜裡」——規則寫的是「攝夢人在夜裡死亡，
+// 夢遊者才會一同死去」，白天投票出局（不管是直接出局、還是出局後觸發的開槍/連鎖開槍）
+// 都不算夜裡死亡，不該觸發這個連鎖。呼叫端必須自己依情境判斷傳入正確的值，不提供預設，
+// 避免之後新增呼叫點時忘記考慮這一點、又不小心把白天死亡也算進去。
+function jgCascadeDreamcatcherDeath(wasRole, trulyDied, isNightDeath){
+  if(trulyDied&&isNightDeath&&wasRole==='dreamcatcher'&&jgRecord.dreamcatcherTarget){
     const dct=jgFind(jgRecord.dreamcatcherTarget);
     if(dct&&dct.alive){ jgApplyDeath(dct); return dct.num; }
   }
@@ -1817,7 +1821,15 @@ function jgRenderRoster(){
       // 提醒法官不會再看到「定序王子翻牌」的選項（jgSequencePrinceUsed 是整局唯一的旗標，
       // 不分是哪一天用掉的，用過就是用過）。
       const princeUsedTag=(role==='sequenceprince'&&jgSequencePrinceUsed)?'<span class="rp-tag-lover" style="color:var(--gold);" title="定序王子已經翻過牌，整局限一次，不會再出現">👑已翻牌</span>':'';
-      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}${princeUsedTag}</div>`;
+      // 混血兒：第一夜選完支持對象之後，法官自己視角就加註「狼人混」或「好人混」標籤，
+      // 不用等遊戲結束才知道——法官心裡要有數（例如屠民判定、狼隊出刀名單這些場上互動）
+      // 混血兒本人一律當一般平民處理，這個標籤純粹是給法官自己看的參考，不代表混血兒
+      // 因此真的變成狼隊或取得任何狼隊技能。
+      const hybridSideTag=(role==='hybrid'&&jgHybridChosen&&jgHybridTarget)
+        ?(()=>{ const tp=jgFind(jgHybridTarget); if(!tp) return ''; const isWolf=jgIsWolfPackMember(tp);
+            return '<span class="rp-tag-lover" style="color:'+(isWolf?'var(--wolf,#b91c1c)':'var(--good,#2e7d32)')+';" title="混血兒支持 '+tp.num+'號（'+(isWolf?'狼人陣營':'好人陣營')+'），僅供法官自己參考：混血兒本人查驗/屠民判定一律仍算好人／平民">'+(isWolf?'狼人混':'好人混')+'</span>'; })()
+        :'';
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}${princeUsedTag}${hybridSideTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <button type="button" class="rp-toggle-btn" title="手動修改死亡狀態（安全網，避免忘記勾選/漏改）" onclick="jgManualToggleAlive(${p.num})">⇄</button>

@@ -298,7 +298,11 @@ function jgSaveDawnHunterShot(){
       const wasRole=p.role; // 換牌前先記住原本身分，避免 jgApplyDeath 換牌後 role 已經變了
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      const dcTargetNum=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      // 這個函式（jgSaveDawnHunterShot）只會在「夜裡被狼刀殺死、天亮才揭曉並開槍」這個
+      // 情境下被呼叫到（內嵌渲染在天亮畫面裡，不是獨立的步驟，見 steps.js 的 hunterShotHtml
+      // 那一段）——白天投票出局後開槍走的是完全不同的另一個函式 jgSaveHunter（雖然檔案放在
+      // night.js，但那個才是真正被白天投票流程觸發的），這裡固定就是夜裡死亡，一律傳 true。
+      const dcTargetNum=jgCascadeDreamcatcherDeath(wasRole, trulyDied, true);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
@@ -389,7 +393,7 @@ function jgSaveMechHunterChainShot(){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum2=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      const dcTargetNum2=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      const dcTargetNum2=jgCascadeDreamcatcherDeath(wasRole, trulyDied, chainOrigin==='night');
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
@@ -457,7 +461,7 @@ function jgSaveLuckyoneHunterShot(){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum3=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      const dcTargetNum3=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      const dcTargetNum3=jgCascadeDreamcatcherDeath(wasRole, trulyDied, false);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
@@ -849,7 +853,7 @@ function jgSaveWolfKingShot(){
       const wasRole=p.role;
       const trulyDied=jgApplyDeath(p);
       const wbCharmNum4=jgCascadeWolfBeautyDeath(wasRole, trulyDied);
-      const dcTargetNum4=jgCascadeDreamcatcherDeath(wasRole, trulyDied);
+      const dcTargetNum4=jgCascadeDreamcatcherDeath(wasRole, trulyDied, false);
       { const loverDeadNum=jgCascadeLoverDeath(p.num, trulyDied);
         if(loverDeadNum){
           alert('💘 '+p.num+'號的情侶 '+loverDeadNum+'號 跟著殉情！（殉情不會觸發任何技能，即使殉情者是獵人／黑狼王等，也不能開槍帶人）\n\n法官口白：「'+p.num+'號、'+loverDeadNum+'號 淘汰。」');
