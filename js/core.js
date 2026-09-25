@@ -1531,7 +1531,10 @@ function jgRoomCreateFromSetup(){
     alert('⚠️ 目前選了 '+compTotal+' 個角色，但玩家人數是 '+n+' 人'+(compCheck.thief>0?'（有盜賊，需選滿 '+targetTotal+' 個角色，比玩家人數多 2 個）':'（需選滿 '+targetTotal+' 個角色）')+'才能建立房間，請調整角色數量。');
     return;
   }
-  window.jgRoomPendingComp={comp:compCheck, total:n};
+  // 上警競選要不要開放，直接沿用法官助手設定頁「本局開放上警競選」的勾選，連線房間
+  // 那邊不用再問一次——兩邊各問一次容易兜不起來，也多一道法官要記得同步的步驟。
+  const sheriffEnabled=!!(document.getElementById('jg-sheriff-enabled')||{}).checked;
+  window.jgRoomPendingComp={comp:compCheck, total:n, sheriffEnabled:sheriffEnabled};
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.getElementById('t-room').classList.add('on');
   document.querySelectorAll('.nav-btn').forEach((b,i)=>{
@@ -1541,7 +1544,7 @@ function jgRoomCreateFromSetup(){
   // js/room.js 是用 <script type="module"> 載入的，執行時機比較晚，這裡一樣用重試避免
   // 手速太快、模組還沒載完時畫面空白（理由同 switchTab 那邊的處理）。
   const tryRoomRender=(retries)=>{
-    if(window.jgRoomRenderCreateWithComp){ window.jgRoomRenderCreateWithComp(compCheck, n); }
+    if(window.jgRoomRenderCreateWithComp){ window.jgRoomRenderCreateWithComp(compCheck, n, sheriffEnabled); }
     else if(retries>0){ setTimeout(()=>tryRoomRender(retries-1),100); }
   };
   tryRoomRender(20);

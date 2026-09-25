@@ -1236,13 +1236,25 @@ function jgRoomVoiceSpeakOnce(key, text){
 // 依照房間目前狀態（房間文件即時監聽收到的最新資料）組出這次該念的台詞。每次監聽器
 // 觸發都會呼叫一次，只有「狀態真的往前推進」才會念新的台詞，同一個狀態被重複觸發的
 // 重畫不會反覆念。
-function jgRoomVoiceMaybeNarrate(rd){
+// 天亮公告的死訊那句台詞，比照本機法官助手 jgBuildDawnMsg 的讀法：讀 dayLog/{night}.deathLine
+// （見 jgRoomCaptureDeathLine），平安夜就講「昨晚是平安夜」，有人死就講「昨晚 X號、Y號死亡」。
+async function jgRoomVoiceDeathLineText(night){
+  if(!jgRoomCode||!night) return '昨晚是平安夜。';
+  try{
+    const db=window.jgFirebaseDb;
+    const dayLogSnap=await getDoc(doc(db,'rooms',jgRoomCode,'dayLog',String(night)));
+    const line=dayLogSnap.exists()?dayLogSnap.data().deathLine:null;
+    if(!line||line==='平安夜') return '昨晚是平安夜。';
+    return '昨晚 '+line+'。';
+  }catch(e){ return '昨晚是平安夜。'; }
+}
+async function jgRoomVoiceMaybeNarrate(rd){
   if(!rd) return;
   if(!jgRoomVoiceGetPref()) return;
   if(!jgRoomVoiceSupported()) return;
   if(rd.gameOverWinner){
     jgRoomVoiceSpeakOnce('gameover:'+rd.gameOverWinner,
-      (rd.gameOverWinner==='wolf'?'狼人陣營獲勝':'好人陣營獲勝')+'，遊戲結束。');
+      '遊戲結束，'+(rd.gameOverWinner==='wolf'?'狼人':'好人')+'獲勝。');
     return;
   }
   if(rd.mode==='deal') return; // 發牌模式不是真的在進行遊戲，不用語音
@@ -1251,11 +1263,19 @@ function jgRoomVoiceMaybeNarrate(rd){
     return;
   }
   if(rd.phase==='sheriff'){
-    jgRoomVoiceSpeakOnce('sheriff', '天亮了，開放警長競選。');
+    const key='sheriff:'+(rd.night||0);
+    if(key===jgRoomVoiceState.key) return;
+    jgRoomVoiceState={ key, night:rd.night||0, step:null };
+    const deathText=await jgRoomVoiceDeathLineText(rd.night);
+    jgRoomSpeak('天亮請睜眼，'+deathText+'開放警長競選。');
     return;
   }
   if(rd.phase==='day-open'){
-    jgRoomVoiceSpeakOnce('day:'+(rd.night||0), '天亮了。');
+    const key='day:'+(rd.night||0);
+    if(key===jgRoomVoiceState.key) return;
+    jgRoomVoiceState={ key, night:rd.night||0, step:null };
+    const deathText=await jgRoomVoiceDeathLineText(rd.night);
+    jgRoomSpeak('天亮請睜眼，'+deathText);
     return;
   }
   if(rd.phase==='night'){
@@ -1500,6 +1520,23 @@ async function jgRoomWitchViewHtml(night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   if(jgRoomAmIFeared(rd,night)) return jgRoomFearedNoticeHtml();
+  // 女巫已經出局：比照本機法官助手（steps.js witch-wake 的「若女巫已出局」分支）——仍然要
+  // 走完整套流程避免洩露身分，但不能讓她知道今晚狼刀殺了誰、也不能透露解藥/毒藥還有沒有，
+  // 兩個問題照樣問一次，直接給一顆「下一步」讓她（其實是不會真的動作）翻過這一步就好，不
+  // 顯示任何「（法官搖頭）」之類會暗示存活狀態或藥剩餘量的提示。
+  const deadMe=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  if(deadMe&&deadMe.alive===false){
+    const deadActSnap=await getDoc(doc(db,'rooms',jgRoomCode,'witchActs',window.jgFirebaseUid));
+    if(deadActSnap.exists()&&deadActSnap.data().night===night){
+      return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🧪</div><h1>已行動</h1></div>'
+        +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請記住，等待其他人完成夜晚行動</div>'};
+    }
+    return {needsTimer:true, html:jgRoomTimerHtml(20,'你要使用解藥或毒藥嗎？')
+      +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🧪</div><h1>女巫請睜眼</h1></div>'
+      +'<div class="speech" style="text-align:center;">「<em>今晚他被殺了，你要使用解藥嗎？</em>」</div>'
+      +'<div class="speech" style="text-align:center;margin-top:10px;">「<em>你要使用毒藥嗎？你要毒誰呢？</em>」</div>'
+      +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomWitchSkip('+night+')">下一步 →</button></div>'};
+  }
   const actSnap=await getDoc(doc(db,'rooms',jgRoomCode,'witchActs',window.jgFirebaseUid));
   if(actSnap.exists()&&actSnap.data().night===night){
     const d=actSnap.data();
@@ -2731,7 +2768,7 @@ async function jgRoomRenderNightShell(){
     bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🌙</div><h1>夜晚進行中</h1>'
       +'<p class="sub" style="text-align:center;margin-top:8px;">請安靜閉眼等待，輪到你操作時畫面會自動出現</p></div>';
   }
-  const hostAdvanceHtml=jgRoomIsHost?jgRoomHostAdvanceHtml(currentStep):'';
+  const hostAdvanceHtml=jgRoomIsHost?jgRoomHostAdvanceHtml(currentStep, night):'';
   root.innerHTML=`<div class="section-title">第 ${night} 夜</div>${bodyHtml}${hostAdvanceHtml}`;
   // 狼人睜眼出刀維持 30 秒（隊友要互相商量，時間比較緊繃），其餘所有夜晚步驟都是 20 秒——
   // 這裡要跟每個步驟自己 HTML 裡用 jgRoomTimerHtml() 顯示出來的秒數對應一致，不然畫面上
@@ -2742,27 +2779,75 @@ async function jgRoomRenderNightShell(){
 // 房主專用提示：狼隊出刀完成後，如果板子有查驗類角色（預言家/通靈師擇一）就會先進行查驗，
 // 查驗完（或本來就沒有查驗類角色）currentStep 會變成空，這裡改成直接顯示「開始警長競選」
 // 按鈕，銜接到白天流程（預言家跟通靈師不會同時出現在同一場板子，不需要「下一位」按鈕）。
-function jgRoomHostAdvanceHtml(currentStep){
+// 這些步驟「今晚沒人行動」有明確、安全的預設結果（等同該角色自己選擇跳過），可以放心讓
+// 房主強制推進——最常見的卡住情境是：該步驟真正的角色持有人已經死亡（例如女巫吃過毒、
+// 通靈師被狼刀殺死），這種情況下這個人不一定還有人拿著他的手機盯著螢幕操作，導致全場等
+// 不到一個不會再有人回應的動作。其餘還沒有明確安全預設的步驟（邱比特配對、夢魘恐懼、
+// 魔術師換人、攝夢人夢遊、狼兄狼弟）先不開放強制跳過，避免用錯預設值扭曲遊戲結果。
+const JG_ROOM_FORCE_SKIPPABLE_STEPS=new Set(['witch','seer','medium','mechwolf','guard','blackmarket']);
+function jgRoomHostAdvanceHtml(currentStep, night){
+  const forceHtml=(jgRoomIsHost&&currentStep&&JG_ROOM_FORCE_SKIPPABLE_STEPS.has(currentStep))
+    ?'<div style="text-align:center;margin-top:10px;"><button style="font-size:12px;color:var(--text3);" onclick="jgRoomHostForceAdvanceStep(\''+currentStep+'\','+night+')">⚠️ 卡住了？房主強制往下一步</button></div>'
+    :'';
   if(currentStep==='shoot') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">昨晚有人被狼刀淘汰、而且他持有開槍資格（獵人／黑狼王／幸運兒獵槍），正在等他決定要不要開槍帶人；決定完（或所有有資格的人都決定完）會自動往下一步。</div>';
   if(currentStep==='badge') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">警長剛剛陣亡了，正在等他決定警徽要傳給誰（或摧毀警徽）；決定完會自動往下一步。</div>';
   if(currentStep==='cupid') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">邱比特配對完、兩位情侶也互相確認過身分之後，會自動往下一步。</div>';
   if(currentStep==='nightmare') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">夢魘選完恐懼對象之後，會自動往下一步。</div>';
   if(currentStep==='magician') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">魔術師換完（或選擇不換）之後，會自動往下一步。</div>';
-  if(currentStep==='guard') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">守衛選完之後，會自動往下一步。</div>';
+  if(currentStep==='guard') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">守衛選完之後，會自動往下一步。</div>'+forceHtml;
   if(currentStep==='dreamcatcher') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">攝夢人選完夢遊對象之後，會自動往下一步。</div>';
   if(currentStep==='wolfbrother') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">第一夜是狼兄狼弟互相確認身分；其餘夜晚平常沒事，只有狼兄陣亡後狼弟覺醒復仇那一晚才需要操作，完成後會自動往下一步。</div>';
   if(currentStep==='wolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">只有一隻狼的話，選定並確認後就是最終決定；不只一隻狼要全員確認才會真的定案。</div>';
-  if(currentStep==='blackmarket') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">黑市商人交易完（或選擇不交易）之後，會自動往下一步。獵人獵槍這項技能目前還沒自動化，請法官／房主用本機工具手動處理。</div>';
-  if(currentStep==='witch') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">女巫（或持有女巫毒藥技能的幸運兒）行動完之後，會自動往下一步（查驗類角色，或直接接警長競選）。</div>';
+  if(currentStep==='mechwolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">機械狼學習／使用技能（或確認沒有技能可用）之後，會自動往下一步。</div>'+forceHtml;
+  if(currentStep==='blackmarket') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">黑市商人交易完（或選擇不交易）之後，會自動往下一步。獵人獵槍這項技能目前還沒自動化，請法官／房主用本機工具手動處理。</div>'+forceHtml;
+  if(currentStep==='witch') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">女巫（或持有女巫毒藥技能的幸運兒）行動完之後，會自動往下一步（查驗類角色，或直接接警長競選）。</div>'+forceHtml;
+  if(currentStep==='seer') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">預言家（或持有查驗技能的幸運兒）查驗完之後，會自動往下一步。</div>'+forceHtml;
+  if(currentStep==='medium') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">通靈師查驗完之後，會自動往下一步。</div>'+forceHtml;
   if(!currentStep) return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">這一夜已經結束，正在自動接警長競選...</div>';
   return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">目前只做了守衛、狼隊出刀、女巫、預言家、通靈師、夢魘、魔術師、攝夢人、機械狼、邱比特、狼兄狼弟、黑市商人、夜槍（獵人/黑狼王/幸運兒獵槍）當示範，其餘角色還在開發中。</div>';
 }
+// 房主強制把卡住的步驟往下推進——比照 jgRoomHostForceAdvanceWolf 的精神，把「這一步沒人
+// 行動」視為該角色自己選擇不使用技能／不查驗的結果，寧可事後用口頭方式跟現場核對真正
+// 發生了什麼，也不要讓整場遊戲卡死在這裡出不去（最常見的原因是這一步真正的角色持有人
+// 已經死亡，沒有人會再去點他的手機）。
+window.jgRoomHostForceAdvanceStep=async function(step, night){
+  if(!JG_ROOM_FORCE_SKIPPABLE_STEPS.has(step)) return;
+  if(!confirm('確定要強制跳過目前這一步嗎？這會當作「這一步沒有人採取任何行動」直接往下一步。')) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  if(step==='witch'){
+    if(rd.wolfKillTargetSeatNum) await jgRoomAppendNightLog(night, '救 x');
+    await jgRoomAppendNightLog(night, '毒 x');
+    await jgRoomResolveNightDeaths();
+    await jgRoomAdvanceToCheckOrSheriff();
+  } else if(step==='seer'||step==='medium'){
+    await jgRoomAdvanceToDayPhase(night);
+  } else if(step==='mechwolf'||step==='guard'){
+    await jgRoomAdvanceToWolfOrBeyond(step, night);
+  } else if(step==='blackmarket'){
+    await jgRoomAfterBlackmarketStep(night);
+  }
+  await jgRoomRefreshAndRenderCurrent();
+};
 // 預言家的查驗畫面：先看看這一晚是不是已經查過了（重新整理／斷線重連都要能接續，不能
 // 讓他重複查、也不能讓他看不到剛剛已經查到的結果）。
 async function jgRoomSeerViewHtml(night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   if(jgRoomAmIFeared(rd,night)) return jgRoomFearedNoticeHtml();
+  // 預言家已出局：比照本機法官助手（steps.js seer-wake 的「Dead seer」分支）——仍然要走完
+  // 流程避免洩露身分，但不能讓她真的查驗、也不能透露任何查驗結果，直接給一顆「下一步」。
+  const deadMe=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  if(deadMe&&deadMe.alive===false){
+    const deadCheckSnap=await getDoc(doc(db,'rooms',jgRoomCode,'seerChecks',window.jgFirebaseUid));
+    if(deadCheckSnap.exists()&&deadCheckSnap.data().night===night){
+      return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🔮</div><h1>已行動</h1></div>'
+        +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請記住，等待其他人完成夜晚行動</div>'};
+    }
+    return {needsTimer:true, html:jgRoomTimerHtml(20,'你要查驗的對象是？')
+      +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🔮</div><h1>預言家請睜眼</h1></div>'
+      +'<div class="info-warn" style="text-align:center;">預言家已出局，仍需走完流程</div>'
+      +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomSeerDeadContinue('+night+')">下一步 →</button></div>'};
+  }
   const checkSnap=await getDoc(doc(db,'rooms',jgRoomCode,'seerChecks',window.jgFirebaseUid));
   if(checkSnap.exists()&&checkSnap.data().night===night){
     const d=checkSnap.data();
@@ -2794,6 +2879,14 @@ window.jgRoomSubmitCheckFromGrid=function(kind, gridId, night){
   else if(kind==='guard') jgRoomGuardAct(p.uid, seatNum, night);
 };
 
+// 已出局的預言家按「下一步」：不記錄任何真正的查驗對象／結果，純粹只是把這一步結束、
+// 往下一步推進，跟本機法官助手「仍需走完流程」的精神一致。
+window.jgRoomSeerDeadContinue=async function(night){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode,'seerChecks',window.jgFirebaseUid),{ night:night, targetUid:null, targetSeatNum:null, team:null });
+  await jgRoomAdvanceToDayPhase(night);
+  await jgRoomRefreshAndRenderCurrent();
+};
 window.jgRoomSeerCheck=async function(targetUid, targetSeatNum, night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
@@ -2825,6 +2918,20 @@ async function jgRoomMediumViewHtml(night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   if(jgRoomAmIFeared(rd,night)) return jgRoomFearedNoticeHtml();
+  // 通靈師已出局：一樣比照本機法官助手（steps.js medium-wake 的「dead」分支）——仍然要走完
+  // 流程避免洩露身分，但不能讓她真的查驗、也不能透露任何查驗結果，直接給一顆「下一步」。
+  const deadMe=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  if(deadMe&&deadMe.alive===false){
+    const deadCheckSnap=await getDoc(doc(db,'rooms',jgRoomCode,'mediumChecks',window.jgFirebaseUid));
+    if(deadCheckSnap.exists()&&deadCheckSnap.data().night===night){
+      return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><div class="nicon">👁️</div><h1>已行動</h1></div>'
+        +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請記住，等待其他人完成夜晚行動</div>'};
+    }
+    return {needsTimer:true, html:jgRoomTimerHtml(20,'你要查驗的對象是？')
+      +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">👁️</div><h1>通靈師請睜眼</h1></div>'
+      +'<div class="info-warn" style="text-align:center;">通靈師已出局，仍需走完流程</div>'
+      +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomMediumDeadContinue('+night+')">下一步 →</button></div>'};
+  }
   const checkSnap=await getDoc(doc(db,'rooms',jgRoomCode,'mediumChecks',window.jgFirebaseUid));
   if(checkSnap.exists()&&checkSnap.data().night===night){
     const d=checkSnap.data();
@@ -2838,6 +2945,14 @@ async function jgRoomMediumViewHtml(night){
     +jgRoomNumGridHtml('jg-room-medium-pick', null)
     +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomSubmitCheckFromGrid(\'medium\',\'jg-room-medium-pick\','+night+')">確認</button></div>'};
 }
+// 已出局的通靈師按「下一步」：不記錄任何真正的查驗對象／結果，純粹只是把這一步結束、
+// 往下一步推進，跟本機法官助手「仍需走完流程」的精神一致。
+window.jgRoomMediumDeadContinue=async function(night){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode,'mediumChecks',window.jgFirebaseUid),{ night:night, targetUid:null, targetSeatNum:null, roleName:null });
+  await jgRoomAdvanceToDayPhase(night);
+  await jgRoomRefreshAndRenderCurrent();
+};
 // 查驗到機械狼：機械狼尚未學習技能時顯示「機械狼」，已經學習之後改顯示學到的具體身分
 // （見 ALL_ROLES.medium 的規則說明），學到的身分存在機械狼自己 players/{uid}.mechWolfLearnedRole。
 window.jgRoomMediumCheck=async function(targetUid, targetSeatNum, night){
@@ -3810,10 +3925,10 @@ window.jgRoomLeave=function(){
 
 // ── 從「法官助手」設定畫面帶著已確認的板子設定過來：直接跳到「輸入全名、建立房間」，
 //    不用再走一次選板子（板子已經在那邊選好、驗證過人數對得上了）。──
-window.jgRoomRenderCreateWithComp=function(comp, total){
+window.jgRoomRenderCreateWithComp=function(comp, total, sheriffEnabled){
   const root=document.getElementById('jg-room-content');
   if(!root) return;
-  window.jgRoomPendingComp={comp:comp, total:total};
+  window.jgRoomPendingComp={comp:comp, total:total, sheriffEnabled:!!sheriffEnabled};
   const parts=Object.entries(comp).filter(([,v])=>v>0)
     .map(([k,v])=>((typeof RNAME!=='undefined'&&RNAME[k])||k)+'×'+v).join('、');
   // 如果法官助手設定畫面裡已經幫幾個座位填過真名（不是「X號」這種預設佔位名稱），順便問
@@ -3822,7 +3937,6 @@ window.jgRoomRenderCreateWithComp=function(comp, total){
   const hasPresetNames=typeof jgPlayerNames!=='undefined'&&Object.keys(jgPlayerNames||{}).some(k=>jgPlayerNames[k]&&jgPlayerNames[k]!==(k+'號'));
   root.innerHTML=`
     <div class="nbanner">
-      <div class="nicon">🎮</div>
       <h1>建立連線房間</h1>
     </div>
     <div class="info" style="font-size:13px;margin-top:10px;">板子設定：${total} 人局，${parts}</div>
@@ -3830,8 +3944,8 @@ window.jgRoomRenderCreateWithComp=function(comp, total){
       <label>你的全名（房主）</label>
       <input type="text" id="jg-room-name-create" placeholder="輸入你的全名">
       ${hasPresetNames?'<label style="margin-top:10px;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="jg-room-use-preset-names" checked style="width:auto;"> 沿用法官助手裡已經填好的座位姓名（其他人加入時用點選的，不用自己打名字）</label>':''}
-      <label style="margin-top:10px;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="jg-room-sheriff-enabled" style="width:auto;"> 本局開放上警競選（第一夜結束後出現參選警長畫面）</label>
-      <button class="primary" style="margin-top:10px;" onclick="jgRoomCreate(document.getElementById('jg-room-name-create').value, window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, ${hasPresetNames?'document.getElementById(\'jg-room-use-preset-names\').checked':'false'}, document.getElementById('jg-room-sheriff-enabled').checked)">建立房間</button>
+      <div class="info" style="font-size:12px;margin-top:10px;">本局${window.jgRoomPendingComp.sheriffEnabled?'開放':'不開放'}上警競選（跟隨法官助手設定頁的選擇，回去重新調整板子可以改）</div>
+      <button class="primary" style="margin-top:10px;" onclick="jgRoomCreate(document.getElementById('jg-room-name-create').value, window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, ${hasPresetNames?'document.getElementById(\'jg-room-use-preset-names\').checked':'false'}, window.jgRoomPendingComp.sheriffEnabled)">建立房間</button>
     </div>
     <button class="ghost" style="margin-top:10px;" onclick="switchTab('t-judge')">← 回去重新調整板子</button>
     <button class="ghost" style="margin-top:8px;" onclick="jgRoomCancelPendingCreate()">取消建立房間</button>
@@ -3867,7 +3981,7 @@ window.jgRoomRenderEntry=async function(){
     return;
   }
   if(window.jgRoomPendingComp){
-    jgRoomRenderCreateWithComp(window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total);
+    jgRoomRenderCreateWithComp(window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, window.jgRoomPendingComp.sheriffEnabled);
     return;
   }
   root.innerHTML='<div class="info" style="text-align:center;margin-top:20px;">連線中...</div>';
