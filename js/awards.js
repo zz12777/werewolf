@@ -251,7 +251,7 @@ function computeAwards(){
       note:'【預言家查到狼】:僅計「預言家／通靈師」的查驗結果，查到邪惡陣營即算命中；機械狼僅限最終顯示為「機械狼／機械黑狼王／機械狼人」時才算（學到女巫/守衛/獵人等好人技能後查到不算）。雙身分板若牌面顯示為好人則不算。'},
     {icon:'🗡️',title:'超會獵魔人',top:awTopTiers(demonhunterHits),
       note:'【獵魔人獵對狼】:獵魔人把狼獵出去。逐一比對有獵魔人的板子，狩的對象＝該場狼隊號碼，算一次。'},
-    {icon:'D',title:'滴滴之星',top:awTopTiers(diDiStar),
+    {icon:'D',title:'滴滴之星',top:awTopTiers(diDiStar),unit:'分',
       note:'【滴滴代跳預言家】:預言家第一晚查的對象拿到警徽，且預言家有上警又退水，算一分；若該場好人陣營獲勝，再加一分。'},
     {icon:'🔪',title:'自刀專家',top:awTopTiers(selfKillDict),
       note:'【自刀騙解藥成功】:女巫救的對象是狼隊見面狼隊友，代表成功騙解藥，該局所有見面狼隊友（機械狼、石像鬼等不見面角色不算）都算1次。'},
@@ -279,7 +279,7 @@ function awardsRender(){
       <div class="aw-icon">${a.icon}</div>
       <div class="aw-title">${a.title}</div>
       <div class="aw-name">${first?first.name:'尚無資料'}</div>
-      <div class="aw-count">${first?first.count+'次':''}</div>
+      <div class="aw-count">${first?first.count+(a.unit||'次'):''}</div>
     </div>`;
   }).join('');
   const detail=document.getElementById('award-detail');
@@ -296,7 +296,7 @@ function awardsToggle(i){
   const a=(window.AW_CURRENT||[])[i];
   if(!a) return;
   const rows=a.top.length
-    ? a.top.map(t=>`<div>🏅 <b>第${t.rank}名｜${t.name}</b>　${t.count}次　<span style="color:var(--text3);">(${t.detail})</span></div>`).join('')
+    ? a.top.map(t=>`<div>🏅 <b>第${t.rank}名｜${t.name}</b>　${t.count}${a.unit||'次'}　<span style="color:var(--text3);">(${t.detail})</span></div>`).join('')
     : '<div style="color:var(--text3);">目前還沒有場次符合這個項目</div>';
   detail.innerHTML=`${rows}<div class="aw-note">${a.note}</div>`;
   detail.classList.add('open');

@@ -507,6 +507,13 @@ function jgFormatNightLog(){
   if(jgNight===1 && jgCupidChosen && jgLovers && jgLovers.length===2){
     lines.push('邱 '+jgLovers.join('-'));
   }
+  // 混血兒也是第一夜（僅一次）選定支持對象，順便記下支持的號碼跟陣營標籤（好人混／狼人混），
+  // 這樣不管哪個板子，只要有混血兒，文字紀錄跟之後的遊玩數據頁面都看得到他學到誰、混到哪邊。
+  if(jgNight===1 && jgHybridChosen && jgHybridTarget){
+    const hyTp=jgFind(jgHybridTarget);
+    const hyIsWolf=hyTp&&jgIsWolfPackMember(hyTp);
+    lines.push('混 '+jgHybridTarget+'（'+(hyIsWolf?'狼混':'好人混')+'）');
+  }
   const guardP=jgPlayers.find(p=>p.role==='guard');
   const mwP=jgPlayers.find(p=>p.role==='mechanicalwolf');
   const seerP=jgPlayers.find(p=>p.role==='seer');
@@ -916,7 +923,7 @@ function jgOpenRosterSetup(){
 function jgRenderRosterSetupRows_OLD(){
   const box=document.getElementById('jg-roster-setup-rows');
   if(!box) return;
-  let html='<button type="button" class="ghost" style="margin:0 0 12px;" onclick="jgRosterClearAll()">🗑️ 清空全部姓名</button>';
+  let html='<button type="button" class="ghost" style="margin:0 0 12px;" onclick="jgRosterClearAll()">清空全部姓名</button>';
   for(let i=1;i<=jgTotal;i++){
     const cur=jgPlayerNames[i]||'';
     html+='<div class="rname-row">'
@@ -1105,7 +1112,7 @@ function jgRenderRosterSetupRows(){
   const cols=Math.ceil(jgTotal/2);
   // 空格區：橫向分兩行——每一格點下去，會變成「目前作用中」的號碼（用顏色標示），
   // 隱藏的 input 是給 jgApplyRosterSetupNames 之類既有的存檔邏輯讀值用，格式不用改。
-  let slotsHtml='<button type="button" class="ghost" style="margin:0 0 12px;" onclick="jgRosterClearAll()">🗑️ 清空全部姓名</button>'
+  let slotsHtml='<button type="button" class="ghost" style="margin:0 0 12px;" onclick="jgRosterClearAll()">清空全部姓名</button>'
     +'<div class="rname-slots-grid" style="grid-template-columns:repeat('+cols+',1fr);">';
   for(let i=1;i<=jgTotal;i++){
     const cur=jgPlayerNames[i]||'';

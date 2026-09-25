@@ -319,6 +319,7 @@
   <div class="card-grid">
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon">🗳️</span>
       <span class="rcol-name">計票方式與平票 PK</span>
       <span class="rcol-arrow">▶</span>
     </div>
@@ -334,7 +335,6 @@
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">💥</span>
       <span class="rcol-name">自爆吞警徽規則</span>
       <span class="rcol-arrow">▶</span>
     </div>
@@ -373,7 +373,7 @@
   <div id="glossary-dynamic-list"></div>
   </div>
   <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
-    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
+    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">問題回報</button>
   </div>
 </div>
 <!-- ══════════════════════════════════════
@@ -426,10 +426,10 @@
   <div class="big-section-title">警長設定（選填）</div>
   <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:0;padding:14px 16px;border-radius:12px;border:2px solid var(--accent,#2e7d32);background:rgba(46,125,50,0.08);cursor:pointer;transition:background .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
     <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
-    <span style="font-weight:800;font-size:16px;">🎖️ 上警局（開放警長競選）</span>
+    <span style="font-weight:800;font-size:16px;">上警局 -- 開放警長競選</span>
   </label>
   <div id="jg-badge-mode-wrap" style="display:none;margin-top:10px;">
-    <label>💥 自爆吞警徽規則</label>
+    <label>自爆吞警徽規則</label>
     <div class="btn2" style="margin-top:0;">
       <button type="button" id="jg-badge-mode-single" class="primary" onclick="jgSetBadgeMode('single')">單爆吞警徽</button>
       <button type="button" id="jg-badge-mode-double" onclick="jgSetBadgeMode('double')">雙爆吞警徽</button>
@@ -437,7 +437,7 @@
     <div class="info" id="jg-badge-mode-desc" style="font-size:12px;margin-top:8px;">單爆吞警徽：只要有狼人在首個白天的警上環節自爆，警徽立刻流失，本局不再有警長。</div>
   </div>
   <div class="big-section-title">開始遊戲</div>
-  <button onclick="jgOpenRosterSetup()">👥 設定本局玩家名單（選填）</button>
+  <button onclick="jgOpenRosterSetup()">設定本局玩家名單（選填）</button>
   <button class="primary" style="margin-top:14px;" onclick="jgStart()">開始主持 →</button>
   <div style="display:flex;gap:8px;margin-top:8px;">
     <button style="flex:1;" onclick="jgRoomCreateFromSetup()">建立連線房間</button>
@@ -486,13 +486,13 @@
 
 <!-- 即時票型紀錄（公開，任何人打開這個頁面都看得到；資料來自法官端同步過去的 Google 試算表） -->
 <div class="card" style="margin:16px 0;">
-  <div class="section-title">📡 即時票型紀錄</div>
+  <div class="section-title">即時票型紀錄</div>
   <div class="info" style="font-size:12px;">法官記完一輪投票會自動同步到這裡，若還沒出來請稍等一下或問法官。</div>
   <div id="jg-live-session-view" style="margin-top:10px;"></div>
 </div>
 
 <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
-  <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
+  <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">問題回報</button>
 </div>
 </div><!-- /t-judge -->
 
@@ -553,7 +553,7 @@
   <div id="game-list" class="card-grid"></div>
 
   <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
-    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
+    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">問題回報</button>
   </div>
 </div>
 
@@ -575,7 +575,7 @@
   <div class="chip-row" id="guide-tag-filter" style="display:none;"></div>
   <div id="guide-list" class="card-grid"></div>
   <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
-    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">🐛 問題回報</button>
+    <button class="ghost" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">問題回報</button>
   </div>
 </div>
 
@@ -591,7 +591,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-09-24-b</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-09-25-a</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="data/games-history.js"></script>

@@ -183,7 +183,16 @@ function pdSubmitGameRecord(){
   for(let i=1;i<=jgTotal;i++){
     const p=jgByNum(i);
     if(!p) continue;
-    const entry={num:i, name:jgPlayerNames[i]||p.name, role:jgRoleDisplayName(p)};
+    // 混血兒送進遊玩數據的身分字串要帶上（好人混／狼混）註記，不然歷史紀錄頁面完全看不出來
+    // 這場混血兒支持哪邊——之後 pdDisplayRole／classify 都是靠這個括號註記才能正確判斷
+    // 混血兒這場算好人還是邪惡陣營，任何板子只要有混血兒都要一律補上，不能只有特定板子才有。
+    let roleForExport=jgRoleDisplayName(p);
+    if(p.role==='hybrid'&&jgHybridChosen&&jgHybridTarget){
+      const hyTp=jgFind(jgHybridTarget);
+      const hyIsWolf=hyTp&&jgIsWolfPackMember(hyTp);
+      roleForExport+=(hyIsWolf?'（狼混）':'（好人混）');
+    }
+    const entry={num:i, name:jgPlayerNames[i]||p.name, role:roleForExport};
     if(thirdPartyNums.includes(i.toString())) entry.third=true; // 標記這場「成為過第三方」，跟輸贏無關
     players.push(entry);
   }
@@ -649,7 +658,10 @@ function pdRenderGames(){
       const badgeColorCls=camp==='third'?'bthird':(camp==='evil'?'bw':'bv');
       const badge=g.unclear?'':`<span class="badge ${badgeColorCls}" style="padding:2px 8px;font-size:10px;">${badgeLabel}</span>`;
       const mvpBadge=(mvpNum&&String(p.num)===String(mvpNum))?' <span style="font-size:12px;">🏆 MVP</span>':'';
-      return `<tr><td>${p.num}</td><td>${p.name}${mvpBadge}</td><td>${disp}${p.role.includes('（')?'<span style="color:var(--text3);font-size:11px;"> '+p.role.match(/（(.*?)）/)[1]+'</span>':''}</td><td>${badge}</td></tr>`;
+      // disp（pdDisplayRole 的結果）已經把括號註記（好人混／狼混等）折進顯示文字裡了
+      // （例如「混血兒(好人混)」），這裡不能再從 p.role 額外抓一次括號內容補在後面，
+      // 不然會變成「混血兒(好人混)好人混」這種重複顯示。
+      return `<tr><td>${p.num}</td><td>${p.name}${mvpBadge}</td><td>${disp}</td><td>${badge}</td></tr>`;
     }).join('');
     return `
     <div class="gcard" onclick="pdToggleGame(${i})">

@@ -598,6 +598,14 @@ async function jgRoomRenderCurrentPhase(){
     jgRoomRenderDealPhase();
     return;
   }
+  // 遊戲已經自動判定出勝負：不管現在原本走到哪一步，一律優先顯示結束畫面給所有人看
+  // （目前只有「機械狼＋通靈師」「攝夢人＋夢魘」這兩個板子會寫入 gameOverWinner，
+  // 見 jgRoomMaybeDeclareWin；其餘板子這個欄位永遠是 undefined，行為不受影響）。
+  if(jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.gameOverWinner){
+    jgRoomStopTimer();
+    await jgRoomRenderGameOverPhase();
+    return;
+  }
   if(jgRoomGodViewOn){
     await jgRoomRenderGodView();
     return;
@@ -890,6 +898,9 @@ async function jgRoomAdvanceToCheckOrSheriff(){
     await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'badge' },{ merge:true });
     return;
   }
+  // 這一晚的死亡（含夜槍、警徽傳遞）都已經塵埃落定，才是檢查勝負的正確時機——
+  // 分出勝負就直接讓所有人的畫面切去結束畫面，不用再進查驗步驟或天亮。
+  if(await jgRoomMaybeDeclareWin()) return;
   const checkStep=jgRoomNextCheckStep();
   if(checkStep){
     await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:checkStep },{ merge:true });
@@ -989,7 +1000,12 @@ async function jgRoomCheckShootEligible(uid, night, dayVote){
   if(role==='hunter'||role==='wolfking') return true;
   const pSnap=await getDoc(doc(db,'rooms',jgRoomCode,'players',uid));
   const p=pSnap.exists()?pSnap.data():null;
-  if(!p||p.luckyOneSkill!=='hunter') return false;
+  if(!p) return false;
+  // 機械狼學到「獵人」：這個被動的「淘汰時開槍」能力本身沒有「次晚起」的限制（跟每晚可用的
+  // 主動技能不一樣），學到的當下就算數，不用檢查是哪一晚學到、現在是第幾晚——跟本機法官助手
+  // jgMechWolfHunterActive() 的規則一致（只看有沒有學到，不看學到之後過了幾晚）。
+  if(role==='mechanicalwolf'&&p.mechWolfLearnedRole==='hunter') return true;
+  if(p.luckyOneSkill!=='hunter') return false;
   return dayVote ? (p.luckyOneGrantedNight<=night) : (p.luckyOneGrantedNight<night);
 }
 // 狼刀死亡結算：只在「女巫回合結束後」（或板子沒有女巫、狼隊確認完就直接算）呼叫一次。
@@ -1073,6 +1089,93 @@ async function jgRoomApplyCupidCascade(){
     const survivor=aAlive?a:b;
     await setDoc(doc(db,'rooms',jgRoomCode,'players',survivor),{ alive:false },{ merge:true });
   }
+}
+
+// ═══════════════════════════════════════════
+// 連線房間勝負自動判定：目前只給「機械狼＋通靈師」「攝夢人＋夢魘」這兩個已經全自動的
+// 板子使用（房主建立房間時鎖定的板子只要不含這兩個板子以外的角色，這裡的邏輯就完全
+// 適用；其餘板子——魔術師/黑市商人/邱比特那三個目前全自動板子，以及所有手機發牌板子
+// ——jgRoomComp 裡會出現這裡沒處理到的角色，直接讓 jgRoomMaybeDeclareWin 判斷「板子
+// 不在支援範圍」就跳過，不會誤判）。判定邏輯照抄本機法官助手 jgCheckWinNormal()：
+//   ‧ 狼人全滅 → 好人贏
+//   ‧ 機械狼板：狼隊跟真正的狼人互不相認、憑人數優勢不算數，一定要屠民或屠神才算贏
+//   ‧ 其餘情況（目前只剩攝夢人板）：攝夢人本身就是「主動翻盤」的活棋（連續兩晚鎖同一人
+//     就能弄死狼隊），人數打平時還不能篤定狼贏，狼隊人數要「嚴格多於」好人才算贏；
+//     女巫如果還有解藥或毒藥沒用完，一樣算「還有翻盤機會」
+//   ‧ 屠民（好人裡的平民死光，但神職還有人活著）→ 狼贏
+//   ‧ 屠神（好人裡的神職死光，但平民還有人活著）→ 狼贏
+// 支援範圍以外的角色一律讓這個函式直接回傳 null（不判定），呼叫端看到 null 就什麼都不做，
+// 不會影響其餘板子原本「勝負由法官／房主自己看場上情況宣布」的既有行為。
+const JG_ROOM_WIN_CHECK_SUPPORTED_ROLES=new Set([
+  'villager','wolf','wolfking','seer','witch','hunter','guard',
+  'mechanicalwolf','medium','dreamcatcher','nightmare'
+]);
+function jgRoomAllGodsForWin(){
+  // 跟本機法官助手 jgAllGodsForWin() 一樣的「屠神」神職清單，這裡先只列出這兩個支援板子
+  // 可能出現的神職（seer/witch/hunter/guard/dreamcatcher/medium），其餘神職角色一律不在
+  // JG_ROOM_WIN_CHECK_SUPPORTED_ROLES 裡，根本不會走到這裡。
+  return ['seer','witch','hunter','guard','dreamcatcher','medium'];
+}
+async function jgRoomComputeWinCheck(){
+  const db=window.jgFirebaseDb;
+  if(!jgRoomComp) return null;
+  // 板子角色只要出現任何一個不在支援清單裡的角色（例如魔術師、黑市商人、邱比特、盜賊…），
+  // 這個板子就不在這次先做的範圍內，直接不判定，讓法官／房主照舊自己宣布。
+  const compRoles=Object.keys(jgRoomComp).filter(r=>(jgRoomComp[r]||0)>0);
+  if(compRoles.some(r=>!JG_ROOM_WIN_CHECK_SUPPORTED_ROLES.has(r))) return null;
+  const { getDocs } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+  const secretsSnap=await getDocs(collection(db,'rooms',jgRoomCode,'secrets'));
+  const roleByUid={}; secretsSnap.docs.forEach(d=>{ roleByUid[d.id]=d.data().role; });
+  // 存活狀態逐一重新讀最新的 players/{uid} 文件，不要信任 jgRoomLatestPlayers 這份畫面快取
+  // ——這個函式常常緊接在剛寫入 alive:false 之後就呼叫，即時監聽器可能還沒同步回最新狀態
+  // （跟 jgRoomCheckAndSetPendingBadge 是同一個道理）；uid／座位清單本身板子人數固定不會
+  // 中途變動，用 jgRoomLatestPlayers 取就好，只有 alive 這個欄位需要重新讀。
+  const players=[];
+  for(const p of jgRoomLatestPlayers){
+    const pSnap=await getDoc(doc(db,'rooms',jgRoomCode,'players',p.uid));
+    // 讀不到文件（理論上正式環境不會發生，但保留這個備援）就退回畫面快取本身的 alive 值，
+    // 不要直接當成「還活著」——這樣比較安全，不會因為讀取失敗而誤判一個已經死亡的玩家
+    // 還活著、進而影響勝負判定。
+    const fresh=pSnap.exists()?pSnap.data():null;
+    const alive=fresh?(fresh.alive!==false):(p.alive!==false);
+    players.push({ uid:p.uid, alive, witchSaveUsed: fresh?fresh.witchSaveUsed:p.witchSaveUsed, witchPoisonUsed: fresh?fresh.witchPoisonUsed:p.witchPoisonUsed });
+  }
+  const alive=players.filter(p=>p.alive!==false);
+  const isWolf=(p)=>typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(roleByUid[p.uid]);
+  const aw=alive.filter(isWolf);
+  const ag=alive.filter(p=>!isWolf(p));
+  if(aw.length===0) return {winner:'good', msg:'所有狼人已被淘汰'};
+  const hasMechWolfBoard=(jgRoomComp.mechanicalwolf||0)>0;
+  if(!hasMechWolfBoard){
+    const hasComebackThreat=ag.some(p=>{
+      const r=roleByUid[p.uid];
+      if(r==='witch') return !p.witchSaveUsed||!p.witchPoisonUsed;
+      if(r==='dreamcatcher') return true;
+      return false;
+    });
+    if(hasComebackThreat){
+      if(aw.length>ag.length) return {winner:'wolf', msg:'狼人人數已達多數'};
+    } else if(aw.length>=ag.length) return {winner:'wolf', msg:'狼人人數已達多數'};
+  }
+  const allGods=jgRoomAllGodsForWin();
+  const aGod=ag.filter(p=>allGods.includes(roleByUid[p.uid]));
+  const aVil=ag.filter(p=>roleByUid[p.uid]==='villager');
+  if(aVil.length===0&&aGod.length>0) return {winner:'wolf', msg:'所有平民已被淘汰'};
+  if(aGod.length===0&&aVil.length>0) return {winner:'wolf', msg:'所有神職已被淘汰'};
+  return null;
+}
+// 呼叫端在「這一輪死亡結算已經全部塵埃落定」的幾個關卡點呼叫這個函式：算出勝負就把
+// gameOverWinner／gameOverMsg 寫進房間文件（讓所有人的畫面自動切去 jgRoomRenderGameOverPhase）
+// 並回傳 true；沒有分出勝負（或板子不在支援範圍）就回傳 false，呼叫端照原本流程繼續走。
+async function jgRoomMaybeDeclareWin(){
+  const db=window.jgFirebaseDb;
+  const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const rd=roomSnap.data()||{};
+  if(rd.gameOverWinner) return true; // 已經判定過了，不要重複判定/覆寫
+  const res=await jgRoomComputeWinCheck();
+  if(!res) return false;
+  await setDoc(doc(db,'rooms',jgRoomCode),{ gameOverWinner:res.winner, gameOverMsg:res.msg },{ merge:true });
+  return true;
 }
 
 // ═══════════════════════════════════════════
@@ -2008,6 +2111,8 @@ async function jgRoomResolveDayVote(entries, top){
     // 決定完開槍之後才做，不會在這裡重複觸發。
     if(await jgRoomCheckAndSetPendingBadge()){
       jgRoomRenderCurrentPhase();
+    } else if(await jgRoomMaybeDeclareWin()){
+      jgRoomRenderCurrentPhase();
     } else {
       await jgRoomStartNextNight();
     }
@@ -2164,9 +2269,10 @@ window.jgRoomToggleGodView=function(){
   jgRoomGodViewOn=!jgRoomGodViewOn;
   jgRoomRenderGodView();
 };
-async function jgRoomRenderGodView(){
-  const root=document.getElementById('jg-room-content');
-  if(!root) return;
+// 「玩家狀態格子＋文字紀錄」這兩塊是上帝視角跟遊戲結束畫面共用的內容（差別只在最上面的
+// banner／有沒有「退出上帝視角」按鈕），抽成共用函式，兩邊各自組自己的外層 html 就好，
+// 不用維護兩份幾乎一樣的查詢/組字串邏輯。
+async function jgRoomBuildGodViewSections(){
   const db=window.jgFirebaseDb;
   const { getDocs } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
   const [secretsSnap, votesSnap, nightLogSnap, dayLogSnap]=await Promise.all([
@@ -2289,6 +2395,12 @@ async function jgRoomRenderGodView(){
     ? blocks.map(b=>'<div class="gl-head">'+b.head+'</div>'+b.lines.map(l=>'<div class="gl-sub">'+l+'</div>').join('')).join('')
     : '目前還沒有紀錄';
 
+  return {pgridHtml, logHtml, blocks, roleByUid};
+}
+async function jgRoomRenderGodView(){
+  const root=document.getElementById('jg-room-content');
+  if(!root) return;
+  const {pgridHtml, logHtml}=await jgRoomBuildGodViewSections();
   root.innerHTML=`
     <div class="nbanner"><div class="nicon">👁️</div><h1>上帝視角</h1></div>
     <button style="margin-top:10px;" onclick="jgRoomToggleGodView()">← 退出上帝視角</button>
@@ -2298,6 +2410,145 @@ async function jgRoomRenderGodView(){
     <div class="godlog">${logHtml}</div>
   `;
 }
+// 遊戲結束畫面：所有人（不用等死亡才能切上帝視角）都直接看到勝負結果＋完整身分／文字
+// 紀錄，跟上帝視角共用同一份「玩家狀態＋文字紀錄」內容（jgRoomBuildGodViewSections），
+// 只是最上面換成勝負 banner，也不需要「退出」按鈕——遊戲已經結束了，沒有其他畫面可以回去。
+async function jgRoomRenderGameOverPhase(){
+  const root=document.getElementById('jg-room-content');
+  if(!root) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  const {pgridHtml, logHtml}=await jgRoomBuildGodViewSections();
+  const winner=rd.gameOverWinner;
+  const winnerLabel=winner==='wolf'?'狼人陣營獲勝':(winner==='good'?'好人陣營獲勝':'遊戲結束');
+  const icon=winner==='wolf'?'🐺':'🎉';
+  root.innerHTML=`
+    <div class="nbanner"><div class="nicon">${icon}</div><h1>${winnerLabel}</h1>
+      <p class="sub" style="text-align:center;margin-top:8px;">${(rd.gameOverMsg||'').replace(/</g,'&lt;')}</p></div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button style="flex:1;" onclick="jgRoomShowExportModal()">匯出文字紀錄</button>
+      <button style="flex:1;" onclick="jgRoomSubmitToPlaydata()">送出到遊玩數據</button>
+    </div>
+    <div class="section-title" style="margin-top:16px;">玩家狀態（完整身分）</div>
+    <div class="pgrid">${pgridHtml}</div>
+    <div class="section-title" style="margin-top:16px;">文字紀錄</div>
+    <div class="godlog">${logHtml}</div>
+  `;
+}
+
+// 比照本機法官助手 jgAutoGameTitle() 的「沒有選現成板子時，用場上特殊角色兜標題」規則，
+// 連線房間沒有另外記錄板子名稱（建立房間時只存了 comp／total），一律用這個規則從 jgRoomComp
+// 兜出來——目前先支援的兩個板子（機械狼＋通靈師／攝夢人＋夢魘）各自的特殊角色固定只有
+// 兩個，兜出來的標題會跟本機法官助手選同樣板子時的標題一致（例如「機械狼通靈師」）。
+function jgRoomAutoGameTitle(){
+  const baseline=new Set(['villager','wolf','seer','witch','hunter','guard']);
+  const specialRoles=Object.keys(jgRoomComp||{}).filter(r=>(jgRoomComp[r]||0)>0&&!baseline.has(r));
+  if(!specialRoles.length) return '基本板';
+  if(typeof GAME_TITLE_ROLE_ORDER!=='undefined'){
+    specialRoles.sort((a,b)=>GAME_TITLE_ROLE_ORDER.indexOf(a)-GAME_TITLE_ROLE_ORDER.indexOf(b));
+  }
+  return specialRoles.map(r=>(typeof jgFullRoleName==='function'?jgFullRoleName(r):((typeof RNAME!=='undefined'&&RNAME[r])||r))).join('');
+}
+// 組出跟本機法官助手 jgExportGameLog() 同樣格式的純文字紀錄：===板子標題=== → 座號/姓名/
+// 身分名單 → =====日期_房號===== → 逐一區塊（警長競選／夜晚／白天，直接借用
+// jgRoomBuildGodViewSections() 已經組好的 blocks，格式本來就跟本機法官助手一致）→
+// =====結果=====。
+async function jgRoomBuildExportText(){
+  const rd=jgRoomLatestRoomDoc||{};
+  const {blocks, roleByUid}=await jgRoomBuildGodViewSections();
+  const title=jgRoomAutoGameTitle();
+  let out='==='+title+'===\n';
+  jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum).forEach(p=>{
+    const role=roleByUid[p.uid];
+    const roleName=role?((typeof RNAME!=='undefined'&&RNAME[role])||role):'?';
+    out+=p.seatNum+' '+p.name+' '+roleName+'\n';
+  });
+  const d=new Date();
+  const mmdd=String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  out+='====='+mmdd+'_'+jgRoomCode+'=====\n';
+  blocks.forEach((b,idx)=>{
+    if(idx>0) out+='\n';
+    out+=b.head+'\n';
+    b.lines.forEach(l=>{ out+=l+'\n'; });
+  });
+  const resultLabel=rd.gameOverWinner==='wolf'?'邪惡陣營獲勝':(rd.gameOverWinner==='good'?'好人陣營獲勝':'遊戲結束');
+  out+='====='+resultLabel+'=====';
+  return out;
+}
+window.jgRoomShowExportModal=async function(){
+  const text=await jgRoomBuildExportText();
+  let modal=document.getElementById('jg-room-export-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='jg-room-export-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    document.body.appendChild(modal);
+  }
+  const safeText=text.replace(/</g,'&lt;');
+  modal.innerHTML='<div style="background:var(--bg1,#fff);border-radius:14px;padding:16px;max-width:480px;width:100%;max-height:85vh;display:flex;flex-direction:column;">'
+    +'<div style="font-weight:800;margin-bottom:8px;">本局文字紀錄</div>'
+    +'<textarea readonly style="flex:1;min-height:300px;font-family:monospace;font-size:12px;white-space:pre;padding:10px;border-radius:8px;">'+safeText+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:10px;">'
+    +'<button class="primary" style="flex:1;" onclick="jgRoomCopyExportText()">複製文字</button>'
+    +'<button style="flex:1;" onclick="document.getElementById(\'jg-room-export-modal\').remove()">關閉</button>'
+    +'</div></div>';
+};
+window.jgRoomCopyExportText=function(){
+  const modal=document.getElementById('jg-room-export-modal');
+  const ta=modal&&modal.querySelector('textarea');
+  if(!ta) return;
+  ta.select();
+  navigator.clipboard?.writeText(ta.value).catch(()=>{});
+  try{ document.execCommand('copy'); }catch(e){}
+};
+// 送到遊玩數據：跟本機法官助手 pdSubmitGameRecord() 走同一份 Google 表單設定
+// （PD_FORM_ACTION_URL／PD_FORM_ENTRIES／PD_SUBMIT_PASSWORD，定義在 js/playdata-core.js，
+// 那個檔案是一般 <script>、比這個 module 早載入，可以直接引用），只是玩家清單／文字紀錄
+// 要從房間自己的資料組，不能借用本機法官助手那邊 jgPlayers／jgExportGameLog 那一套
+// （連線房間走的是完全獨立的一份資料）。
+window.jgRoomSubmitToPlaydata=async function(){
+  const rd=jgRoomLatestRoomDoc||{};
+  if(!rd.gameOverWinner){ alert('目前沒有可送出的對局結果'); return; }
+  if(typeof PD_NOT_CONFIGURED==='undefined'||PD_NOT_CONFIGURED(PD_FORM_ACTION_URL)){
+    alert('雲端試算表還沒設定好喔～可以先用上面「匯出文字紀錄」複製這場的內容，之後貼給整理資料的人。');
+    return;
+  }
+  const pw=prompt('請輸入密碼以確認送出這場紀錄：');
+  if(pw===null) return; // 按取消，什麼都不做
+  if(pw!==PD_SUBMIT_PASSWORD){ alert('密碼不對，這場沒有送出。'); return; }
+  const {blocks, roleByUid}=await jgRoomBuildGodViewSections();
+  const d=new Date();
+  const mmdd=String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  const id=mmdd+'_'+jgRoomCode;
+  const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const players=jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum).map(p=>{
+    const role=roleByUid[p.uid];
+    return { num:p.seatNum, name:p.name, role:(role?((typeof RNAME!=='undefined'&&RNAME[role])||role):'?') };
+  });
+  const winner=rd.gameOverWinner==='wolf'?'evil':'good';
+  const resultText=winner==='good'?'好人陣營獲勝':'邪惡陣營獲勝';
+  const board=jgRoomAutoGameTitle();
+  // 文字紀錄只要送出「**警長競選／**夜晚／**白天…」這幾個區塊本身，不要帶最上面的
+  // ===板子標題===／座號名單／=====日期_房號===== 這幾行（跟本機法官助手 pdSubmitGameRecord
+  // 的做法一致，那幾行資訊已經分別送進 board／players 欄位了，不用在 log 欄位重複一次）；
+  // 連線房間的區塊順序是「警長競選在最前面」（跟本機法官助手「警長競選夾在夜晚1st裡面」
+  // 順序不同，見 jgRoomBuildGodViewSections 的說明），所以不能沿用本機法官助手那邊「找
+  // 第一個 **夜晚 才截斷」的寫法（那樣會把最前面的警長競選區塊漏掉），改成找「第一個
+  // 區塊標頭」本身在哪裡出現就從那裡截斷，不管那是警長競選還是夜晚。
+  const fullLog=blocks.map((b,idx)=>(idx>0?'\n':'')+b.head+'\n'+b.lines.map(l=>l+'\n').join('')).join('');
+  const log=fullLog;
+  const body=new URLSearchParams();
+  body.append(PD_FORM_ENTRIES.id, id);
+  body.append(PD_FORM_ENTRIES.date, iso);
+  body.append(PD_FORM_ENTRIES.board, board);
+  body.append(PD_FORM_ENTRIES.resultText, resultText);
+  body.append(PD_FORM_ENTRIES.winner, winner);
+  body.append(PD_FORM_ENTRIES.time, d.toTimeString().slice(0,5));
+  body.append(PD_FORM_ENTRIES.players, JSON.stringify(players));
+  body.append(PD_FORM_ENTRIES.log, log);
+  fetch(PD_FORM_ACTION_URL, {method:'POST', mode:'no-cors', body})
+    .then(()=>alert('已送出到遊玩數據！（切到「遊玩數據」分頁重新整理就看得到）'))
+    .catch(()=>alert('送出失敗，請檢查網路連線後再試一次'));
+};
 
 // ── 夜晚畫面：目前做了預言家（查陣營）跟通靈師（查真實身分）兩個角色當示範，展示同一份
 //    secrets 資料可以給「只查陣營」跟「查真實身分」兩種不同查驗角色共用。是該角色的人會
@@ -2699,9 +2950,9 @@ window.jgRoomDreamcatcherAct=async function(targetUid, targetSeatNum, night){
 //   學到女巫：整局限一次的毒藥（沒有解藥），一樣不可被守衛/解藥阻擋。
 //   學到通靈師：每晚查驗一名玩家的具體身分（另存一份 mechwolfChecks，跟真正的通靈師分開）。
 //   學到守衛：每晚可以額外守護一人，效果比照真守衛擋狼刀（跟真守衛各自獨立判斷）。
-//   學到獵人：被淘汰時可以開槍——這部分跟房間系統目前「獵人開槍」本身還沒自動化的
-//     既有限制一樣（見 jgRoomHostAdvanceHtml 的說明），這裡先只記錄身分，開槍請法官
-//     line下手動處理，之後獵人自動化做好了會一起補上。
+//   學到獵人：被淘汰時（不管是夜裡被刀死還是白天被投票出局）自動跳出開槍畫面，
+//     可以選一人一起帶走——跟真正的獵人／黑狼王共用同一套 jgRoomCheckShootEligible／
+//     jgRoomShootAct 判斷與結算，唯一差別只有文字紀錄的縮寫改標「機獵」方便跟真獵人區分。
 // 除了以上技能之外，任何一晚只要「其餘真正跟狼隊一起睜眼的隊友全部死亡」
 // （jgRoomMechWolfKillEligible()），機械狼就會在自己的畫面上多看到一個「今晚由你出刀」的
 // 選人畫面，結果直接寫進 wolfKillTargetUid／wolfKillTargetSeatNum，跟一般狼刀走同一套
@@ -2764,7 +3015,7 @@ async function jgRoomMechWolfViewHtml(night){
         +jgRoomNumGridHtml('jg-room-mechwolf-guard-pick', null, lastTargetSeat?[lastTargetSeat]:[])
         +'<div style="text-align:center;"><button class="primary" style="margin-top:10px;" onclick="jgRoomMechWolfGuardFromGrid('+night+')">確認</button></div>';
     } else if(learned==='hunter'){
-      html+='<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">你學到了獵人：出局時可以開槍帶人，這部分請法官／房主用本機工具手動處理（房間系統的獵人開槍尚未自動化）。</div>';
+      html+='<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">你學到了獵人：這是被動能力，不用主動使用——之後如果被淘汰（夜裡被刀死或白天被投票出局），會自動跳出開槍畫面讓你選要不要帶人。</div>';
     } else {
       html+='<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">這個身分這一晚沒有可以使用的主動技能。</div>';
     }
@@ -3371,7 +3622,10 @@ window.jgRoomShootAct=async function(targetUid, targetSeatNum, night){
   const mySeat=me?me.seatNum:'?';
   const secretSnap=await getDoc(doc(db,'rooms',jgRoomCode,'secrets',window.jgFirebaseUid));
   const myRole=secretSnap.exists()?secretSnap.data().role:null;
-  const abbr=myRole==='wolfking'?'王':(myRole==='hunter'?'獵':'幸獵');
+  const meSnap=await getDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid));
+  const meP=meSnap.exists()?meSnap.data():null;
+  const isMechHunter=myRole==='mechanicalwolf'&&meP&&meP.mechWolfLearnedRole==='hunter';
+  const abbr=myRole==='wolfking'?'王':(myRole==='hunter'?'獵':(isMechHunter?'機獵':'幸獵'));
   // 攝夢人的夢遊者一樣免疫夜槍（見 ALL_ROLES.dreamcatcher：「不會死於攝夢人以外的夜間
   // 技能(狼刀、巫毒、夜槍)」）——槍還是算開出去了（技能用掉），只是這一槍沒有打死人。
   const isDreaming=rd.dreamcatcherTargetNight===night&&rd.dreamcatcherTargetUid===targetUid;
@@ -3402,7 +3656,7 @@ async function jgRoomShootResolve(night){
     // 完除了要檢查警長是不是也被這一槍帶走（jgRoomCheckAndSetPendingBadge），沒有的話才
     // 真的進入下一夜。
     if(fresh.pendingShootContext==='day'){
-      if(!(await jgRoomCheckAndSetPendingBadge())){
+      if(!(await jgRoomCheckAndSetPendingBadge())&&!(await jgRoomMaybeDeclareWin())){
         await jgRoomStartNextNight();
       }
     } else {
@@ -3512,10 +3766,10 @@ window.jgRoomRenderEntry=async function(){
     <div class="info" style="font-size:12px;margin-top:10px;">
       <div>目前進度：</div>
       <ul style="margin:6px 0 6px 18px;padding:0;">
-        <li>📱 手機發牌：全部板子都可用（只負責把身分發到手機上，之後交給法官用本機工具主持）。</li>
-        <li>🌐 連線房間全自動（含夜晚技能結算、白天警長競選／放逐投票／PK、被淘汰後的獵人/黑狼王/幸運兒開槍、上帝視角票型紀錄）：僅限機械狼＋通靈師、攝夢人＋夢魘、魔術師＋黑/白狼王、黑市商人＋狼兄狼弟、邱比特這五個板子，其餘板子請改用手機發牌＋本機主持；就算是這五個板子，連線房間目前也還不會自動判定勝負，要由法官／房主自己看場上情況宣布。</li>
+        <li>手機發牌：全部板子都可用（只負責把身分發到手機上，之後交給法官用本機工具主持）。</li>
+        <li>連線房間全自動功能目前尚未完善，僅有部分板子可使用，勝負尚無法自動判定。</li>
       </ul>
-      <div>⚠️ 以上功能都還沒經過完整實機測試，可能會有 bug，歡迎回報問題。</div>
+      <div>以上功能都還沒經過完整實機測試，可能會有 bug，歡迎回報問題。</div>
     </div>
   `;
   // 如果是從邀請連結點進來的（網址帶 ?room=房號），直接把房號填好，玩家只要打名字就好，
