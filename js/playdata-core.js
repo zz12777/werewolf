@@ -35,10 +35,16 @@ function pdGameMvpNum(g){
   const m=String(g.log||'').match(/【MVP[：:]\s*(\d+)號/);
   return m?parseInt(m[1],10):null;
 }
-function pdDisplayRole(rawRole){
+function pdDisplayRole(rawRole, log){
   if(rawRole.includes('混')){
     const m=rawRole.match(/[（(]([^）)]*)[）)]/);
-    const note=(m?m[1]:'').trim();
+    let note=(m?m[1]:'').trim();
+    // 有些舊場次匯出時漏補（好人混／狼人混）括號註記，role 只留下光禿禿的「混血兒」，
+    // 這時退回去翻這場的文字紀錄，找法官助手當時記錄的「混 X（狼人混/好人混）」那一行來補判斷。
+    if(!note && log){
+      const lm=String(log).match(/混\s*\d+\s*[（(]([^）)]+)[）)]/);
+      if(lm) note=lm[1].trim();
+    }
     if(note.includes('狼')) return '混血兒(狼人混)';
     if(note) return '混血兒(好人混)';
     return '混血兒';
@@ -420,7 +426,7 @@ function pdRebuildAndRender(){
     const mvpNum=pdGameMvpNum(g);
     g.players.forEach(pl=>{
       const p=getP(pl.name);
-      const roleDisp=pdDisplayRole(pl.role);
+      const roleDisp=pdDisplayRole(pl.role, g.log);
       p.totalGames++;
       let result='unclear', camp=null;
       let pointsDynamic=0, pointsLocked=0;
@@ -652,7 +658,7 @@ function pdRenderGames(){
     const badgeCls = g.unclear?'bu':(g.winner==='evil'?'bw':(g.winner==='third'?'bthird':'bv'));
     const mvpNum=typeof pdGameMvpNum==='function'?pdGameMvpNum(g):null;
     const roster=g.players.map(p=>{
-      const disp=pdDisplayRole(p.role);
+      const disp=pdDisplayRole(p.role, g.log);
       // 第三方（人狼鏈成立時的情侶＋邱比特）：不歸類成好人/邪惡，直接標「第三方」、用粉色，
       // 跟其他好人/邪惡陣營的判定方式分開處理。
       const camp=g.unclear?null:(p.third?'third':classify(disp));
