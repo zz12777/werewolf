@@ -6,10 +6,12 @@
 const ABBR={'民':'平民','狼':'狼人','巫':'女巫','預':'預言家','守':'守衛','獵':'獵人','通':'通靈師','混':'混血兒','王':'黑狼王','月':'血月使者','魔':'魔術師','魘':'夢魘','攝':'攝夢人','騎':'騎士'};
 function normRole(r){return ABBR[r]||r;}
 function classify(role){
-  // 混血兒是唯一陣營會依「這場實際跟誰」而變動的角色：若是狼混（混到狼隊），
+  // 混血兒是唯一陣營會依「這場實際跟誰」而變動的角色：若是狼人混（混到狼隊），
   // 這場要算邪惡陣營、跟狼隊共享勝負；沒有標註或標註好人混，才維持原本一律算好人。
+  // 用「有沒有狼字」判斷、不直接比對整段「狼人混」字串，這樣不管括號裡的註記文字未來
+  // 怎麼微調用詞，只要還帶著「狼」字就一定判成邪惡陣營，比較不容易因為文字對不齊而漏判。
   if(role.startsWith('混血兒')){
-    return role.includes('狼混') ? 'evil' : 'good';
+    return role.includes('狼') ? 'evil' : 'good';
   }
   // 其餘角色優先用 ALL_ROLES 的陣營資料（team）當唯一真相來源，跟法官系統的判定保持一致，
   // 避免「石像鬼」「惡靈騎士」這類名稱裡沒有「狼」字、但其實是狼隊的角色被誤判成好人
@@ -22,7 +24,7 @@ function classify(role){
   return keys.some(k=>role.includes(k))?'evil':'good';
 }
 // 統一的「顯示身分」：
-// ‧ 混血兒：括號註記（好人混／狼混）要保留下來，不能被括號清除規則拿掉，
+// ‧ 混血兒：括號註記（好人混／狼人混）要保留下來，不能被括號清除規則拿掉，
 //   因為 classify() 要靠它判斷這場混血兒實際算好人還是邪惡陣營。
 // ‧ 機械狼：學到的具體身分改成保留在括號內顯示（例如「機械狼(機械民)」「機械狼(機械守衛)」），
 //   不再直接收斂成單純的「機械狼」，方便在每人細項、每場紀錄裡看出他當時學到什麼。
@@ -37,7 +39,7 @@ function pdDisplayRole(rawRole){
   if(rawRole.includes('混')){
     const m=rawRole.match(/[（(]([^）)]*)[）)]/);
     const note=(m?m[1]:'').trim();
-    if(note.includes('狼')) return '混血兒(狼混)';
+    if(note.includes('狼')) return '混血兒(狼人混)';
     if(note) return '混血兒(好人混)';
     return '混血兒';
   }
@@ -183,14 +185,14 @@ function pdSubmitGameRecord(){
   for(let i=1;i<=jgTotal;i++){
     const p=jgByNum(i);
     if(!p) continue;
-    // 混血兒送進遊玩數據的身分字串要帶上（好人混／狼混）註記，不然歷史紀錄頁面完全看不出來
+    // 混血兒送進遊玩數據的身分字串要帶上（好人混／狼人混）註記，不然歷史紀錄頁面完全看不出來
     // 這場混血兒支持哪邊——之後 pdDisplayRole／classify 都是靠這個括號註記才能正確判斷
     // 混血兒這場算好人還是邪惡陣營，任何板子只要有混血兒都要一律補上，不能只有特定板子才有。
     let roleForExport=jgRoleDisplayName(p);
     if(p.role==='hybrid'&&jgHybridChosen&&jgHybridTarget){
       const hyTp=jgFind(jgHybridTarget);
       const hyIsWolf=hyTp&&jgIsWolfPackMember(hyTp);
-      roleForExport+=(hyIsWolf?'（狼混）':'（好人混）');
+      roleForExport+=(hyIsWolf?'（狼人混）':'（好人混）');
     }
     const entry={num:i, name:jgPlayerNames[i]||p.name, role:roleForExport};
     if(thirdPartyNums.includes(i.toString())) entry.third=true; // 標記這場「成為過第三方」，跟輸贏無關
@@ -459,7 +461,7 @@ function pdRebuildAndRender(){
       }
       p.pointsLockedTotal+=pointsLocked;
       // 「玩過角色」統計用收斂過的身分：不管是機械狼學到什麼、還是混血兒混到哪邊，
-      // 統計格都只看角色本身、去掉括號細節，避免被拆成機械民／機械女巫／混血兒(狼混)…
+      // 統計格都只看角色本身、去掉括號細節，避免被拆成機械民／機械女巫／混血兒(狼人混)…
       // 太細碎；每局紀錄仍然用 roleDisp，保留括號內的具體資訊。
       const roleTally=roleDisp.replace(/\(.*?\)/,'');
       p.roleCounts[roleTally]=(p.roleCounts[roleTally]||0)+1;
@@ -658,7 +660,7 @@ function pdRenderGames(){
       const badgeColorCls=camp==='third'?'bthird':(camp==='evil'?'bw':'bv');
       const badge=g.unclear?'':`<span class="badge ${badgeColorCls}" style="padding:2px 8px;font-size:10px;">${badgeLabel}</span>`;
       const mvpBadge=(mvpNum&&String(p.num)===String(mvpNum))?' <span style="font-size:12px;">🏆 MVP</span>':'';
-      // disp（pdDisplayRole 的結果）已經把括號註記（好人混／狼混等）折進顯示文字裡了
+      // disp（pdDisplayRole 的結果）已經把括號註記（好人混／狼人混等）折進顯示文字裡了
       // （例如「混血兒(好人混)」），這裡不能再從 p.role 額外抓一次括號內容補在後面，
       // 不然會變成「混血兒(好人混)好人混」這種重複顯示。
       return `<tr><td>${p.num}</td><td>${p.name}${mvpBadge}</td><td>${disp}</td><td>${badge}</td></tr>`;

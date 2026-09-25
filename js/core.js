@@ -512,7 +512,7 @@ function jgFormatNightLog(){
   if(jgNight===1 && jgHybridChosen && jgHybridTarget){
     const hyTp=jgFind(jgHybridTarget);
     const hyIsWolf=hyTp&&jgIsWolfPackMember(hyTp);
-    lines.push('混 '+jgHybridTarget+'（'+(hyIsWolf?'狼混':'好人混')+'）');
+    lines.push('混 '+jgHybridTarget+'（'+(hyIsWolf?'狼人混':'好人混')+'）');
   }
   const guardP=jgPlayers.find(p=>p.role==='guard');
   const mwP=jgPlayers.find(p=>p.role==='mechanicalwolf');

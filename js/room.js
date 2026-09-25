@@ -565,6 +565,10 @@ async function jgRoomEnterLobby(code){
       jgRoomLeave();
       return;
     }
+    // 語音播報跟畫面重畫是兩件事：就算下面的 jgRoomSuppressAutoRender 旗標開著、暫時不
+    // 重畫畫面，語音還是要照狀態變化正常念，不然狼隊連續出刀那幾筆中間寫入會讓語音跟著
+    // 卡住、漏念步驟。
+    jgRoomVoiceMaybeNarrate(jgRoomLatestRoomDoc);
     // 有些操作（例如狼隊出刀：寫目標→記文字紀錄→進黑市商人／女巫回合→…）背後其實是好幾筆
     // 連續的資料庫寫入，不是像機械狼學習那樣一次寫完。每一筆寫入都會讓這個監聽器再觸發
     // 一次、整個畫面重畫一次——如果剛好使用者還在同一個選人畫面上（例如另一隻狼隊友的
@@ -633,6 +637,7 @@ async function jgRoomRenderCurrentPhase(){
   // async 函式最後真正寫入 innerHTML 之前，反而被整個蓋掉、白疊加了——這是這次順手修掉的
   // 既有 race condition）。
   jgRoomAppendGodViewToggle();
+  jgRoomAppendVoiceToggle();
   jgRoomAppendPlayerStatusFooter();
 }
 // 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——不管現在房間進行到哪個畫面都會出現
@@ -1177,6 +1182,125 @@ async function jgRoomMaybeDeclareWin(){
   await setDoc(doc(db,'rooms',jgRoomCode),{ gameOverWinner:res.winner, gameOverMsg:res.msg },{ merge:true });
   return true;
 }
+
+// ═══════════════════════════════════════════
+// 法官語音（連線房間）——用瀏覽器內建的語音合成（Web Speech API），不需要另外準備任何
+// 語音檔，也不用另外架設服務。跟 jgRoomComputeWinCheck 用同一份「這個板子的角色我們都
+// 認識」白名單（JG_ROOM_WIN_CHECK_SUPPORTED_ROLES）判斷要不要開放語音，先只在勝負也能
+// 自動判定的兩個板子（機械狼＋通靈師、攝夢人＋夢魘）生效，避免對還沒驗證過流程的其他
+// 板子亂念台詞、誤導玩家。開關預設關閉、存在 localStorage，每個人自己的裝置各自記憶
+// （避免好幾支手機同時開著語音互相搶著念、吵成一團）。
+// ═══════════════════════════════════════════
+let jgRoomVoiceState={ key:null, night:null, step:null }; // 記住「上次已經念過的狀態」，同一個狀態被重複觸發的重畫（例如玩家名單監聽器也會重畫畫面）不會重複念
+let jgRoomVoiceSpokenLog=[]; // 純粹留給測試／除錯用：依序記錄目前為止念過的每一句話，不影響正式運作
+// 房間目前的板子（compRoles）是不是都在勝負自動判定支援的角色清單裡——語音功能沿用同一份
+// 白名單，理由跟勝負判定一樣：這兩個板子以外的流程還沒逐一驗證過語音時機對不對，先不要念。
+function jgRoomVoiceSupported(){
+  if(!jgRoomComp) return false;
+  const compRoles=Object.keys(jgRoomComp).filter(r=>(jgRoomComp[r]||0)>0);
+  return compRoles.length>0 && compRoles.every(r=>JG_ROOM_WIN_CHECK_SUPPORTED_ROLES.has(r));
+}
+function jgRoomVoiceGetPref(){
+  try{ return localStorage.getItem('jgRoomVoiceOn')==='1'; }catch(e){ return false; }
+}
+function jgRoomVoiceSetPref(on){
+  try{ localStorage.setItem('jgRoomVoiceOn', on?'1':'0'); }catch(e){}
+}
+// 真正開口念一句話——新的一句話一定比舊的優先（cancel 掉還在排隊或正在念的舊台詞），
+// 避免狀態變化太快時，語音排隊排到過時、跟畫面對不上的台詞。
+function jgRoomSpeak(text){
+  if(!text) return;
+  jgRoomVoiceSpokenLog.push(text);
+  if(typeof window==='undefined'||!window.speechSynthesis) return;
+  try{
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='zh-TW';
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+// 夜晚各個步驟（room.js 的 currentStep 值）對應的角色稱呼——跟 RNAME 大致相同，但
+// 'wolfbrother'／'mechwolf' 這兩個 currentStep 名稱本身跟 RNAME 的角色 key 對不上
+// （狼兄弟分成 wolfbrother_e／wolfbrother_y 兩個角色 key、機械狼的 currentStep 叫
+// 'mechwolf' 但角色 key 是 'mechanicalwolf'），這裡另外對應一份給語音專用。
+const JG_ROOM_STEP_ROLE_NAME={
+  thief:'盜賊', cupid:'邱比特', nightmare:'夢魘', magician:'魔術師', guard:'守衛',
+  dreamcatcher:'攝夢人', wolfbrother:'狼兄狼弟', mechwolf:'機械狼', wolf:'狼人',
+  blackmarket:'黑市商人', witch:'女巫', seer:'預言家', medium:'通靈師'
+};
+function jgRoomVoiceSpeakOnce(key, text){
+  if(key===jgRoomVoiceState.key) return;
+  jgRoomVoiceState={ key, night:null, step:null };
+  if(text) jgRoomSpeak(text);
+}
+// 依照房間目前狀態（房間文件即時監聽收到的最新資料）組出這次該念的台詞。每次監聽器
+// 觸發都會呼叫一次，只有「狀態真的往前推進」才會念新的台詞，同一個狀態被重複觸發的
+// 重畫不會反覆念。
+function jgRoomVoiceMaybeNarrate(rd){
+  if(!rd) return;
+  if(!jgRoomVoiceGetPref()) return;
+  if(!jgRoomVoiceSupported()) return;
+  if(rd.gameOverWinner){
+    jgRoomVoiceSpeakOnce('gameover:'+rd.gameOverWinner,
+      (rd.gameOverWinner==='wolf'?'狼人陣營獲勝':'好人陣營獲勝')+'，遊戲結束。');
+    return;
+  }
+  if(rd.mode==='deal') return; // 發牌模式不是真的在進行遊戲，不用語音
+  if(rd.votingActive){
+    jgRoomVoiceSpeakOnce('vote:'+(rd.night||0)+':'+(rd.phase||''), '請開始投票。');
+    return;
+  }
+  if(rd.phase==='sheriff'){
+    jgRoomVoiceSpeakOnce('sheriff', '天亮了，開放警長競選。');
+    return;
+  }
+  if(rd.phase==='day-open'){
+    jgRoomVoiceSpeakOnce('day:'+(rd.night||0), '天亮了。');
+    return;
+  }
+  if(rd.phase==='night'){
+    const night=rd.night||0, step=rd.currentStep||null;
+    const key='night:'+night+':'+(step||'end');
+    if(key===jgRoomVoiceState.key) return;
+    // 只有還在同一夜裡，前一個步驟的角色才接得上「XX請閉眼」；跨到新的一夜就直接從
+    // 「天黑請閉眼」開始，不用去接上一夜最後一個步驟的角色。
+    const prevRoleName=(jgRoomVoiceState.night===night)?JG_ROOM_STEP_ROLE_NAME[jgRoomVoiceState.step]:null;
+    const roleName=step?JG_ROOM_STEP_ROLE_NAME[step]:null;
+    let text=null;
+    if(jgRoomVoiceState.night!==night){
+      text=roleName?('天黑請閉眼，'+roleName+'請睜眼。'):null;
+    } else if(prevRoleName&&roleName){
+      text=prevRoleName+'請閉眼，'+roleName+'請睜眼。';
+    } else if(prevRoleName&&!roleName){
+      text=prevRoleName+'請閉眼，這一夜已經結束。';
+    } else if(roleName){
+      text=roleName+'請睜眼。';
+    }
+    jgRoomVoiceState={ key, night, step };
+    if(text) jgRoomSpeak(text);
+  }
+}
+// 房間畫面最下面的語音開關（只有支援的板子才會出現這顆按鈕，其餘板子完全不顯示）。
+function jgRoomAppendVoiceToggle(){
+  const root=document.getElementById('jg-room-content');
+  if(!root) return;
+  if(!jgRoomVoiceSupported()) return;
+  const on=jgRoomVoiceGetPref();
+  root.insertAdjacentHTML('beforeend',
+    '<button style="margin-top:10px;" onclick="jgRoomToggleVoice()">法官語音：'+(on?'開':'關')+'</button>');
+}
+window.jgRoomToggleVoice=function(){
+  const next=!jgRoomVoiceGetPref();
+  jgRoomVoiceSetPref(next);
+  if(!next&&typeof window!=='undefined'&&window.speechSynthesis) window.speechSynthesis.cancel();
+  if(next){
+    // 剛打開時，把上次記住的狀態清掉，讓目前這個狀態立刻念一次，使用者不用等到下一次
+    // 狀態變化才第一次聽到語音。
+    jgRoomVoiceState={ key:null, night:null, step:null };
+    jgRoomVoiceMaybeNarrate(jgRoomLatestRoomDoc);
+  }
+  jgRoomRenderCurrentPhase();
+};
 
 // ═══════════════════════════════════════════
 // 夢魘／魔術師／攝夢人／機械狼——共用的小工具
