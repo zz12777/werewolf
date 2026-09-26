@@ -1917,11 +1917,24 @@ async function jgRoomGetWolfUids(){
     return !p||p.alive!==false; // 找不到玩家資料時保守當作還活著，不要誤判卡住
   }).map(d=>d.id);
 }
-// 給 js/voice.js（語音通話）判斷「現在是不是狼隊出刀商議時間、這個人算不算見面狼隊友」
-// 用——語音那邊要在狼隊商議時，只讓見面狼隊友互相聽得到彼此，避免機械狼、夢魘這些
-// 不跟狼隊一起睜眼的人（或其他神職／平民）聽到殺人商議內容，見 js/voice.js
-// jgVoiceApplyWolfAudioFilter 的說明。
-window.jgRoomGetFaceWolfUidsAsync=jgRoomGetWolfUids;
+// 給 js/voice.js（語音通話）判斷「狼隊出刀商議時，這個人算不算聽得到聲音的見面狼」用——
+// 這份名單跟上面 jgRoomGetWolfUids()（出刀確認投票用的名單）刻意不是同一份：使用者
+// 明確指定語音上「聽得到」跟「參與出刀確認」是兩種不同的分類，例如夢魘不參與出刀確認
+// 投票，但語音上要聽得到狼隊商議；狼弟在正式覺醒、加入狼隊之前完全不跟狼隊一起商議，
+// 語音上永遠聽不到（不像出刀名單那樣覺醒後才加入）。目前 WOLF_ROLES 裡還有 mask／
+// bigmechwolf／smallmechwolf／trickster 這幾個房間系統還沒實作、使用者也沒有指定的
+// 角色，先保守歸類為「聽不到」，之後如果房間系統支援這些角色、使用者也確認了聽覺分類，
+// 再加進來即可。
+const JG_ROOM_VOICE_FACE_WOLF_ROLES=new Set([
+  'wolf','wolfking','whitewolf','nightmare','wolfbrother_e',
+  'bloodmoon','evilknight','wolfbeauty','wolfshaman','bigbadwolf'
+]);
+window.jgRoomGetFaceWolfUidsAsync=async function(){
+  const db=window.jgFirebaseDb;
+  const { getDocs } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+  const secretsSnap=await getDocs(collection(db,'rooms',jgRoomCode,'secrets'));
+  return secretsSnap.docs.filter(d=>JG_ROOM_VOICE_FACE_WOLF_ROLES.has(d.data().role)).map(d=>d.id);
+};
 window.jgRoomIsNightWolfStepNow=function(){
   const rd=jgRoomLatestRoomDoc||{};
   return rd.phase==='night'&&rd.currentStep==='wolf';
