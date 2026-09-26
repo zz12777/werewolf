@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "jsdom": "^30.0.1"
+    "jsdom": "^30.0.1",
+    "livekit-server-sdk": "^2.19.1"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

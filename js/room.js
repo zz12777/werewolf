@@ -6,7 +6,7 @@
 // js 檔互相看不到彼此的變數，所以這裡也把要給一般 script 用的函式掛到 window 上。
 // ═══════════════════════════════════════════
 import {
-  doc, setDoc, getDoc, addDoc, collection, onSnapshot, serverTimestamp, query, orderBy, arrayUnion
+  doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 let jgRoomCode=null;       // 目前所在的房號
@@ -23,6 +23,18 @@ let jgRoomLatestRoomDoc=null; // 房間文件監聽收到的最新資料（phase
 let jgRoomTimerInterval=null; // 夜晚操作畫面的倒數計時器（見 jgRoomStartTimer）
 let jgRoomUnsubVotes=null;  // 投票結果的即時監聽
 let jgRoomLatestVotes=[];   // 目前這一輪（不分投票類型：警長／白天／PK）收到的所有票
+let jgRoomUnsubChat=null;   // 文字聊天室的即時監聽
+let jgRoomLatestChatMsgs=[]; // 目前收到的所有聊天訊息（依時間排序）
+let jgRoomChatExpanded=false; // 聊天小視窗現在是展開還是收合成一顆按鈕
+
+// ── 給 js/voice.js（語音通話，另一個獨立的 ES module）讀取房間狀態用的小工具函式──
+// js/voice.js 也是用 <script type="module"> 載入，跟這個檔案是不同的模組作用域，直接讀
+// 不到上面這些 let 變數；比起把每個變數都額外掛一份到 window 上（還要記得每個賦值的地方
+// 都同步更新），這裡改成只掛幾個「讀取當下值」的函式，voice.js 呼叫的當下永遠拿到最新值。
+window.jgRoomGetCode=function(){ return jgRoomCode; };
+window.jgRoomGetIsHost=function(){ return jgRoomIsHost; };
+window.jgRoomGetPlayers=function(){ return jgRoomLatestPlayers; };
+window.jgRoomGetMySeatNum=function(){ return jgMySeatNum; };
 
 // ── 夜晚操作畫面共用的倒數計時器：30 秒倒數，剩 10 秒時把法官台詞閃一次提醒——之後每加
 //    一個角色（查驗類、魔術師交換...），畫面上只要放這個計時器＋自己的台詞文字，就能
@@ -33,9 +45,30 @@ function jgRoomTimerHtml(seconds, phrase){
     +'<div class="speech" id="jg-room-script-line" style="margin-top:6px;">「<em>'+phrase+'</em>」</div>'
     +'</div>';
 }
+// 這支手機自己讀畫面上「你要...」那句台詞念一次——跟 jgRoomVoiceMaybeNarrate 廣播的
+// 「XX請睜眼／請閉眼」是兩句不同的話，那句是講給全場聽的公開播報，這句才是實際提示
+// 現在該做什麼決定的台詞，比照本機法官助手「開場先講一次，快沒時間了再提醒一次」的
+// 做法。用「夜晚＋目前步驟＋台詞內容」當去重 key，避免同一個回合因為別人操作觸發的
+// 無關重畫（onSnapshot 監聽器）而反覆重講；步驟或夜晚真的換了，key 自然不同，會正常
+// 重講一次。
+let jgRoomTimerLastSpokenKey=null;
+function jgRoomSpeakScriptLine(){
+  if(!jgRoomVoiceGetPref()) return;
+  const lineEl=document.getElementById('jg-room-script-line');
+  if(!lineEl) return;
+  const em=lineEl.querySelector('em');
+  const text=(em?em.textContent:lineEl.textContent||'').trim();
+  if(!text) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  const key=(rd.night||0)+':'+(rd.currentStep||'')+':'+text;
+  if(key===jgRoomTimerLastSpokenKey) return;
+  jgRoomTimerLastSpokenKey=key;
+  jgRoomSpeak(text);
+}
 function jgRoomStartTimer(seconds, onComplete){
   jgRoomStopTimer();
   let remaining=seconds;
+  jgRoomSpeakScriptLine();
   jgRoomTimerInterval=setInterval(()=>{
     remaining--;
     const el=document.getElementById('jg-room-countdown');
@@ -46,6 +79,16 @@ function jgRoomStartTimer(seconds, onComplete){
         line.style.animation='none';
         void line.offsetWidth; // 觸發 reflow，讓動畫可以重新播放一次
         line.style.animation='jgRoomFlash 0.5s ease 3';
+      }
+    }
+    if(remaining===5){
+      // 剩5秒還沒動作：把同一句台詞再念一次提醒，不用去重 key 擋掉（跟開場那次是同一句話，
+      // 但這裡就是要故意再講一次）。
+      if(jgRoomVoiceGetPref()){
+        const lineEl=document.getElementById('jg-room-script-line');
+        const em=lineEl&&lineEl.querySelector('em');
+        const text=(em?em.textContent:(lineEl?lineEl.textContent:'')||'').trim();
+        if(text) jgRoomSpeak(text);
       }
     }
     if(remaining<=0){
@@ -548,11 +591,22 @@ async function jgRoomEnterLobby(code){
     jgRoomTotal=roomSnap.data().total||null;
   }
   jgRoomAppendMyIdentityButton();
+  jgRoomAppendVoiceToggleButton();
+  jgRoomAppendChatWidget();
+  // js/voice.js（語音通話）自己的初始化——不是每個人都會用到語音功能，這裡用
+  // window 上有沒有掛這個函式來判斷 voice.js 有沒有載入，避免沒載入時報錯。
+  if(window.jgVoiceOnRoomEnter) window.jgVoiceOnRoomEnter();
   if(jgRoomUnsubPlayers) jgRoomUnsubPlayers();
   const q=query(collection(db,'rooms',code,'players'), orderBy('seatNum'));
   jgRoomUnsubPlayers=onSnapshot(q,(snap)=>{
     jgRoomLatestPlayers=snap.docs.map(d=>({uid:d.id, ...d.data()}));
     jgRoomRenderCurrentPhase();
+  });
+  if(jgRoomUnsubChat) jgRoomUnsubChat();
+  const chatQ=query(collection(db,'rooms',code,'chat'), orderBy('ts'), limit(300));
+  jgRoomUnsubChat=onSnapshot(chatQ,(snap)=>{
+    jgRoomLatestChatMsgs=snap.docs.map(d=>({id:d.id, ...d.data()}));
+    jgRoomRenderChatMessages();
   });
   if(jgRoomUnsubRoom) jgRoomUnsubRoom();
   jgRoomUnsubRoom=onSnapshot(doc(db,'rooms',code),(snap)=>{
@@ -567,8 +621,10 @@ async function jgRoomEnterLobby(code){
     }
     // 語音播報跟畫面重畫是兩件事：就算下面的 jgRoomSuppressAutoRender 旗標開著、暫時不
     // 重畫畫面，語音還是要照狀態變化正常念，不然狼隊連續出刀那幾筆中間寫入會讓語音跟著
-    // 卡住、漏念步驟。
+    // 卡住、漏念步驟。文字聊天室的顯示／隱藏（只在白天出現，夜晚讓給睜眼操作）也是同樣
+    // 道理，不能被 suppressAutoRender 卡住。
     jgRoomVoiceMaybeNarrate(jgRoomLatestRoomDoc);
+    jgRoomUpdateChatVisibility();
     // 有些操作（例如狼隊出刀：寫目標→記文字紀錄→進黑市商人／女巫回合→…）背後其實是好幾筆
     // 連續的資料庫寫入，不是像機械狼學習那樣一次寫完。每一筆寫入都會讓這個監聽器再觸發
     // 一次、整個畫面重畫一次——如果剛好使用者還在同一個選人畫面上（例如另一隻狼隊友的
@@ -637,7 +693,7 @@ async function jgRoomRenderCurrentPhase(){
   // async 函式最後真正寫入 innerHTML 之前，反而被整個蓋掉、白疊加了——這是這次順手修掉的
   // 既有 race condition）。
   jgRoomAppendGodViewToggle();
-  jgRoomAppendVoiceToggle();
+  jgRoomUpdateVoiceToggleButton();
   jgRoomAppendPlayerStatusFooter();
 }
 // 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——不管現在房間進行到哪個畫面都會出現
@@ -712,6 +768,7 @@ window.jgRoomAssignRoles=async function(){
     ));
   }
   await setDoc(doc(db,'rooms',jgRoomCode),Object.assign({ status:'role-assigned', phase:'lobby' },extra),{ merge:true });
+  await jgRoomResetChat();
 };
 
 // ── 房主開始遊戲：進入第一夜。完整順序（跟本機法官助手 jgAfterXStep 那一串固定順序的
@@ -1113,13 +1170,15 @@ async function jgRoomApplyCupidCascade(){
 // 不會影響其餘板子原本「勝負由法官／房主自己看場上情況宣布」的既有行為。
 const JG_ROOM_WIN_CHECK_SUPPORTED_ROLES=new Set([
   'villager','wolf','wolfking','seer','witch','hunter','guard',
-  'mechanicalwolf','medium','dreamcatcher','nightmare'
+  'mechanicalwolf','medium','dreamcatcher','nightmare',
+  'blackmarket','wolfbrother_e','wolfbrother_y'
 ]);
 function jgRoomAllGodsForWin(){
-  // 跟本機法官助手 jgAllGodsForWin() 一樣的「屠神」神職清單，這裡先只列出這兩個支援板子
-  // 可能出現的神職（seer/witch/hunter/guard/dreamcatcher/medium），其餘神職角色一律不在
-  // JG_ROOM_WIN_CHECK_SUPPORTED_ROLES 裡，根本不會走到這裡。
-  return ['seer','witch','hunter','guard','dreamcatcher','medium'];
+  // 跟本機法官助手 jgAllGodsForWin() 一樣的「屠神」神職清單，這裡先只列出這些支援板子
+  // 可能出現的神職（seer/witch/hunter/guard/dreamcatcher/medium/blackmarket），其餘神職
+  // 角色一律不在 JG_ROOM_WIN_CHECK_SUPPORTED_ROLES 裡，根本不會走到這裡——狼兄狼弟是
+  // 狼隊，不算「神職」，不放進這份清單（跟本機法官助手 jgAllGodsForWin() 一致）。
+  return ['seer','witch','hunter','guard','dreamcatcher','medium','blackmarket'];
 }
 async function jgRoomComputeWinCheck(){
   const db=window.jgFirebaseDb;
@@ -1143,7 +1202,9 @@ async function jgRoomComputeWinCheck(){
     // 還活著、進而影響勝負判定。
     const fresh=pSnap.exists()?pSnap.data():null;
     const alive=fresh?(fresh.alive!==false):(p.alive!==false);
-    players.push({ uid:p.uid, alive, witchSaveUsed: fresh?fresh.witchSaveUsed:p.witchSaveUsed, witchPoisonUsed: fresh?fresh.witchPoisonUsed:p.witchPoisonUsed });
+    players.push({ uid:p.uid, alive,
+      witchSaveUsed: fresh?fresh.witchSaveUsed:p.witchSaveUsed, witchPoisonUsed: fresh?fresh.witchPoisonUsed:p.witchPoisonUsed,
+      luckyOneSkill: fresh?fresh.luckyOneSkill:p.luckyOneSkill, luckyOneWitchUsed: fresh?fresh.luckyOneWitchUsed:p.luckyOneWitchUsed });
   }
   const alive=players.filter(p=>p.alive!==false);
   const isWolf=(p)=>typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(roleByUid[p.uid]);
@@ -1156,6 +1217,10 @@ async function jgRoomComputeWinCheck(){
       const r=roleByUid[p.uid];
       if(r==='witch') return !p.witchSaveUsed||!p.witchPoisonUsed;
       if(r==='dreamcatcher') return true;
+      // 黑市商人交易出來、拿到女巫毒藥技能的幸運兒，只要毒藥還沒用掉，一樣算「還有翻盤
+      // 機會」——跟真女巫的判斷邏輯一致，不能因為他底層角色只是平民/其他角色，就漏算
+      // 這個還握在手上的反殺機會。
+      if(p.luckyOneSkill==='witch') return !p.luckyOneWitchUsed;
       return false;
     });
     if(hasComebackThreat){
@@ -1259,7 +1324,17 @@ async function jgRoomVoiceMaybeNarrate(rd){
   }
   if(rd.mode==='deal') return; // 發牌模式不是真的在進行遊戲，不用語音
   if(rd.votingActive){
-    jgRoomVoiceSpeakOnce('vote:'+(rd.night||0)+':'+(rd.phase||''), '請開始投票。');
+    jgRoomVoiceSpeakOnce('vote:'+(rd.night||0)+':'+(rd.votingRound||0), rd.votingScript||'請開始投票。');
+    return;
+  }
+  if(rd.dayVoteLastWordsUid){
+    jgRoomVoiceSpeakOnce('lastwords:'+(rd.night||0)+':'+rd.dayVoteLastWordsUid,
+      rd.dayVoteLastWordsSeatNum+'號出局，請發表遺言。');
+    return;
+  }
+  if(rd.sheriffPhase==='pick-direction'&&rd.sheriffWinnerSeatNum){
+    jgRoomVoiceSpeakOnce('sheriffelected:'+(rd.night||0)+':'+rd.sheriffWinnerSeatNum,
+      rd.sheriffWinnerSeatNum+'號當選警長。');
     return;
   }
   if(rd.phase==='sheriff'){
@@ -1286,13 +1361,21 @@ async function jgRoomVoiceMaybeNarrate(rd){
     // 「天黑請閉眼」開始，不用去接上一夜最後一個步驟的角色。
     const prevRoleName=(jgRoomVoiceState.night===night)?JG_ROOM_STEP_ROLE_NAME[jgRoomVoiceState.step]:null;
     const roleName=step?JG_ROOM_STEP_ROLE_NAME[step]:null;
+    // 黑市商人「真的談成一筆交易」（不管對象是好人成功、還是踩到狼人失敗，只要不是單純
+    // 跳過不交易）離開這一步時，要插一句掩護台詞——跟本機法官助手「幸運兒走一圈」的精神
+    // 一樣：不管交易成功與否都講同一句話，避免玩家從「有沒有講這句話」猜出交易結果，
+    // 只是連線房間不用真的睜眼查看，改成「白天會在自己手機上顯示」。單純跳過不交易的
+    // 夜晚不會設定 blackmarketTradeNight，這裡不會誤講。
+    const bmAnnounce=(jgRoomVoiceState.step==='blackmarket'&&jgRoomVoiceState.night===night&&rd.blackmarketTradeNight===night)
+      ?'幸運兒將在白天時於頁面顯示你是幸運兒即你獲得的技能，請小心不要讓別人看到。'
+      :'';
     let text=null;
     if(jgRoomVoiceState.night!==night){
       text=roleName?('天黑請閉眼，'+roleName+'請睜眼。'):null;
     } else if(prevRoleName&&roleName){
-      text=prevRoleName+'請閉眼，'+roleName+'請睜眼。';
+      text=prevRoleName+'請閉眼。'+bmAnnounce+roleName+'請睜眼。';
     } else if(prevRoleName&&!roleName){
-      text=prevRoleName+'請閉眼，這一夜已經結束。';
+      text=prevRoleName+'請閉眼。'+bmAnnounce+'這一夜已經結束。';
     } else if(roleName){
       text=roleName+'請睜眼。';
     }
@@ -1300,14 +1383,146 @@ async function jgRoomVoiceMaybeNarrate(rd){
     if(text) jgRoomSpeak(text);
   }
 }
-// 房間畫面最下面的語音開關（只有支援的板子才會出現這顆按鈕，其餘板子完全不顯示）。
-function jgRoomAppendVoiceToggle(){
-  const root=document.getElementById('jg-room-content');
-  if(!root) return;
-  if(!jgRoomVoiceSupported()) return;
-  const on=jgRoomVoiceGetPref();
-  root.insertAdjacentHTML('beforeend',
-    '<button style="margin-top:10px;" onclick="jgRoomToggleVoice()">法官語音：'+(on?'開':'關')+'</button>');
+// ── 左上角「法官語音」小按鈕：跟右上角「確認自己身分」按鈕（jgRoomAppendMyIdentityButton）
+//    是同一種做法——固定掛在 body 上（不是掛在會被整個 innerHTML 換掉的 #jg-room-content
+//    裡面），不管現在畫面切到哪個步驟、捲到哪裡都固定看得到，不用每次畫面重畫都在內容
+//    最下面重新找一次。只有支援語音的板子才會顯示這顆按鈕，其餘板子整個藏起來。──
+function jgRoomAppendVoiceToggleButton(){
+  if(document.getElementById('jg-room-voice-btn')) return; // 已經加過了，不要重複加
+  const btn=document.createElement('button');
+  btn.id='jg-room-voice-btn';
+  btn.onclick=jgRoomToggleVoice;
+  btn.style.cssText='position:fixed;top:66px;left:8px;z-index:200;width:auto;margin:0;padding:6px 12px;font-size:12px;font-weight:600;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.08);';
+  document.body.appendChild(btn);
+  jgRoomUpdateVoiceToggleButton();
+}
+function jgRoomRemoveVoiceToggleButton(){
+  const btn=document.getElementById('jg-room-voice-btn');
+  if(btn) btn.remove();
+}
+// 每次畫面重畫都呼叫一次，更新按鈕文字（開/關）跟顯示與否（板子不支援語音就整個藏起來）。
+function jgRoomUpdateVoiceToggleButton(){
+  const btn=document.getElementById('jg-room-voice-btn');
+  if(!btn) return;
+  // 發牌模式（mode:'deal'）不是真的在進行遊戲、沒有夜晚/白天流程可以念，跟
+  // jgRoomVoiceMaybeNarrate 的判斷一致，這裡也要藏起來，不能讓按鈕在發牌畫面憑空出現。
+  const isDeal=jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.mode==='deal';
+  if(isDeal||!jgRoomVoiceSupported()){ btn.style.display='none'; return; }
+  btn.style.display='block';
+  btn.textContent='法官語音：'+(jgRoomVoiceGetPref()?'開':'關');
+}
+// 跟右上角「確認自己身分」按鈕一樣，只在「連線房間」分頁顯示，切到其他分頁先藏起來
+// ——由 core.js 的 switchTab() 呼叫，跟 jgRoomSetIdentityButtonVisible 是同一組。
+window.jgRoomSetVoiceButtonVisible=function(visible){
+  const btn=document.getElementById('jg-room-voice-btn');
+  if(!btn) return;
+  if(!visible){ btn.style.display='none'; return; }
+  jgRoomUpdateVoiceToggleButton();
+};
+// ── 右下角「💬 聊天」文字聊天室：只在白天（day-open／警長競選／投票中）出現，夜晚整個
+//    藏起來讓給睜眼操作，不會跟夜晚的操作畫面搶版面。預設收合成一顆小按鈕，點開才展開
+//    捲動視窗＋輸入框，不展開時幾乎不佔畫面空間（跟語音通話那條固定貼底的長條不一樣，
+//    這裡刻意做成「不點就幾乎看不到」，因為使用者要求「不要影響到頁面」）。訊息本身存在
+//    rooms/{code}/chat 子集合，同一場遊戲的白天彼此接續（不會因為天黑就清掉），只有
+//    房主重新分配身分、開始新的一場（jgRoomAssignRoles）才會整個清空，見 jgRoomResetChat。──
+let jgRoomChatTabVisible=true; // 目前是不是在「連線房間」分頁（切到其他分頁要整個藏起來）
+function jgRoomAppendChatWidget(){
+  if(document.getElementById('jg-room-chat-widget')) return; // 已經加過了，不要重複加
+  const wrap=document.createElement('div');
+  wrap.id='jg-room-chat-widget';
+  wrap.style.cssText='position:fixed;right:8px;bottom:70px;z-index:250;display:none;text-align:right;';
+  wrap.innerHTML=
+    '<div id="jg-room-chat-panel" style="display:none;width:230px;max-width:66vw;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.18);margin-bottom:6px;overflow:hidden;text-align:left;">'
+    +'<div id="jg-room-chat-msgs" style="max-height:180px;overflow-y:auto;padding:8px;font-size:12.5px;line-height:1.5;word-break:break-word;"></div>'
+    +'<div style="display:flex;border-top:1px solid var(--border);">'
+    +'<input id="jg-room-chat-input" type="text" maxlength="200" placeholder="輸入訊息…" style="flex:1;border:none;padding:8px;font-size:12.5px;background:transparent;min-width:0;">'
+    +'<button style="width:auto;margin:0;padding:8px 12px;border:none;border-radius:0;" onclick="jgRoomSendChat()">送出</button>'
+    +'</div></div>'
+    +'<button id="jg-room-chat-toggle" onclick="jgRoomToggleChatExpand()" style="width:auto;margin:0;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);box-shadow:0 1px 6px rgba(0,0,0,0.15);cursor:pointer;">💬 聊天</button>';
+  document.body.appendChild(wrap);
+  const input=document.getElementById('jg-room-chat-input');
+  if(input) input.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter') window.jgRoomSendChat(); });
+}
+function jgRoomRemoveChatWidget(){
+  const wrap=document.getElementById('jg-room-chat-widget');
+  if(wrap) wrap.remove();
+}
+function jgRoomScrollChatToBottom(){
+  const box=document.getElementById('jg-room-chat-msgs');
+  if(box) box.scrollTop=box.scrollHeight;
+}
+function jgRoomRenderChatMessages(){
+  const box=document.getElementById('jg-room-chat-msgs');
+  if(!box) return;
+  const wasAtBottom=box.scrollHeight-box.scrollTop-box.clientHeight<20;
+  box.innerHTML=jgRoomLatestChatMsgs.length
+    ? jgRoomLatestChatMsgs.map(m=>
+        '<div style="margin-bottom:4px;"><b>'+String(m.name||'？').replace(/</g,'&lt;')+'：</b>'+String(m.text||'').replace(/</g,'&lt;')+'</div>'
+      ).join('')
+    : '<div style="color:var(--text3);">還沒有人發言</div>';
+  if(wasAtBottom) jgRoomScrollChatToBottom();
+}
+// 房間文件每次更新都呼叫一次：只有「已經開始遊戲（有 phase）」且「不是發牌模式」且
+// 「現在不是夜晚」才顯示，天黑（phase==='night'）就整個藏起來，收合狀態也重置，避免
+// 白天展開著、一到晚上畫面上還卡著一個攤開的聊天視窗。
+function jgRoomUpdateChatVisibility(){
+  const wrap=document.getElementById('jg-room-chat-widget');
+  if(!wrap) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  const isDeal=rd.mode==='deal';
+  const started=!!rd.phase;
+  const isNight=rd.phase==='night';
+  const show=jgRoomChatTabVisible&&started&&!isDeal&&!isNight;
+  wrap.style.display=show?'block':'none';
+  if(!show){
+    jgRoomChatExpanded=false;
+    const panel=document.getElementById('jg-room-chat-panel');
+    if(panel) panel.style.display='none';
+  }
+}
+window.jgRoomToggleChatExpand=function(){
+  jgRoomChatExpanded=!jgRoomChatExpanded;
+  const panel=document.getElementById('jg-room-chat-panel');
+  if(panel) panel.style.display=jgRoomChatExpanded?'block':'none';
+  if(jgRoomChatExpanded) jgRoomScrollChatToBottom();
+};
+// 跟右上角「確認自己身分」、左上角「法官語音」同一組——只在「連線房間」分頁顯示，切到
+// 其他分頁（例如切去看排行榜）先整個藏起來，由 core.js 的 switchTab() 呼叫。
+window.jgRoomSetChatWidgetVisible=function(visible){
+  jgRoomChatTabVisible=visible;
+  jgRoomUpdateChatVisibility();
+};
+window.jgRoomSendChat=async function(){
+  const input=document.getElementById('jg-room-chat-input');
+  if(!input||!jgRoomCode) return;
+  const text=input.value.trim().slice(0,200);
+  if(!text) return;
+  input.value='';
+  const db=window.jgFirebaseDb;
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  try{
+    await addDoc(collection(db,'rooms',jgRoomCode,'chat'),{
+      uid: window.jgFirebaseUid,
+      seatNum: me?me.seatNum:null,
+      name: me?(me.seatNum+'號 '+me.name):'？',
+      text: text,
+      ts: serverTimestamp()
+    });
+  }catch(err){
+    alert('訊息送出失敗：'+(err&&err.message?err.message:String(err)));
+  }
+};
+// 房主重新分配身分（開始新的一場）時清空聊天室——每一場的對話不要延續到下一場；同一場
+// 遊戲裡白天跟白天之間則照使用者要求接續，不要在天黑時清掉。
+async function jgRoomResetChat(){
+  if(!jgRoomCode) return;
+  const db=window.jgFirebaseDb;
+  try{
+    const snap=await getDocs(collection(db,'rooms',jgRoomCode,'chat'));
+    await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));
+  }catch(err){
+    console.error('清空聊天室失敗', err);
+  }
 }
 window.jgRoomToggleVoice=function(){
   const next=!jgRoomVoiceGetPref();
@@ -1319,6 +1534,7 @@ window.jgRoomToggleVoice=function(){
     jgRoomVoiceState={ key:null, night:null, step:null };
     jgRoomVoiceMaybeNarrate(jgRoomLatestRoomDoc);
   }
+  jgRoomUpdateVoiceToggleButton();
   jgRoomRenderCurrentPhase();
 };
 
@@ -2074,8 +2290,10 @@ window.jgRoomHostStartSheriffVote=async function(){
 
 // ── 投票通用元件：candidateUids 是可以被投的對象，excludeUids 是「不能投票」的人
 //    （例如警長選舉時候選人自己不能投）。votingRound 每開一輪投票就 +1，避免舊票混進
-//    新一輪的統計裡。5秒倒數，時間到不管有沒有投都強制看到結果畫面（沒投＝棄票，這裡
-//    不用另外寫一筆「棄票」紀錄，票數統計本來就只算有投的人，沒投的人自然不會被算進去）。
+//    新一輪的統計裡。倒數10秒，時間到不管有沒有投都強制看到結果畫面並鎖定按鈕（沒投＝
+//    棄票，這裡不用另外寫一筆「棄票」紀錄，票數統計本來就只算有投的人，沒投的人自然不會
+//    被算進去）。
+const JG_ROOM_VOTE_DURATION_MS=10000;
 window.jgRoomStartVoting=async function(type, candidateUids, excludeUids, script){
   const db=window.jgFirebaseDb;
   const candidates=candidateUids.map(uid=>{
@@ -2089,7 +2307,7 @@ window.jgRoomStartVoting=async function(type, candidateUids, excludeUids, script
   await setDoc(doc(db,'rooms',jgRoomCode),{
     votingActive:true, votingType:type, votingCandidates:candidates,
     votingExclude:excludeUids||[], votingRound:round, votingScript:script||'請投票',
-    votingDeadline: Date.now()+5000,
+    votingDeadline: Date.now()+JG_ROOM_VOTE_DURATION_MS,
     votingRoundLog: arrayUnion({round, type, script:script||'請投票'})
   },{ merge:true });
 };
@@ -2105,6 +2323,12 @@ window.jgRoomCastVote=async function(targetUid, targetSeatNum){
     round:round, voterUid:window.jgFirebaseUid, targetUid:targetUid, targetSeatNum:targetSeatNum
   });
 };
+// 投票倒數時間到——不管是還沒投票、還是已經投完/被排除在看計票畫面的手機，都會走到
+// 這裡；實際結算交給 jgRoomHostCloseVoting（它自己會重新檢查這輪是不是還沒結算過，
+// 好幾支手機幾乎同時倒數到 0 也不會被重複處理兩次）。
+async function jgRoomVoteTimerComplete(){
+  await jgRoomHostCloseVoting();
+}
 function jgRoomRenderVoting(){
   const root=document.getElementById('jg-room-content');
   if(!root) return;
@@ -2117,14 +2341,13 @@ function jgRoomRenderVoting(){
   // 即時票數畫面（旁觀），不會被強迫看空白畫面。
   const excluded=iAmDead||(rd.votingExclude||[]).includes(window.jgFirebaseUid);
   const timeUp=Date.now()>=(rd.votingDeadline||0);
-  let bodyHtml, needsTimer=false, timerSeconds=0;
+  const timerSeconds=Math.max(1, Math.ceil(((rd.votingDeadline||Date.now())-Date.now())/1000));
+  let bodyHtml;
   if(!myVote&&!excluded&&!timeUp){
     const cands=rd.votingCandidates||[];
     const buttons=cands.map(c=>
       '<button onclick="jgRoomCastVote(\''+c.uid+'\','+c.seatNum+')" style="margin:4px;width:auto;display:inline-block;padding:10px 16px;">'+c.seatNum+'號 '+c.name+'</button>'
     ).join('');
-    needsTimer=true;
-    timerSeconds=Math.max(1, Math.ceil(((rd.votingDeadline||Date.now())-Date.now())/1000));
     bodyHtml=jgRoomTimerHtml(timerSeconds, rd.votingScript||'請投票')
       +'<div style="text-align:center;margin-top:10px;">'+buttons+'</div>';
   } else {
@@ -2139,17 +2362,21 @@ function jgRoomRenderVoting(){
     });
     const rows=Object.entries(tally).sort((a,b)=>b[1].count-a[1].count)
       .map(([seat,d])=>'<div class="row"><div class="nm">'+seat+'號</div><div>'+d.count+' 票（'+d.voters.join('、')+' 投）</div></div>').join('');
-    bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🗳️</div><h1>即時票數</h1></div>'
+    // 這裡也放同一張倒數卡片（雖然這支手機已經投完票／不能投），理由是：時間到了必須有
+    // 人真的去結算這輪投票，不能只靠「剛好還有人停在投票按鈕畫面」才會觸發——萬一活著
+    // 的人全部都已經投完票，大家都在看這個計票畫面，時間到時還是要有人能觸發結算。
+    bodyHtml=jgRoomTimerHtml(timerSeconds, '等待這輪投票結束')
+      +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">🗳️</div><h1>即時票數</h1></div>'
       +'<div class="card" style="margin-top:10px;">'+(rows||'<div class="empty">還沒有人投票</div>')+'</div>'
       +(iAmDead?'<div class="info" style="font-size:12px;margin-top:8px;text-align:center;">你已經出局了，不能投票</div>'
         :excluded?'<div class="info" style="font-size:12px;margin-top:8px;text-align:center;">你不能投票這一輪</div>':'')
       +(!myVote&&!excluded&&timeUp?'<div class="info" style="font-size:12px;margin-top:8px;text-align:center;">時間到了，這輪算棄票</div>':'');
   }
-  const hostCloseBtn=jgRoomIsHost?'<button style="margin-top:16px;" onclick="jgRoomHostCloseVoting()">公布結果，結束投票 →</button>':'';
+  // 手動按鈕保留當備用安全閥（比照夜晚各步驟「卡住了？房主強制往下一步」的精神）——正常
+  // 情況時間到了會自動結算、自動公布結果，不需要房主特地按這顆鈕。
+  const hostCloseBtn=jgRoomIsHost?'<button style="margin-top:16px;font-size:12px;color:var(--text3);" onclick="jgRoomHostCloseVoting()">⚠️ 卡住了？手動公布結果，結束投票</button>':'';
   root.innerHTML=`<div class="section-title">投票</div>${bodyHtml}${hostCloseBtn}`;
-  // 時間到了強制重新渲染一次（讓還沒投票的人自動切換到棄票／結果畫面），不用另外寫
-  // callback 去主動關閉投票——投票視窗會不會真的結束，由房主按「公布結果」決定。
-  if(needsTimer) jgRoomStartTimer(timerSeconds, ()=>jgRoomRenderVoting()); else jgRoomStopTimer();
+  jgRoomStartTimer(timerSeconds, jgRoomVoteTimerComplete);
 }
 // 把這一輪的票數（jgRoomLatestVotes 裡符合 round 的那些）依座位號碼加總成一份 tally——
 // weightFn(uid) 決定每一票算幾票（警長在放逐投票時算 1.5 票，其餘投票每人都是 1 票，見
@@ -2175,7 +2402,16 @@ function jgRoomComputeVoteTally(round, weightFn){
 // 放逐投票時，如果警長還活著，警長那一票算 1.5 票（跟本機法官助手 jgVoteWeight 一致）；
 // 警長競選本身（選警長那一輪）不加權，因為那時候警長都還沒選出來。
 window.jgRoomHostCloseVoting=async function(){
-  const rd=jgRoomLatestRoomDoc||{};
+  const db=window.jgFirebaseDb;
+  // 安全閥：重新讀一次資料庫，確認這輪投票還沒被結算過（votingActive 還是 true）——這個
+  // 函式現在不只房主手動按的按鈕會呼叫，時間到時任何一支還開著投票/計票畫面的手機都會
+  // 自動呼叫（見 jgRoomVoteTimerComplete），這裡擋一下避免好幾支手機幾乎同時倒數到 0、
+  // 同一輪投票被重複結算兩次。
+  const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const fresh=roomSnap.data()||{};
+  if(!fresh.votingActive){ jgRoomRenderCurrentPhase(); return; }
+  jgRoomLatestRoomDoc=fresh;
+  const rd=fresh;
   const round=rd.votingRound||1;
   if(rd.votingType==='sheriff'){
     const {entries, top}=jgRoomComputeVoteTally(round, null);
@@ -2195,10 +2431,10 @@ window.jgRoomHostCloseVoting=async function(){
 async function jgRoomResolveSheriffVote(entries, top){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
-  const killedSeatNum=rd.wolfKillTargetSeatNum||null;
-  const nightMsg=killedSeatNum?('昨晚 '+killedSeatNum+'號 死了'):'昨晚是平安夜';
+  // 結果不再用 alert() 彈窗公布——那只有按下「公布結果」的那支手機自己看得到，還會擋住
+  // 那支手機的操作；結果本身（當選/無警長/進PK）都會寫進房間文件，所有人的畫面本來就會
+  // 透過即時監聽器自動跟著換畫面，不需要再彈一個窗告知。
   if(!entries.length){
-    alert('🎖️ 沒有人投票，本局無警長\n\n'+nightMsg);
     await setDoc(doc(db,'rooms',jgRoomCode),{
       votingActive:false, sheriffWinnerSeatNum:null, sheriffPkRound:false,
       phase:'day-open', sheriffPhase:null
@@ -2208,7 +2444,6 @@ async function jgRoomResolveSheriffVote(entries, top){
   if(top.length>1){
     const tiedSeats=top.map(e=>e.seat);
     if(rd.sheriffPkRound){
-      alert('🎖️ PK 後再度平票（'+tiedSeats.join('、')+'號），本局無警長\n\n'+nightMsg);
       await setDoc(doc(db,'rooms',jgRoomCode),{
         votingActive:false, sheriffWinnerSeatNum:null, sheriffPkRound:false,
         phase:'day-open', sheriffPhase:null
@@ -2216,9 +2451,8 @@ async function jgRoomResolveSheriffVote(entries, top){
       return;
     }
     const tiedUids=top.map(e=>e.targetUid);
-    alert('🎖️ 平票（'+tiedSeats.join('、')+'號），進入 PK 重新投票');
     await setDoc(doc(db,'rooms',jgRoomCode),{ sheriffPkRound:true },{ merge:true });
-    await jgRoomStartVoting('sheriff', tiedUids, tiedUids, 'PK 重新投票，請投票');
+    await jgRoomStartVoting('sheriff', tiedUids, tiedUids, '平票（'+tiedSeats.join('、')+'號），PK 重新投票，請投票');
     return;
   }
   const winnerSeatNum=Number(top[0].seat);
@@ -2226,7 +2460,6 @@ async function jgRoomResolveSheriffVote(entries, top){
     votingActive:false, sheriffWinnerSeatNum:winnerSeatNum, sheriffPkRound:false,
     phase:'day-open', sheriffPhase:'pick-direction'
   },{ merge:true });
-  alert('🎖️ '+winnerSeatNum+'號 當選警長（'+top[0].weight+' 票）\n\n'+nightMsg);
 }
 // 放逐投票結算：唯一最高票→真的淘汰（alive:false）、觸發邱比特殉情連動、檢查有沒有開槍
 // 資格（獵人/黑狼王/幸運兒獵槍，見 jgRoomCheckShootEligible）；平票→進入 PK；PK 後再度
@@ -2234,8 +2467,10 @@ async function jgRoomResolveSheriffVote(entries, top){
 async function jgRoomResolveDayVote(entries, top){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
+  // 結果一樣不再用 alert() 彈窗（理由同 jgRoomResolveSheriffVote）——票數/出局/PK 都是寫進
+  // 房間文件的共享狀態，所有人的畫面本來就會自動跟著換，需要的口白交給 jgRoomVoiceMaybeNarrate
+  // 統一播報（見 dayVoteLastWordsUid 那個分支）。
   if(!entries.length){
-    alert('🗳️ 沒有人投票，無人出局');
     await setDoc(doc(db,'rooms',jgRoomCode),{ votingActive:false, dayVotePkRound:false },{ merge:true });
     await jgRoomStartNextNight();
     return;
@@ -2243,15 +2478,13 @@ async function jgRoomResolveDayVote(entries, top){
   if(top.length>1){
     const tiedSeats=top.map(e=>e.seat);
     if(rd.dayVotePkRound){
-      alert('🗳️ PK 後再度平票（'+tiedSeats.join('、')+'號），無人出局');
       await setDoc(doc(db,'rooms',jgRoomCode),{ votingActive:false, dayVotePkRound:false },{ merge:true });
       await jgRoomStartNextNight();
       return;
     }
     const tiedUids=top.map(e=>e.targetUid);
-    alert('🗳️ 平票（'+tiedSeats.join('、')+'號），進入 PK 重新投票');
     await setDoc(doc(db,'rooms',jgRoomCode),{ dayVotePkRound:true },{ merge:true });
-    await jgRoomStartVoting('day', tiedUids, tiedUids, 'PK 重新投票，請投票放逐其中一位');
+    await jgRoomStartVoting('day', tiedUids, tiedUids, '平票（'+tiedSeats.join('、')+'號），PK 重新投票，請投票放逐其中一位');
     return;
   }
   const outSeat=Number(top[0].seat);
@@ -2262,12 +2495,10 @@ async function jgRoomResolveDayVote(entries, top){
   const night=rd.night||1;
   const eligible=await jgRoomCheckShootEligible(outUid, night, true);
   if(eligible){
-    alert('🗳️ '+outSeat+'號 出局（'+top[0].weight+' 票）——他/她有開槍資格，正在讓他/她決定要不要帶人');
     await setDoc(doc(db,'rooms',jgRoomCode),{ pendingShootUids:[outUid], pendingShootContext:'day' },{ merge:true });
     jgRoomRenderCurrentPhase();
   } else {
-    alert('🗳️ '+outSeat+'號 出局（'+top[0].weight+' 票）');
-    // 沒有開槍資格：如果出局的剛好就是警長本人，要先讓他決定警徽傳給誰，再進下一夜
+    // 沒有開槍資格：如果出局的剛好就是警長本人，要先讓他決定警徽傳給誰，再進遺言／下一夜
     // （見 jgRoomCheckAndSetPendingBadge），有開槍資格的話這個檢查會等 jgRoomShootResolve
     // 決定完開槍之後才做，不會在這裡重複觸發。
     if(await jgRoomCheckAndSetPendingBadge()){
@@ -2275,10 +2506,56 @@ async function jgRoomResolveDayVote(entries, top){
     } else if(await jgRoomMaybeDeclareWin()){
       jgRoomRenderCurrentPhase();
     } else {
-      await jgRoomStartNextNight();
+      await jgRoomStartDayVoteLastWords(outUid, outSeat);
+      jgRoomRenderCurrentPhase();
     }
   }
 }
+// ── 遺言：白天投票放逐（含PK）確定唯一出局者、槍與警徽都處理完之後，不直接跳下一夜，
+//    先讓出局的人發表遺言——90秒倒數，他自己可以提前按「遺言發表完畢」結束，全部人的
+//    畫面都看得到同一份共享倒數，時間到了（或他自己按完）都會自動接下一夜，不用等房主
+//    另外按按鈕，比照本機法官助手 jgLastWordsBtn 的精神（給遺言，結束後才繼續往下走）。──
+async function jgRoomStartDayVoteLastWords(outUid, outSeatNum){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode),{
+    dayVoteLastWordsUid: outUid, dayVoteLastWordsSeatNum: outSeatNum,
+    dayVoteLastWordsDeadline: Date.now()+90000
+  },{ merge:true });
+}
+// 倒數90秒時間到——跟投票時間到的道理一樣，任何一支還開著這個畫面的手機都可能觸發，
+// 用「重新讀一次資料庫，確認這輪遺言還沒被結束過」當安全閥，避免好幾支手機同時倒數到
+// 0、重複處理。
+async function jgRoomDayVoteLastWordsTimerComplete(){
+  const db=window.jgFirebaseDb;
+  const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const fresh=roomSnap.data()||{};
+  if(!fresh.dayVoteLastWordsUid){ jgRoomRenderCurrentPhase(); return; }
+  await jgRoomFinishDayVoteLastWords();
+}
+async function jgRoomFinishDayVoteLastWords(){
+  const db=window.jgFirebaseDb;
+  const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const fresh=roomSnap.data()||{};
+  if(!fresh.dayVoteLastWordsUid){ jgRoomRenderCurrentPhase(); return; } // 已經被別的裝置結束過了
+  await setDoc(doc(db,'rooms',jgRoomCode),{
+    dayVoteLastWordsUid:null, dayVoteLastWordsSeatNum:null, dayVoteLastWordsDeadline:null
+  },{ merge:true });
+  await jgRoomStartNextNight();
+  jgRoomRenderCurrentPhase();
+}
+// 出局的人自己按「遺言發表完畢」提前結束——其餘裝置的計時器時間到也會走到同一個結束
+// 函式，兩條路徑用同一份安全閥（上面 fresh.dayVoteLastWordsUid 的檢查）避免重複處理。
+window.jgRoomFinishDayVoteLastWordsBtn=async function(){
+  if(!confirm('確定遺言發表完畢，準備天黑了嗎？')) return;
+  await jgRoomFinishDayVoteLastWords();
+};
+// 幸運兒白天私下確認自己中獎——只寫自己的旗標，不影響任何共享狀態，按完直接照常渲染
+// 這一輪原本該顯示的畫面（開槍/警徽/遺言/白天發言……）。
+window.jgRoomAckLuckyOneReveal=async function(){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ luckyOneRevealSeen:true },{ merge:true });
+  jgRoomRenderCurrentPhase();
+};
 
 // ── 白天：第一夜結束後先讓警長決定發言方向（若有警長），接著是發言＋投票放逐——發言階段
 //    這一版不追蹤每個人是誰在發言，只給一個「大家都發言完了」的按鈕讓房主按下去開始投票
@@ -2293,8 +2570,24 @@ async function jgRoomRenderDayOpen(){
   const winnerSeatNum=rd.sheriffWinnerSeatNum;
   const iAmSheriff=jgMySeatNum&&winnerSeatNum&&jgMySeatNum===winnerSeatNum;
   const pendingShoot=rd.pendingShootUids||[];
-  let bodyHtml, needsTimer=false;
-  if(pendingShoot.length&&rd.pendingShootContext==='day'){
+  let bodyHtml, needsTimer=false, timerSeconds=20, timerCb=null;
+  const meForLucky=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  if(meForLucky&&meForLucky.luckyOneSkill&&meForLucky.luckyOneGrantedNight!=null&&!meForLucky.luckyOneRevealSeen){
+    // 黑市商人交易成功那晚不會立刻告訴他自己中獎，比照本機法官助手「不管交易成功與否，
+    // 晚上都走同一套掩護動作」的精神——連線房間改成「白天自己手機上私下顯示」，只有這
+    // 支手機自己看得到，其他人畫面完全看不出差異。放在這個 render 函式最前面（優先度比
+    // 開槍/警徽/遺言都高），但只是一次性的「知道了」按鈕，按完會照常往下渲染真正該顯示
+    // 的畫面，不會真的卡住任何共享流程。
+    const skillLabel={seer:'預言家查驗',witch:'女巫毒藥',hunter:'獵人獵槍'}[meForLucky.luckyOneSkill]||meForLucky.luckyOneSkill;
+    const passiveNote=meForLucky.luckyOneSkill==='hunter'
+      ?'這是被動能力：之後如果被淘汰（夜裡被刀死或白天被投票出局），會自動跳出開槍畫面讓你選要不要帶人。'
+      :'技能會在之後的女巫／預言家步驟自動開放給你操作。';
+    bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🍀</div><h1>你是幸運兒</h1></div>'
+      +'<p class="sub" style="text-align:center;margin-top:8px;">你獲得的技能：'+skillLabel+'</p>'
+      +'<div class="info-warn" style="margin-top:10px;text-align:center;">請小心不要讓別人看到這個畫面</div>'
+      +'<div class="info" style="font-size:12px;margin-top:10px;text-align:center;">'+passiveNote+'</div>'
+      +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomAckLuckyOneReveal()">知道了 →</button></div>';
+  } else if(pendingShoot.length&&rd.pendingShootContext==='day'){
     if(pendingShoot.includes(window.jgFirebaseUid)){
       const night=rd.night||1;
       const r=await jgRoomShootViewHtml(night);
@@ -2309,6 +2602,24 @@ async function jgRoomRenderDayOpen(){
       bodyHtml=r.html; needsTimer=r.needsTimer;
     } else {
       bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🎖️</div><h1>警長剛剛陣亡，正在決定警徽要傳給誰</h1></div>'
+        +'<p class="sub" style="text-align:center;margin-top:8px;">請安靜等待</p>';
+    }
+  } else if(rd.dayVoteLastWordsUid){
+    // 白天投票放逐（含PK）確定唯一出局者、槍/警徽都處理完之後，不直接跳下一夜，先讓
+    // 出局的人發表遺言——90秒倒數，他自己也能提前按「遺言發表完畢」結束，時間到
+    // （或他自己按完）都會自動接下一夜，不用等房主另外按按鈕。
+    const isMe=rd.dayVoteLastWordsUid===window.jgFirebaseUid;
+    needsTimer=true;
+    timerSeconds=Math.max(1, Math.ceil(((rd.dayVoteLastWordsDeadline||Date.now())-Date.now())/1000));
+    timerCb=jgRoomDayVoteLastWordsTimerComplete;
+    const seatNum=rd.dayVoteLastWordsSeatNum;
+    if(isMe){
+      bodyHtml=jgRoomTimerHtml(timerSeconds, seatNum+'號出局，可以發表遺言')
+        +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">💬</div><h1>發表遺言</h1></div>'
+        +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomFinishDayVoteLastWordsBtn()">遺言發表完畢 →</button></div>';
+    } else {
+      bodyHtml=jgRoomTimerHtml(timerSeconds, seatNum+'號出局，可以發表遺言')
+        +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">💬</div><h1>'+seatNum+'號 正在發表遺言</h1></div>'
         +'<p class="sub" style="text-align:center;margin-top:8px;">請安靜等待</p>';
     }
   } else if(rd.sheriffPhase==='pick-direction'&&iAmSheriff){
@@ -2347,7 +2658,7 @@ async function jgRoomRenderDayOpen(){
       +jgRoomLiveVoteTallyHtml();
   }
   root.innerHTML=`<div class="section-title">白天</div>${bodyHtml}`;
-  if(needsTimer) jgRoomStartTimer(20); else jgRoomStopTimer();
+  if(needsTimer) jgRoomStartTimer(timerSeconds, timerCb); else jgRoomStopTimer();
 }
 // 活著的人在白天畫面（非投票中）也能看到「目前為止」最新一輪投票的即時票型——跟投票進行
 // 中看到的計票畫面是同一種資訊，只是投票結束、還沒進下一夜的這段時間也讓大家看得到，不用
@@ -2415,7 +2726,7 @@ window.jgRoomHostSpinSpeechOrder=async function(){
 window.jgRoomHostStartDayVote=async function(){
   const aliveUids=jgRoomLatestPlayers.filter(p=>p.alive!==false).map(p=>p.uid);
   if(aliveUids.length<2){ alert('存活人數不足，無法投票'); return; }
-  await jgRoomStartVoting('day', aliveUids, [], '請投票，準備放逐一位玩家');
+  await jgRoomStartVoting('day', aliveUids, [], '都發言完畢，準備投票，3、2、1請投票');
 };
 
 // ══════════════════════════════════════════
@@ -3771,14 +4082,16 @@ window.jgRoomBlackmarketTrade=async function(skill, night){
   if(isWolf){
     await setDoc(doc(db,'rooms',jgRoomCode),{
       blackmarketFailUid:window.jgFirebaseUid, blackmarketFailNight:night,
-      blackmarketPendingUid:null, blackmarketPendingSeatNum:null, blackmarketDoneNight:night
+      blackmarketPendingUid:null, blackmarketPendingSeatNum:null, blackmarketDoneNight:night,
+      blackmarketTradeNight:night
     },{ merge:true });
   } else {
     await setDoc(doc(db,'rooms',jgRoomCode,'players',targetUid),{
       luckyOneSkill:skill, luckyOneGrantedNight:night
     },{ merge:true });
     await setDoc(doc(db,'rooms',jgRoomCode),{
-      blackmarketPendingUid:null, blackmarketPendingSeatNum:null, blackmarketDoneNight:night
+      blackmarketPendingUid:null, blackmarketPendingSeatNum:null, blackmarketDoneNight:night,
+      blackmarketTradeNight:night
     },{ merge:true });
   }
   await jgRoomAppendNightLog(night, '易 '+targetSeatNum+(skillAbbr?'('+skillAbbr+')':''));
@@ -3896,7 +4209,11 @@ async function jgRoomShootResolve(night){
     // 真的進入下一夜。
     if(fresh.pendingShootContext==='day'){
       if(!(await jgRoomCheckAndSetPendingBadge())&&!(await jgRoomMaybeDeclareWin())){
-        await jgRoomStartNextNight();
+        // 這一支手機就是白天投票放逐、決定完開槍與否的那位出局者本人（pendingShootUids
+        // 只會包含他自己），直接用自己的座位號碼進遺言，理由跟 jgRoomResolveDayVote 那邊
+        // 沒有開槍資格的分支一致。
+        const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+        await jgRoomStartDayVoteLastWords(window.jgFirebaseUid, me?me.seatNum:null);
       }
     } else {
       await jgRoomAdvanceToCheckOrSheriff();
@@ -3911,14 +4228,18 @@ async function jgRoomShootResolve(night){
 window.jgRoomLeave=function(){
   jgRoomStopTimer();
   jgRoomRemoveMyIdentityButton();
+  jgRoomRemoveVoiceToggleButton();
+  jgRoomRemoveChatWidget();
+  if(window.jgVoiceOnRoomLeave) window.jgVoiceOnRoomLeave();
   if(jgRoomUnsubPlayers){ jgRoomUnsubPlayers(); jgRoomUnsubPlayers=null; }
   if(jgRoomUnsubMyRole){ jgRoomUnsubMyRole(); jgRoomUnsubMyRole=null; }
   if(jgRoomUnsubRoom){ jgRoomUnsubRoom(); jgRoomUnsubRoom=null; }
   if(jgRoomUnsubVotes){ jgRoomUnsubVotes(); jgRoomUnsubVotes=null; }
+  if(jgRoomUnsubChat){ jgRoomUnsubChat(); jgRoomUnsubChat=null; }
   if(jgRoomUnsubDealMyRole){ jgRoomUnsubDealMyRole(); jgRoomUnsubDealMyRole=null; }
   jgRoomCode=null; jgRoomComp=null; jgRoomTotal=null; jgRoomIsHost=false;
   jgMyRole=null; jgMySeatNum=null; jgRoomLatestPlayers=[]; jgRoomLatestRoomDoc=null;
-  jgRoomLatestVotes=[]; jgRoomGodViewOn=false;
+  jgRoomLatestVotes=[]; jgRoomGodViewOn=false; jgRoomLatestChatMsgs=[]; jgRoomChatExpanded=false;
   try{ localStorage.removeItem('jgLastRoomCode'); }catch(e){}
   jgRoomRenderEntry();
 };

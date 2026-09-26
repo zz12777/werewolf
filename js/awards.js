@@ -175,6 +175,13 @@ function computeAwards(){
         && withdrawnSeats.includes(seerOwnSeat) && electedSeat===seerCheckSeat){
         awAddCredit(diDiStar, seerOnlyP.name, g.id);
         if(g.winner==='good') awAddCredit(diDiStar, seerOnlyP.name, g.id); // 好人獲勝再加一分
+        // 拿到警徽的那位（預言家查驗、代跳的對象）也算一份滴滴之星——他就是被預言家「滴」
+        // 上去、順利當選警長的人，跟預言家本人一樣算分，計分規則（好人獲勝再加一分）相同。
+        const badgeP=players.find(p=>String(p.num)===electedSeat);
+        if(badgeP && badgeP.name!==seerOnlyP.name){
+          awAddCredit(diDiStar, badgeP.name, g.id);
+          if(g.winner==='good') awAddCredit(diDiStar, badgeP.name, g.id);
+        }
       }
     }
 
