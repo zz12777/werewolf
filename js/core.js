@@ -46,6 +46,9 @@ function switchTab(id){
   // 「確認自己身分」按鈕是連線房間專用的，只在「連線房間」分頁顯示，切到其他分頁（角色
   // 與規則、遊玩數據...）先藏起來，避免讓人誤以為那些分頁也要確認身分。
   if(window.jgRoomSetIdentityButtonVisible) window.jgRoomSetIdentityButtonVisible(id==='t-room');
+  // 左上角「法官語音」按鈕跟右上角「確認自己身分」按鈕是同一組規則：只在「連線房間」
+  // 分頁顯示，切到其他分頁先藏起來。
+  if(window.jgRoomSetVoiceButtonVisible) window.jgRoomSetVoiceButtonVisible(id==='t-room');
   if(id==='t-room'&&window.jgRoomShown!==true){
     window.jgRoomShown=true;
     // js/room.js 是用 <script type="module"> 載入的，執行時機比一般 script 稍晚，

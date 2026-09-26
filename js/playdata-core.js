@@ -573,6 +573,13 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
     const topRoles=Object.entries(p.roleCounts).sort((a,b)=>b[1]-a[1])
       .map(([r,c])=>`<span class="chip">${r} ×${c}</span>`).join('');
     const histSorted=[...p.history].sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
+    // 連勝標籤：從最新一場開始往回數，遇到不是「贏」（含輸、和局）就停，>=3 連勝才顯示，
+    // 不用點進戰績明細也能一眼看出誰手感正熱——只看「贏／不是贏」，第三方獲勝也算贏。
+    let pdWinStreak=0;
+    for(const h of histSorted){
+      if(h.result==='win') pdWinStreak++; else break;
+    }
+    const streakBadge=pdWinStreak>=3?`<span class="streak-badge">🔥${pdWinStreak}連勝</span>`:'';
     const histHtml=histSorted.map(h=>{
       const cls=h.result==='win'?'win':(h.result==='lose'?'lose':'unclear');
       const mark=h.result==='win'?'✓':(h.result==='lose'?'✗':'－');
@@ -588,7 +595,7 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
       <div class="rank"${isRanked?'':' title="場數未達門檻，不列入排名"'}>${isRanked?(i+1):'－'}</div>
       <div class="av">${p.name.slice(0,1)}</div>
       <div class="nm-wrap">
-        <div class="nm">${p.name}</div>
+        <div class="nm">${p.name}${streakBadge}</div>
         <div class="nm-sub">${p.games} 場・${p.wins} 勝</div>
       </div>
       <div>
