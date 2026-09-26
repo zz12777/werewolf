@@ -576,9 +576,21 @@ window.jgRoomSetIdentityButtonVisible=function(visible){
   const btn=document.getElementById('jg-room-myid-btn');
   if(btn) btn.style.display=visible?'block':'none';
 };
+// 機械狼學到技能之後，這裡（跟玩家狀態格子、上帝視角）都要比照本機法官助手
+// jgRoleDisplayName() 的規則，顯示「機械」＋學到的角色（例如機械民、機械女巫），而不是
+// 一直顯示沒有資訊量的「機械狼」——學到的角色存在 players/{uid}.mechWolfLearnedRole
+// （見 jgRoomMechWolfLearn），不是存在 secrets，所以 jgRoomLatestPlayers 裡就查得到，
+// 不用另外讀資料庫。
+function jgRoomDisplayRoleName(role, mechWolfLearnedRole){
+  if(!role) return null;
+  const plain=(typeof RNAME!=='undefined'&&RNAME[role])||role;
+  if(role!=='mechanicalwolf'||!mechWolfLearnedRole) return plain;
+  return (typeof jgMechDisplayLabel==='function')?jgMechDisplayLabel(mechWolfLearnedRole):plain;
+}
 window.jgRoomShowMyIdentity=function(){
   if(!jgMySeatNum){ alert('還沒有座位資料（可能還在大廳，尚未分配身分）'); return; }
-  const roleName=jgMyRole?((typeof RNAME!=='undefined'&&RNAME[jgMyRole])||jgMyRole):'（尚未分配身分）';
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  const roleName=jgMyRole?jgRoomDisplayRoleName(jgMyRole, me&&me.mechWolfLearnedRole):'（尚未分配身分）';
   jgRoomShowBigCard(jgMySeatNum+'號', roleName);
 };
 
@@ -625,6 +637,10 @@ async function jgRoomEnterLobby(code){
     // 道理，不能被 suppressAutoRender 卡住。
     jgRoomVoiceMaybeNarrate(jgRoomLatestRoomDoc);
     jgRoomUpdateChatVisibility();
+    // 通知 js/voice.js 房間狀態（含 currentStep）可能變了，讓它重新判斷現在是不是狼隊
+    // 出刀商議時間、要不要把語音通話裡的狼隊商議聲音隔離起來——理由跟上面兩行一樣，
+    // 不能被 suppressAutoRender 卡住。
+    if(window.jgVoiceOnRoomStepChange) window.jgVoiceOnRoomStepChange();
     // 有些操作（例如狼隊出刀：寫目標→記文字紀錄→進黑市商人／女巫回合→…）背後其實是好幾筆
     // 連續的資料庫寫入，不是像機械狼學習那樣一次寫完。每一筆寫入都會讓這個監聽器再觸發
     // 一次、整個畫面重畫一次——如果剛好使用者還在同一個選人畫面上（例如另一隻狼隊友的
@@ -1901,6 +1917,15 @@ async function jgRoomGetWolfUids(){
     return !p||p.alive!==false; // 找不到玩家資料時保守當作還活著，不要誤判卡住
   }).map(d=>d.id);
 }
+// 給 js/voice.js（語音通話）判斷「現在是不是狼隊出刀商議時間、這個人算不算見面狼隊友」
+// 用——語音那邊要在狼隊商議時，只讓見面狼隊友互相聽得到彼此，避免機械狼、夢魘這些
+// 不跟狼隊一起睜眼的人（或其他神職／平民）聽到殺人商議內容，見 js/voice.js
+// jgVoiceApplyWolfAudioFilter 的說明。
+window.jgRoomGetFaceWolfUidsAsync=jgRoomGetWolfUids;
+window.jgRoomIsNightWolfStepNow=function(){
+  const rd=jgRoomLatestRoomDoc||{};
+  return rd.phase==='night'&&rd.currentStep==='wolf';
+};
 // 機械狼獨自帶刀的條件：其餘「真正跟狼隊一起睜眼」的隊友（jgRoomGetWolfUids 排除掉機械狼
 // 自己跟夢魘之後剩下的那些人）全部死亡——跟本機法官助手 jgMechWolf2KillEligible／
 // jgAfterGargoyleStep 系列判斷同一套邏輯的房間版本。
@@ -1925,8 +1950,10 @@ async function jgRoomBlackmarketUsed(){
   return !!(p&&p.blackmarketUsed);
 }
 
-// ── 狼隊出刀畫面：任何一位狼隊友選定目標並按下確認，就是最終決定，不用等其他隊友
-//    （跟其他單人技能是同一種互動方式）。──
+// ── 狼隊出刀畫面：只有一隻見面狼時，選定並確認就是最終決定；不只一隻見面狼時，任何一位
+//    先提議一個目標，其餘隊友的畫面會看到「已確認 X/Y 人」，各自按確認表態，全員確認完
+//    才真的結算、往下一步（見下面 jgRoomWolfPropose／jgRoomWolfConfirm／jgRoomWolfFinalize
+//    這一串）。──
 let jgRoomWolfFinalizing=false; // 避免「全員到齊」的結算邏輯被同時觸發兩次（見下方註解）
 // 「一次操作背後有好幾筆連續寫入」的函式（狼隊出刀是目前最明顯的例子）用這個旗標暫時
 // 請即時監聽器不要跟著每一筆中間寫入重畫畫面（見 jgRoomEnterLobby 裡監聽器的說明），
@@ -2792,7 +2819,7 @@ async function jgRoomBuildGodViewSections(){
   //    同樣用途，人數一多自然會排成兩排以上）。
   const pgridHtml=jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum).map(p=>{
     const role=roleByUid[p.uid];
-    const roleName=role?((typeof RNAME!=='undefined'&&RNAME[role])||role):'?';
+    const roleName=role?jgRoomDisplayRoleName(role, p.mechWolfLearnedRole):'?';
     return '<div class="pcell'+(p.alive===false?' dead':'')+'"><div class="pnum">'+p.seatNum+'號</div>'
       +'<div class="pname">'+p.name+'</div>'
       +'<div class="prole"><span class="badge '+(p.alive===false?'bw':'bv')+'">'+roleName+'</span></div></div>';
@@ -2962,7 +2989,7 @@ async function jgRoomBuildExportText(){
   let out='==='+title+'===\n';
   jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum).forEach(p=>{
     const role=roleByUid[p.uid];
-    const roleName=role?((typeof RNAME!=='undefined'&&RNAME[role])||role):'?';
+    const roleName=role?jgRoomDisplayRoleName(role, p.mechWolfLearnedRole):'?';
     out+=p.seatNum+' '+p.name+' '+roleName+'\n';
   });
   const d=new Date();
@@ -3139,10 +3166,10 @@ function jgRoomHostAdvanceHtml(currentStep, night){
   if(currentStep==='guard') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">守衛選完之後，會自動往下一步。</div>'+forceHtml;
   if(currentStep==='dreamcatcher') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">攝夢人選完夢遊對象之後，會自動往下一步。</div>';
   if(currentStep==='wolfbrother') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">第一夜是狼兄狼弟互相確認身分；其餘夜晚平常沒事，只有狼兄陣亡後狼弟覺醒復仇那一晚才需要操作，完成後會自動往下一步。</div>';
-  if(currentStep==='wolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">只有一隻狼的話，選定並確認後就是最終決定；不只一隻狼要全員確認才會真的定案。</div>';
-  if(currentStep==='mechwolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">機械狼學習／使用技能（或確認沒有技能可用）之後，會自動往下一步。</div>'+forceHtml;
+  if(currentStep==='wolf') return '';
+  if(currentStep==='mechwolf') return forceHtml;
   if(currentStep==='blackmarket') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">黑市商人交易完（或選擇不交易）之後，會自動往下一步。獵人獵槍這項技能目前還沒自動化，請法官／房主用本機工具手動處理。</div>'+forceHtml;
-  if(currentStep==='witch') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">女巫（或持有女巫毒藥技能的幸運兒）行動完之後，會自動往下一步（查驗類角色，或直接接警長競選）。</div>'+forceHtml;
+  if(currentStep==='witch') return forceHtml;
   if(currentStep==='seer') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">預言家（或持有查驗技能的幸運兒）查驗完之後，會自動往下一步。</div>'+forceHtml;
   if(currentStep==='medium') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">通靈師查驗完之後，會自動往下一步。</div>'+forceHtml;
   if(!currentStep) return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">這一夜已經結束，正在自動接警長競選...</div>';
