@@ -12,7 +12,9 @@
 // 部署後到 Vercel 專案的 Settings → Environment Variables 加三個變數：
 //   LIVEKIT_API_KEY    ← LiveKit Cloud 專案的 API Key
 //   LIVEKIT_API_SECRET ← LiveKit Cloud 專案的 API Secret
-//   LIVEKIT_WS_URL     ← LiveKit Cloud 專案的 WebSocket URL（wss://xxx.livekit.cloud）
+//   LIVEKIT_URL        ← LiveKit Cloud 專案的 WebSocket URL（wss://xxx.livekit.cloud，
+//                        沿用 LiveKit 官方文件常用的變數名稱；也支援 LIVEKIT_WS_URL
+//                        這個別名，兩個名字擇一設定即可）
 // 這三個值只填在 Vercel 後台，不要寫進任何程式碼或 commit 進 GitHub。
 //
 // 信任模型：跟這個 app 其餘連線房間功能一致——「知道房號」本身就是信任邊界（房號本身就
@@ -41,7 +43,7 @@ module.exports = async function handler(req, res) {
 
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
-  const wsUrl = process.env.LIVEKIT_WS_URL;
+  const wsUrl = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL;
   if (!apiKey || !apiSecret || !wsUrl) {
     res.status(500).json({ error: 'Server is missing LiveKit credentials (check Vercel env vars)' });
     return;

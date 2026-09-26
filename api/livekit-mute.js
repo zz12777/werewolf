@@ -9,7 +9,7 @@
 // 對方的手機不配合，其他人也聽不到他的聲音——這才是真的「強制」。
 //
 // 部署方式跟金鑰設定：跟 api/livekit-token.js 完全一樣（同一個 Vercel 專案、同一組
-// LIVEKIT_API_KEY / LIVEKIT_API_SECRET / LIVEKIT_WS_URL 環境變數）。
+// LIVEKIT_API_KEY / LIVEKIT_API_SECRET / LIVEKIT_URL 環境變數）。
 //
 // 權限把關：這裡沒有另外驗證「呼叫的人真的是房主」——跟這個 app 其餘所有「房主專用」
 // 操作（例如公布投票結果、分配身分）一樣，都是前端只把按鈕顯示給房主看，伺服器端本身
@@ -37,7 +37,7 @@ module.exports = async function handler(req, res) {
 
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
-  const wsUrl = process.env.LIVEKIT_WS_URL;
+  const wsUrl = process.env.LIVEKIT_URL || process.env.LIVEKIT_WS_URL;
   if (!apiKey || !apiSecret || !wsUrl) {
     res.status(500).json({ error: 'Server is missing LiveKit credentials (check Vercel env vars)' });
     return;
