@@ -24,6 +24,15 @@ let jgRoomTimerInterval=null; // 夜晚操作畫面的倒數計時器（見 jgRo
 let jgRoomUnsubVotes=null;  // 投票結果的即時監聽
 let jgRoomLatestVotes=[];   // 目前這一輪（不分投票類型：警長／白天／PK）收到的所有票
 
+// ── 給 js/voice.js（語音通話，另一個獨立的 ES module）讀取房間狀態用的小工具函式──
+// js/voice.js 也是用 <script type="module"> 載入，跟這個檔案是不同的模組作用域，直接讀
+// 不到上面這些 let 變數；比起把每個變數都額外掛一份到 window 上（還要記得每個賦值的地方
+// 都同步更新），這裡改成只掛幾個「讀取當下值」的函式，voice.js 呼叫的當下永遠拿到最新值。
+window.jgRoomGetCode=function(){ return jgRoomCode; };
+window.jgRoomGetIsHost=function(){ return jgRoomIsHost; };
+window.jgRoomGetPlayers=function(){ return jgRoomLatestPlayers; };
+window.jgRoomGetMySeatNum=function(){ return jgMySeatNum; };
+
 // ── 夜晚操作畫面共用的倒數計時器：30 秒倒數，剩 10 秒時把法官台詞閃一次提醒——之後每加
 //    一個角色（查驗類、魔術師交換...），畫面上只要放這個計時器＋自己的台詞文字，就能
 //    共用同一套倒數/提醒邏輯，不用每個角色各寫一份。──
@@ -580,6 +589,9 @@ async function jgRoomEnterLobby(code){
   }
   jgRoomAppendMyIdentityButton();
   jgRoomAppendVoiceToggleButton();
+  // js/voice.js（語音通話）自己的初始化——不是每個人都會用到語音功能，這裡用
+  // window 上有沒有掛這個函式來判斷 voice.js 有沒有載入，避免沒載入時報錯。
+  if(window.jgVoiceOnRoomEnter) window.jgVoiceOnRoomEnter();
   if(jgRoomUnsubPlayers) jgRoomUnsubPlayers();
   const q=query(collection(db,'rooms',code,'players'), orderBy('seatNum'));
   jgRoomUnsubPlayers=onSnapshot(q,(snap)=>{
@@ -4099,6 +4111,7 @@ window.jgRoomLeave=function(){
   jgRoomStopTimer();
   jgRoomRemoveMyIdentityButton();
   jgRoomRemoveVoiceToggleButton();
+  if(window.jgVoiceOnRoomLeave) window.jgVoiceOnRoomLeave();
   if(jgRoomUnsubPlayers){ jgRoomUnsubPlayers(); jgRoomUnsubPlayers=null; }
   if(jgRoomUnsubMyRole){ jgRoomUnsubMyRole(); jgRoomUnsubMyRole=null; }
   if(jgRoomUnsubRoom){ jgRoomUnsubRoom(); jgRoomUnsubRoom=null; }
