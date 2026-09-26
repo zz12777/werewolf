@@ -581,6 +581,15 @@ window.jgRoomSetIdentityButtonVisible=function(visible){
 // 一直顯示沒有資訊量的「機械狼」——學到的角色存在 players/{uid}.mechWolfLearnedRole
 // （見 jgRoomMechWolfLearn），不是存在 secrets，所以 jgRoomLatestPlayers 裡就查得到，
 // 不用另外讀資料庫。
+// 死亡標記用的骷髏小圖示——畫出來的 SVG 圖案，不是 emoji（emoji 在不同裝置/字型上長相
+// 差很多，畫出來的線條圖案比較一致，也比較搭配整個 app 素雅的視覺風格）。
+function jgRoomDeadSkullSvg(){
+  return '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-left:3px;opacity:0.7;">'
+    +'<path d="M12 3a7 7 0 0 0-7 7c0 2.8 1.4 4.3 2 5.5V18a1 1 0 0 0 1 1h1v-2h1v2h4v-2h1v2h1a1 1 0 0 0 1-1v-2.5c0.6-1.2 2-2.7 2-5.5a7 7 0 0 0-7-7z"></path>'
+    +'<circle cx="9.3" cy="10.5" r="1.1" fill="currentColor" stroke="none"></circle>'
+    +'<circle cx="14.7" cy="10.5" r="1.1" fill="currentColor" stroke="none"></circle>'
+    +'</svg>';
+}
 function jgRoomDisplayRoleName(role, mechWolfLearnedRole){
   if(!role) return null;
   const plain=(typeof RNAME!=='undefined'&&RNAME[role])||role;
@@ -715,17 +724,21 @@ async function jgRoomRenderCurrentPhase(){
   jgRoomUpdateVoiceToggleButton();
   jgRoomAppendPlayerStatusFooter();
 }
-// 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——但要等到白天正式宣布死訊（含輪到自己
-// 發表遺言的話，要先講完）才能進去，不能在夜晚（phase==='night'）或警長競選（第一夜死訊
-// 還沒公布，見 jgRoomAdvanceToDayPhase：先抽籤定生死才進競選，警長競選結束才輪到白天
-// 公告死訊）就先偷看上帝視角——不然剛死的人會在其他玩家還沒收到死訊公告前，就已經透過
-// 語音通話等管道把場上真實身分洩漏出去，等於變相作弊。
+// 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——夜晚被刀死的人要等到白天正式宣布
+// 死訊（含輪到自己發表遺言的話，要先講完）才能進去，不能在夜晚（phase==='night'）或
+// 警長競選（第一夜死訊還沒公布，見 jgRoomAdvanceToDayPhase：先抽籤定生死才進競選，
+// 警長競選結束才輪到白天公告死訊）就先偷看上帝視角——不然剛死的人會在其他玩家還沒收到
+// 死訊公告前，就已經透過語音通話等管道把場上真實身分洩漏出去，等於變相作弊。
+// 白天被投票放逐（含PK）的人不受這個限制：投票結果本來就是全場當場公開看著發生的，
+// 沒有「死訊還沒公布」這種空窗期需要保密，發表完遺言之後不管接下來天黑幾次都能看
+// （見 jgRoomStartDayVoteLastWords 寫入的 exiledByVote 旗標）。
 function jgRoomGodViewAllowedNow(){
   const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
   if(!me||me.alive!==false) return false;
   const rd=jgRoomLatestRoomDoc||{};
-  if(rd.phase==='night'||rd.phase==='sheriff') return false;
   if(rd.dayVoteLastWordsUid===me.uid) return false; // 自己還沒發表遺言
+  if(me.exiledByVote) return true;
+  if(rd.phase==='night'||rd.phase==='sheriff') return false;
   return true;
 }
 function jgRoomAppendGodViewToggle(){
@@ -799,6 +812,7 @@ window.jgRoomAssignRoles=async function(){
   await setDoc(doc(db,'rooms',jgRoomCode),Object.assign({ status:'role-assigned', phase:'lobby' },extra),{ merge:true });
   await jgRoomResetChat();
   jgRoomSpeechOrderAutoTriedNight=null;
+  jgRoomVoiceDayAnnouncedNight=null; jgRoomVoiceSheriffAnnouncedNight=null;
 };
 
 // ── 房主開始遊戲：進入第一夜。完整順序（跟本機法官助手 jgAfterXStep 那一串固定順序的
@@ -1287,6 +1301,13 @@ async function jgRoomMaybeDeclareWin(){
 // （避免好幾支手機同時開著語音互相搶著念、吵成一團）。
 // ═══════════════════════════════════════════
 let jgRoomVoiceState={ key:null, night:null, step:null }; // 記住「上次已經念過的狀態」，同一個狀態被重複觸發的重畫（例如玩家名單監聽器也會重畫畫面）不會重複念
+// 「天亮請睜眼」（day-open／sheriff 這兩個分支）另外用這兩個變數各自記住「已經幫這一夜
+// 念過開場白了嗎」，不能只靠 jgRoomVoiceState.key 判斷——白天期間投票、遺言這些狀態會
+// 輪流把 jgRoomVoiceState.key 蓋成別的值，蓋掉之後如果又繞回「顯示白天開場畫面」這個
+// 分支（例如平票 PK 重新投票前那個中間畫面），key 對不起來就會被誤判成「還沒念過」，
+// 把「天亮請睜眼」在同一個白天裡重複念好幾次——這是這次抓到的真正 bug。
+let jgRoomVoiceDayAnnouncedNight=null;
+let jgRoomVoiceSheriffAnnouncedNight=null;
 let jgRoomVoiceSpokenLog=[]; // 純粹留給測試／除錯用：依序記錄目前為止念過的每一句話，不影響正式運作
 // 房間目前的板子（compRoles）是不是都在勝負自動判定支援的角色清單裡——語音功能沿用同一份
 // 白名單，理由跟勝負判定一樣：這兩個板子以外的流程還沒逐一驗證過語音時機對不對，先不要念。
@@ -1368,17 +1389,19 @@ async function jgRoomVoiceMaybeNarrate(rd){
     return;
   }
   if(rd.phase==='sheriff'){
-    const key='sheriff:'+(rd.night||0);
-    if(key===jgRoomVoiceState.key) return;
-    jgRoomVoiceState={ key, night:rd.night||0, step:null };
+    const night=rd.night||0;
+    if(jgRoomVoiceSheriffAnnouncedNight===night) return;
+    jgRoomVoiceSheriffAnnouncedNight=night;
+    jgRoomVoiceState={ key:'sheriff:'+night, night, step:null };
     const deathText=await jgRoomVoiceDeathLineText(rd.night);
     jgRoomSpeak('天亮請睜眼，'+deathText+'開放警長競選。');
     return;
   }
   if(rd.phase==='day-open'){
-    const key='day:'+(rd.night||0);
-    if(key===jgRoomVoiceState.key) return;
-    jgRoomVoiceState={ key, night:rd.night||0, step:null };
+    const night=rd.night||0;
+    if(jgRoomVoiceDayAnnouncedNight===night) return;
+    jgRoomVoiceDayAnnouncedNight=night;
+    jgRoomVoiceState={ key:'day:'+night, night, step:null };
     const deathText=await jgRoomVoiceDeathLineText(rd.night);
     jgRoomSpeak('天亮請睜眼，'+deathText);
     return;
@@ -2339,7 +2362,7 @@ window.jgRoomHostStartSheriffVote=async function(){
   const candidates=rd.sheriffCandidates||[];
   const everCandidates=rd.sheriffEverCandidates||[];
   if(candidates.length<1){ alert('目前沒有候選人（可能都退水了），無法開始投票'); return; }
-  await jgRoomStartVoting('sheriff', candidates, everCandidates, '準備投票，3、2、1，請投票');
+  await jgRoomStartVoting('sheriff', candidates, everCandidates, '準備投票，投票時間倒數10秒，請於時間內投票');
 };
 
 // ── 投票通用元件：candidateUids 是可以被投的對象，excludeUids 是「不能投票」的人
@@ -2506,7 +2529,7 @@ async function jgRoomResolveSheriffVote(entries, top){
     }
     const tiedUids=top.map(e=>e.targetUid);
     await setDoc(doc(db,'rooms',jgRoomCode),{ sheriffPkRound:true },{ merge:true });
-    await jgRoomStartVoting('sheriff', tiedUids, tiedUids, '平票（'+tiedSeats.join('、')+'號），PK 重新投票，請投票');
+    await jgRoomStartVoting('sheriff', tiedUids, tiedUids, '平票（'+tiedSeats.join('、')+'號），PK 重新投票，投票時間倒數10秒，請於時間內投票');
     return;
   }
   const winnerSeatNum=Number(top[0].seat);
@@ -2514,6 +2537,25 @@ async function jgRoomResolveSheriffVote(entries, top){
     votingActive:false, sheriffWinnerSeatNum:winnerSeatNum, sheriffPkRound:false,
     phase:'day-open', sheriffPhase:'pick-direction'
   },{ merge:true });
+}
+// PK 候選人的倒序發言順序——比照本機法官助手的 PK 規則：今天原本的發言順序裡，位置排在
+// 越後面的人，PK 時越先發言。用 daySpeechStart／daySpeechDir 算出每個 PK 候選人在今天
+// 發言順序裡排第幾個（跟 jgRoomAutoSpinSpeechOrder 決定起點用的是同一份方向設定），再依
+// 這個「發言順序位置」由大到小排序，回傳一份「X號」字串陣列給畫面直接顯示。
+function jgRoomComputePkSpeechOrder(pkSeats, rd){
+  const total=jgRoomTotal||jgRoomLatestPlayers.length;
+  const start=rd.daySpeechStart, dir=rd.daySpeechDir;
+  if(!start||!dir||!total) return pkSeats.map(s=>s+'號'); // 還沒抽過發言順序時，保底照原本座位順序顯示
+  const positionOf=(seatNum)=>{
+    let n=start, pos=0;
+    for(let i=0;i<total;i++){
+      if(n===seatNum) return pos;
+      n=dir==='逆'?(n-1<1?total:n-1):(n+1>total?1:n+1);
+      pos++;
+    }
+    return 0;
+  };
+  return pkSeats.slice().sort((a,b)=>positionOf(b)-positionOf(a)).map(s=>s+'號');
 }
 // 放逐投票結算：唯一最高票→真的淘汰（alive:false）、觸發邱比特殉情連動、檢查有沒有開槍
 // 資格（獵人/黑狼王/幸運兒獵槍，見 jgRoomCheckShootEligible）；平票→進入 PK；PK 後再度
@@ -2537,8 +2579,13 @@ async function jgRoomResolveDayVote(entries, top){
       return;
     }
     const tiedUids=top.map(e=>e.targetUid);
-    await setDoc(doc(db,'rooms',jgRoomCode),{ dayVotePkRound:true },{ merge:true });
-    await jgRoomStartVoting('day', tiedUids, tiedUids, '平票（'+tiedSeats.join('、')+'號），PK 重新投票，請投票放逐其中一位');
+    // 平票不直接開下一輪投票——先進入「PK」這個獨立的中間畫面，讓 PK 候選人照倒序
+    // （比照本機法官助手 PK 的規則：今天發言順序最後面的人先發言）發言完，房主按下去
+    // 才真的開放投票，不能讓玩家連反應/發言的時間都沒有就直接被計票。
+    await setDoc(doc(db,'rooms',jgRoomCode),{
+      dayVotePkRound:true, dayVotePkPendingUids:tiedUids, dayVotePkPendingSeats:tiedSeats
+    },{ merge:true });
+    jgRoomRenderCurrentPhase();
     return;
   }
   const outSeat=Number(top[0].seat);
@@ -2565,6 +2612,18 @@ async function jgRoomResolveDayVote(entries, top){
     }
   }
 }
+// 房主確認 PK 候選人都發言完畢，正式開放 PK 投票——候選人＝原本平票的那幾位，投票資格
+// 排除掉這幾位本人（只有沒參與 PK 的人能投，見 jgRoomStartVoting 的 excludeUids 參數），
+// 只能投給 PK 名單裡的人。
+window.jgRoomHostStartPkVote=async function(){
+  const rd=jgRoomLatestRoomDoc||{};
+  const tiedUids=rd.dayVotePkPendingUids||[];
+  const tiedSeats=rd.dayVotePkPendingSeats||[];
+  if(!tiedUids.length) return;
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode),{ dayVotePkPendingUids:null, dayVotePkPendingSeats:null },{ merge:true });
+  await jgRoomStartVoting('day', tiedUids, tiedUids, '平票（'+tiedSeats.join('、')+'號），PK 重新投票，投票時間倒數10秒，請於時間內投票放逐其中一位');
+};
 // ── 遺言：白天投票放逐（含PK）確定唯一出局者、槍與警徽都處理完之後，不直接跳下一夜，
 //    先讓出局的人發表遺言——90秒倒數，他自己可以提前按「遺言發表完畢」結束，全部人的
 //    畫面都看得到同一份共享倒數，時間到了（或他自己按完）都會自動接下一夜，不用等房主
@@ -2575,6 +2634,11 @@ async function jgRoomStartDayVoteLastWords(outUid, outSeatNum){
     dayVoteLastWordsUid: outUid, dayVoteLastWordsSeatNum: outSeatNum,
     dayVoteLastWordsDeadline: Date.now()+90000
   },{ merge:true });
+  // 白天被投票放逐（含PK）跟夜晚被刀死法不一樣：放逐是全場都親眼看著投票結果公開發生的，
+  // 沒有「死訊還沒公布」這種需要保密的空窗期，所以不用像夜晚死亡那樣等到下一次白天公告
+  // 才能看上帝視角——這裡記一個 exiledByVote 旗標，讓 jgRoomGodViewAllowedNow() 對這個人
+  // 放行到「發表完遺言之後，不管接下來天黑幾次都能看」，見那裡的說明。
+  await setDoc(doc(db,'rooms',jgRoomCode,'players',outUid),{ exiledByVote:true },{ merge:true });
 }
 // 倒數90秒時間到——跟投票時間到的道理一樣，任何一支還開著這個畫面的手機都可能觸發，
 // 用「重新讀一次資料庫，確認這輪遺言還沒被結束過」當安全閥，避免好幾支手機同時倒數到
@@ -2658,6 +2722,14 @@ async function jgRoomRenderDayOpen(){
       bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🎖️</div><h1>警長剛剛陣亡，正在決定警徽要傳給誰</h1></div>'
         +'<p class="sub" style="text-align:center;margin-top:8px;">請安靜等待</p>';
     }
+  } else if(rd.dayVotePkPendingUids&&rd.dayVotePkPendingUids.length){
+    // 平票進入 PK：候選人照「今天發言順序」倒序發言（最後發言的人先講），講完由房主按
+    // 「開始投票」才真的開放投票——跟直接沿用第一輪投票結果、或跳過發言直接開票是兩回事。
+    const pkSeats=rd.dayVotePkPendingSeats||[];
+    const pkOrder=jgRoomComputePkSpeechOrder(pkSeats, rd);
+    bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">⚖️</div><h1>平票（'+pkSeats.join('、')+'號），進入 PK</h1></div>'
+      +'<p class="sub" style="text-align:center;margin-top:8px;">請依序發言：'+pkOrder.join(' → ')+'（倒序，最後發言的人先講）</p>'
+      +(jgRoomIsHost?'<button class="primary" style="margin-top:16px;" onclick="jgRoomHostStartPkVote()">PK 發言完畢，開始投票 →</button>':'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請等待房主開放投票</div>');
   } else if(rd.dayVoteLastWordsUid){
     // 白天投票放逐（含PK）確定唯一出局者、槍/警徽都處理完之後，不直接跳下一夜，先讓
     // 出局的人發表遺言——90秒倒數，他自己也能提前按「遺言發表完畢」結束，時間到
@@ -2668,11 +2740,11 @@ async function jgRoomRenderDayOpen(){
     timerCb=jgRoomDayVoteLastWordsTimerComplete;
     const seatNum=rd.dayVoteLastWordsSeatNum;
     if(isMe){
-      bodyHtml=jgRoomTimerHtml(timerSeconds, seatNum+'號出局，可以發表遺言')
+      bodyHtml=jgRoomTimerHtml(timerSeconds, seatNum+'號出局，請發表遺言')
         +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">💬</div><h1>發表遺言</h1></div>'
         +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomFinishDayVoteLastWordsBtn()">遺言發表完畢 →</button></div>';
     } else {
-      bodyHtml=jgRoomTimerHtml(timerSeconds, seatNum+'號出局，可以發表遺言')
+      bodyHtml=jgRoomTimerHtml(timerSeconds, seatNum+'號出局，請發表遺言')
         +'<div class="nbanner" style="margin-top:20px;"><div class="nicon">💬</div><h1>'+seatNum+'號 正在發表遺言</h1></div>'
         +'<p class="sub" style="text-align:center;margin-top:8px;">請安靜等待</p>';
     }
@@ -2792,7 +2864,7 @@ async function jgRoomAutoSpinSpeechOrder(night){
 window.jgRoomHostStartDayVote=async function(){
   const aliveUids=jgRoomLatestPlayers.filter(p=>p.alive!==false).map(p=>p.uid);
   if(aliveUids.length<2){ alert('存活人數不足，無法投票'); return; }
-  await jgRoomStartVoting('day', aliveUids, [], '都發言完畢，準備投票，3、2、1請投票');
+  await jgRoomStartVoting('day', aliveUids, [], '都發言完畢，準備投票，投票時間倒數10秒，請於時間內投票');
 };
 
 // ══════════════════════════════════════════
@@ -2833,9 +2905,15 @@ async function jgRoomBuildGodViewSections(){
   const pgridHtml=jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum).map(p=>{
     const role=roleByUid[p.uid];
     const roleName=role?jgRoomDisplayRoleName(role, p.mechWolfLearnedRole):'?';
-    return '<div class="pcell'+(p.alive===false?' dead':'')+'"><div class="pnum">'+p.seatNum+'號</div>'
+    // 顏色比照本機法官助手的 BADGE 對照表——民是綠色（bv）、狼隊固定紅色（bw），每個神職
+    // 各自有自己的顏色（bs 預言家/通靈師、bwt 女巫/黑市商人、bh 獵人、bg2 守衛...），不是
+    // 只靠死活分紅綠兩色；死亡的人再疊加灰底＋一個骷髏圖案（用畫的圖案，不是 emoji），
+    // 避免灰底在有些螢幕上不夠明顯看不出來已經出局。
+    const badgeCls=(role&&typeof BADGE!=='undefined'&&BADGE[role])||'bv';
+    const deadMark=p.alive===false?jgRoomDeadSkullSvg():'';
+    return '<div class="pcell'+(p.alive===false?' dead':'')+'"><div class="pnum">'+p.seatNum+'號'+deadMark+'</div>'
       +'<div class="pname">'+p.name+'</div>'
-      +'<div class="prole"><span class="badge '+(p.alive===false?'bw':'bv')+'">'+roleName+'</span></div></div>';
+      +'<div class="prole"><span class="badge '+badgeCls+'">'+roleName+'</span></div></div>';
   }).join('');
 
   // ── 文字紀錄：比照本機法官助手的匯出格式（**夜晚Nst / --行動 / **警長競選 / **白天Nst /
@@ -2971,7 +3049,7 @@ async function jgRoomRenderGameOverPhase(){
       <button style="flex:1;" onclick="jgRoomShowExportModal()">匯出文字紀錄</button>
       <button style="flex:1;" onclick="jgRoomSubmitToPlaydata()">送出到遊玩數據</button>
     </div>
-    <div class="section-title" style="margin-top:16px;">玩家狀態（完整身分）</div>
+    <div class="section-title" style="margin-top:16px;">玩家身分</div>
     <div class="pgrid">${pgridHtml}</div>
     <div class="section-title" style="margin-top:16px;">文字紀錄</div>
     <div class="godlog">${logHtml}</div>
@@ -4312,6 +4390,7 @@ window.jgRoomLeave=function(){
   jgMyRole=null; jgMySeatNum=null; jgRoomLatestPlayers=[]; jgRoomLatestRoomDoc=null;
   jgRoomLatestVotes=[]; jgRoomGodViewOn=false; jgRoomLatestChatMsgs=[]; jgRoomChatExpanded=false;
   jgRoomSpeechOrderAutoTriedNight=null;
+  jgRoomVoiceDayAnnouncedNight=null; jgRoomVoiceSheriffAnnouncedNight=null;
   try{ localStorage.removeItem('jgLastRoomCode'); }catch(e){}
   jgRoomRenderEntry();
 };
