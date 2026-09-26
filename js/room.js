@@ -1145,13 +1145,15 @@ async function jgRoomApplyCupidCascade(){
 // 不會影響其餘板子原本「勝負由法官／房主自己看場上情況宣布」的既有行為。
 const JG_ROOM_WIN_CHECK_SUPPORTED_ROLES=new Set([
   'villager','wolf','wolfking','seer','witch','hunter','guard',
-  'mechanicalwolf','medium','dreamcatcher','nightmare'
+  'mechanicalwolf','medium','dreamcatcher','nightmare',
+  'blackmarket','wolfbrother_e','wolfbrother_y'
 ]);
 function jgRoomAllGodsForWin(){
-  // 跟本機法官助手 jgAllGodsForWin() 一樣的「屠神」神職清單，這裡先只列出這兩個支援板子
-  // 可能出現的神職（seer/witch/hunter/guard/dreamcatcher/medium），其餘神職角色一律不在
-  // JG_ROOM_WIN_CHECK_SUPPORTED_ROLES 裡，根本不會走到這裡。
-  return ['seer','witch','hunter','guard','dreamcatcher','medium'];
+  // 跟本機法官助手 jgAllGodsForWin() 一樣的「屠神」神職清單，這裡先只列出這些支援板子
+  // 可能出現的神職（seer/witch/hunter/guard/dreamcatcher/medium/blackmarket），其餘神職
+  // 角色一律不在 JG_ROOM_WIN_CHECK_SUPPORTED_ROLES 裡，根本不會走到這裡——狼兄狼弟是
+  // 狼隊，不算「神職」，不放進這份清單（跟本機法官助手 jgAllGodsForWin() 一致）。
+  return ['seer','witch','hunter','guard','dreamcatcher','medium','blackmarket'];
 }
 async function jgRoomComputeWinCheck(){
   const db=window.jgFirebaseDb;
@@ -1175,7 +1177,9 @@ async function jgRoomComputeWinCheck(){
     // 還活著、進而影響勝負判定。
     const fresh=pSnap.exists()?pSnap.data():null;
     const alive=fresh?(fresh.alive!==false):(p.alive!==false);
-    players.push({ uid:p.uid, alive, witchSaveUsed: fresh?fresh.witchSaveUsed:p.witchSaveUsed, witchPoisonUsed: fresh?fresh.witchPoisonUsed:p.witchPoisonUsed });
+    players.push({ uid:p.uid, alive,
+      witchSaveUsed: fresh?fresh.witchSaveUsed:p.witchSaveUsed, witchPoisonUsed: fresh?fresh.witchPoisonUsed:p.witchPoisonUsed,
+      luckyOneSkill: fresh?fresh.luckyOneSkill:p.luckyOneSkill, luckyOneWitchUsed: fresh?fresh.luckyOneWitchUsed:p.luckyOneWitchUsed });
   }
   const alive=players.filter(p=>p.alive!==false);
   const isWolf=(p)=>typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(roleByUid[p.uid]);
@@ -1188,6 +1192,10 @@ async function jgRoomComputeWinCheck(){
       const r=roleByUid[p.uid];
       if(r==='witch') return !p.witchSaveUsed||!p.witchPoisonUsed;
       if(r==='dreamcatcher') return true;
+      // 黑市商人交易出來、拿到女巫毒藥技能的幸運兒，只要毒藥還沒用掉，一樣算「還有翻盤
+      // 機會」——跟真女巫的判斷邏輯一致，不能因為他底層角色只是平民/其他角色，就漏算
+      // 這個還握在手上的反殺機會。
+      if(p.luckyOneSkill==='witch') return !p.luckyOneWitchUsed;
       return false;
     });
     if(hasComebackThreat){
@@ -1328,13 +1336,21 @@ async function jgRoomVoiceMaybeNarrate(rd){
     // 「天黑請閉眼」開始，不用去接上一夜最後一個步驟的角色。
     const prevRoleName=(jgRoomVoiceState.night===night)?JG_ROOM_STEP_ROLE_NAME[jgRoomVoiceState.step]:null;
     const roleName=step?JG_ROOM_STEP_ROLE_NAME[step]:null;
+    // 黑市商人「真的談成一筆交易」（不管對象是好人成功、還是踩到狼人失敗，只要不是單純
+    // 跳過不交易）離開這一步時，要插一句掩護台詞——跟本機法官助手「幸運兒走一圈」的精神
+    // 一樣：不管交易成功與否都講同一句話，避免玩家從「有沒有講這句話」猜出交易結果，
+    // 只是連線房間不用真的睜眼查看，改成「白天會在自己手機上顯示」。單純跳過不交易的
+    // 夜晚不會設定 blackmarketTradeNight，這裡不會誤講。
+    const bmAnnounce=(jgRoomVoiceState.step==='blackmarket'&&jgRoomVoiceState.night===night&&rd.blackmarketTradeNight===night)
+      ?'幸運兒將在白天時於頁面顯示你是幸運兒即你獲得的技能，請小心不要讓別人看到。'
+      :'';
     let text=null;
     if(jgRoomVoiceState.night!==night){
       text=roleName?('天黑請閉眼，'+roleName+'請睜眼。'):null;
     } else if(prevRoleName&&roleName){
-      text=prevRoleName+'請閉眼，'+roleName+'請睜眼。';
+      text=prevRoleName+'請閉眼。'+bmAnnounce+roleName+'請睜眼。';
     } else if(prevRoleName&&!roleName){
-      text=prevRoleName+'請閉眼，這一夜已經結束。';
+      text=prevRoleName+'請閉眼。'+bmAnnounce+'這一夜已經結束。';
     } else if(roleName){
       text=roleName+'請睜眼。';
     }
@@ -2144,10 +2160,10 @@ window.jgRoomHostStartSheriffVote=async function(){
 
 // ── 投票通用元件：candidateUids 是可以被投的對象，excludeUids 是「不能投票」的人
 //    （例如警長選舉時候選人自己不能投）。votingRound 每開一輪投票就 +1，避免舊票混進
-//    新一輪的統計裡。原本只給 5 秒倒數，根本來不及討論/點按鈕就結束，改成 45 秒；時間到
-//    不管有沒有投都強制看到結果畫面（沒投＝棄票，這裡不用另外寫一筆「棄票」紀錄，票數
-//    統計本來就只算有投的人，沒投的人自然不會被算進去）。
-const JG_ROOM_VOTE_DURATION_MS=45000;
+//    新一輪的統計裡。倒數10秒，時間到不管有沒有投都強制看到結果畫面並鎖定按鈕（沒投＝
+//    棄票，這裡不用另外寫一筆「棄票」紀錄，票數統計本來就只算有投的人，沒投的人自然不會
+//    被算進去）。
+const JG_ROOM_VOTE_DURATION_MS=10000;
 window.jgRoomStartVoting=async function(type, candidateUids, excludeUids, script){
   const db=window.jgFirebaseDb;
   const candidates=candidateUids.map(uid=>{
@@ -2403,6 +2419,13 @@ window.jgRoomFinishDayVoteLastWordsBtn=async function(){
   if(!confirm('確定遺言發表完畢，準備天黑了嗎？')) return;
   await jgRoomFinishDayVoteLastWords();
 };
+// 幸運兒白天私下確認自己中獎——只寫自己的旗標，不影響任何共享狀態，按完直接照常渲染
+// 這一輪原本該顯示的畫面（開槍/警徽/遺言/白天發言……）。
+window.jgRoomAckLuckyOneReveal=async function(){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ luckyOneRevealSeen:true },{ merge:true });
+  jgRoomRenderCurrentPhase();
+};
 
 // ── 白天：第一夜結束後先讓警長決定發言方向（若有警長），接著是發言＋投票放逐——發言階段
 //    這一版不追蹤每個人是誰在發言，只給一個「大家都發言完了」的按鈕讓房主按下去開始投票
@@ -2418,7 +2441,23 @@ async function jgRoomRenderDayOpen(){
   const iAmSheriff=jgMySeatNum&&winnerSeatNum&&jgMySeatNum===winnerSeatNum;
   const pendingShoot=rd.pendingShootUids||[];
   let bodyHtml, needsTimer=false, timerSeconds=20, timerCb=null;
-  if(pendingShoot.length&&rd.pendingShootContext==='day'){
+  const meForLucky=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  if(meForLucky&&meForLucky.luckyOneSkill&&meForLucky.luckyOneGrantedNight!=null&&!meForLucky.luckyOneRevealSeen){
+    // 黑市商人交易成功那晚不會立刻告訴他自己中獎，比照本機法官助手「不管交易成功與否，
+    // 晚上都走同一套掩護動作」的精神——連線房間改成「白天自己手機上私下顯示」，只有這
+    // 支手機自己看得到，其他人畫面完全看不出差異。放在這個 render 函式最前面（優先度比
+    // 開槍/警徽/遺言都高），但只是一次性的「知道了」按鈕，按完會照常往下渲染真正該顯示
+    // 的畫面，不會真的卡住任何共享流程。
+    const skillLabel={seer:'預言家查驗',witch:'女巫毒藥',hunter:'獵人獵槍'}[meForLucky.luckyOneSkill]||meForLucky.luckyOneSkill;
+    const passiveNote=meForLucky.luckyOneSkill==='hunter'
+      ?'這是被動能力：之後如果被淘汰（夜裡被刀死或白天被投票出局），會自動跳出開槍畫面讓你選要不要帶人。'
+      :'技能會在之後的女巫／預言家步驟自動開放給你操作。';
+    bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">🍀</div><h1>你是幸運兒</h1></div>'
+      +'<p class="sub" style="text-align:center;margin-top:8px;">你獲得的技能：'+skillLabel+'</p>'
+      +'<div class="info-warn" style="margin-top:10px;text-align:center;">請小心不要讓別人看到這個畫面</div>'
+      +'<div class="info" style="font-size:12px;margin-top:10px;text-align:center;">'+passiveNote+'</div>'
+      +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomAckLuckyOneReveal()">知道了 →</button></div>';
+  } else if(pendingShoot.length&&rd.pendingShootContext==='day'){
     if(pendingShoot.includes(window.jgFirebaseUid)){
       const night=rd.night||1;
       const r=await jgRoomShootViewHtml(night);
@@ -2557,7 +2596,7 @@ window.jgRoomHostSpinSpeechOrder=async function(){
 window.jgRoomHostStartDayVote=async function(){
   const aliveUids=jgRoomLatestPlayers.filter(p=>p.alive!==false).map(p=>p.uid);
   if(aliveUids.length<2){ alert('存活人數不足，無法投票'); return; }
-  await jgRoomStartVoting('day', aliveUids, [], '請投票，準備放逐一位玩家');
+  await jgRoomStartVoting('day', aliveUids, [], '都發言完畢，準備投票，3、2、1請投票');
 };
 
 // ══════════════════════════════════════════
@@ -3913,14 +3952,16 @@ window.jgRoomBlackmarketTrade=async function(skill, night){
   if(isWolf){
     await setDoc(doc(db,'rooms',jgRoomCode),{
       blackmarketFailUid:window.jgFirebaseUid, blackmarketFailNight:night,
-      blackmarketPendingUid:null, blackmarketPendingSeatNum:null, blackmarketDoneNight:night
+      blackmarketPendingUid:null, blackmarketPendingSeatNum:null, blackmarketDoneNight:night,
+      blackmarketTradeNight:night
     },{ merge:true });
   } else {
     await setDoc(doc(db,'rooms',jgRoomCode,'players',targetUid),{
       luckyOneSkill:skill, luckyOneGrantedNight:night
     },{ merge:true });
     await setDoc(doc(db,'rooms',jgRoomCode),{
-      blackmarketPendingUid:null, blackmarketPendingSeatNum:null, blackmarketDoneNight:night
+      blackmarketPendingUid:null, blackmarketPendingSeatNum:null, blackmarketDoneNight:night,
+      blackmarketTradeNight:night
     },{ merge:true });
   }
   await jgRoomAppendNightLog(night, '易 '+targetSeatNum+(skillAbbr?'('+skillAbbr+')':''));
