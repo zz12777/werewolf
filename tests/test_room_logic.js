@@ -68,7 +68,7 @@ function loadRoomLogicForGodView() {
     + 'function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}\n'
     + 'module.exports={jgRoomRenderGodView,jgRoomMechWolfViewHtml,jgRoomMechWolfKillEligible,jgRoomMechWolfLearn,'
     + 'jgRoomWolfViewHtml,jgRoomWolfPropose,jgRoomWitchSave,jgRoomWitchPoison,jgRoomWitchSkip,jgRoomSeerCheck,'
-    + 'jgRoomMediumCheck,jgRoomResolveNightDeaths,jgRoomCaptureDeathLine,jgRoomHostSpinSpeechOrder,'
+    + 'jgRoomMediumCheck,jgRoomResolveNightDeaths,jgRoomCaptureDeathLine,jgRoomAutoSpinSpeechOrder,'
     + 'jgRoomGuardActFromGrid,jgRoomSubmitCheckFromGrid,jgRoomGuardAct,jgRoomRenderNightShell,'
     + 'jgRoomAdvanceToDayPhase,jgRoomJoinSheriff,jgRoomLockSheriffJoin,jgRoomRenderSheriffCampaign,jgRoomWolfConfirm,'
     + 'jgRoomAssignRoles,jgRoomThiefChoose,jgRoomThiefViewHtml,jgRoomNextNightStep,jgRoomStepPresent,jgRoomCupidPickFirst,jgRoomCupidConfirmPair,jgRoomDealAssignRoles,'
@@ -427,7 +427,9 @@ async function runGodViewTest(){
   await mod.jgRoomRenderGodView();
   const html=fakeRoot.innerHTML;
   check('包含玩家狀態格子(1號)', html.includes('1號')&&html.includes('Alice'));
-  check('包含已出局標記', html.includes('（已出局）'));
+  // 已出局現在改成用 pcell 的 dead 樣式（灰底＋骷髏圖案）表示，不再顯示「（已出局）」文字
+  // ——驗證死亡的 Carol（3號）那格真的套上了 dead 這個 class。
+  check('死亡玩家格子套用 dead 樣式', /<div class="pcell dead">[^<]*<div class="pnum">3號/.test(html));
   check('包含夜晚1st標頭', html.includes('**夜晚1st'));
   check('包含夜晚行動內容(守 1)', html.includes('--守 1'));
   check('包含刀的紀錄(刀 3)', html.includes('--刀 3'));
@@ -785,7 +787,7 @@ async function runSpeechOrderTest(){
     'rooms/ROOMS1/dayLog/1':{ deathLine:'3號死亡' },
   };
   mod.__setRoomDoc(global.__mockDocs['rooms/ROOMS1']);
-  await mod.jgRoomHostSpinSpeechOrder();
+  await mod.jgRoomAutoSpinSpeechOrder(1);
   const r1=global.__mockDocs['rooms/ROOMS1']||{};
   check('有人死亡：起點固定是死者的下一位活人（3號死亡、順時針→4號）', r1.daySpeechStart, 4);
   check('方向已經定過了，抽籤不會改變方向', r1.daySpeechDir, '順');
@@ -797,7 +799,7 @@ async function runSpeechOrderTest(){
     'rooms/ROOMS1':{ night:2, daySpeechDir:'順' },
     'rooms/ROOMS1/dayLog/2':{ deathLine:'平安夜' },
   };
-  await mod.jgRoomHostSpinSpeechOrder();
+  await mod.jgRoomAutoSpinSpeechOrder(2);
   const r2=global.__mockDocs['rooms/ROOMS1']||{};
   check('平安夜：抽到的起點是活人座位', [1,4,5,6].includes(r2.daySpeechStart), true);
   check('平安夜：方向依然沒有被改掉', r2.daySpeechDir, '順');

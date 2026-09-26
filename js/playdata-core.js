@@ -471,7 +471,7 @@ function pdRebuildAndRender(){
       // 太細碎；每局紀錄仍然用 roleDisp，保留括號內的具體資訊。
       const roleTally=roleDisp.replace(/\(.*?\)/,'');
       p.roleCounts[roleTally]=(p.roleCounts[roleTally]||0)+1;
-      p.history.push({date:g.date,label:g.id,board:g.board,role:roleDisp,result,resultText:g.resultText,pointsDynamic,pointsLocked,camp,isMvp:!!(mvpNum&&String(pl.num)===String(mvpNum))});
+      p.history.push({date:g.date,time:g.time,label:g.id,board:g.board,role:roleDisp,result,resultText:g.resultText,pointsDynamic,pointsLocked,camp,isMvp:!!(mvpNum&&String(pl.num)===String(mvpNum))});
     });
   });
   const boardCounts={};
@@ -564,7 +564,7 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
   // 只是統一放到排行榜最下面、不給正式名次，避免灌水的高勝率誤導大家。
   const pdOrderedList=[...pdRankedList, ...pdUnrankedList];
   const lb=document.getElementById('leaderboard');
-  lb.innerHTML=pdOrderedList.map((p,i)=>{
+  const pdRowsHtml=pdOrderedList.map((p,i)=>{
     const isRanked=i<pdRankedList.length;
     const wr=p.games?Math.round(p.wins/p.games*100):0;
     const bayesPct=Math.round(p.bayesScore*100);
@@ -572,7 +572,17 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
     const scoreVal=PD_SORT_MODE==='points'?(Math.round(p.points*10)/10+' 分'):(p.games?(PD_SORT_MODE==='bayes'?bayesPct+'%':wr+'%'):'–');
     const topRoles=Object.entries(p.roleCounts).sort((a,b)=>b[1]-a[1])
       .map(([r,c])=>`<span class="chip">${r} ×${c}</span>`).join('');
-    const histSorted=[...p.history].sort((a,b)=> a.date<b.date?1:(a.date>b.date?-1:0));
+    // 同一天玩好幾場時，只靠日期沒辦法分先後，一定要再比時間——場次 id（例如
+    // 0924_1／0924_2）只是紀錄輸入的順序，不代表真的先後（例如 0730_1 時間是21:16、
+    // 0730_2 反而是10:56，id 數字比實際時間還新），連勝標籤（往回數最新那幾場是不是連贏）
+    // 全靠這個排序準不準，排錯就會把「其實是當天最後一場、剛輸掉」的紀錄排到中間，
+    // 誤判成後面接了一場連勝。有時間資料的才拿來比，沒有時間資料的維持原本順序（沒辦法
+    // 判斷、也不要亂猜）。
+    const histSorted=[...p.history].sort((a,b)=>{
+      if(a.date!==b.date) return a.date<b.date?1:-1;
+      if(a.time&&b.time&&a.time!==b.time) return a.time<b.time?1:-1;
+      return 0;
+    });
     // 連勝標籤：從最新一場開始往回數，遇到不是「贏」（含輸、和局）就停，>=3 連勝才顯示，
     // 不用點進戰績明細也能一眼看出誰手感正熱——只看「贏／不是贏」，第三方獲勝也算贏。
     let pdWinStreak=0;
@@ -588,9 +598,7 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
       const mvpTag=h.isMvp?'<span class="chip mvp" style="padding:1px 6px;font-size:11px;margin-left:4px;background:rgba(154,124,40,0.16);color:var(--gold);">⭐ MVP</span>':'';
       return `<div class="hist-item"><span class="hist-res ${cls}"${title}>${mark}</span><span class="hist-role">${h.role}</span>${thirdTag}${mvpTag}<span>${h.board}</span><span class="hist-date">${pdDisplayDateShort(h.date)}</span></div>`;
     }).join('');
-    const divider=(!isRanked&&i===pdRankedList.length)
-      ?`<div class="pd-unranked-divider">⬇ 以下玩家遊玩場數未達門檻，僅供參考、不列入正式排名</div>`:'';
-    return `${divider}
+    return `
     <div class="row${isRanked?'':' unranked'}" onclick="pdToggleDetail(${i})">
       <div class="rank"${isRanked?'':' title="場數未達門檻，不列入排名"'}>${isRanked?(i+1):'－'}</div>
       <div class="av">${p.name.slice(0,1)}</div>
@@ -615,7 +623,15 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
       ${(PD_SHOW_TREND_CHART&&isRanked)?pdPlayerTrendSectionHtml(p.name):''}
       <div class="hist">${histHtml}</div>
     </div>`;
-  }).join('');
+  });
+  // 未達門檻的玩家整段包進可以收合的 <details>，預設收合——這些人資料仍然都在（點開就看得
+  // 到），只是不佔一直展開的版面。收合三角形用純文字符號（跟這個檔案其餘展開箭頭同一個
+  // 符號），不用 emoji。
+  const pdRankedHtml=pdRowsHtml.slice(0, pdRankedList.length).join('');
+  const pdUnrankedHtml=pdRowsHtml.slice(pdRankedList.length).join('');
+  lb.innerHTML=pdRankedHtml+(pdUnrankedHtml
+    ?`<details class="pd-unranked-details"><summary>以下玩家遊玩場數未達門檻，僅供參考、不列入正式排名</summary>${pdUnrankedHtml}</details>`
+    :'');
 
   // ── 篩選器（重建選項，保留 change 監聽器） ──
   const fPlayerEl=document.getElementById('f-player');
