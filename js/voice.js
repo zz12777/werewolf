@@ -16,7 +16,7 @@ import { Room, RoomEvent } from 'https://cdn.jsdelivr.net/npm/livekit-client@2.2
 
 // TODO(部署時必改)：換成你自己的 Vercel 專案網址（Vercel 專案頁面最上面那個網址，後面
 // 加 /api）。這個常數只是一個網址，不是金鑰，可以安心留在程式碼裡、commit 進 GitHub。
-const JG_VOICE_API_BASE = 'https://YOUR-VERCEL-PROJECT.vercel.app/api';
+const JG_VOICE_API_BASE = 'https://werewolf-aqn450f2k-werewolf5.vercel.app/api';
 
 let jgVoiceRoom=null;          // LiveKit 的 Room 物件，還沒加入通話時是 null
 let jgVoiceMicOn=false;        // 我自己的麥克風目前是不是開著
