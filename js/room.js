@@ -576,9 +576,21 @@ window.jgRoomSetIdentityButtonVisible=function(visible){
   const btn=document.getElementById('jg-room-myid-btn');
   if(btn) btn.style.display=visible?'block':'none';
 };
+// 機械狼學到技能之後，這裡（跟玩家狀態格子、上帝視角）都要比照本機法官助手
+// jgRoleDisplayName() 的規則，顯示「機械」＋學到的角色（例如機械民、機械女巫），而不是
+// 一直顯示沒有資訊量的「機械狼」——學到的角色存在 players/{uid}.mechWolfLearnedRole
+// （見 jgRoomMechWolfLearn），不是存在 secrets，所以 jgRoomLatestPlayers 裡就查得到，
+// 不用另外讀資料庫。
+function jgRoomDisplayRoleName(role, mechWolfLearnedRole){
+  if(!role) return null;
+  const plain=(typeof RNAME!=='undefined'&&RNAME[role])||role;
+  if(role!=='mechanicalwolf'||!mechWolfLearnedRole) return plain;
+  return (typeof jgMechDisplayLabel==='function')?jgMechDisplayLabel(mechWolfLearnedRole):plain;
+}
 window.jgRoomShowMyIdentity=function(){
   if(!jgMySeatNum){ alert('還沒有座位資料（可能還在大廳，尚未分配身分）'); return; }
-  const roleName=jgMyRole?((typeof RNAME!=='undefined'&&RNAME[jgMyRole])||jgMyRole):'（尚未分配身分）';
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  const roleName=jgMyRole?jgRoomDisplayRoleName(jgMyRole, me&&me.mechWolfLearnedRole):'（尚未分配身分）';
   jgRoomShowBigCard(jgMySeatNum+'號', roleName);
 };
 
@@ -625,6 +637,10 @@ async function jgRoomEnterLobby(code){
     // 道理，不能被 suppressAutoRender 卡住。
     jgRoomVoiceMaybeNarrate(jgRoomLatestRoomDoc);
     jgRoomUpdateChatVisibility();
+    // 通知 js/voice.js 房間狀態（含 currentStep）可能變了，讓它重新判斷現在是不是狼隊
+    // 出刀商議時間、要不要把語音通話裡的狼隊商議聲音隔離起來——理由跟上面兩行一樣，
+    // 不能被 suppressAutoRender 卡住。
+    if(window.jgVoiceOnRoomStepChange) window.jgVoiceOnRoomStepChange();
     // 有些操作（例如狼隊出刀：寫目標→記文字紀錄→進黑市商人／女巫回合→…）背後其實是好幾筆
     // 連續的資料庫寫入，不是像機械狼學習那樣一次寫完。每一筆寫入都會讓這個監聽器再觸發
     // 一次、整個畫面重畫一次——如果剛好使用者還在同一個選人畫面上（例如另一隻狼隊友的
@@ -666,6 +682,9 @@ async function jgRoomRenderCurrentPhase(){
     await jgRoomRenderGameOverPhase();
     return;
   }
+  // 已經在上帝視角裡的人，如果天黑了（或輪到自己發表遺言）就強制退出、回到正常畫面——
+  // 不能讓人掛在上帝視角上跨夜偷看，等於變相在夜晚洩漏場上真實身分。
+  if(jgRoomGodViewOn&&!jgRoomGodViewAllowedNow()) jgRoomGodViewOn=false;
   if(jgRoomGodViewOn){
     await jgRoomRenderGodView();
     return;
@@ -696,13 +715,23 @@ async function jgRoomRenderCurrentPhase(){
   jgRoomUpdateVoiceToggleButton();
   jgRoomAppendPlayerStatusFooter();
 }
-// 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——不管現在房間進行到哪個畫面都會出現
-// （只要玩家自己的 alive 是 false），活著的玩家完全看不到這個按鈕。
+// 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——但要等到白天正式宣布死訊（含輪到自己
+// 發表遺言的話，要先講完）才能進去，不能在夜晚（phase==='night'）或警長競選（第一夜死訊
+// 還沒公布，見 jgRoomAdvanceToDayPhase：先抽籤定生死才進競選，警長競選結束才輪到白天
+// 公告死訊）就先偷看上帝視角——不然剛死的人會在其他玩家還沒收到死訊公告前，就已經透過
+// 語音通話等管道把場上真實身分洩漏出去，等於變相作弊。
+function jgRoomGodViewAllowedNow(){
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  if(!me||me.alive!==false) return false;
+  const rd=jgRoomLatestRoomDoc||{};
+  if(rd.phase==='night'||rd.phase==='sheriff') return false;
+  if(rd.dayVoteLastWordsUid===me.uid) return false; // 自己還沒發表遺言
+  return true;
+}
 function jgRoomAppendGodViewToggle(){
   const root=document.getElementById('jg-room-content');
   if(!root) return;
-  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
-  if(me&&me.alive===false){
+  if(jgRoomGodViewAllowedNow()){
     root.insertAdjacentHTML('beforeend','<button style="margin-top:20px;" onclick="jgRoomToggleGodView()">進入上帝視角</button>');
   }
 }
@@ -769,6 +798,7 @@ window.jgRoomAssignRoles=async function(){
   }
   await setDoc(doc(db,'rooms',jgRoomCode),Object.assign({ status:'role-assigned', phase:'lobby' },extra),{ merge:true });
   await jgRoomResetChat();
+  jgRoomSpeechOrderAutoTriedNight=null;
 };
 
 // ── 房主開始遊戲：進入第一夜。完整順序（跟本機法官助手 jgAfterXStep 那一串固定順序的
@@ -1438,7 +1468,7 @@ function jgRoomAppendChatWidget(){
     +'<input id="jg-room-chat-input" type="text" maxlength="200" placeholder="輸入訊息…" style="flex:1;border:none;padding:8px;font-size:12.5px;background:transparent;min-width:0;">'
     +'<button style="width:auto;margin:0;padding:8px 12px;border:none;border-radius:0;" onclick="jgRoomSendChat()">送出</button>'
     +'</div></div>'
-    +'<button id="jg-room-chat-toggle" onclick="jgRoomToggleChatExpand()" style="width:auto;margin:0;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);box-shadow:0 1px 6px rgba(0,0,0,0.15);cursor:pointer;">💬 聊天</button>';
+    +'<button id="jg-room-chat-toggle" onclick="jgRoomToggleChatExpand()" style="width:auto;margin:0;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);box-shadow:0 1px 6px rgba(0,0,0,0.15);cursor:pointer;">聊天</button>';
   document.body.appendChild(wrap);
   const input=document.getElementById('jg-room-chat-input');
   if(input) input.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter') window.jgRoomSendChat(); });
@@ -1887,6 +1917,28 @@ async function jgRoomGetWolfUids(){
     return !p||p.alive!==false; // 找不到玩家資料時保守當作還活著，不要誤判卡住
   }).map(d=>d.id);
 }
+// 給 js/voice.js（語音通話）判斷「狼隊出刀商議時，這個人算不算聽得到聲音的見面狼」用——
+// 這份名單跟上面 jgRoomGetWolfUids()（出刀確認投票用的名單）刻意不是同一份：使用者
+// 明確指定語音上「聽得到」跟「參與出刀確認」是兩種不同的分類，例如夢魘不參與出刀確認
+// 投票，但語音上要聽得到狼隊商議；狼弟在正式覺醒、加入狼隊之前完全不跟狼隊一起商議，
+// 語音上永遠聽不到（不像出刀名單那樣覺醒後才加入）。目前 WOLF_ROLES 裡還有 mask／
+// bigmechwolf／smallmechwolf／trickster 這幾個房間系統還沒實作、使用者也沒有指定的
+// 角色，先保守歸類為「聽不到」，之後如果房間系統支援這些角色、使用者也確認了聽覺分類，
+// 再加進來即可。
+const JG_ROOM_VOICE_FACE_WOLF_ROLES=new Set([
+  'wolf','wolfking','whitewolf','nightmare','wolfbrother_e',
+  'bloodmoon','evilknight','wolfbeauty','wolfshaman','bigbadwolf'
+]);
+window.jgRoomGetFaceWolfUidsAsync=async function(){
+  const db=window.jgFirebaseDb;
+  const { getDocs } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+  const secretsSnap=await getDocs(collection(db,'rooms',jgRoomCode,'secrets'));
+  return secretsSnap.docs.filter(d=>JG_ROOM_VOICE_FACE_WOLF_ROLES.has(d.data().role)).map(d=>d.id);
+};
+window.jgRoomIsNightWolfStepNow=function(){
+  const rd=jgRoomLatestRoomDoc||{};
+  return rd.phase==='night'&&rd.currentStep==='wolf';
+};
 // 機械狼獨自帶刀的條件：其餘「真正跟狼隊一起睜眼」的隊友（jgRoomGetWolfUids 排除掉機械狼
 // 自己跟夢魘之後剩下的那些人）全部死亡——跟本機法官助手 jgMechWolf2KillEligible／
 // jgAfterGargoyleStep 系列判斷同一套邏輯的房間版本。
@@ -1911,8 +1963,10 @@ async function jgRoomBlackmarketUsed(){
   return !!(p&&p.blackmarketUsed);
 }
 
-// ── 狼隊出刀畫面：任何一位狼隊友選定目標並按下確認，就是最終決定，不用等其他隊友
-//    （跟其他單人技能是同一種互動方式）。──
+// ── 狼隊出刀畫面：只有一隻見面狼時，選定並確認就是最終決定；不只一隻見面狼時，任何一位
+//    先提議一個目標，其餘隊友的畫面會看到「已確認 X/Y 人」，各自按確認表態，全員確認完
+//    才真的結算、往下一步（見下面 jgRoomWolfPropose／jgRoomWolfConfirm／jgRoomWolfFinalize
+//    這一串）。──
 let jgRoomWolfFinalizing=false; // 避免「全員到齊」的結算邏輯被同時觸發兩次（見下方註解）
 // 「一次操作背後有好幾筆連續寫入」的函式（狼隊出刀是目前最明顯的例子）用這個旗標暫時
 // 請即時監聽器不要跟著每一筆中間寫入重畫畫面（見 jgRoomEnterLobby 裡監聽器的說明），
@@ -2643,14 +2697,17 @@ async function jgRoomRenderDayOpen(){
     const dayLogSnap=await getDoc(doc(db,'rooms',jgRoomCode,'dayLog',String(night)));
     const nightMsg=dayLogSnap.exists()?('昨晚 '+dayLogSnap.data().deathLine):'（死訊結算中...）';
     // 發言順序：daySpeechStart 每天都要重新決定（有人死亡就固定從死者下一位活人開始，
-    // 平安夜才隨機抽起點；方向一旦決定過，整局都不會再變，見 jgRoomHostSpinSpeechOrder
+    // 平安夜才隨機抽起點；方向一旦決定過，整局都不會再變，見 jgRoomAutoSpinSpeechOrder
     // 的說明）——這裡只有第一天、剛好有選出警長時才會直接有值（警長競選那邊會問要往
-    // 左還右發言，見 jgRoomSheriffPickDirection），其餘情況都要靠房主按「抽籤」才會有值。
+    // 左還右發言，見 jgRoomSheriffPickDirection）。其餘情況原本要靠房主按「抽籤」按鈕，
+    // 但房主如果剛好死亡、切進上帝視角就按不到這顆按鈕，會卡住整個流程——改成任何一支
+    // 裝置畫面渲染到這裡、發現還沒抽籤，就自動觸發一次（jgRoomAutoSpinSpeechOrder 內部
+    // 會重新讀一次最新資料庫狀態確認「真的還沒人抽過」才寫入，好幾支手機同時觸發也不會
+    // 抽兩次、互相蓋掉）,不用等房主，也不用房主還活著。
     const speechHtml=rd.daySpeechStart
       ?'<p class="sub" style="text-align:center;margin-top:8px;">從 '+rd.daySpeechStart+'號 開始，'+dirLabel+'發言</p>'
-      :(jgRoomIsHost
-        ?'<div style="text-align:center;margin-top:10px;"><button onclick="jgRoomHostSpinSpeechOrder()" style="width:auto;display:inline-block;padding:10px 18px;">抽籤決定發言順序</button></div>'
-        :'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請等待房主抽籤決定發言順序</div>');
+      :'<p class="sub" style="text-align:center;margin-top:8px;">抽籤決定發言順序中…</p>';
+    if(!rd.daySpeechStart) jgRoomAutoSpinSpeechOrder(night);
     bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">☀️</div><h1>白天開始</h1>'
       +'<p class="sub" style="text-align:center;margin-top:8px;">'+nightMsg+'</p></div>'
       +speechHtml
@@ -2685,16 +2742,25 @@ window.jgRoomSheriffPickDirection=async function(startSeatNum, dir){
     sheriffPhase:null, daySpeechStart:startSeatNum, daySpeechDir:dir
   },{ merge:true });
 };
-// 房主抽籤決定「今天從幾號開始發言」——跟本機法官助手 jgSpinWheel／jgSpinDirectionOnly
+// 自動抽籤決定「今天從幾號開始發言」——跟本機法官助手 jgSpinWheel／jgSpinDirectionOnly
 // 同一套規則：方向（順/逆）整局只會決定一次，決定過就不會再變，之後每天只重新抽起點；
 // 如果昨晚有人死亡，起點不是隨機的，是固定從「死者的下一個活人」（照已經定好的方向）
 // 開始——沒有死人的平安夜才會連起點一起隨機抽。這裡不做本機那種逐格跳動的抽籤動畫
-// （連線房間是好幾支手機同步看同一個結果，不是單一台裝置在演戲給大家看），房主按一下
-// 直接寫入最終結果，全部人的畫面會透過即時監聽器一起看到。
-window.jgRoomHostSpinSpeechOrder=async function(){
+// （連線房間是好幾支手機同步看同一個結果，不是單一台裝置在演戲給大家看），計算完直接
+// 寫入最終結果，全部人的畫面會透過即時監聽器一起看到。
+// 原本這是房主專用的手動按鈕，但房主如果剛好死亡、切去上帝視角就按不到，會卡住整個
+// 流程——改成任何一支裝置畫面渲染到「還沒抽籤」的白天開場畫面，就自動觸發一次；
+// jgRoomSpeechOrderAutoTriedNight 這個模組層級變數只是「同一支裝置不用每次重畫都重新
+// 讀一次資料庫」的節流，真正防止「好幾支手機同時觸發、抽兩次互相蓋掉」的是函式一開頭
+// 那次重新讀取資料庫最新狀態、確認 daySpeechStart 真的還是空的才繼續算下去。
+let jgRoomSpeechOrderAutoTriedNight=null;
+async function jgRoomAutoSpinSpeechOrder(night){
+  if(jgRoomSpeechOrderAutoTriedNight===night) return;
+  jgRoomSpeechOrderAutoTriedNight=night;
   const db=window.jgFirebaseDb;
-  const rd=jgRoomLatestRoomDoc||{};
-  const night=rd.night||1;
+  const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const rd=freshSnap.exists()?freshSnap.data():{};
+  if(rd.daySpeechStart) return; // 已經有其他裝置搶先抽過了
   const alive=jgRoomLatestPlayers.filter(p=>p.alive!==false);
   if(!alive.length) return;
   const dayLogSnap=await getDoc(doc(db,'rooms',jgRoomCode,'dayLog',String(night)));
@@ -2720,7 +2786,7 @@ window.jgRoomHostSpinSpeechOrder=async function(){
     start=pool[Math.floor(Math.random()*pool.length)];
   }
   await setDoc(doc(db,'rooms',jgRoomCode),{ daySpeechStart:start, daySpeechDir:dir },{ merge:true });
-};
+}
 // 房主開始放逐投票：候選人＝目前還活著的所有玩家，沒有人被排除在投票資格之外（跟警長
 // 競選不同，放逐投票不用先「報名」，活著的人都能投也都能被投）。
 window.jgRoomHostStartDayVote=async function(){
@@ -2737,9 +2803,14 @@ window.jgRoomHostStartDayVote=async function(){
 // 取捨：這是死亡玩家的合法功能，不是後門）。
 // ══════════════════════════════════════════
 let jgRoomGodViewOn=false;
+// 修正過的 bug：這裡原本不管切換後的新狀態是什麼，一律呼叫 jgRoomRenderGodView()——
+// 導致按「退出上帝視角」把 jgRoomGodViewOn 改成 false 之後，畫面卻還是重新渲染「上帝
+// 視角」本身（因為直接呼叫的就是這個函式），看起來像按了沒反應。改成呼叫
+// jgRoomRenderCurrentPhase()，讓它自己依照 jgRoomGodViewOn 的最新值決定要顯示上帝視角
+// 還是回到正常畫面。
 window.jgRoomToggleGodView=function(){
   jgRoomGodViewOn=!jgRoomGodViewOn;
-  jgRoomRenderGodView();
+  jgRoomRenderCurrentPhase();
 };
 // 「玩家狀態格子＋文字紀錄」這兩塊是上帝視角跟遊戲結束畫面共用的內容（差別只在最上面的
 // banner／有沒有「退出上帝視角」按鈕），抽成共用函式，兩邊各自組自己的外層 html 就好，
@@ -2761,10 +2832,10 @@ async function jgRoomBuildGodViewSections(){
   //    同樣用途，人數一多自然會排成兩排以上）。
   const pgridHtml=jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum).map(p=>{
     const role=roleByUid[p.uid];
-    const roleName=role?((typeof RNAME!=='undefined'&&RNAME[role])||role):'?';
+    const roleName=role?jgRoomDisplayRoleName(role, p.mechWolfLearnedRole):'?';
     return '<div class="pcell'+(p.alive===false?' dead':'')+'"><div class="pnum">'+p.seatNum+'號</div>'
       +'<div class="pname">'+p.name+'</div>'
-      +'<div class="prole"><span class="badge '+(p.alive===false?'bw':'bv')+'">'+roleName+(p.alive===false?'（已出局）':'')+'</span></div></div>';
+      +'<div class="prole"><span class="badge '+(p.alive===false?'bw':'bv')+'">'+roleName+'</span></div></div>';
   }).join('');
 
   // ── 文字紀錄：比照本機法官助手的匯出格式（**夜晚Nst / --行動 / **警長競選 / **白天Nst /
@@ -2875,11 +2946,11 @@ async function jgRoomRenderGodView(){
   const {pgridHtml, logHtml}=await jgRoomBuildGodViewSections();
   root.innerHTML=`
     <div class="nbanner"><div class="nicon">👁️</div><h1>上帝視角</h1></div>
-    <button style="margin-top:10px;" onclick="jgRoomToggleGodView()">← 退出上帝視角</button>
     <div class="section-title" style="margin-top:16px;">玩家狀態</div>
     <div class="pgrid">${pgridHtml}</div>
     <div class="section-title" style="margin-top:16px;">文字紀錄</div>
     <div class="godlog">${logHtml}</div>
+    <button style="margin-top:14px;" onclick="jgRoomToggleGodView()">← 退出上帝視角</button>
   `;
 }
 // 遊戲結束畫面：所有人（不用等死亡才能切上帝視角）都直接看到勝負結果＋完整身分／文字
@@ -2931,7 +3002,7 @@ async function jgRoomBuildExportText(){
   let out='==='+title+'===\n';
   jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum).forEach(p=>{
     const role=roleByUid[p.uid];
-    const roleName=role?((typeof RNAME!=='undefined'&&RNAME[role])||role):'?';
+    const roleName=role?jgRoomDisplayRoleName(role, p.mechWolfLearnedRole):'?';
     out+=p.seatNum+' '+p.name+' '+roleName+'\n';
   });
   const d=new Date();
@@ -3108,10 +3179,10 @@ function jgRoomHostAdvanceHtml(currentStep, night){
   if(currentStep==='guard') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">守衛選完之後，會自動往下一步。</div>'+forceHtml;
   if(currentStep==='dreamcatcher') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">攝夢人選完夢遊對象之後，會自動往下一步。</div>';
   if(currentStep==='wolfbrother') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">第一夜是狼兄狼弟互相確認身分；其餘夜晚平常沒事，只有狼兄陣亡後狼弟覺醒復仇那一晚才需要操作，完成後會自動往下一步。</div>';
-  if(currentStep==='wolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">只有一隻狼的話，選定並確認後就是最終決定；不只一隻狼要全員確認才會真的定案。</div>';
-  if(currentStep==='mechwolf') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">機械狼學習／使用技能（或確認沒有技能可用）之後，會自動往下一步。</div>'+forceHtml;
+  if(currentStep==='wolf') return '';
+  if(currentStep==='mechwolf') return forceHtml;
   if(currentStep==='blackmarket') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">黑市商人交易完（或選擇不交易）之後，會自動往下一步。獵人獵槍這項技能目前還沒自動化，請法官／房主用本機工具手動處理。</div>'+forceHtml;
-  if(currentStep==='witch') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">女巫（或持有女巫毒藥技能的幸運兒）行動完之後，會自動往下一步（查驗類角色，或直接接警長競選）。</div>'+forceHtml;
+  if(currentStep==='witch') return forceHtml;
   if(currentStep==='seer') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">預言家（或持有查驗技能的幸運兒）查驗完之後，會自動往下一步。</div>'+forceHtml;
   if(currentStep==='medium') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">通靈師查驗完之後，會自動往下一步。</div>'+forceHtml;
   if(!currentStep) return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">這一夜已經結束，正在自動接警長競選...</div>';
@@ -4240,6 +4311,7 @@ window.jgRoomLeave=function(){
   jgRoomCode=null; jgRoomComp=null; jgRoomTotal=null; jgRoomIsHost=false;
   jgMyRole=null; jgMySeatNum=null; jgRoomLatestPlayers=[]; jgRoomLatestRoomDoc=null;
   jgRoomLatestVotes=[]; jgRoomGodViewOn=false; jgRoomLatestChatMsgs=[]; jgRoomChatExpanded=false;
+  jgRoomSpeechOrderAutoTriedNight=null;
   try{ localStorage.removeItem('jgLastRoomCode'); }catch(e){}
   jgRoomRenderEntry();
 };
