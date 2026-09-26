@@ -6,7 +6,7 @@
 // js 檔互相看不到彼此的變數，所以這裡也把要給一般 script 用的函式掛到 window 上。
 // ═══════════════════════════════════════════
 import {
-  doc, setDoc, getDoc, addDoc, collection, onSnapshot, serverTimestamp, query, orderBy, arrayUnion
+  doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 let jgRoomCode=null;       // 目前所在的房號
@@ -23,6 +23,9 @@ let jgRoomLatestRoomDoc=null; // 房間文件監聽收到的最新資料（phase
 let jgRoomTimerInterval=null; // 夜晚操作畫面的倒數計時器（見 jgRoomStartTimer）
 let jgRoomUnsubVotes=null;  // 投票結果的即時監聽
 let jgRoomLatestVotes=[];   // 目前這一輪（不分投票類型：警長／白天／PK）收到的所有票
+let jgRoomUnsubChat=null;   // 文字聊天室的即時監聽
+let jgRoomLatestChatMsgs=[]; // 目前收到的所有聊天訊息（依時間排序）
+let jgRoomChatExpanded=false; // 聊天小視窗現在是展開還是收合成一顆按鈕
 
 // ── 給 js/voice.js（語音通話，另一個獨立的 ES module）讀取房間狀態用的小工具函式──
 // js/voice.js 也是用 <script type="module"> 載入，跟這個檔案是不同的模組作用域，直接讀
@@ -589,6 +592,7 @@ async function jgRoomEnterLobby(code){
   }
   jgRoomAppendMyIdentityButton();
   jgRoomAppendVoiceToggleButton();
+  jgRoomAppendChatWidget();
   // js/voice.js（語音通話）自己的初始化——不是每個人都會用到語音功能，這裡用
   // window 上有沒有掛這個函式來判斷 voice.js 有沒有載入，避免沒載入時報錯。
   if(window.jgVoiceOnRoomEnter) window.jgVoiceOnRoomEnter();
@@ -597,6 +601,12 @@ async function jgRoomEnterLobby(code){
   jgRoomUnsubPlayers=onSnapshot(q,(snap)=>{
     jgRoomLatestPlayers=snap.docs.map(d=>({uid:d.id, ...d.data()}));
     jgRoomRenderCurrentPhase();
+  });
+  if(jgRoomUnsubChat) jgRoomUnsubChat();
+  const chatQ=query(collection(db,'rooms',code,'chat'), orderBy('ts'), limit(300));
+  jgRoomUnsubChat=onSnapshot(chatQ,(snap)=>{
+    jgRoomLatestChatMsgs=snap.docs.map(d=>({id:d.id, ...d.data()}));
+    jgRoomRenderChatMessages();
   });
   if(jgRoomUnsubRoom) jgRoomUnsubRoom();
   jgRoomUnsubRoom=onSnapshot(doc(db,'rooms',code),(snap)=>{
@@ -611,8 +621,10 @@ async function jgRoomEnterLobby(code){
     }
     // 語音播報跟畫面重畫是兩件事：就算下面的 jgRoomSuppressAutoRender 旗標開著、暫時不
     // 重畫畫面，語音還是要照狀態變化正常念，不然狼隊連續出刀那幾筆中間寫入會讓語音跟著
-    // 卡住、漏念步驟。
+    // 卡住、漏念步驟。文字聊天室的顯示／隱藏（只在白天出現，夜晚讓給睜眼操作）也是同樣
+    // 道理，不能被 suppressAutoRender 卡住。
     jgRoomVoiceMaybeNarrate(jgRoomLatestRoomDoc);
+    jgRoomUpdateChatVisibility();
     // 有些操作（例如狼隊出刀：寫目標→記文字紀錄→進黑市商人／女巫回合→…）背後其實是好幾筆
     // 連續的資料庫寫入，不是像機械狼學習那樣一次寫完。每一筆寫入都會讓這個監聽器再觸發
     // 一次、整個畫面重畫一次——如果剛好使用者還在同一個選人畫面上（例如另一隻狼隊友的
@@ -756,6 +768,7 @@ window.jgRoomAssignRoles=async function(){
     ));
   }
   await setDoc(doc(db,'rooms',jgRoomCode),Object.assign({ status:'role-assigned', phase:'lobby' },extra),{ merge:true });
+  await jgRoomResetChat();
 };
 
 // ── 房主開始遊戲：進入第一夜。完整順序（跟本機法官助手 jgAfterXStep 那一串固定順序的
@@ -1406,6 +1419,111 @@ window.jgRoomSetVoiceButtonVisible=function(visible){
   if(!visible){ btn.style.display='none'; return; }
   jgRoomUpdateVoiceToggleButton();
 };
+// ── 右下角「💬 聊天」文字聊天室：只在白天（day-open／警長競選／投票中）出現，夜晚整個
+//    藏起來讓給睜眼操作，不會跟夜晚的操作畫面搶版面。預設收合成一顆小按鈕，點開才展開
+//    捲動視窗＋輸入框，不展開時幾乎不佔畫面空間（跟語音通話那條固定貼底的長條不一樣，
+//    這裡刻意做成「不點就幾乎看不到」，因為使用者要求「不要影響到頁面」）。訊息本身存在
+//    rooms/{code}/chat 子集合，同一場遊戲的白天彼此接續（不會因為天黑就清掉），只有
+//    房主重新分配身分、開始新的一場（jgRoomAssignRoles）才會整個清空，見 jgRoomResetChat。──
+let jgRoomChatTabVisible=true; // 目前是不是在「連線房間」分頁（切到其他分頁要整個藏起來）
+function jgRoomAppendChatWidget(){
+  if(document.getElementById('jg-room-chat-widget')) return; // 已經加過了，不要重複加
+  const wrap=document.createElement('div');
+  wrap.id='jg-room-chat-widget';
+  wrap.style.cssText='position:fixed;right:8px;bottom:70px;z-index:250;display:none;text-align:right;';
+  wrap.innerHTML=
+    '<div id="jg-room-chat-panel" style="display:none;width:230px;max-width:66vw;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.18);margin-bottom:6px;overflow:hidden;text-align:left;">'
+    +'<div id="jg-room-chat-msgs" style="max-height:180px;overflow-y:auto;padding:8px;font-size:12.5px;line-height:1.5;word-break:break-word;"></div>'
+    +'<div style="display:flex;border-top:1px solid var(--border);">'
+    +'<input id="jg-room-chat-input" type="text" maxlength="200" placeholder="輸入訊息…" style="flex:1;border:none;padding:8px;font-size:12.5px;background:transparent;min-width:0;">'
+    +'<button style="width:auto;margin:0;padding:8px 12px;border:none;border-radius:0;" onclick="jgRoomSendChat()">送出</button>'
+    +'</div></div>'
+    +'<button id="jg-room-chat-toggle" onclick="jgRoomToggleChatExpand()" style="width:auto;margin:0;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);box-shadow:0 1px 6px rgba(0,0,0,0.15);cursor:pointer;">💬 聊天</button>';
+  document.body.appendChild(wrap);
+  const input=document.getElementById('jg-room-chat-input');
+  if(input) input.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter') window.jgRoomSendChat(); });
+}
+function jgRoomRemoveChatWidget(){
+  const wrap=document.getElementById('jg-room-chat-widget');
+  if(wrap) wrap.remove();
+}
+function jgRoomScrollChatToBottom(){
+  const box=document.getElementById('jg-room-chat-msgs');
+  if(box) box.scrollTop=box.scrollHeight;
+}
+function jgRoomRenderChatMessages(){
+  const box=document.getElementById('jg-room-chat-msgs');
+  if(!box) return;
+  const wasAtBottom=box.scrollHeight-box.scrollTop-box.clientHeight<20;
+  box.innerHTML=jgRoomLatestChatMsgs.length
+    ? jgRoomLatestChatMsgs.map(m=>
+        '<div style="margin-bottom:4px;"><b>'+String(m.name||'？').replace(/</g,'&lt;')+'：</b>'+String(m.text||'').replace(/</g,'&lt;')+'</div>'
+      ).join('')
+    : '<div style="color:var(--text3);">還沒有人發言</div>';
+  if(wasAtBottom) jgRoomScrollChatToBottom();
+}
+// 房間文件每次更新都呼叫一次：只有「已經開始遊戲（有 phase）」且「不是發牌模式」且
+// 「現在不是夜晚」才顯示，天黑（phase==='night'）就整個藏起來，收合狀態也重置，避免
+// 白天展開著、一到晚上畫面上還卡著一個攤開的聊天視窗。
+function jgRoomUpdateChatVisibility(){
+  const wrap=document.getElementById('jg-room-chat-widget');
+  if(!wrap) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  const isDeal=rd.mode==='deal';
+  const started=!!rd.phase;
+  const isNight=rd.phase==='night';
+  const show=jgRoomChatTabVisible&&started&&!isDeal&&!isNight;
+  wrap.style.display=show?'block':'none';
+  if(!show){
+    jgRoomChatExpanded=false;
+    const panel=document.getElementById('jg-room-chat-panel');
+    if(panel) panel.style.display='none';
+  }
+}
+window.jgRoomToggleChatExpand=function(){
+  jgRoomChatExpanded=!jgRoomChatExpanded;
+  const panel=document.getElementById('jg-room-chat-panel');
+  if(panel) panel.style.display=jgRoomChatExpanded?'block':'none';
+  if(jgRoomChatExpanded) jgRoomScrollChatToBottom();
+};
+// 跟右上角「確認自己身分」、左上角「法官語音」同一組——只在「連線房間」分頁顯示，切到
+// 其他分頁（例如切去看排行榜）先整個藏起來，由 core.js 的 switchTab() 呼叫。
+window.jgRoomSetChatWidgetVisible=function(visible){
+  jgRoomChatTabVisible=visible;
+  jgRoomUpdateChatVisibility();
+};
+window.jgRoomSendChat=async function(){
+  const input=document.getElementById('jg-room-chat-input');
+  if(!input||!jgRoomCode) return;
+  const text=input.value.trim().slice(0,200);
+  if(!text) return;
+  input.value='';
+  const db=window.jgFirebaseDb;
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  try{
+    await addDoc(collection(db,'rooms',jgRoomCode,'chat'),{
+      uid: window.jgFirebaseUid,
+      seatNum: me?me.seatNum:null,
+      name: me?(me.seatNum+'號 '+me.name):'？',
+      text: text,
+      ts: serverTimestamp()
+    });
+  }catch(err){
+    alert('訊息送出失敗：'+(err&&err.message?err.message:String(err)));
+  }
+};
+// 房主重新分配身分（開始新的一場）時清空聊天室——每一場的對話不要延續到下一場；同一場
+// 遊戲裡白天跟白天之間則照使用者要求接續，不要在天黑時清掉。
+async function jgRoomResetChat(){
+  if(!jgRoomCode) return;
+  const db=window.jgFirebaseDb;
+  try{
+    const snap=await getDocs(collection(db,'rooms',jgRoomCode,'chat'));
+    await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));
+  }catch(err){
+    console.error('清空聊天室失敗', err);
+  }
+}
 window.jgRoomToggleVoice=function(){
   const next=!jgRoomVoiceGetPref();
   jgRoomVoiceSetPref(next);
@@ -4111,15 +4229,17 @@ window.jgRoomLeave=function(){
   jgRoomStopTimer();
   jgRoomRemoveMyIdentityButton();
   jgRoomRemoveVoiceToggleButton();
+  jgRoomRemoveChatWidget();
   if(window.jgVoiceOnRoomLeave) window.jgVoiceOnRoomLeave();
   if(jgRoomUnsubPlayers){ jgRoomUnsubPlayers(); jgRoomUnsubPlayers=null; }
   if(jgRoomUnsubMyRole){ jgRoomUnsubMyRole(); jgRoomUnsubMyRole=null; }
   if(jgRoomUnsubRoom){ jgRoomUnsubRoom(); jgRoomUnsubRoom=null; }
   if(jgRoomUnsubVotes){ jgRoomUnsubVotes(); jgRoomUnsubVotes=null; }
+  if(jgRoomUnsubChat){ jgRoomUnsubChat(); jgRoomUnsubChat=null; }
   if(jgRoomUnsubDealMyRole){ jgRoomUnsubDealMyRole(); jgRoomUnsubDealMyRole=null; }
   jgRoomCode=null; jgRoomComp=null; jgRoomTotal=null; jgRoomIsHost=false;
   jgMyRole=null; jgMySeatNum=null; jgRoomLatestPlayers=[]; jgRoomLatestRoomDoc=null;
-  jgRoomLatestVotes=[]; jgRoomGodViewOn=false;
+  jgRoomLatestVotes=[]; jgRoomGodViewOn=false; jgRoomLatestChatMsgs=[]; jgRoomChatExpanded=false;
   try{ localStorage.removeItem('jgLastRoomCode'); }catch(e){}
   jgRoomRenderEntry();
 };
