@@ -666,6 +666,9 @@ async function jgRoomRenderCurrentPhase(){
     await jgRoomRenderGameOverPhase();
     return;
   }
+  // 已經在上帝視角裡的人，如果天黑了（或輪到自己發表遺言）就強制退出、回到正常畫面——
+  // 不能讓人掛在上帝視角上跨夜偷看，等於變相在夜晚洩漏場上真實身分。
+  if(jgRoomGodViewOn&&!jgRoomGodViewAllowedNow()) jgRoomGodViewOn=false;
   if(jgRoomGodViewOn){
     await jgRoomRenderGodView();
     return;
@@ -696,13 +699,23 @@ async function jgRoomRenderCurrentPhase(){
   jgRoomUpdateVoiceToggleButton();
   jgRoomAppendPlayerStatusFooter();
 }
-// 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——不管現在房間進行到哪個畫面都會出現
-// （只要玩家自己的 alive 是 false），活著的玩家完全看不到這個按鈕。
+// 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——但要等到白天正式宣布死訊（含輪到自己
+// 發表遺言的話，要先講完）才能進去，不能在夜晚（phase==='night'）或警長競選（第一夜死訊
+// 還沒公布，見 jgRoomAdvanceToDayPhase：先抽籤定生死才進競選，警長競選結束才輪到白天
+// 公告死訊）就先偷看上帝視角——不然剛死的人會在其他玩家還沒收到死訊公告前，就已經透過
+// 語音通話等管道把場上真實身分洩漏出去，等於變相作弊。
+function jgRoomGodViewAllowedNow(){
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  if(!me||me.alive!==false) return false;
+  const rd=jgRoomLatestRoomDoc||{};
+  if(rd.phase==='night'||rd.phase==='sheriff') return false;
+  if(rd.dayVoteLastWordsUid===me.uid) return false; // 自己還沒發表遺言
+  return true;
+}
 function jgRoomAppendGodViewToggle(){
   const root=document.getElementById('jg-room-content');
   if(!root) return;
-  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
-  if(me&&me.alive===false){
+  if(jgRoomGodViewAllowedNow()){
     root.insertAdjacentHTML('beforeend','<button style="margin-top:20px;" onclick="jgRoomToggleGodView()">進入上帝視角</button>');
   }
 }
@@ -769,6 +782,7 @@ window.jgRoomAssignRoles=async function(){
   }
   await setDoc(doc(db,'rooms',jgRoomCode),Object.assign({ status:'role-assigned', phase:'lobby' },extra),{ merge:true });
   await jgRoomResetChat();
+  jgRoomSpeechOrderAutoTriedNight=null;
 };
 
 // ── 房主開始遊戲：進入第一夜。完整順序（跟本機法官助手 jgAfterXStep 那一串固定順序的
@@ -1438,7 +1452,7 @@ function jgRoomAppendChatWidget(){
     +'<input id="jg-room-chat-input" type="text" maxlength="200" placeholder="輸入訊息…" style="flex:1;border:none;padding:8px;font-size:12.5px;background:transparent;min-width:0;">'
     +'<button style="width:auto;margin:0;padding:8px 12px;border:none;border-radius:0;" onclick="jgRoomSendChat()">送出</button>'
     +'</div></div>'
-    +'<button id="jg-room-chat-toggle" onclick="jgRoomToggleChatExpand()" style="width:auto;margin:0;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);box-shadow:0 1px 6px rgba(0,0,0,0.15);cursor:pointer;">💬 聊天</button>';
+    +'<button id="jg-room-chat-toggle" onclick="jgRoomToggleChatExpand()" style="width:auto;margin:0;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text2);box-shadow:0 1px 6px rgba(0,0,0,0.15);cursor:pointer;">聊天</button>';
   document.body.appendChild(wrap);
   const input=document.getElementById('jg-room-chat-input');
   if(input) input.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter') window.jgRoomSendChat(); });
@@ -2643,14 +2657,17 @@ async function jgRoomRenderDayOpen(){
     const dayLogSnap=await getDoc(doc(db,'rooms',jgRoomCode,'dayLog',String(night)));
     const nightMsg=dayLogSnap.exists()?('昨晚 '+dayLogSnap.data().deathLine):'（死訊結算中...）';
     // 發言順序：daySpeechStart 每天都要重新決定（有人死亡就固定從死者下一位活人開始，
-    // 平安夜才隨機抽起點；方向一旦決定過，整局都不會再變，見 jgRoomHostSpinSpeechOrder
+    // 平安夜才隨機抽起點；方向一旦決定過，整局都不會再變，見 jgRoomAutoSpinSpeechOrder
     // 的說明）——這裡只有第一天、剛好有選出警長時才會直接有值（警長競選那邊會問要往
-    // 左還右發言，見 jgRoomSheriffPickDirection），其餘情況都要靠房主按「抽籤」才會有值。
+    // 左還右發言，見 jgRoomSheriffPickDirection）。其餘情況原本要靠房主按「抽籤」按鈕，
+    // 但房主如果剛好死亡、切進上帝視角就按不到這顆按鈕，會卡住整個流程——改成任何一支
+    // 裝置畫面渲染到這裡、發現還沒抽籤，就自動觸發一次（jgRoomAutoSpinSpeechOrder 內部
+    // 會重新讀一次最新資料庫狀態確認「真的還沒人抽過」才寫入，好幾支手機同時觸發也不會
+    // 抽兩次、互相蓋掉）,不用等房主，也不用房主還活著。
     const speechHtml=rd.daySpeechStart
       ?'<p class="sub" style="text-align:center;margin-top:8px;">從 '+rd.daySpeechStart+'號 開始，'+dirLabel+'發言</p>'
-      :(jgRoomIsHost
-        ?'<div style="text-align:center;margin-top:10px;"><button onclick="jgRoomHostSpinSpeechOrder()" style="width:auto;display:inline-block;padding:10px 18px;">抽籤決定發言順序</button></div>'
-        :'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請等待房主抽籤決定發言順序</div>');
+      :'<p class="sub" style="text-align:center;margin-top:8px;">抽籤決定發言順序中…</p>';
+    if(!rd.daySpeechStart) jgRoomAutoSpinSpeechOrder(night);
     bodyHtml='<div class="nbanner" style="margin-top:20px;"><div class="nicon">☀️</div><h1>白天開始</h1>'
       +'<p class="sub" style="text-align:center;margin-top:8px;">'+nightMsg+'</p></div>'
       +speechHtml
@@ -2685,16 +2702,25 @@ window.jgRoomSheriffPickDirection=async function(startSeatNum, dir){
     sheriffPhase:null, daySpeechStart:startSeatNum, daySpeechDir:dir
   },{ merge:true });
 };
-// 房主抽籤決定「今天從幾號開始發言」——跟本機法官助手 jgSpinWheel／jgSpinDirectionOnly
+// 自動抽籤決定「今天從幾號開始發言」——跟本機法官助手 jgSpinWheel／jgSpinDirectionOnly
 // 同一套規則：方向（順/逆）整局只會決定一次，決定過就不會再變，之後每天只重新抽起點；
 // 如果昨晚有人死亡，起點不是隨機的，是固定從「死者的下一個活人」（照已經定好的方向）
 // 開始——沒有死人的平安夜才會連起點一起隨機抽。這裡不做本機那種逐格跳動的抽籤動畫
-// （連線房間是好幾支手機同步看同一個結果，不是單一台裝置在演戲給大家看），房主按一下
-// 直接寫入最終結果，全部人的畫面會透過即時監聽器一起看到。
-window.jgRoomHostSpinSpeechOrder=async function(){
+// （連線房間是好幾支手機同步看同一個結果，不是單一台裝置在演戲給大家看），計算完直接
+// 寫入最終結果，全部人的畫面會透過即時監聽器一起看到。
+// 原本這是房主專用的手動按鈕，但房主如果剛好死亡、切去上帝視角就按不到，會卡住整個
+// 流程——改成任何一支裝置畫面渲染到「還沒抽籤」的白天開場畫面，就自動觸發一次；
+// jgRoomSpeechOrderAutoTriedNight 這個模組層級變數只是「同一支裝置不用每次重畫都重新
+// 讀一次資料庫」的節流，真正防止「好幾支手機同時觸發、抽兩次互相蓋掉」的是函式一開頭
+// 那次重新讀取資料庫最新狀態、確認 daySpeechStart 真的還是空的才繼續算下去。
+let jgRoomSpeechOrderAutoTriedNight=null;
+async function jgRoomAutoSpinSpeechOrder(night){
+  if(jgRoomSpeechOrderAutoTriedNight===night) return;
+  jgRoomSpeechOrderAutoTriedNight=night;
   const db=window.jgFirebaseDb;
-  const rd=jgRoomLatestRoomDoc||{};
-  const night=rd.night||1;
+  const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const rd=freshSnap.exists()?freshSnap.data():{};
+  if(rd.daySpeechStart) return; // 已經有其他裝置搶先抽過了
   const alive=jgRoomLatestPlayers.filter(p=>p.alive!==false);
   if(!alive.length) return;
   const dayLogSnap=await getDoc(doc(db,'rooms',jgRoomCode,'dayLog',String(night)));
@@ -2720,7 +2746,7 @@ window.jgRoomHostSpinSpeechOrder=async function(){
     start=pool[Math.floor(Math.random()*pool.length)];
   }
   await setDoc(doc(db,'rooms',jgRoomCode),{ daySpeechStart:start, daySpeechDir:dir },{ merge:true });
-};
+}
 // 房主開始放逐投票：候選人＝目前還活著的所有玩家，沒有人被排除在投票資格之外（跟警長
 // 競選不同，放逐投票不用先「報名」，活著的人都能投也都能被投）。
 window.jgRoomHostStartDayVote=async function(){
@@ -2737,9 +2763,14 @@ window.jgRoomHostStartDayVote=async function(){
 // 取捨：這是死亡玩家的合法功能，不是後門）。
 // ══════════════════════════════════════════
 let jgRoomGodViewOn=false;
+// 修正過的 bug：這裡原本不管切換後的新狀態是什麼，一律呼叫 jgRoomRenderGodView()——
+// 導致按「退出上帝視角」把 jgRoomGodViewOn 改成 false 之後，畫面卻還是重新渲染「上帝
+// 視角」本身（因為直接呼叫的就是這個函式），看起來像按了沒反應。改成呼叫
+// jgRoomRenderCurrentPhase()，讓它自己依照 jgRoomGodViewOn 的最新值決定要顯示上帝視角
+// 還是回到正常畫面。
 window.jgRoomToggleGodView=function(){
   jgRoomGodViewOn=!jgRoomGodViewOn;
-  jgRoomRenderGodView();
+  jgRoomRenderCurrentPhase();
 };
 // 「玩家狀態格子＋文字紀錄」這兩塊是上帝視角跟遊戲結束畫面共用的內容（差別只在最上面的
 // banner／有沒有「退出上帝視角」按鈕），抽成共用函式，兩邊各自組自己的外層 html 就好，
@@ -2764,7 +2795,7 @@ async function jgRoomBuildGodViewSections(){
     const roleName=role?((typeof RNAME!=='undefined'&&RNAME[role])||role):'?';
     return '<div class="pcell'+(p.alive===false?' dead':'')+'"><div class="pnum">'+p.seatNum+'號</div>'
       +'<div class="pname">'+p.name+'</div>'
-      +'<div class="prole"><span class="badge '+(p.alive===false?'bw':'bv')+'">'+roleName+(p.alive===false?'（已出局）':'')+'</span></div></div>';
+      +'<div class="prole"><span class="badge '+(p.alive===false?'bw':'bv')+'">'+roleName+'</span></div></div>';
   }).join('');
 
   // ── 文字紀錄：比照本機法官助手的匯出格式（**夜晚Nst / --行動 / **警長競選 / **白天Nst /
@@ -2875,11 +2906,11 @@ async function jgRoomRenderGodView(){
   const {pgridHtml, logHtml}=await jgRoomBuildGodViewSections();
   root.innerHTML=`
     <div class="nbanner"><div class="nicon">👁️</div><h1>上帝視角</h1></div>
-    <button style="margin-top:10px;" onclick="jgRoomToggleGodView()">← 退出上帝視角</button>
     <div class="section-title" style="margin-top:16px;">玩家狀態</div>
     <div class="pgrid">${pgridHtml}</div>
     <div class="section-title" style="margin-top:16px;">文字紀錄</div>
     <div class="godlog">${logHtml}</div>
+    <button style="margin-top:14px;" onclick="jgRoomToggleGodView()">← 退出上帝視角</button>
   `;
 }
 // 遊戲結束畫面：所有人（不用等死亡才能切上帝視角）都直接看到勝負結果＋完整身分／文字
@@ -4240,6 +4271,7 @@ window.jgRoomLeave=function(){
   jgRoomCode=null; jgRoomComp=null; jgRoomTotal=null; jgRoomIsHost=false;
   jgMyRole=null; jgMySeatNum=null; jgRoomLatestPlayers=[]; jgRoomLatestRoomDoc=null;
   jgRoomLatestVotes=[]; jgRoomGodViewOn=false; jgRoomLatestChatMsgs=[]; jgRoomChatExpanded=false;
+  jgRoomSpeechOrderAutoTriedNight=null;
   try{ localStorage.removeItem('jgLastRoomCode'); }catch(e){}
   jgRoomRenderEntry();
 };

@@ -144,7 +144,7 @@ function jgVoiceRenderPanel(){
   if(!jgVoiceRoom){
     bar.innerHTML='<div style="padding:10px 14px;text-align:center;">'
       +'<button class="primary" style="width:auto;display:inline-block;padding:8px 20px;" onclick="jgVoiceJoin()" '+(jgVoiceConnecting?'disabled':'')+'>'
-      +(jgVoiceConnecting?'連線中…':'🎙️ 加入語音通話')+'</button></div>';
+      +(jgVoiceConnecting?'連線中…':'加入語音通話')+'</button></div>';
     return;
   }
   const remoteIds=Array.from(jgVoiceRoom.remoteParticipants.keys());
@@ -162,10 +162,10 @@ function jgVoiceRenderPanel(){
       ?'<button style="width:auto;padding:3px 10px;font-size:11px;" onclick="jgVoiceHostMute(\''+id+'\','+(muted?'false':'true')+')">'+(muted?'恢復麥克風':'靜音')+'</button>'
       :'';
     return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 14px;'+(speaking?'background:rgba(46,125,50,0.12);':'')+'">'
-      +'<span>'+(speaking?'🔊 ':'👤 ')+label+(muted?'（靜音）':'')+'</span>'+muteBtn+'</div>';
+      +'<span>'+label+(muted?'（靜音）':'')+'</span>'+muteBtn+'</div>';
   }).join('')||'<div style="padding:8px 14px;color:var(--text3);">還沒有其他人加入語音</div>';
   bar.innerHTML='<div style="display:flex;align-items:center;justify-content:space-around;padding:8px 6px;">'
-    +'<button style="width:auto;padding:6px 10px;" onclick="jgVoiceToggleMic()">'+(jgVoiceMicOn?'🎙️ 麥克風開':'🔇 麥克風關')+'</button>'
+    +'<button style="width:auto;padding:6px 10px;" onclick="jgVoiceToggleMic()">'+(jgVoiceMicOn?'麥克風開':'麥克風關')+'</button>'
     +'<button style="width:auto;padding:6px 10px;" onclick="jgVoiceTogglePanelExpand()">'+(jgVoicePanelExpanded?'收合 ▲':'通話中（'+(remoteIds.length+1)+'人）▼')+'</button>'
     +'<button style="width:auto;padding:6px 10px;color:var(--wolf,#b83828);" onclick="jgVoiceLeave()">離開通話</button>'
     +'</div>'
