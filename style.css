@@ -528,3 +528,11 @@ select{
 .jg-thief-bigcard-bottom .jtc-btn-row{display:flex;gap:14px;margin-top:16px;justify-content:center;}
 .jg-thief-bigcard-bottom .jtc-btn-row button{width:auto;margin:0;padding:13px 24px;font-size:16px;border-radius:12px;}
 
+/* ── 連線房間幾個主要階段的橫幅：拿掉 emoji 圖示之後，改用淡色底區分「現在是夜晚／
+   白天／上帝視角／哪一方獲勝」，不用圖案也能一眼看出現在是什麼狀態。── */
+.nbanner-night{background:rgba(30,41,88,0.08);border-radius:var(--r);}
+.nbanner-day{background:rgba(184,131,11,0.1);border-radius:var(--r);}
+.nbanner-god{background:rgba(124,58,237,0.08);border-radius:var(--r);}
+.nbanner-good{background:rgba(58,122,42,0.12);border-radius:var(--r);}
+.nbanner-evil{background:rgba(184,56,40,0.12);border-radius:var(--r);}
+

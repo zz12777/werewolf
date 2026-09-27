@@ -630,7 +630,7 @@ Bayesian Score ＝ (好人校正勝率 × 好人場次 ＋ 邪惡校正勝率 ×
   const pdRankedHtml=pdRowsHtml.slice(0, pdRankedList.length).join('');
   const pdUnrankedHtml=pdRowsHtml.slice(pdRankedList.length).join('');
   lb.innerHTML=pdRankedHtml+(pdUnrankedHtml
-    ?`<details class="pd-unranked-details"><summary>以下玩家遊玩場數未達門檻，僅供參考、不列入正式排名</summary>${pdUnrankedHtml}</details>`
+    ?`<details class="pd-unranked-details"><summary>點擊展開列表，以下玩家遊玩場數未達門檻</summary>${pdUnrankedHtml}</details>`
     :'');
 
   // ── 篩選器（重建選項，保留 change 監聽器） ──
