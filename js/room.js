@@ -614,6 +614,7 @@ async function jgRoomEnterLobby(code){
   jgRoomAppendMyIdentityButton();
   jgRoomAppendVoiceToggleButton();
   jgRoomAppendChatWidget();
+  jgRoomAppendWhitewolfButton();
   // js/voice.js（語音通話）自己的初始化——不是每個人都會用到語音功能，這裡用
   // window 上有沒有掛這個函式來判斷 voice.js 有沒有載入，避免沒載入時報錯。
   if(window.jgVoiceOnRoomEnter) window.jgVoiceOnRoomEnter();
@@ -722,6 +723,7 @@ async function jgRoomRenderCurrentPhase(){
   // 既有 race condition）。
   jgRoomAppendGodViewToggle();
   jgRoomUpdateVoiceToggleButton();
+  jgRoomUpdateWhitewolfButton();
   jgRoomAppendPlayerStatusFooter();
 }
 // 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——夜晚被刀死的人要等到白天正式宣布
@@ -875,14 +877,18 @@ window.jgRoomStartNight=async function(){
 // 對不上、會被當成「這一晚還沒選」，不需要特地清掉；只有 pendingShootUids 這種「這一晚
 // 有沒有事情還沒解決」的旗標需要在這裡明確歸零，避免萬一有殘留卡住下一夜的流程。這個函式
 // 只在程式內部呼叫（不是按鈕 onclick），所以不用掛到 window 上。
-async function jgRoomStartNextNight(){
+// overrideStep：不想照正常的夜晚步驟順序走、直接指定 currentStep 時用（目前只有血月
+// 使者最後一擊——那一晚使用者明確要求「只有狼人（血月使者本人）會睜眼，其他神職都不用
+// 睜眼操作」，見 jgRoomStartBloodmoonLastStand）；extraFields：這次進新的一夜同時要
+// 一起寫入的額外欄位，避免呼叫端還要另外多一次 setDoc。
+async function jgRoomStartNextNight(overrideStep, extraFields){
   if(!jgRoomCode) return;
   const db=window.jgFirebaseDb;
   const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
   const rd=roomSnap.data()||{};
   const nextNight=(rd.night||1)+1;
-  const firstStep=jgRoomNextNightStep(null, nextNight);
-  await setDoc(doc(db,'rooms',jgRoomCode),{
+  const firstStep=overrideStep||jgRoomNextNightStep(null, nextNight);
+  await setDoc(doc(db,'rooms',jgRoomCode),Object.assign({
     phase:'night', night:nextNight, currentStep:firstStep,
     pendingShootUids:[], pendingShootContext:null,
     votingActive:false, dayVotePkRound:false,
@@ -890,7 +896,8 @@ async function jgRoomStartNextNight(){
     // 只有「今天從幾號開始講」（daySpeechStart）才是每天都要重新決定的，跟本機法官助手
     // 的 jgSpeakDirection（整局唯一）／jgDayMeta[night].start（每天都不同）是同一套規則。
     daySpeechStart:null
-  },{ merge:true });
+  }, extraFields||{}),{ merge:true });
+  return nextNight;
 }
 // 這一晚查驗階段該輪到誰——板子裡有預言家就輪預言家，沒有的話看有沒有幸運兒目前正好
 // 持有「預言家查驗」技能（黑市商人交易來的），再沒有就看通靈師，都沒有就代表這一晚沒有
@@ -925,11 +932,29 @@ async function jgRoomAdvanceToSheriffCampaign(){
     sheriffPkRound:false, sheriffJoinDeadline: Date.now()+10000
   },{ merge:true });
 }
-// 查驗類角色結束（或本來就沒有）之後，第一夜要接警長競選（僅限房主建房時有勾選「本局
-// 開放上警競選」——沒勾選的話，第一夜不會出現參選警長畫面，直接跟第二夜起一樣進白天），
-// 第二夜起（本局已經選過警長，不會再選第二次）直接進入白天公告死訊、開放發言／投票放逐
-// ——共用這個判斷。
+// 查驗類角色結束（或本來就沒有）之後，先看板子上有沒有獵魔人要接手狩獵——他排在通靈師/
+// 預言家之後、天亮之前（跟本機法官助手 GOD_CHAIN 的順序一致：查驗類角色→獵魔人），
+// 第二夜起才會真的有動作（見 jgRoomDemonhunterPending），有的話讓他先行動，行動完（他自己
+// 的 jgRoomFinishDemonhunterStep）才會真的呼叫 jgRoomReallyAdvanceToDayPhase 進入白天，
+// 這樣死訊才能正確包含他這一刀的結果；沒有獵魔人要接的話直接進白天。
 async function jgRoomAdvanceToDayPhase(night){
+  if(jgRoomDemonhunterPending(night)){
+    const db=window.jgFirebaseDb;
+    await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'demonhunter' },{ merge:true });
+    return;
+  }
+  await jgRoomReallyAdvanceToDayPhase(night);
+}
+// 獵魔人第一夜沒有任何動作可做（第一晚只確認身分、不能狩獵，見規則說明）——房間系統
+// 索性連這一步的睜眼畫面都跳過（反正這個 app 隨時都能按右上角「確認自己身分」看自己是
+// 誰，不用特地走一次沒有任何操作的空白睜眼畫面），從第二夜開始才真的排進流程。
+function jgRoomDemonhunterPending(night){
+  return !!(jgRoomComp&&jgRoomComp.demonhunter>0&&night>=2);
+}
+// 真正的「進入白天」：第一夜要接警長競選（僅限房主建房時有勾選「本局開放上警競選」
+// ——沒勾選的話，第一夜不會出現參選警長畫面，直接跟第二夜起一樣進白天），第二夜起
+// （本局已經選過警長，不會再選第二次）直接進入白天公告死訊、開放發言／投票放逐。
+async function jgRoomReallyAdvanceToDayPhase(night){
   const db=window.jgFirebaseDb;
   await jgRoomCaptureDeathLine(night);
   const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
@@ -978,6 +1003,10 @@ async function jgRoomCaptureDeathLine(night){
   if(fresh.dreamcatcherTargetNight===night) await add(uidOfSeat(fresh.dreamcatcherTargetSeatNum), fresh.dreamcatcherTargetSeatNum, '（連續兩晚被夢，致死）');
   await add(uidOfSeat(fresh.cupidLoverASeatNum), fresh.cupidLoverASeatNum, '（情侶殉情）');
   await add(uidOfSeat(fresh.cupidLoverBSeatNum), fresh.cupidLoverBSeatNum, '（情侶殉情）');
+  if(fresh.demonhunterHuntNight===night){
+    if(fresh.demonhunterHuntIsWolf) await add(fresh.demonhunterHuntTargetUid, fresh.demonhunterHuntTargetSeatNum, '（獵魔人狩獵）');
+    else await add(fresh.demonhunterUid, seatOfUid(fresh.demonhunterUid), '（獵魔人狩獵失敗，反噬自身）');
+  }
   let line=parts.length?parts.join('、'):'平安夜';
   // 夜槍（獵人/黑狼王/幸運兒被狼刀淘汰後開的槍）的結果，在槍決定完的當下就先存進
   // shotNotes（見 jgRoomAppendShotNoteToDayLog 的說明），這裡讀出來接在死訊句子後面。
@@ -1147,7 +1176,15 @@ async function jgRoomResolveNightDeaths(){
       wolfKillDeathCandidates.push(wolfTarget);
     }
   }
-  if(fresh.witchPoisonUid&&!isDreaming(fresh.witchPoisonUid)) await kill(fresh.witchPoisonUid);
+  // 獵魔人免疫女巫毒藥（見角色規則說明）——毒到他本人的話要先查一下被毒對象的真實
+  // 角色再決定要不要真的殺，跟其餘幾種「整局限一次、不可阻擋」的死法不一樣，這裡是
+  // 唯一需要額外讀 secrets 的一種。只有真的有人被毒、而且這場板子確實可能有獵魔人時
+  // 才查（板子沒有獵魔人的情況多讀一次 secrets 沒有意義，但直接查也無害，不特地省略）。
+  if(fresh.witchPoisonUid&&!isDreaming(fresh.witchPoisonUid)){
+    const poisonSecretSnap=await getDoc(doc(db,'rooms',jgRoomCode,'secrets',fresh.witchPoisonUid));
+    const poisonRole=poisonSecretSnap.exists()?poisonSecretSnap.data().role:null;
+    if(poisonRole!=='demonhunter') await kill(fresh.witchPoisonUid);
+  }
   // 機械狼學到狼人/黑狼王的額外一刀、學到女巫的毒藥：整局限一次、不可被守衛/解藥阻擋。
   if(fresh.mechWolfBonusKillUid&&fresh.mechWolfBonusKillNight===night&&!isDreaming(fresh.mechWolfBonusKillUid)){
     await kill(fresh.mechWolfBonusKillUid);
@@ -1218,7 +1255,8 @@ async function jgRoomApplyCupidCascade(){
 const JG_ROOM_WIN_CHECK_SUPPORTED_ROLES=new Set([
   'villager','wolf','wolfking','whitewolf','seer','witch','hunter','guard',
   'mechanicalwolf','medium','dreamcatcher','nightmare',
-  'blackmarket','wolfbrother_e','wolfbrother_y','magician'
+  'blackmarket','wolfbrother_e','wolfbrother_y','magician',
+  'bloodmoon','demonhunter'
 ]);
 function jgRoomAllGodsForWin(){
   // 跟本機法官助手 jgAllGodsForWin() 一樣的「屠神」神職清單，這裡先只列出這些支援板子
@@ -1228,7 +1266,7 @@ function jgRoomAllGodsForWin(){
   // jgAllGodsForWin() 一致）。魔術師雖然只是換號碼、不算查驗/救人這種主動反殺技能，但
   // 本機法官助手的規則裡他仍然算「神」（不是「民」）——加進這份清單，不然屠民/屠神判斷
   // 會把還活著的魔術師誤算成兩邊都不是，可能提前誤判成屠民。
-  return ['seer','witch','hunter','guard','dreamcatcher','medium','blackmarket','magician'];
+  return ['seer','witch','hunter','guard','dreamcatcher','medium','blackmarket','magician','demonhunter'];
 }
 async function jgRoomComputeWinCheck(){
   const db=window.jgFirebaseDb;
@@ -1348,7 +1386,7 @@ function jgRoomSpeak(text){
 const JG_ROOM_STEP_ROLE_NAME={
   thief:'盜賊', cupid:'邱比特', nightmare:'夢魘', magician:'魔術師', guard:'守衛',
   dreamcatcher:'攝夢人', wolfbrother:'狼兄狼弟', mechwolf:'機械狼', wolf:'狼人',
-  blackmarket:'黑市商人', witch:'女巫', seer:'預言家', medium:'通靈師'
+  blackmarket:'黑市商人', witch:'女巫', seer:'預言家', medium:'通靈師', demonhunter:'獵魔人'
 };
 function jgRoomVoiceSpeakOnce(key, text){
   if(key===jgRoomVoiceState.key) return;
@@ -1459,6 +1497,79 @@ function jgRoomRemoveVoiceToggleButton(){
   const btn=document.getElementById('jg-room-voice-btn');
   if(btn) btn.remove();
 }
+// ── 白狼王「自爆帶人」：規則說「白天除了投票環節以外的任何階段都可以主動宣告」，不是
+//    某個特定步驟才有的操作介面，所以做成跟語音/確認身分同一種「固定貼在畫面角落、
+//    不管現在畫面切到哪個子步驟都看得到」的按鈕，而不是塞進某一個特定的 render 函式裡。
+//    每次 jgRoomRenderCurrentPhase() 重畫都會呼叫 jgRoomUpdateWhitewolfButton() 判斷這個
+//    當下能不能自爆（活著、輪到白天、不是投票中、沒有槍/警徽/遺言/PK 卡著）。──
+function jgRoomAppendWhitewolfButton(){
+  if(document.getElementById('jg-room-whitewolf-btn')) return;
+  const btn=document.createElement('button');
+  btn.id='jg-room-whitewolf-btn';
+  btn.textContent='白狼王自爆';
+  btn.onclick=function(){ window.jgRoomWhitewolfDetonateStart(); };
+  btn.style.cssText='position:fixed;bottom:70px;left:8px;z-index:250;width:auto;margin:0;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid var(--wolf,#b83828);background:var(--wolf,#b83828);color:#fff;box-shadow:0 1px 6px rgba(0,0,0,0.2);cursor:pointer;display:none;';
+  document.body.appendChild(btn);
+}
+function jgRoomRemoveWhitewolfButton(){
+  const btn=document.getElementById('jg-room-whitewolf-btn');
+  if(btn) btn.remove();
+}
+function jgRoomUpdateWhitewolfButton(){
+  const btn=document.getElementById('jg-room-whitewolf-btn');
+  if(!btn) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  const eligible=jgMyRole==='whitewolf'&&me&&me.alive!==false&&!rd.votingActive
+    &&(rd.phase==='day-open'||rd.phase==='sheriff')
+    &&!(rd.pendingShootUids&&rd.pendingShootUids.length)
+    &&!rd.pendingBadgeUid&&!rd.dayVoteLastWordsUid
+    &&!(rd.dayVotePkPendingUids&&rd.dayVotePkPendingUids.length);
+  btn.style.display=eligible?'block':'none';
+}
+// 點下去先換成一個獨立的選人畫面（取代目前的 #jg-room-content，跟警徽/開槍那些特殊互動
+// 畫面是同一種做法），不是彈出視窗——自爆是「整場公開、後果重大」的宣告，用整頁畫面
+// 呈現比較慎重，選錯號碼也還有「取消」可以退回目前這一步原本該顯示的畫面。
+window.jgRoomWhitewolfDetonateStart=function(){
+  const root=document.getElementById('jg-room-content');
+  if(!root) return;
+  root.innerHTML='<div class="nbanner nbanner-evil" style="margin-top:20px;"><h1>白狼王自爆</h1></div>'
+    +'<div class="info-warn" style="text-align:center;">自爆之後會直接進入夜晚，可以選一位玩家一起帶走，也可以不選、只有自己陣亡</div>'
+    +jgRoomNumGridHtml('jg-room-whitewolf-pick', null)
+    +'<div style="text-align:center;margin-top:10px;"><button class="primary" onclick="jgRoomWhitewolfDetonateConfirm()">自爆</button>'
+    +' <button onclick="jgRoomRenderCurrentPhase()">取消</button></div>';
+};
+window.jgRoomWhitewolfDetonateConfirm=async function(){
+  const hidden=document.getElementById('jg-room-whitewolf-pick');
+  const seatNum=hidden&&hidden.value?parseInt(hidden.value):null;
+  if(!confirm('確定要自爆'+(seatNum?'並帶走 '+seatNum+'號':'（不帶走任何人）')+'嗎？這會直接進入夜晚，無法反悔。')) return;
+  const db=window.jgFirebaseDb;
+  const rd=jgRoomLatestRoomDoc||{};
+  const night=rd.night||1;
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ alive:false },{ merge:true });
+  let targetSeatText='沒有人';
+  if(seatNum){
+    const target=jgRoomLatestPlayers.find(p=>p.seatNum===seatNum);
+    if(target){
+      await setDoc(doc(db,'rooms',jgRoomCode,'players',target.uid),{ alive:false },{ merge:true });
+      targetSeatText=seatNum+'號';
+    }
+  }
+  await jgRoomAppendNightLog(night, (me?me.seatNum:'?')+'號（白狼王）自爆，帶走 '+targetSeatText);
+  await jgRoomApplyCupidCascade();
+  if(await jgRoomCheckAndSetPendingBadge()){
+    await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'badge' },{ merge:true });
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
+  if(await jgRoomMaybeDeclareWin()){
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
+  await jgRoomStartNextNight();
+  await jgRoomRefreshAndRenderCurrent();
+};
 // 每次畫面重畫都呼叫一次，更新按鈕文字（開/關）跟顯示與否（板子不支援語音就整個藏起來）。
 function jgRoomUpdateVoiceToggleButton(){
   const btn=document.getElementById('jg-room-voice-btn');
@@ -2570,6 +2681,97 @@ function jgRoomComputePkSpeechOrder(pkSeats, rd){
   };
   return pkSeats.slice().sort((a,b)=>positionOf(b)-positionOf(a)).map(s=>s+'號');
 }
+
+// ═══════════════════════════════════════════
+// 血月使者被動：「若為最後一個被放逐的狼人，可暫時存活進入黑夜，夜晚再擊殺一名玩家，
+// 達屠邊則狼人勝利」——公開讓全場知道（不是像幸運兒那樣只有自己看得到的私密畫面），
+// 進入黑夜後只有他一個人有事要做（其他神職這一晚都不用睜眼操作），開完這最後一刀，
+// 如果剛好屠邊（殺光所有民或所有神）狼人就贏；沒有的話，他這次「暫留」的緩刑就結束，
+// 這時候才真的死亡（此時場上狼人已全滅，好人陣營照正常規則獲勝）。
+// ═══════════════════════════════════════════
+// 這次要放逐的人是不是「場上最後一個活著的狼人」而且剛好是血月使者——兩個條件都要成立
+// 才觸發被動；只是普通狼人被放逐（沒有血月使者，或血月使者不是最後一個）維持原本流程，
+// 正常死亡。
+async function jgRoomCheckBloodmoonLastStand(uid){
+  const db=window.jgFirebaseDb;
+  const { getDocs } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+  const secretsSnap=await getDocs(collection(db,'rooms',jgRoomCode,'secrets'));
+  const roleByUid={}; secretsSnap.docs.forEach(d=>{ roleByUid[d.id]=d.data().role; });
+  if(roleByUid[uid]!=='bloodmoon') return false;
+  const otherAliveWolves=jgRoomLatestPlayers.filter(p=>p.uid!==uid&&p.alive!==false
+    &&typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(roleByUid[p.uid]));
+  return otherAliveWolves.length===0;
+}
+// 觸發被動：公開記一筆文字紀錄（讓上帝視角、之後複查都看得到這件事發生過），然後直接
+// 進入下一夜、指定 currentStep 為 'bloodmoonlaststand'（跳過正常的夜晚步驟順序——這一晚
+// 不會有查驗類角色、女巫這些正常流程，只有血月使者一個人的最後一擊）。
+async function jgRoomStartBloodmoonLastStand(outUid, outSeatNum){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode),{ votingActive:false, dayVotePkRound:false },{ merge:true });
+  await jgRoomAppendNightLog((jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.night)||1,
+    outSeatNum+'號（血月使者）是本局最後一位狼人，暫留場上，進入黑夜開最後一刀');
+  const nextNight=await jgRoomStartNextNight('bloodmoonlaststand', {
+    bloodmoonLastStandUid:outUid, bloodmoonLastStandSeatNum:outSeatNum
+  });
+  jgRoomVoiceSpeakOnce('bloodmoonreveal:'+outUid, outSeatNum+'號是血月使者，是本局最後一位狼人，暫留場上，進入黑夜開最後一刀。');
+  jgRoomRenderCurrentPhase();
+}
+async function jgRoomBloodmoonLastStandViewHtml(night){
+  const rd=jgRoomLatestRoomDoc||{};
+  const isMe=rd.bloodmoonLastStandUid===window.jgFirebaseUid;
+  if(!isMe){
+    const hostBtn=jgRoomIsHost
+      ?'<div style="text-align:center;margin-top:10px;"><button style="font-size:12px;color:var(--text3);" onclick="jgRoomHostForceBloodmoonLastStand()">⚠️ 卡住了？房主強制結算（當作沒有殺任何人）</button></div>'
+      :'';
+    return {needsTimer:false, html:'<div class="nbanner nbanner-night" style="margin-top:20px;"><h1>血月使者的最後一擊</h1></div>'
+      +'<p class="sub" style="text-align:center;margin-top:8px;">'+rd.bloodmoonLastStandSeatNum+'號是血月使者，暫留場上，正在決定今晚的最後一刀，請安靜等待</p>'
+      +hostBtn};
+  }
+  return {needsTimer:true, html:jgRoomTimerHtml(30,'選擇今晚要殺的對象——這是你最後的機會')
+    +'<div class="nbanner nbanner-night" style="margin-top:20px;"><h1>血月使者：最後一擊</h1></div>'
+    +'<div class="info-warn" style="text-align:center;margin-top:6px;">你是本局最後一位狼人，剛才的放逐暫時沒有真的生效——選一位玩家開最後一刀，如果殺光所有平民或所有神職，狼人就獲勝；沒有的話，這一刀結束後你就會真正陣亡。</div>'
+    +jgRoomNumGridHtml('jg-room-bloodmoon-pick', null)
+    +'<div style="text-align:center;"><button class="primary" style="margin-top:10px;" onclick="jgRoomBloodmoonLastStandKillFromGrid('+night+')">開最後一刀</button></div>'};
+}
+window.jgRoomBloodmoonLastStandKillFromGrid=function(night){
+  const hidden=document.getElementById('jg-room-bloodmoon-pick');
+  const seatNum=hidden&&hidden.value?parseInt(hidden.value):null;
+  if(!seatNum){ alert('請先點選一個號碼'); return; }
+  const p=jgRoomLatestPlayers.find(pp=>pp.seatNum===seatNum);
+  if(!p) return;
+  if(!confirm('確定要對 '+seatNum+'號 開最後一刀嗎？這是最後機會，確定後無法更改。')) return;
+  window.jgRoomBloodmoonLastStandKill(p.uid, seatNum, night);
+};
+window.jgRoomBloodmoonLastStandKill=async function(targetUid, targetSeatNum, night){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode,'players',targetUid),{ alive:false },{ merge:true });
+  await jgRoomAppendNightLog(night, '血月最後一擊 '+targetSeatNum);
+  await jgRoomFinishBloodmoonLastStand();
+};
+// 房主強制跳過（例如血月使者本人手機沒電、忘記按）：當作這一刀沒有殺任何人，直接讓他
+// 真正陣亡、結算勝負。
+window.jgRoomHostForceBloodmoonLastStand=async function(){
+  if(!confirm('確定要強制跳過血月使者的最後一擊嗎？這會當作沒有殺任何人，直接結算勝負。')) return;
+  await jgRoomFinishBloodmoonLastStand();
+};
+// 不管有沒有真的殺到人，都要「先檢查這一刀有沒有直接達成屠邊」再讓血月使者真正陣亡——
+// 這個當下他在資料庫裡都還沒被標記死亡，「狼人是不是已經全滅」不會被誤觸發，只會看到
+// 屠民/屠神；沒有達成屠邊的話，他的緩刑到此結束，這時候才真的死亡，「狼人已全滅」這次
+// 才會成立，好人陣營獲勝。
+async function jgRoomFinishBloodmoonLastStand(){
+  const db=window.jgFirebaseDb;
+  const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
+  const rd=roomSnap.data()||{};
+  const uid=rd.bloodmoonLastStandUid;
+  if(!uid) return; // 已經被別的裝置結算過了
+  await setDoc(doc(db,'rooms',jgRoomCode),{ bloodmoonLastStandUid:null },{ merge:true });
+  const won=await jgRoomMaybeDeclareWin();
+  if(!won){
+    await setDoc(doc(db,'rooms',jgRoomCode,'players',uid),{ alive:false },{ merge:true });
+    await jgRoomMaybeDeclareWin();
+  }
+  await jgRoomRefreshAndRenderCurrent();
+}
 // 放逐投票結算：唯一最高票→真的淘汰（alive:false）、觸發邱比特殉情連動、檢查有沒有開槍
 // 資格（獵人/黑狼王/幸運兒獵槍，見 jgRoomCheckShootEligible）；平票→進入 PK；PK 後再度
 // 平票、或沒有人投票→無人出局。不管哪種結果，只要沒有人卡在開槍，就直接進入下一夜。
@@ -2603,6 +2805,13 @@ async function jgRoomResolveDayVote(entries, top){
   }
   const outSeat=Number(top[0].seat);
   const outUid=top[0].targetUid;
+  // 血月使者被動：這次要放逐的剛好是「場上最後一個活著的狼人」而且他是血月使者，不是
+  // 真的死掉——公開讓全場知道他暫留場上，直接進入夜晚讓他自己選一人開最後一刀，見
+  // jgRoomStartBloodmoonLastStand 的說明。這個檢查要放在真的標記 alive:false 之前。
+  if(await jgRoomCheckBloodmoonLastStand(outUid)){
+    await jgRoomStartBloodmoonLastStand(outUid, outSeat);
+    return;
+  }
   await setDoc(doc(db,'rooms',jgRoomCode,'players',outUid),{ alive:false },{ merge:true });
   await jgRoomApplyCupidCascade();
   await setDoc(doc(db,'rooms',jgRoomCode),{ votingActive:false, dayVotePkRound:false },{ merge:true });
@@ -3386,6 +3595,13 @@ async function jgRoomRenderNightShell(){
     const r=jgRoomBadgeViewHtml(); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(jgMyRole==='medium'&&currentStep==='medium'){
     const r=await jgRoomMediumViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
+  } else if(jgMyRole==='demonhunter'&&currentStep==='demonhunter'){
+    const r=await jgRoomDemonhunterViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
+  } else if(currentStep==='bloodmoonlaststand'){
+    // 這一晚是全房公開的（不是角色機密），所有人都看得到同一份畫面——不像其餘步驟要
+    // 用 jgMyRole 篩選誰看得到操作介面，這裡由 jgRoomBloodmoonLastStandViewHtml 自己
+    // 依「我是不是血月使者本人」分成操作畫面／安靜等待畫面兩種。
+    const r=await jgRoomBloodmoonLastStandViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else {
     jgRoomStopTimer();
     bodyHtml='<div class="nbanner nbanner-night" style="margin-top:20px;"><h1>夜晚進行中</h1>'
@@ -3396,7 +3612,7 @@ async function jgRoomRenderNightShell(){
   // 狼人睜眼出刀維持 30 秒（隊友要互相商量，時間比較緊繃），其餘所有夜晚步驟都是 20 秒——
   // 這裡要跟每個步驟自己 HTML 裡用 jgRoomTimerHtml() 顯示出來的秒數對應一致，不然畫面上
   // 寫「倒數20秒」但計時器實際上跑30秒才會觸發自動跳下一步，會對不起來。
-  const timerSeconds=(currentStep==='wolf')?30:20;
+  const timerSeconds=(currentStep==='wolf'||currentStep==='bloodmoonlaststand')?30:20;
   if(needsTimer) jgRoomStartTimer(timerSeconds); else jgRoomStopTimer();
 }
 // 房主專用提示：狼隊出刀完成後，如果板子有查驗類角色（預言家/通靈師擇一）就會先進行查驗，
@@ -3407,7 +3623,7 @@ async function jgRoomRenderNightShell(){
 // 通靈師被狼刀殺死），這種情況下這個人不一定還有人拿著他的手機盯著螢幕操作，導致全場等
 // 不到一個不會再有人回應的動作。其餘還沒有明確安全預設的步驟（邱比特配對、夢魘恐懼、
 // 魔術師換人、攝夢人夢遊、狼兄狼弟）先不開放強制跳過，避免用錯預設值扭曲遊戲結果。
-const JG_ROOM_FORCE_SKIPPABLE_STEPS=new Set(['witch','seer','medium','mechwolf','guard','blackmarket']);
+const JG_ROOM_FORCE_SKIPPABLE_STEPS=new Set(['witch','seer','medium','mechwolf','guard','blackmarket','demonhunter']);
 function jgRoomHostAdvanceHtml(currentStep, night){
   const forceHtml=(jgRoomIsHost&&currentStep&&JG_ROOM_FORCE_SKIPPABLE_STEPS.has(currentStep))
     ?'<div style="text-align:center;margin-top:10px;"><button style="font-size:12px;color:var(--text3);" onclick="jgRoomHostForceAdvanceStep(\''+currentStep+'\','+night+')">⚠️ 卡住了？房主強制往下一步</button></div>'
@@ -3426,6 +3642,7 @@ function jgRoomHostAdvanceHtml(currentStep, night){
   if(currentStep==='witch') return forceHtml;
   if(currentStep==='seer') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">預言家（或持有查驗技能的幸運兒）查驗完之後，會自動往下一步。</div>'+forceHtml;
   if(currentStep==='medium') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">通靈師查驗完之後，會自動往下一步。</div>'+forceHtml;
+  if(currentStep==='demonhunter') return forceHtml;
   if(!currentStep) return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">這一夜已經結束，正在自動接警長競選...</div>';
   return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">目前只做了守衛、狼隊出刀、女巫、預言家、通靈師、夢魘、魔術師、攝夢人、機械狼、邱比特、狼兄狼弟、黑市商人、夜槍（獵人/黑狼王/幸運兒獵槍）當示範，其餘角色還在開發中。</div>';
 }
@@ -3448,6 +3665,9 @@ window.jgRoomHostForceAdvanceStep=async function(step, night){
     await jgRoomAdvanceToWolfOrBeyond(step, night);
   } else if(step==='blackmarket'){
     await jgRoomAfterBlackmarketStep(night);
+  } else if(step==='demonhunter'){
+    await jgRoomAppendNightLog(night, '獵 x');
+    await jgRoomFinishDemonhunterStep(night);
   }
   await jgRoomRefreshAndRenderCurrent();
 };
@@ -3576,6 +3796,98 @@ window.jgRoomMediumDeadContinue=async function(night){
   await jgRoomAdvanceToDayPhase(night);
   await jgRoomRefreshAndRenderCurrent();
 };
+
+// ── 獵魔人：查驗類角色之後、天亮之前的最後一步（見 jgRoomAdvanceToDayPhase）。第二夜起
+//    每晚都能選一人狩獵（可以留空跳過）：對方是狼人陣營→狼死，對方是好人→獵魔人自己死；
+//    免疫女巫毒藥（見 jgRoomResolveNightDeaths 裡加的角色判斷）。這一刀是立即結算、確定
+//    生死的效果，不像狼刀可能被守衛/解藥擋下，所以直接在這裡標記死亡，不透過
+//    jgRoomResolveNightDeaths（那個函式是給「狼刀/毒/額外一刀」這幾種當晚已經寫好目標、
+//    要一起結算的死法共用，這一步的行動時間點已經在那些都結算完之後，重新呼叫一次會把
+//    狼刀/毒的死亡結算邏輯重跑一遍，可能誤觸發已經處理過的夜槍/警徽流程）。──
+async function jgRoomDemonhunterViewHtml(night){
+  const rd=jgRoomLatestRoomDoc||{};
+  if(jgRoomAmIFeared(rd,night)) return jgRoomFearedNoticeHtml();
+  const db=window.jgFirebaseDb;
+  const deadMe=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  if(deadMe&&deadMe.alive===false){
+    const deadActSnap=await getDoc(doc(db,'rooms',jgRoomCode,'demonhunterActs',window.jgFirebaseUid));
+    if(deadActSnap.exists()&&deadActSnap.data().night===night){
+      return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><h1>已行動</h1></div>'
+        +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請記住，等待其他人完成夜晚行動</div>'};
+    }
+    return {needsTimer:true, html:jgRoomTimerHtml(20,'今晚要狩獵的對象是？')
+      +'<div class="nbanner" style="margin-top:20px;"><h1>獵魔人請睜眼</h1></div>'
+      +'<div class="info-warn" style="text-align:center;">獵魔人已出局，仍需走完流程</div>'
+      +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomDemonhunterSkip('+night+')">下一步 →</button></div>'};
+  }
+  const actSnap=await getDoc(doc(db,'rooms',jgRoomCode,'demonhunterActs',window.jgFirebaseUid));
+  if(actSnap.exists()&&actSnap.data().night===night){
+    const d=actSnap.data();
+    return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><h1>已行動</h1>'
+      +'<p class="sub" style="text-align:center;margin-top:8px;">'+(d.targetSeatNum?('狩獵了 '+d.targetSeatNum+'號'):'這晚沒有狩獵')+'</p></div>'
+      +'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">請記住，等待其他人完成夜晚行動</div>'};
+  }
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'今晚要狩獵的對象是？（可以留空跳過）')
+    +'<div class="nbanner" style="margin-top:20px;"><h1>請選擇狩獵對象</h1></div>'
+    +'<div class="info" style="font-size:12px;text-align:center;margin-top:4px;">對方是狼→狼死；對方是好人→你自己死。免疫女巫毒藥。</div>'
+    +jgRoomNumGridHtml('jg-room-demonhunter-pick', null)
+    +'<div style="text-align:center;"><button class="primary" style="margin-top:10px;" onclick="jgRoomDemonhunterHuntFromGrid('+night+')">狩獵</button></div>'
+    +'<div style="text-align:center;"><button style="margin-top:8px;" onclick="jgRoomDemonhunterSkip('+night+')">今晚不狩獵，跳過</button></div>'};
+}
+window.jgRoomDemonhunterHuntFromGrid=function(night){
+  const hidden=document.getElementById('jg-room-demonhunter-pick');
+  const seatNum=hidden&&hidden.value?parseInt(hidden.value):null;
+  if(!seatNum){ alert('請先點選一個號碼'); return; }
+  const p=jgRoomLatestPlayers.find(pp=>pp.seatNum===seatNum);
+  if(!p) return;
+  if(!confirm('確定要狩獵 '+seatNum+'號 嗎？如果對方是好人，你自己會死。')) return;
+  window.jgRoomDemonhunterHunt(p.uid, seatNum, night);
+};
+window.jgRoomDemonhunterHunt=async function(targetUid, targetSeatNum, night){
+  const db=window.jgFirebaseDb;
+  const rd=jgRoomLatestRoomDoc||{};
+  const effective=jgRoomEffectiveTarget(rd,night,targetUid);
+  const secretSnap=await getDoc(doc(db,'rooms',jgRoomCode,'secrets',effective));
+  const role=secretSnap.exists()?secretSnap.data().role:'villager';
+  const isWolf=(typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(role));
+  await setDoc(doc(db,'rooms',jgRoomCode),{
+    demonhunterHuntNight:night, demonhunterHuntTargetUid:effective, demonhunterHuntTargetSeatNum:targetSeatNum,
+    demonhunterHuntIsWolf:isWolf, demonhunterUid:window.jgFirebaseUid
+  },{ merge:true });
+  if(isWolf){
+    await setDoc(doc(db,'rooms',jgRoomCode,'players',effective),{ alive:false },{ merge:true });
+  } else {
+    await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ alive:false },{ merge:true });
+  }
+  await setDoc(doc(db,'rooms',jgRoomCode,'demonhunterActs',window.jgFirebaseUid),{ night:night, targetSeatNum:targetSeatNum });
+  await jgRoomAppendNightLog(night, '獵 '+targetSeatNum+(isWolf?'(狼)':'(好，獵魔人自死)'));
+  await jgRoomApplyCupidCascade();
+  await jgRoomFinishDemonhunterStep(night);
+};
+window.jgRoomDemonhunterSkip=async function(night){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode,'demonhunterActs',window.jgFirebaseUid),{ night:night, targetSeatNum:null });
+  await jgRoomAppendNightLog(night, '獵 x');
+  await jgRoomFinishDemonhunterStep(night);
+};
+// 獵魔人這一步結束（不管有沒有真的狩獵）之後：先檢查有沒有警徽要處理（萬一他自己死了、
+// 剛好又是警長），再檢查勝負（他這一刀可能剛好屠邊、或剛好害狼人全滅），都沒有才真的
+// 進入白天（見 jgRoomReallyAdvanceToDayPhase，這裡刻意不呼叫 jgRoomAdvanceToDayPhase，
+// 不然會被 jgRoomDemonhunterPending 誤判成「還沒輪到獵魔人」又繞回這一步，無限迴圈）。
+async function jgRoomFinishDemonhunterStep(night){
+  const db=window.jgFirebaseDb;
+  if(await jgRoomCheckAndSetPendingBadge()){
+    await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'badge' },{ merge:true });
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
+  if(await jgRoomMaybeDeclareWin()){
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
+  await jgRoomReallyAdvanceToDayPhase(night);
+  await jgRoomRefreshAndRenderCurrent();
+}
 // 查驗到機械狼：機械狼尚未學習技能時顯示「機械狼」，已經學習之後改顯示學到的具體身分
 // （見 ALL_ROLES.medium 的規則說明），學到的身分存在機械狼自己 players/{uid}.mechWolfLearnedRole。
 window.jgRoomMediumCheck=async function(targetUid, targetSeatNum, night){
@@ -4542,6 +4854,7 @@ window.jgRoomLeave=function(){
   jgRoomRemoveMyIdentityButton();
   jgRoomRemoveVoiceToggleButton();
   jgRoomRemoveChatWidget();
+  jgRoomRemoveWhitewolfButton();
   if(window.jgVoiceOnRoomLeave) window.jgVoiceOnRoomLeave();
   if(jgRoomUnsubPlayers){ jgRoomUnsubPlayers(); jgRoomUnsubPlayers=null; }
   if(jgRoomUnsubMyRole){ jgRoomUnsubMyRole(); jgRoomUnsubMyRole=null; }
