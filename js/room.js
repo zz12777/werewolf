@@ -615,6 +615,7 @@ async function jgRoomEnterLobby(code){
   jgRoomAppendVoiceToggleButton();
   jgRoomAppendChatWidget();
   jgRoomAppendWhitewolfButton();
+  jgRoomAppendBloodmoonButton();
   // js/voice.js（語音通話）自己的初始化——不是每個人都會用到語音功能，這裡用
   // window 上有沒有掛這個函式來判斷 voice.js 有沒有載入，避免沒載入時報錯。
   if(window.jgVoiceOnRoomEnter) window.jgVoiceOnRoomEnter();
@@ -724,6 +725,7 @@ async function jgRoomRenderCurrentPhase(){
   jgRoomAppendGodViewToggle();
   jgRoomUpdateVoiceToggleButton();
   jgRoomUpdateWhitewolfButton();
+  jgRoomUpdateBloodmoonButton();
   jgRoomAppendPlayerStatusFooter();
 }
 // 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——夜晚被刀死的人要等到白天正式宣布
@@ -949,7 +951,13 @@ async function jgRoomAdvanceToDayPhase(night){
 // 索性連這一步的睜眼畫面都跳過（反正這個 app 隨時都能按右上角「確認自己身分」看自己是
 // 誰，不用特地走一次沒有任何操作的空白睜眼畫面），從第二夜開始才真的排進流程。
 function jgRoomDemonhunterPending(night){
-  return !!(jgRoomComp&&jgRoomComp.demonhunter>0&&night>=2);
+  return !!(jgRoomComp&&jgRoomComp.demonhunter>0&&night>=2&&!jgRoomGodSkillsSealedThisNight(night));
+}
+// 血月使者自爆（見 jgRoomBloodmoonDetonateConfirm）封印的那一夜——這一晚除了狼隊正常
+// 出刀之外，守衛／女巫／查驗類角色／獵魔人這些「神牌」技能全部跳過，不受任何一步的
+// 強制推進按鈕影響（本來就不會顯示，因為 currentStep 從來不會被設成那些步驟）。
+function jgRoomGodSkillsSealedThisNight(night){
+  return !!(jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.godSkillsSealedNight===night);
 }
 // 真正的「進入白天」：第一夜要接警長競選（僅限房主建房時有勾選「本局開放上警競選」
 // ——沒勾選的話，第一夜不會出現參選警長畫面，直接跟第二夜起一樣進白天），第二夜起
@@ -1039,7 +1047,9 @@ async function jgRoomAdvanceToCheckOrSheriff(){
   // 這一晚的死亡（含夜槍、警徽傳遞）都已經塵埃落定，才是檢查勝負的正確時機——
   // 分出勝負就直接讓所有人的畫面切去結束畫面，不用再進查驗步驟或天亮。
   if(await jgRoomMaybeDeclareWin()) return;
-  const checkStep=jgRoomNextCheckStep();
+  // 血月使者自爆封印當晚所有神牌技能（見 jgRoomBloodmoonDetonateConfirm）：查驗類角色
+  // 這一步也要跳過，不能因為技能被封印就卡住流程。
+  const checkStep=jgRoomGodSkillsSealedThisNight(rd.night||1)?null:jgRoomNextCheckStep();
   if(checkStep){
     await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:checkStep },{ merge:true });
   } else {
@@ -1539,6 +1549,12 @@ window.jgRoomWhitewolfDetonateStart=function(){
     +'<div style="text-align:center;margin-top:10px;"><button class="primary" onclick="jgRoomWhitewolfDetonateConfirm()">自爆</button>'
     +' <button onclick="jgRoomRenderCurrentPhase()">取消</button></div>';
 };
+// 自爆之後：先標記自己死亡，帶走的人（如果有選）也一起標記死亡，接著跟白天投票放逐
+// 死亡同一套流程——先看有沒有警徽要處理，沒有再看有沒有分出勝負，都沒有的話讓白狼王
+// 自己發表 90 秒遺言（見 jgRoomStartDayVoteLastWords，同時會標記 exiledByVote，讓他遺言
+// 講完之後不用等隔天公布死訊就能看上帝視角——這是白天公開發生的事，沒有保密的必要）。
+// 帶走的那個人是被自爆連坐死亡，不是自己選擇要不要講遺言，不會另外卡出他的遺言畫面，
+// 但一樣視為「白天公開死亡」，標記 exiledByVote 讓他也能提早看上帝視角。
 window.jgRoomWhitewolfDetonateConfirm=async function(){
   const hidden=document.getElementById('jg-room-whitewolf-pick');
   const seatNum=hidden&&hidden.value?parseInt(hidden.value):null;
@@ -1547,19 +1563,24 @@ window.jgRoomWhitewolfDetonateConfirm=async function(){
   const rd=jgRoomLatestRoomDoc||{};
   const night=rd.night||1;
   const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  const mySeat=me?me.seatNum:null;
   await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ alive:false },{ merge:true });
   let targetSeatText='沒有人';
   if(seatNum){
     const target=jgRoomLatestPlayers.find(p=>p.seatNum===seatNum);
     if(target){
-      await setDoc(doc(db,'rooms',jgRoomCode,'players',target.uid),{ alive:false },{ merge:true });
+      await setDoc(doc(db,'rooms',jgRoomCode,'players',target.uid),{ alive:false, exiledByVote:true },{ merge:true });
       targetSeatText=seatNum+'號';
     }
   }
-  await jgRoomAppendNightLog(night, (me?me.seatNum:'?')+'號（白狼王）自爆，帶走 '+targetSeatText);
+  // 自爆不管是在白天發言、還是剛好在警長競選階段發生，都直接算進入白天死訊結算流程——
+  // 競選本身直接作廢（反正下一步就是天黑），這樣才能沿用白天既有的「開槍／警徽／遺言」
+  // 判斷鏈（那條鏈是掛在 phase==='day-open' 才會被檢查，見 jgRoomRenderDayOpen），不用在
+  // 警長競選畫面另外重做一套。
+  await setDoc(doc(db,'rooms',jgRoomCode),{ phase:'day-open', sheriffPhase:null },{ merge:true });
+  await jgRoomAppendNightLog(night, (mySeat||'?')+'號（白狼王）自爆，帶走 '+targetSeatText);
   await jgRoomApplyCupidCascade();
   if(await jgRoomCheckAndSetPendingBadge()){
-    await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'badge' },{ merge:true });
     await jgRoomRefreshAndRenderCurrent();
     return;
   }
@@ -1567,9 +1588,75 @@ window.jgRoomWhitewolfDetonateConfirm=async function(){
     await jgRoomRefreshAndRenderCurrent();
     return;
   }
-  await jgRoomStartNextNight();
+  await jgRoomStartDayVoteLastWords(window.jgFirebaseUid, mySeat);
   await jgRoomRefreshAndRenderCurrent();
 };
+
+// ── 血月使者自己的主動技能：「白天自己發言階段可自爆後直接進入黑夜，當晚所有神牌技能
+//    封印」——限定「自己的發言階段」，不是像白狼王那樣白天任何時候都能按，所以這顆按鈕
+//    要另外檢查「現在輪到的發言人是不是我自己」（沿用 90 秒發言輪流計時器的
+//    speechTurnContext／speechTurnOrder／speechTurnIdx，見 jgRoomSpeechTurnWidgetHtml），
+//    只在白天一般發言輪到自己時才會出現，警長競選政見發表輪到自己時不算。──
+function jgRoomAppendBloodmoonButton(){
+  if(document.getElementById('jg-room-bloodmoon-btn')) return;
+  const btn=document.createElement('button');
+  btn.id='jg-room-bloodmoon-btn';
+  btn.textContent='血月使者自爆';
+  btn.onclick=function(){ window.jgRoomBloodmoonDetonateStart(); };
+  btn.style.cssText='position:fixed;bottom:120px;left:8px;z-index:250;width:auto;margin:0;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid var(--wolf,#b83828);background:var(--wolf,#b83828);color:#fff;box-shadow:0 1px 6px rgba(0,0,0,0.2);cursor:pointer;display:none;';
+  document.body.appendChild(btn);
+}
+function jgRoomRemoveBloodmoonButton(){
+  const btn=document.getElementById('jg-room-bloodmoon-btn');
+  if(btn) btn.remove();
+}
+function jgRoomUpdateBloodmoonButton(){
+  const btn=document.getElementById('jg-room-bloodmoon-btn');
+  if(!btn) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  const night=rd.night||1;
+  const isMySpeechTurn=rd.speechTurnContext==='day:'+night
+    &&Array.isArray(rd.speechTurnOrder)
+    &&me&&rd.speechTurnOrder[rd.speechTurnIdx||0]===me.seatNum;
+  const eligible=jgMyRole==='bloodmoon'&&me&&me.alive!==false&&!rd.votingActive
+    &&rd.phase==='day-open'&&isMySpeechTurn
+    &&!(rd.pendingShootUids&&rd.pendingShootUids.length)
+    &&!rd.pendingBadgeUid&&!rd.dayVoteLastWordsUid
+    &&!(rd.dayVotePkPendingUids&&rd.dayVotePkPendingUids.length);
+  btn.style.display=eligible?'block':'none';
+}
+window.jgRoomBloodmoonDetonateStart=function(){
+  if(!confirm('確定要自爆嗎？今晚只有狼隊會正常出刀，其他神牌技能（守衛/女巫/查驗類/獵魔人）全部封印，直接進入黑夜，無法反悔。')) return;
+  window.jgRoomBloodmoonDetonateConfirm();
+};
+// 自爆不帶人（規則明講「自爆時不能開槍帶人」），直接標記自己死亡，接續跟白狼王一樣的
+// 「警徽→勝負」判斷鏈，但不給遺言（他剛才就是在自己的發言階段中途自爆，不像白狼王
+// 是隨時打斷別人發言，沒有另外需要一段遺言時間的必要）——直接指定下一夜從 wolf 開始
+// （跳過守衛），並且標記 godSkillsSealedNight，讓 jgRoomAfterBlackmarketStep／
+// jgRoomAdvanceToCheckOrSheriff／jgRoomDemonhunterPending 這幾個檢查點都知道要跳過。
+window.jgRoomBloodmoonDetonateConfirm=async function(){
+  const db=window.jgFirebaseDb;
+  const rd=jgRoomLatestRoomDoc||{};
+  const night=rd.night||1;
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  const mySeat=me?me.seatNum:null;
+  await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ alive:false, exiledByVote:true },{ merge:true });
+  await jgRoomAppendNightLog(night, (mySeat||'?')+'號（血月使者）自爆，當晚封印所有神牌技能');
+  await jgRoomApplyCupidCascade();
+  if(await jgRoomCheckAndSetPendingBadge()){
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
+  if(await jgRoomMaybeDeclareWin()){
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
+  const nextNight=await jgRoomStartNextNight('wolf', {});
+  await setDoc(doc(db,'rooms',jgRoomCode),{ godSkillsSealedNight:nextNight },{ merge:true });
+  await jgRoomRefreshAndRenderCurrent();
+};
+
 // 每次畫面重畫都呼叫一次，更新按鈕文字（開/關）跟顯示與否（板子不支援語音就整個藏起來）。
 function jgRoomUpdateVoiceToggleButton(){
   const btn=document.getElementById('jg-room-voice-btn');
@@ -2285,7 +2372,9 @@ async function jgRoomAfterKillDecided(night){
 async function jgRoomAfterBlackmarketStep(night){
   const db=window.jgFirebaseDb;
   const hasWitch=(jgRoomComp&&jgRoomComp.witch>0)||!!jgRoomActiveLuckyOne('witch', night);
-  if(hasWitch){
+  // 血月使者自爆封印當晚所有神牌技能（見 jgRoomBloodmoonDetonateConfirm）：女巫這一步
+  // 也要跳過，直接結算死亡（狼刀不受影響，正常結算）。
+  if(hasWitch&&!jgRoomGodSkillsSealedThisNight(night)){
     await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'witch' },{ merge:true });
   } else {
     await jgRoomResolveNightDeaths();
@@ -4855,6 +4944,7 @@ window.jgRoomLeave=function(){
   jgRoomRemoveVoiceToggleButton();
   jgRoomRemoveChatWidget();
   jgRoomRemoveWhitewolfButton();
+  jgRoomRemoveBloodmoonButton();
   if(window.jgVoiceOnRoomLeave) window.jgVoiceOnRoomLeave();
   if(jgRoomUnsubPlayers){ jgRoomUnsubPlayers(); jgRoomUnsubPlayers=null; }
   if(jgRoomUnsubMyRole){ jgRoomUnsubMyRole(); jgRoomUnsubMyRole=null; }
