@@ -72,6 +72,7 @@ function loadRoomLogicForGodView() {
     + 'jgRoomGuardActFromGrid,jgRoomSubmitCheckFromGrid,jgRoomGuardAct,jgRoomRenderNightShell,'
     + 'jgRoomAdvanceToDayPhase,jgRoomJoinSheriff,jgRoomLockSheriffJoin,jgRoomRenderSheriffCampaign,jgRoomWolfConfirm,'
     + 'jgRoomAssignRoles,jgRoomThiefChoose,jgRoomThiefViewHtml,jgRoomNextNightStep,jgRoomStepPresent,jgRoomCupidPickFirst,jgRoomCupidConfirmPair,jgRoomDealAssignRoles,'
+    + 'jgRoomCheckBloodmoonLastStand,jgRoomComputeWinCheck,jgRoomDemonhunterHunt,'
     + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal,__setMyRole,__getSuppressFlag};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
@@ -325,6 +326,7 @@ async function runAsync() {
   await runDeadWolfNotBlockingTest();
   await runMechWolfThenWolfChainTest();
   await runGridSubmitFunctionsTest();
+  await runBloodmoonLastStandTest();
 })();
 
 async function runMechWolfNight1Test(){
@@ -1273,6 +1275,72 @@ async function runMultiWolfConsensusTest(){
   const anyFail=results.some(r=>!r.ok);
   if(anyFail){ console.error('多狼情境全員確認測試有失敗！'); process.exit(1); }
   console.log(`全部 ${results.length} 項多狼情境全員確認測試通過`);
+}
+
+// 血月使者被動（若為最後一個活著的狼人，被放逐時暫留場上）的觸發判斷——這是新板子
+// 「血月使者+獵魔人」裡風險最高的一段邏輯（判斷錯就會讓不該觸發的普通狼人放逐流程被
+// 打斷，或該觸發的血月使者卻直接被判定死亡），特別獨立寫測試驗證幾種情境。
+async function runBloodmoonLastStandTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+
+  mod.__setRoomCode('ROOMBM');
+  mod.__setPlayers([
+    { uid:'p1', seatNum:1, name:'甲', alive:true },
+    { uid:'p2', seatNum:2, name:'乙', alive:true },
+    { uid:'p3', seatNum:3, name:'丙', alive:true },
+  ]);
+  global.__mockCollections={
+    'rooms/ROOMBM/secrets':[
+      { id:'p1', data:()=>({role:'bloodmoon'}) },
+      { id:'p2', data:()=>({role:'villager'}) },
+      { id:'p3', data:()=>({role:'demonhunter'}) },
+    ],
+  };
+  check('血月使者是場上最後一隻活著的狼→觸發被動', await mod.jgRoomCheckBloodmoonLastStand('p1'), true);
+
+  mod.__setPlayers([
+    { uid:'p1', seatNum:1, name:'甲', alive:true },
+    { uid:'p2', seatNum:2, name:'乙', alive:true },
+    { uid:'p4', seatNum:4, name:'丁', alive:true },
+  ]);
+  global.__mockCollections['rooms/ROOMBM/secrets']=[
+    { id:'p1', data:()=>({role:'bloodmoon'}) },
+    { id:'p2', data:()=>({role:'villager'}) },
+    { id:'p4', data:()=>({role:'wolf'}) },
+  ];
+  check('還有其他活著的狼隊友→不觸發被動', await mod.jgRoomCheckBloodmoonLastStand('p1'), false);
+
+  mod.__setPlayers([
+    { uid:'p4', seatNum:4, name:'丁', alive:true },
+    { uid:'p2', seatNum:2, name:'乙', alive:true },
+  ]);
+  global.__mockCollections['rooms/ROOMBM/secrets']=[
+    { id:'p4', data:()=>({role:'wolf'}) },
+    { id:'p2', data:()=>({role:'villager'}) },
+  ];
+  check('是最後一隻狼但角色不是血月使者→不觸發被動', await mod.jgRoomCheckBloodmoonLastStand('p4'), false);
+
+  mod.__setPlayers([
+    { uid:'p1', seatNum:1, name:'甲', alive:true },
+    { uid:'p4', seatNum:4, name:'丁', alive:false },
+    { uid:'p2', seatNum:2, name:'乙', alive:true },
+  ]);
+  global.__mockCollections['rooms/ROOMBM/secrets']=[
+    { id:'p1', data:()=>({role:'bloodmoon'}) },
+    { id:'p4', data:()=>({role:'wolf'}) },
+    { id:'p2', data:()=>({role:'villager'}) },
+  ];
+  check('已死亡的狼隊友不算「其他活著的狼」→仍觸發被動', await mod.jgRoomCheckBloodmoonLastStand('p1'), true);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('血月使者最後一擊觸發判斷測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項血月使者最後一擊觸發判斷測試通過`);
 }
 
 async function runGridSubmitFunctionsTest(){
