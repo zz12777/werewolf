@@ -1211,8 +1211,15 @@ async function jgRoomResolveNightDeaths(){
   const wolfKillDeathCandidates=[];
   const wolfTarget=fresh.wolfKillTargetUid;
   if(wolfTarget&&!isDreaming(wolfTarget)){
-    const guardedThis=fresh.guardProtectedUid&&fresh.guardProtectedUid===wolfTarget;
-    const savedThis=fresh.witchSavedUid&&fresh.witchSavedUid===wolfTarget;
+    // guardProtectedUid／witchSavedUid 原本沒有比對「是不是這一晚存的」，只要欄位裡剛好
+    // 是同一個 uid 就算數——這兩個欄位從來沒有在每晚開始時清空，只要守衛/女巫之前任何一晚
+    // 保護／救過某人，之後只要狼隊「剛好」又選中同一個人當目標（很常見，例如連兩晚都殺
+    // 同一個高價值目標），就會被這筆早就過期的舊紀錄誤判成「這一晚也被保護／救了」，明明
+    // 女巫這晚根本沒救、甚至沒藥了，狼刀卻莫名其妙被擋下、天亮播平安夜。改成一定要「這一晚
+    // 存的」（guardTargetNight／witchSavedNight＝現在這一晚）才算數，跟下面 mechGuardedThis
+    // 本來就有的 night 比對邏輯一致。
+    const guardedThis=fresh.guardProtectedUid&&fresh.guardTargetNight===night&&fresh.guardProtectedUid===wolfTarget;
+    const savedThis=fresh.witchSavedUid&&fresh.witchSavedNight===night&&fresh.witchSavedUid===wolfTarget;
     const mechGuardedThis=fresh.mechWolfGuardUid&&fresh.mechWolfGuardNight===night&&fresh.mechWolfGuardUid===wolfTarget;
     const overheal=guardedThis&&savedThis;
     if(overheal||(!guardedThis&&!savedThis&&!mechGuardedThis)){
@@ -1224,7 +1231,11 @@ async function jgRoomResolveNightDeaths(){
   // 角色再決定要不要真的殺，跟其餘幾種「整局限一次、不可阻擋」的死法不一樣，這裡是
   // 唯一需要額外讀 secrets 的一種。只有真的有人被毒、而且這場板子確實可能有獵魔人時
   // 才查（板子沒有獵魔人的情況多讀一次 secrets 沒有意義，但直接查也無害，不特地省略）。
-  if(fresh.witchPoisonUid&&!isDreaming(fresh.witchPoisonUid)){
+  // witchPoisonUid 一樣要比對是不是這一晚下的毒，理由跟上面 guardedThis／savedThis 一樣——
+  // 沒有這個比對的話，某一晚下過毒之後，之後每一晚結算都會把同一個人重新「毒」一次
+  // （雖然對方通常早就已經死亡，寫入不會造成新的錯誤死亡，但邏輯上是錯的，萬一那個人剛好
+  // 被守衛/女巫救回來或其他方式復活，就會被這筆過期紀錄再殺一次）。
+  if(fresh.witchPoisonUid&&fresh.witchPoisonNight===night&&!isDreaming(fresh.witchPoisonUid)){
     const poisonSecretSnap=await getDoc(doc(db,'rooms',jgRoomCode,'secrets',fresh.witchPoisonUid));
     const poisonRole=poisonSecretSnap.exists()?poisonSecretSnap.data().role:null;
     if(poisonRole!=='demonhunter') await kill(fresh.witchPoisonUid);
@@ -2122,7 +2133,7 @@ window.jgRoomWitchSave=async function(targetSeatNum, night){
     await jgRoomRefreshAndRenderCurrent();
     return;
   }
-  await setDoc(doc(db,'rooms',jgRoomCode),{ witchSavedUid: fresh.wolfKillTargetUid },{ merge:true });
+  await setDoc(doc(db,'rooms',jgRoomCode),{ witchSavedUid: fresh.wolfKillTargetUid, witchSavedNight: night },{ merge:true });
   await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ witchSaveUsed:true },{ merge:true });
   await jgRoomAppendNightLog(night, '救 '+targetSeatNum);
   await jgRoomAppendNightLog(night, '毒 x');
@@ -2140,7 +2151,7 @@ window.jgRoomWitchPoison=async function(targetUid, targetSeatNum, night){
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
-  await setDoc(doc(db,'rooms',jgRoomCode),{ witchPoisonUid: effective },{ merge:true });
+  await setDoc(doc(db,'rooms',jgRoomCode),{ witchPoisonUid: effective, witchPoisonNight: night },{ merge:true });
   await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ witchPoisonUsed:true },{ merge:true });
   if(rd.wolfKillTargetSeatNum) await jgRoomAppendNightLog(night, '救 x');
   await jgRoomAppendNightLog(night, '毒 '+targetSeatNum);
@@ -4919,7 +4930,7 @@ window.jgRoomLuckyOneWitchPoison=async function(targetUid, targetSeatNum, night)
   const db=window.jgFirebaseDb;
   const rd=jgRoomLatestRoomDoc||{};
   const effective=jgRoomEffectiveTarget(rd,night,targetUid);
-  await setDoc(doc(db,'rooms',jgRoomCode),{ witchPoisonUid:effective },{ merge:true });
+  await setDoc(doc(db,'rooms',jgRoomCode),{ witchPoisonUid:effective, witchPoisonNight:night },{ merge:true });
   await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ luckyOneWitchUsed:true },{ merge:true });
   await jgRoomAppendNightLog(night, '幸毒 '+targetSeatNum);
   await jgRoomWitchFinish(night, false, targetSeatNum);
