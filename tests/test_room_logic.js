@@ -73,6 +73,7 @@ function loadRoomLogicForGodView() {
     + 'jgRoomAdvanceToDayPhase,jgRoomJoinSheriff,jgRoomLockSheriffJoin,jgRoomRenderSheriffCampaign,jgRoomWolfConfirm,'
     + 'jgRoomAssignRoles,jgRoomThiefChoose,jgRoomThiefViewHtml,jgRoomNextNightStep,jgRoomStepPresent,jgRoomCupidPickFirst,jgRoomCupidConfirmPair,jgRoomDealAssignRoles,'
     + 'jgRoomCheckBloodmoonLastStand,jgRoomComputeWinCheck,jgRoomDemonhunterHunt,'
+    + 'jgRoomMaybeApplyBadgeSwallow,jgRoomWolfSelfBlowConfirm,jgRoomReallyAdvanceToDayPhase,'
     + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal,__setMyRole,__getSuppressFlag};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
@@ -327,6 +328,7 @@ async function runAsync() {
   await runMechWolfThenWolfChainTest();
   await runGridSubmitFunctionsTest();
   await runBloodmoonLastStandTest();
+  await runBadgeSwallowTest();
 })();
 
 async function runMechWolfNight1Test(){
@@ -1401,4 +1403,98 @@ async function runGridSubmitFunctionsTest(){
   const anyFail=results.some(r=>!r.ok);
   if(anyFail){ console.error('圓點格子送出函式測試有失敗！'); process.exit(1); }
   console.log(`全部 ${results.length} 項圓點格子送出函式測試通過`);
+}
+
+// 自爆吞警徽（單爆／雙爆）——驗證 jgRoomMaybeApplyBadgeSwallow 在警長競選期間自爆時，
+// 單爆直接讓警徽流失；雙爆第一爆保留警徽、標記隔天續選，隔天再自爆（第二爆）警徽才真正
+// 流失；不在競選期間（已經選出警長）自爆則完全不影響警徽欄位。另外驗證
+// jgRoomReallyAdvanceToDayPhase 在 sheriffPostponedToDay2 標記下，會正確恢復成
+// sheriffPhase:'day2resume'，不會重新問候選人起立。
+async function runBadgeSwallowTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+  global.window.alert = global.alert = () => {};
+  global.window.confirm = global.confirm = () => true;
+
+  // ── 單爆：警長競選期間自爆，直接讓警徽流失 ──
+  mod.__setRoomCode('BADGE1');
+  mod.__setPlayers([
+    { uid:'w1', seatNum:2, name:'狼一', alive:true },
+    { uid:'p2', seatNum:3, name:'甲', alive:true },
+  ]);
+  global.__mockDocs={
+    'rooms/BADGE1':{ night:1, phase:'sheriff', sheriffPhase:'locked', sheriffWinnerSeatNum:null,
+      badgeMode:'single', sheriffCandidates:['w1','p2'], sheriffEverCandidates:['w1','p2'] },
+  };
+  mod.__setRoomDoc(global.__mockDocs['rooms/BADGE1']);
+  global.window.jgFirebaseUid='w1';
+  await mod.jgRoomWolfSelfBlowConfirm();
+  const single=global.__mockDocs['rooms/BADGE1']||{};
+  check('單爆：自爆後警徽流失（sheriffWinnerSeatNum 仍是 null）', single.sheriffWinnerSeatNum, null);
+  check('單爆：自爆的人從候選名單移除', (single.sheriffCandidates||[]).includes('w1'), false);
+  check('單爆：畫面收回白天（不留在競選畫面）', single.phase, 'day-open');
+  check('單爆：自己被標記死亡', (global.__mockDocs['rooms/BADGE1/players/w1']||{}).alive, false);
+  check('單爆：沒有標記隔天續選', !!single.sheriffPostponedToDay2, false);
+
+  // ── 雙爆：第一爆保留警徽、標記隔天續選 ──
+  mod.__setRoomCode('BADGE2');
+  mod.__setPlayers([
+    { uid:'w1', seatNum:2, name:'狼一', alive:true },
+    { uid:'w2', seatNum:5, name:'狼二', alive:true },
+    { uid:'p2', seatNum:3, name:'甲', alive:true },
+  ]);
+  global.__mockDocs={
+    'rooms/BADGE2':{ night:1, phase:'sheriff', sheriffPhase:'locked', sheriffWinnerSeatNum:null,
+      badgeMode:'double', sheriffCandidates:['w1','w2','p2'], sheriffEverCandidates:['w1','w2','p2'] },
+  };
+  mod.__setRoomDoc(global.__mockDocs['rooms/BADGE2']);
+  global.window.jgFirebaseUid='w1';
+  await mod.jgRoomWolfSelfBlowConfirm();
+  const firstBlow=global.__mockDocs['rooms/BADGE2']||{};
+  check('雙爆・第一爆：警徽保留（sheriffFirstBlowDone=true）', firstBlow.sheriffFirstBlowDone, true);
+  check('雙爆・第一爆：標記隔天續選', firstBlow.sheriffPostponedToDay2, true);
+  check('雙爆・第一爆：sheriffWinnerSeatNum 沒被清成 null 以外的值（本輪本來就沒有警長）', firstBlow.sheriffWinnerSeatNum, null);
+  check('雙爆・第一爆：自爆的人從候選名單移除，其餘候選人還在', firstBlow.sheriffCandidates, ['w2','p2']);
+
+  // 隔天：jgRoomReallyAdvanceToDayPhase 應該恢復成 day2resume，不重新問候選人起立
+  mod.__setRoomDoc(global.__mockDocs['rooms/BADGE2']);
+  await mod.jgRoomReallyAdvanceToDayPhase(2);
+  const resumed=global.__mockDocs['rooms/BADGE2']||{};
+  check('隔天恢復競選：phase 回到 sheriff', resumed.phase, 'sheriff');
+  check('隔天恢復競選：sheriffPhase 是 day2resume（不是重新 joining）', resumed.sheriffPhase, 'day2resume');
+  check('隔天恢復競選：sheriffPostponedToDay2 用完就清掉', !!resumed.sheriffPostponedToDay2, false);
+  check('隔天恢復競選：候選人名單沿用（沒有被重置）', resumed.sheriffCandidates, ['w2','p2']);
+
+  // 隔天續選過程中，第二名狼再次自爆：警徽這次才真正流失
+  mod.__setRoomDoc(resumed);
+  global.window.jgFirebaseUid='w2';
+  await mod.jgRoomWolfSelfBlowConfirm();
+  const secondBlow=global.__mockDocs['rooms/BADGE2']||{};
+  check('雙爆・第二爆：警徽真正流失', secondBlow.sheriffWinnerSeatNum, null);
+  check('雙爆・第二爆：候選人名單只剩沒自爆過的人', secondBlow.sheriffCandidates, ['p2']);
+  check('雙爆・第二爆：不會再標記隔天續選（isFirstBlow 已經是 false）', secondBlow.sheriffPhase, null);
+
+  // ── 不在競選期間（已經選出警長）自爆：完全不影響警徽欄位 ──
+  mod.__setRoomCode('BADGE3');
+  mod.__setPlayers([{ uid:'w1', seatNum:2, name:'狼一', alive:true }]);
+  global.__mockDocs={
+    'rooms/BADGE3':{ night:2, phase:'day-open', sheriffPhase:null, sheriffWinnerSeatNum:5,
+      badgeMode:'single', sheriffCandidates:['someoneElse'] },
+  };
+  const rdBefore=Object.assign({}, global.__mockDocs['rooms/BADGE3']);
+  mod.__setRoomDoc(global.__mockDocs['rooms/BADGE3']);
+  global.window.jgFirebaseUid='w1';
+  await mod.jgRoomMaybeApplyBadgeSwallow(rdBefore, 2, 2);
+  const untouched=global.__mockDocs['rooms/BADGE3']||{};
+  check('已經選出警長時自爆：sheriffWinnerSeatNum 不受影響', untouched.sheriffWinnerSeatNum, 5);
+  check('已經選出警長時自爆：candidates 名單不受影響（函式直接不做事）', untouched.sheriffCandidates, ['someoneElse']);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('自爆吞警徽測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項自爆吞警徽測試通過`);
 }

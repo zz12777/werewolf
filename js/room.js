@@ -6,7 +6,7 @@
 // js 檔互相看不到彼此的變數，所以這裡也把要給一般 script 用的函式掛到 window 上。
 // ═══════════════════════════════════════════
 import {
-  doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion, runTransaction
+  doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion, arrayRemove, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 let jgRoomCode=null;       // 目前所在的房號
@@ -371,7 +371,7 @@ window.jgRoomCancelPendingCreate=function(){
 
 // comp/total 是「已經在法官助手設定畫面確認過」的板子配置——房間建立時就把這份配置存進
 // 房間文件，之後「隨機分配身分」要照這份配置洗牌，而不是憑加入人數臨時套用預設板子。
-window.jgRoomCreate=async function(hostName, comp, total, usePresetNames, sheriffEnabled){
+window.jgRoomCreate=async function(hostName, comp, total, usePresetNames, sheriffEnabled, badgeMode){
   const name=(hostName||'').trim();
   if(!comp||!total){ alert('請先從法官助手的設定畫面，配置好板子跟人數再建立房間。'); return; }
   const uid=await jgRoomWaitAuth();
@@ -394,7 +394,7 @@ window.jgRoomCreate=async function(hostName, comp, total, usePresetNames, sherif
   const finalHostName=presetNames?presetNames[1]:name;
   if(!finalHostName){ alert('請先輸入你的全名'); return; }
   await setDoc(doc(db,'rooms',code),Object.assign(
-    { hostUid:uid, status:'lobby', createdAt:serverTimestamp(), comp:comp, total:total, sheriffEnabled:!!sheriffEnabled },
+    { hostUid:uid, status:'lobby', createdAt:serverTimestamp(), comp:comp, total:total, sheriffEnabled:!!sheriffEnabled, badgeMode:badgeMode==='double'?'double':'single' },
     presetNames?{presetNames:presetNames}:{}
   ));
   await setDoc(doc(db,'rooms',code,'players',uid),{
@@ -629,6 +629,7 @@ async function jgRoomEnterLobby(code){
   jgRoomAppendChatWidget();
   jgRoomAppendWhitewolfButton();
   jgRoomAppendBloodmoonButton();
+  jgRoomAppendWolfSelfBlowButton();
   // js/voice.js（語音通話）自己的初始化——不是每個人都會用到語音功能，這裡用
   // window 上有沒有掛這個函式來判斷 voice.js 有沒有載入，避免沒載入時報錯。
   if(window.jgVoiceOnRoomEnter) window.jgVoiceOnRoomEnter();
@@ -739,6 +740,7 @@ async function jgRoomRenderCurrentPhase(){
   jgRoomUpdateVoiceToggleButton();
   jgRoomUpdateWhitewolfButton();
   jgRoomUpdateBloodmoonButton();
+  jgRoomUpdateWolfSelfBlowButton();
   jgRoomAppendPlayerStatusFooter();
 }
 // 死亡玩家的畫面最下面補一個「進入上帝視角」按鈕——夜晚被刀死的人要等到白天正式宣布
@@ -992,13 +994,26 @@ async function jgRoomReallyAdvanceToDayPhase(night){
   const db=window.jgFirebaseDb;
   await jgRoomCaptureDeathLine(night);
   const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
-  const sheriffEnabled=!!(roomSnap.exists()&&roomSnap.data().sheriffEnabled);
+  const fresh=roomSnap.exists()?roomSnap.data():{};
+  const sheriffEnabled=!!fresh.sheriffEnabled;
   // daySpeechStart（今天從幾號開始發言）每天都要重新決定，但這個欄位原本只在建房時被設成
   // null 過一次，進入白天時完全沒有重置——導致第一天抽（或警長指定）出起點之後，欄位就
   // 一直留在資料庫裡，後面每一天進到白天畫面時 jgRoomRenderDayOpen 看到「已經有值」就直接
   // 沿用第一天的舊起點，不會再轉盤／重抽。這裡在真正進入白天之前先清空，daySpeechDir
   // （順/逆時針）不受影響——那個依規則整局只決定一次，之後每天都要維持同一個方向。
   await setDoc(doc(db,'rooms',jgRoomCode),{ daySpeechStart:null },{ merge:true });
+  // 雙爆吞警徽・昨天發生過第一爆（警徽保留，競選延到隔天）：今天不重新問候選人起立、
+  // 也不用再政見發表一次（政見昨天已經講過了），直接恢復成「候選人可以退水／房主開放
+  // 投票」的畫面（見 jgRoomRenderSheriffCampaign 的 day2resume 分支），沿用昨天還活著、
+  // 還沒退水的候選人名單（sheriffCandidates 整晚都沒被清掉）。這個判斷要放在
+  // night===1&&sheriffEnabled 前面，因為恢復競選這件事跟「是不是第一夜」無關（一定是在
+  // 第一爆發生的隔天，night 可能是任何數字）。
+  if(fresh.sheriffPostponedToDay2){
+    await setDoc(doc(db,'rooms',jgRoomCode),{
+      currentStep:null, phase:'sheriff', sheriffPhase:'day2resume', sheriffPostponedToDay2:false
+    },{ merge:true });
+    return;
+  }
   if(night===1&&sheriffEnabled){
     await jgRoomAdvanceToSheriffCampaign();
   } else {
@@ -1623,9 +1638,11 @@ window.jgRoomWhitewolfDetonateConfirm=async function(){
   // 自爆不管是在白天發言、還是剛好在警長競選階段發生，都直接算進入白天死訊結算流程——
   // 競選本身直接作廢（反正下一步就是天黑），這樣才能沿用白天既有的「開槍／警徽／遺言」
   // 判斷鏈（那條鏈是掛在 phase==='day-open' 才會被檢查，見 jgRoomRenderDayOpen），不用在
-  // 警長競選畫面另外重做一套。
-  await setDoc(doc(db,'rooms',jgRoomCode),{ phase:'day-open', sheriffPhase:null },{ merge:true });
+  // 警長競選畫面另外重做一套。如果自爆當下剛好還在警長競選期間，jgRoomMaybeApplyBadgeSwallow
+  // 會額外套用單爆/雙爆吞警徽規則（自己不算是候選人的話，函式內部自然不會有任何效果）。
   await jgRoomAppendNightLog(night, (mySeat||'?')+'號（白狼王）自爆，帶走 '+targetSeatText);
+  await jgRoomMaybeApplyBadgeSwallow(rd, night, mySeat);
+  await setDoc(doc(db,'rooms',jgRoomCode),{ phase:'day-open', sheriffPhase:null },{ merge:true });
   await jgRoomApplyCupidCascade();
   if(await jgRoomCheckAndSetPendingBadge()){
     await jgRoomRefreshAndRenderCurrent();
@@ -1666,8 +1683,13 @@ function jgRoomUpdateBloodmoonButton(){
   const isMySpeechTurn=rd.speechTurnContext==='day:'+night
     &&Array.isArray(rd.speechTurnOrder)
     &&me&&rd.speechTurnOrder[rd.speechTurnIdx||0]===me.seatNum;
+  // 警長競選期間（還沒選出警長）自爆不受「輪到自己發言」限制——那是自爆吞警徽規則本身的
+  // 行為，任何符合資格的狼都能在競選期間隨時自爆，不管現在輪到誰發言；「須在自己發言階段
+  // 宣告」只限白天一般發言時的自爆（見 jgRoomMaybeApplyBadgeSwallow 的說明）。
+  const inSheriffCampaign=rd.phase==='sheriff'&&!rd.sheriffWinnerSeatNum&&!!rd.sheriffPhase;
+  const inDayTurn=rd.phase==='day-open'&&isMySpeechTurn;
   const eligible=jgMyRole==='bloodmoon'&&me&&me.alive!==false&&!rd.votingActive
-    &&rd.phase==='day-open'&&isMySpeechTurn
+    &&(inDayTurn||inSheriffCampaign)
     &&!(rd.pendingShootUids&&rd.pendingShootUids.length)
     &&!rd.pendingBadgeUid&&!rd.dayVoteLastWordsUid
     &&!(rd.dayVotePkPendingUids&&rd.dayVotePkPendingUids.length);
@@ -1690,6 +1712,11 @@ window.jgRoomBloodmoonDetonateConfirm=async function(){
   const mySeat=me?me.seatNum:null;
   await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ alive:false, exiledByVote:true },{ merge:true });
   await jgRoomAppendNightLog(night, (mySeat||'?')+'號（血月使者）自爆，當晚封印所有神牌技能');
+  // 如果這一爆剛好發生在警長競選期間，額外套用單爆/雙爆吞警徽規則（自己不是候選人的話，
+  // 函式內部自然不會有任何效果）；不管有沒有套用，強制把 phase 收回 day-open，讓後面
+  // jgRoomStartNextNight 之前的判斷鏈不用管競選畫面殘留的狀態。
+  await jgRoomMaybeApplyBadgeSwallow(rd, night, mySeat);
+  await setDoc(doc(db,'rooms',jgRoomCode),{ phase:'day-open', sheriffPhase:null },{ merge:true });
   await jgRoomApplyCupidCascade();
   if(await jgRoomCheckAndSetPendingBadge()){
     await jgRoomRefreshAndRenderCurrent();
@@ -1701,6 +1728,100 @@ window.jgRoomBloodmoonDetonateConfirm=async function(){
   }
   const nextNight=await jgRoomStartNextNight('wolf', {});
   await setDoc(doc(db,'rooms',jgRoomCode),{ godSkillsSealedNight:nextNight },{ merge:true });
+  await jgRoomRefreshAndRenderCurrent();
+};
+
+// ── 自爆吞警徽（單爆／雙爆，房主建房時沿用法官助手設定頁的選擇，存進房間文件的
+//    badgeMode）：任何可自爆的狼隊角色，如果自爆發生在「警長還沒選出來的競選期間」
+//    （sheriffPhase 是 joining／locked／day2resume 這幾種還沒有結果的狀態），除了正常
+//    死亡結算之外，還要額外套用吞警徽規則——
+//    ・單爆：這一爆直接讓警徽流失，本局不再有警長。
+//    ・雙爆：第一爆警徽保留、當天競選直接結束（跟其他情況的自爆一樣直接進入下一夜），
+//      隔天白天重新恢復競選（見 jgRoomReallyAdvanceToDayPhase 的 sheriffPostponedToDay2
+//      分支，直接跳過重新問候選人起立、跳過政見發表，沿用原本還活著、沒退水的候選人）；
+//      如果隔天競選過程中再有人自爆，第二爆警徽才會真正流失。
+//    不在競選期間（已經選出警長、或本局根本沒開放警長競選）呼叫這個函式直接什麼都不做，
+//    這次自爆單純只是一次普通死亡——如果死的剛好是現任警長，警徽傳承交給既有的
+//    jgRoomCheckAndSetPendingBadge 判斷，不歸這裡管。呼叫端傳入的 rd 是呼叫當下的房間
+//    文件快取，跟其餘自爆流程（白狼王／血月使者）一致，不特地重新讀一次最新狀態。──
+async function jgRoomMaybeApplyBadgeSwallow(rd, night, mySeatNum){
+  if(!rd||rd.phase!=='sheriff'||rd.sheriffWinnerSeatNum||!rd.sheriffPhase) return;
+  const db=window.jgFirebaseDb;
+  const isFirstBlow=rd.badgeMode==='double'&&!rd.sheriffFirstBlowDone;
+  const fields={ sheriffCandidates: arrayRemove(window.jgFirebaseUid) };
+  if(isFirstBlow){
+    fields.sheriffFirstBlowDone=true;
+    fields.sheriffFirstBlowSeatNum=mySeatNum;
+    fields.sheriffPostponedToDay2=true;
+    await jgRoomAppendNightLog(night, (mySeatNum||'?')+'號 自爆（雙爆吞警徽・第一爆，警徽保留，競選延到隔天繼續）');
+  } else {
+    fields.sheriffWinnerSeatNum=null;
+    await jgRoomAppendNightLog(night, (mySeatNum||'?')+'號 自爆，吞掉警徽，本局無警長');
+  }
+  await setDoc(doc(db,'rooms',jgRoomCode),fields,{ merge:true });
+}
+// ── 一般可自爆的狼（狼人／黑狼王／已覺醒加入狼窩的狼弟）：白天發言任何時候都可以自爆，
+//    不像白狼王能帶人、也不像血月使者要求輪到自己發言才能按——參考本機法官助手「發言
+//    階段狼人可隨時自爆」的規則。白狼王／血月使者已經各自有專屬按鈕跟流程（見上面兩段），
+//    這裡只涵蓋沒有額外特殊效果的狼隊角色，共用同一套「自爆吞警徽」判斷
+//    （jgRoomMaybeApplyBadgeSwallow）。──
+const JG_ROOM_WOLF_SELFBLOW_ROLES=new Set(['wolf','wolfking','wolfbrother_y']);
+function jgRoomAppendWolfSelfBlowButton(){
+  if(document.getElementById('jg-room-wolfblow-btn')) return;
+  const btn=document.createElement('button');
+  btn.id='jg-room-wolfblow-btn';
+  btn.textContent='狼人自爆';
+  btn.onclick=function(){ window.jgRoomWolfSelfBlowStart(); };
+  btn.style.cssText='position:fixed;bottom:70px;left:8px;z-index:250;width:auto;margin:0;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid var(--wolf,#b83828);background:var(--wolf,#b83828);color:#fff;box-shadow:0 1px 6px rgba(0,0,0,0.2);cursor:pointer;display:none;';
+  document.body.appendChild(btn);
+}
+function jgRoomRemoveWolfSelfBlowButton(){
+  const btn=document.getElementById('jg-room-wolfblow-btn');
+  if(btn) btn.remove();
+}
+function jgRoomUpdateWolfSelfBlowButton(){
+  const btn=document.getElementById('jg-room-wolfblow-btn');
+  if(!btn) return;
+  const rd=jgRoomLatestRoomDoc||{};
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  const roleOk=JG_ROOM_WOLF_SELFBLOW_ROLES.has(jgMyRole)&&(jgMyRole!=='wolfbrother_y'||(me&&me.wolfbrotherJoinedPack));
+  // 警長競選期間（還沒選出警長）也可以自爆——自爆吞警徽規則本身的一部分，不管現在輪到
+  // 誰發言，任何符合資格的狼都能隨時自爆（跟白狼王按鈕在 sheriff 階段也會出現同一個道理）。
+  const inSheriffCampaign=rd.phase==='sheriff'&&!rd.sheriffWinnerSeatNum&&!!rd.sheriffPhase;
+  const eligible=roleOk&&me&&me.alive!==false&&!rd.votingActive
+    &&(rd.phase==='day-open'||inSheriffCampaign)
+    &&!(rd.pendingShootUids&&rd.pendingShootUids.length)
+    &&!rd.pendingBadgeUid&&!rd.dayVoteLastWordsUid
+    &&!(rd.dayVotePkPendingUids&&rd.dayVotePkPendingUids.length);
+  btn.style.display=eligible?'block':'none';
+}
+window.jgRoomWolfSelfBlowStart=function(){
+  if(!confirm('確定要自爆嗎？不能開槍帶人，會跳過投票直接進入夜晚，無法反悔。')) return;
+  window.jgRoomWolfSelfBlowConfirm();
+};
+// 自爆不能開槍帶人、跳過投票，直接標記自己死亡，接續跟白狼王/血月使者一樣的
+// 「警徽→勝負→遺言」判斷鏈——一般自爆沒有專屬的特殊效果，遺言比照白狼王處理
+// （90秒，講完自動接下一夜），跟血月使者（沒有遺言）不一樣。
+window.jgRoomWolfSelfBlowConfirm=async function(){
+  const db=window.jgFirebaseDb;
+  const rd=jgRoomLatestRoomDoc||{};
+  const night=rd.night||1;
+  const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
+  const mySeat=me?me.seatNum:null;
+  await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ alive:false },{ merge:true });
+  await jgRoomAppendNightLog(night, (mySeat||'?')+'號 自爆');
+  await jgRoomMaybeApplyBadgeSwallow(rd, night, mySeat);
+  await setDoc(doc(db,'rooms',jgRoomCode),{ phase:'day-open', sheriffPhase:null },{ merge:true });
+  await jgRoomApplyCupidCascade();
+  if(await jgRoomCheckAndSetPendingBadge()){
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
+  if(await jgRoomMaybeDeclareWin()){
+    await jgRoomRefreshAndRenderCurrent();
+    return;
+  }
+  await jgRoomStartDayVoteLastWords(window.jgFirebaseUid, mySeat);
   await jgRoomRefreshAndRenderCurrent();
 };
 
@@ -2571,7 +2692,6 @@ window.jgRoomJoinSheriff=async function(){
 window.jgRoomWithdrawSheriff=async function(){
   if(!confirm('確定要退水嗎？')) return;
   const db=window.jgFirebaseDb;
-  const { arrayRemove } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
   // 只從「目前候選人」名單移除，sheriffEverCandidates 不動——退水過的人這輪投票還是不能投。
   await setDoc(doc(db,'rooms',jgRoomCode),{ sheriffCandidates: arrayRemove(window.jgFirebaseUid) },{ merge:true });
   await jgRoomRefreshAndRenderCurrent();
@@ -2628,10 +2748,18 @@ function jgRoomRenderSheriffCampaign(){
       +'<div class="info" style="font-size:13px;margin-top:10px;text-align:center;">從 '+rd.sheriffSpeechStart+'號 開始，'+(rd.sheriffSpeechDir==='順'?'順時針':'逆時針')+'發言</div>'
       +(turnMeta?turnMeta.html:'')
       +(isCandidate?'<button style="margin-top:10px;" onclick="jgRoomWithdrawSheriff()">退水</button>':'');
+  } else if(sp==='day2resume'){
+    // 雙爆吞警徽・第一爆的隔天：不重新問候選人起立、也不用再發言一次（政見昨天已經講過
+    // 了），直接沿用昨天還活著、還沒退水的候選人，只留「退水」跟「開始投票」這兩個動作，
+    // 過程中如果再有人自爆，這次警徽才會真正流失（見 jgRoomMaybeApplyBadgeSwallow）。
+    bodyHtml='<div class="nbanner" style="margin-top:20px;"><h1>警長競選（延續）</h1></div>'
+      +'<div class="info-warn" style="font-size:12px;text-align:center;margin-top:6px;">雙爆吞警徽：昨天已經有候選人自爆過（警徽保留），今天繼續競選；過程中如果再有人自爆，警徽才會真正流失。</div>'
+      +'<div class="section-title" style="margin-top:14px;">候選人</div><div class="card">'+candList+'</div>'
+      +(isCandidate?'<button style="margin-top:10px;" onclick="jgRoomWithdrawSheriff()">退水</button>':'');
   } else {
     bodyHtml='<div class="nbanner" style="margin-top:20px;"><h1>警長競選</h1></div>';
   }
-  const hostBtn=(jgRoomIsHost&&sp==='locked')?'<button style="margin-top:14px;" onclick="jgRoomHostStartSheriffVote()">大家都發言完了，開始投票 →</button>':'';
+  const hostBtn=(jgRoomIsHost&&(sp==='locked'||sp==='day2resume'))?'<button style="margin-top:14px;" onclick="jgRoomHostStartSheriffVote()">大家都發言完了，開始投票 →</button>':'';
   root.innerHTML=`<div class="section-title">警長競選</div>${bodyHtml}${hostBtn}`;
   if(needsTimer) jgRoomStartTimer(timerSeconds, timerCb); else jgRoomStopTimer();
   jgRoomStartSpeechTurnClock(turnMeta);
@@ -4997,7 +5125,6 @@ window.jgRoomShootSkip=async function(night){
 };
 async function jgRoomShootResolve(night){
   const db=window.jgFirebaseDb;
-  const { arrayRemove } = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
   await setDoc(doc(db,'rooms',jgRoomCode),{ pendingShootUids: arrayRemove(window.jgFirebaseUid) },{ merge:true });
   const freshSnap=await getDoc(doc(db,'rooms',jgRoomCode));
   const fresh=freshSnap.data()||{};
@@ -5031,6 +5158,7 @@ window.jgRoomLeave=function(){
   jgRoomRemoveChatWidget();
   jgRoomRemoveWhitewolfButton();
   jgRoomRemoveBloodmoonButton();
+  jgRoomRemoveWolfSelfBlowButton();
   if(window.jgVoiceOnRoomLeave) window.jgVoiceOnRoomLeave();
   if(jgRoomUnsubPlayers){ jgRoomUnsubPlayers(); jgRoomUnsubPlayers=null; }
   if(jgRoomUnsubMyRole){ jgRoomUnsubMyRole(); jgRoomUnsubMyRole=null; }
@@ -5052,10 +5180,10 @@ window.jgRoomLeave=function(){
 
 // ── 從「法官助手」設定畫面帶著已確認的板子設定過來：直接跳到「輸入全名、建立房間」，
 //    不用再走一次選板子（板子已經在那邊選好、驗證過人數對得上了）。──
-window.jgRoomRenderCreateWithComp=function(comp, total, sheriffEnabled){
+window.jgRoomRenderCreateWithComp=function(comp, total, sheriffEnabled, badgeMode){
   const root=document.getElementById('jg-room-content');
   if(!root) return;
-  window.jgRoomPendingComp={comp:comp, total:total, sheriffEnabled:!!sheriffEnabled};
+  window.jgRoomPendingComp={comp:comp, total:total, sheriffEnabled:!!sheriffEnabled, badgeMode:badgeMode||'single'};
   const parts=Object.entries(comp).filter(([,v])=>v>0)
     .map(([k,v])=>((typeof RNAME!=='undefined'&&RNAME[k])||k)+'×'+v).join('、');
   // 如果法官助手設定畫面裡已經幫幾個座位填過真名（不是「X號」這種預設佔位名稱），順便問
@@ -5072,7 +5200,8 @@ window.jgRoomRenderCreateWithComp=function(comp, total, sheriffEnabled){
       <input type="text" id="jg-room-name-create" placeholder="輸入你的全名">
       ${hasPresetNames?'<label style="margin-top:10px;display:flex;align-items:center;gap:8px;"><input type="checkbox" id="jg-room-use-preset-names" checked style="width:auto;"> 沿用法官助手裡已經填好的座位姓名（其他人加入時用點選的，不用自己打名字）</label>':''}
       <div class="info" style="font-size:12px;margin-top:10px;">本局${window.jgRoomPendingComp.sheriffEnabled?'開放':'不開放'}上警競選（跟隨法官助手設定頁的選擇，回去重新調整板子可以改）</div>
-      <button class="primary" style="margin-top:10px;" onclick="jgRoomCreate(document.getElementById('jg-room-name-create').value, window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, ${hasPresetNames?'document.getElementById(\'jg-room-use-preset-names\').checked':'false'}, window.jgRoomPendingComp.sheriffEnabled)">建立房間</button>
+      ${window.jgRoomPendingComp.sheriffEnabled?'<div class="info" style="font-size:12px;margin-top:6px;">自爆吞警徽規則：'+(window.jgRoomPendingComp.badgeMode==='double'?'雙爆吞警徽':'單爆吞警徽')+'（跟隨法官助手設定頁的選擇）</div>':''}
+      <button class="primary" style="margin-top:10px;" onclick="jgRoomCreate(document.getElementById('jg-room-name-create').value, window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, ${hasPresetNames?'document.getElementById(\'jg-room-use-preset-names\').checked':'false'}, window.jgRoomPendingComp.sheriffEnabled, window.jgRoomPendingComp.badgeMode)">建立房間</button>
     </div>
     <button class="ghost" style="margin-top:10px;" onclick="switchTab('t-judge')">← 回去重新調整板子</button>
     <button class="ghost" style="margin-top:8px;" onclick="jgRoomCancelPendingCreate()">取消建立房間</button>
@@ -5108,7 +5237,7 @@ window.jgRoomRenderEntry=async function(){
     return;
   }
   if(window.jgRoomPendingComp){
-    jgRoomRenderCreateWithComp(window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, window.jgRoomPendingComp.sheriffEnabled);
+    jgRoomRenderCreateWithComp(window.jgRoomPendingComp.comp, window.jgRoomPendingComp.total, window.jgRoomPendingComp.sheriffEnabled, window.jgRoomPendingComp.badgeMode);
     return;
   }
   root.innerHTML='<div class="info" style="text-align:center;margin-top:20px;">連線中...</div>';
