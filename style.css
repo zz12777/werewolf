@@ -536,3 +536,96 @@ select{
 .nbanner-good{background:rgba(58,122,42,0.12);border-radius:var(--r);}
 .nbanner-evil{background:rgba(184,56,40,0.12);border-radius:var(--r);}
 
+/* ══════════════════════════════════════════════════════════════════
+   Apple 介面風格試套用（僅限「遊玩數據」分頁，.apple-ui-preview 這個
+   class 目前只掛在 index.html 的 #t-data 上）。參考 Apple Human
+   Interface Guidelines 的幾個核心原則：更大的字級層級對比、iOS
+   分組列表（grouped list）的卡片＋內嵌分隔線手法、柔和陰影取代生硬邊框、
+   iOS 慣用的彈性緩動曲線與輕觸回饋（按下縮小＋變淡，而不是整塊變色）。
+   全部規則都包在 .apple-ui-preview 底下，不會影響其他分頁；原本的規則
+   完全沒有刪改，只是被這裡的規則覆蓋——要復原的話，把 index.html 裡
+   #t-data 上的 apple-ui-preview 這個 class 拿掉即可，其餘完全不用動。
+   只調視覺樣式，沒有動到任何 .js 邏輯或 HTML 結構／按鈕行為。
+   ══════════════════════════════════════════════════════════════════ */
+.apple-ui-preview{
+  --au-radius-lg:20px; --au-radius-md:14px; --au-radius-sm:10px;
+  --au-ease:cubic-bezier(.22,1,.36,1);
+  --au-shadow-sm:0 1px 2px rgba(0,0,0,0.04), 0 1px 6px rgba(0,0,0,0.03);
+  --au-shadow-md:0 2px 6px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.05);
+  --au-sep:rgba(0,0,0,0.08);
+}
+
+/* 大標題區：比照 iOS Large Title，字級拉大、字距收緊，副標用較輕的顏色跟字重，
+   整體留白也拉大一截，讓頁首更有「呼吸感」。 */
+.apple-ui-preview .nbanner{padding:2.2rem 0 1.4rem;}
+.apple-ui-preview h1{font-size:34px;font-weight:800;letter-spacing:-0.6px;}
+.apple-ui-preview .sub{font-size:14px;font-weight:500;color:var(--text2);margin-top:5px;}
+
+/* 區塊標題：拿掉原本略生硬的底線分隔，改用字級與字距本身建立層級（iOS Title2 的感覺），
+   段落之間留白也加大，區塊彼此更容易一眼分開。 */
+.apple-ui-preview .big-section-title{
+  font-size:22px;font-weight:800;letter-spacing:-0.2px;color:var(--text);
+  border-bottom:none;padding-bottom:0;margin:32px 0 12px;
+}
+.apple-ui-preview .big-section-title:first-child{margin-top:2px;}
+.apple-ui-preview .section-title{letter-spacing:0.8px;margin:24px 0 8px;}
+
+/* 卡片：柔和陰影取代生硬的 1px 邊框，圓角加大（iOS 的「連續圓角」手感），
+   輕觸有回饋（按下微縮＋變淡），呼應 iOS 分組列表卡片的觸感。 */
+.apple-ui-preview .card,
+.apple-ui-preview .stat-card,
+.apple-ui-preview .gcard,
+.apple-ui-preview .pd-formula-box{
+  border:none;border-radius:var(--au-radius-lg);box-shadow:var(--au-shadow-sm);
+  background:var(--bg2);
+}
+.apple-ui-preview .gcard{
+  cursor:pointer;transition:transform .35s var(--au-ease),box-shadow .35s var(--au-ease);
+}
+.apple-ui-preview .gcard:active{transform:scale(0.98);box-shadow:var(--au-shadow-sm);}
+
+/* 總覽數字卡：字級拉大、字距收緊，卡片本身也加上輕觸回饋，數字是這個區塊的主角。 */
+.apple-ui-preview .stat-num{font-size:28px;font-weight:800;letter-spacing:-0.5px;}
+.apple-ui-preview .stat-lbl{font-size:11.5px;font-weight:600;color:var(--text3);margin-top:4px;}
+.apple-ui-preview .stat-card{padding:16px 14px;}
+.apple-ui-preview .bar{height:6px;border-radius:3px;margin-top:12px;}
+
+/* 排行榜：拿掉每一列各自的邊框感（原本靠 .card 的外框＋列與列之間的分隔線），
+   改成 iOS 分組列表常見的「內縮分隔線」——線不會頂到卡片左右邊緣，會跟頭像對齊，
+   看起來更像一份連續的名單而不是一格一格分開的元件。輕觸整列會有淡淡的回饋。 */
+.apple-ui-preview #leaderboard.card{padding:6px 16px;}
+.apple-ui-preview #leaderboard .row{
+  border-bottom:none;padding:13px 0;position:relative;
+  transition:opacity .15s var(--au-ease);
+}
+.apple-ui-preview #leaderboard .row:not(:last-child)::after{
+  content:'';position:absolute;left:48px;right:0;bottom:0;height:1px;background:var(--au-sep);
+}
+.apple-ui-preview #leaderboard .row:active{opacity:0.5;}
+.apple-ui-preview .av{border-radius:12px;} /* 頭像圓角改成 iOS App Icon 常見的「圓角方形」，跟純圓形拉開一點層次 */
+
+/* 分段控制（簡單勝率／積分）：改成 iOS 原生 UISegmentedControl 的配色與觸感——
+   淡灰底、選中的那一段是白底＋柔和陰影浮起，而不是純色填滿。 */
+.apple-ui-preview .pd-seg{background:rgba(120,120,128,0.12);border-radius:999px;padding:3px;}
+.apple-ui-preview .pd-seg-btn{border-radius:999px;font-weight:700;transition:background .25s var(--au-ease),color .25s var(--au-ease),box-shadow .25s var(--au-ease);}
+.apple-ui-preview .pd-seg-btn.active{background:var(--bg);color:var(--text);box-shadow:var(--au-shadow-sm);}
+
+/* 特別獎項：卡片圓角加大、加上柔和陰影，選中狀態改成陰影加深＋微縮，比原本純色外框更立體。 */
+.apple-ui-preview .award-card{border-radius:var(--au-radius-md);box-shadow:var(--au-shadow-sm);transition:transform .3s var(--au-ease),box-shadow .3s var(--au-ease);}
+.apple-ui-preview .award-card:active{transform:scale(0.95);}
+.apple-ui-preview .award-card.sel{box-shadow:0 0 0 2px var(--accent),var(--au-shadow-sm);}
+.apple-ui-preview .award-detail{border:none;border-radius:var(--au-radius-md);box-shadow:var(--au-shadow-sm);}
+
+/* 篩選下拉選單：圓角加大、拿掉生硬邊框改陰影，維持原本的排列方式不變。 */
+.apple-ui-preview .filters select{border:none;border-radius:var(--au-radius-sm);box-shadow:var(--au-shadow-sm);background:var(--bg2);}
+
+/* 標籤（陣營 chip）：改成藥丸狀更飽滿的觸感，可點擊的加上輕觸回饋。 */
+.apple-ui-preview .chip{border-radius:999px;font-weight:700;}
+.apple-ui-preview .chip.clickable{transition:transform .2s var(--au-ease);}
+.apple-ui-preview .chip.clickable:active{transform:scale(0.94);}
+
+/* 按鈕（問題回報）：拿掉生硬邊框，統一走陰影，輕觸回饋改成 iOS 常見的「微縮＋淡化」而不是整塊變半透明。 */
+.apple-ui-preview button{border:none;box-shadow:var(--au-shadow-sm);transition:transform .2s var(--au-ease),opacity .2s var(--au-ease);}
+.apple-ui-preview button:active{transform:scale(0.97);opacity:0.7;}
+.apple-ui-preview button.primary{box-shadow:0 2px 8px rgba(184,56,40,0.25);}
+
