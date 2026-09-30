@@ -64,11 +64,26 @@ window.jgVoiceJoin=async function(){
       if(track.kind==='audio'){
         const el=track.attach();
         el.style.display='none';
+        el.autoplay=true;
+        el.playsInline=true; // iOS Safari：沒加這個某些情況會想切到全螢幕播放器處理，導致播放行為不正常
         el.dataset.jgVoiceTrack='1';
         // 記住這個音訊元素是誰講的話——狼隊出刀商議時要靠這個判斷「這個聲音該不該讓
         // 目前這支手機聽到」，見 jgVoiceApplyWolfAudioFilter。
         el.dataset.jgVoiceIdentity=participant?participant.identity:'';
         document.body.appendChild(el);
+        // 有些裝置（尤其是插了耳機／連了藍牙耳機時，瀏覽器對新的音訊輸出裝置比較保守）
+        // 會擋掉這個動態插入的 <audio> 元素自動播放，track.attach() 內部的 play() 被拒絕時
+        // 不會跳出任何明顯的錯誤，結果是「畫面顯示已經連線、對方也真的在講話，但這支手機
+        // 完全聽不到聲音」。這裡明確呼叫一次 play()，被拒絕的話改成等使用者下一次點畫面
+        // （不管點在哪裡）再重試一次，避免播放失敗卻無聲無息、找不到原因。
+        const tryPlay=()=>{
+          const p=el.play();
+          if(p&&p.catch) p.catch(()=>{
+            document.addEventListener('click', tryPlay, { once:true });
+            document.addEventListener('touchend', tryPlay, { once:true });
+          });
+        };
+        tryPlay();
         jgVoiceApplyWolfAudioFilter();
       }
       jgVoiceRenderPanel();

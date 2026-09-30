@@ -329,6 +329,7 @@ async function runAsync() {
   await runGridSubmitFunctionsTest();
   await runBloodmoonLastStandTest();
   await runBadgeSwallowTest();
+  await runSameNightDeathStillActsTest();
 })();
 
 async function runMechWolfNight1Test(){
@@ -1497,4 +1498,84 @@ async function runBadgeSwallowTest(){
   const anyFail=results.some(r=>!r.ok);
   if(anyFail){ console.error('自爆吞警徽測試有失敗！'); process.exit(1); }
   console.log(`全部 ${results.length} 項自爆吞警徽測試通過`);
+}
+
+// 「這一晚才死、死訊還沒公布」的角色，這一晚自己的技能還是要能正常使用（通靈師/預言家/
+// 女巫/獵魔人被狼刀當晚殺死，不代表這一晚不能查驗/用藥——只有「早就死掉、死訊已經公布
+// 過」的人才要走假裝還在走流程的分支）；另外驗證狼白天被放逐、已經真的死亡之後，隔天
+// 晚上不會再看到狼隊出刀選人畫面。
+async function runSameNightDeathStillActsTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+  global.window.alert = global.alert = () => {};
+
+  // ── 通靈師這一晚被狼刀殺死（diedNight 就是現在這一晚，死訊還沒公布）：仍要看到真的查驗畫面 ──
+  mod.__setRoomCode('SN1');
+  mod.__setComp({ wolf:1, medium:1 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'狼', alive:true },
+    { uid:'medUid', seatNum:5, name:'通靈師', alive:false, diedNight:1 },
+  ]);
+  global.__mockCollections={ 'rooms/SN1/secrets':[
+    { id:'wolfUid', data:()=>({role:'wolf'}) },
+    { id:'medUid', data:()=>({role:'medium'}) },
+  ]};
+  global.__mockDocs={ 'rooms/SN1':{ night:1, currentStep:'medium', phase:'night' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/SN1']);
+  mod.__setMyRole('medium');
+  global.window.jgFirebaseUid='medUid';
+  await mod.jgRoomRenderNightShell();
+  const sameNightHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('通靈師這一晚才死（死訊還沒公布）：看到真的查驗選人畫面', sameNightHtml.includes('請選擇查驗對象'), true);
+  check('通靈師這一晚才死：不會被誤判成「已出局，仍需走完流程」', sameNightHtml.includes('已出局，仍需走完流程'), false);
+
+  // ── 對照組：通靈師是「前一晚」就死了（死訊早就公布過），這一晚要走假裝流程 ──
+  mod.__setRoomCode('SN2');
+  mod.__setComp({ wolf:1, medium:1 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'狼', alive:true },
+    { uid:'medUid', seatNum:5, name:'通靈師', alive:false, diedNight:1 },
+  ]);
+  global.__mockDocs={ 'rooms/SN2':{ night:2, currentStep:'medium', phase:'night' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/SN2']);
+  await mod.jgRoomRenderNightShell();
+  const oldDeathHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('通靈師是前一晚死的（死訊已公布）：走假裝流程，不能真的查驗', oldDeathHtml.includes('已出局，仍需走完流程'), true);
+  check('通靈師是前一晚死的：不會出現真的查驗選人畫面', oldDeathHtml.includes('請選擇查驗對象'), false);
+
+  // ── 狼白天被放逐、已經死亡（沒有 diedNight，日間死亡本來就是公開的）：
+  //    隔天晚上不該再看到狼隊出刀選人畫面，應該落到「夜晚進行中」通用等待畫面 ──
+  mod.__setRoomCode('SN3');
+  mod.__setComp({ wolf:2 });
+  mod.__setPlayers([
+    { uid:'deadWolfUid', seatNum:2, name:'被放逐的狼', alive:false },
+    { uid:'aliveWolfUid', seatNum:4, name:'還活著的狼', alive:true },
+  ]);
+  global.__mockCollections={ 'rooms/SN3/secrets':[
+    { id:'deadWolfUid', data:()=>({role:'wolf'}) },
+    { id:'aliveWolfUid', data:()=>({role:'wolf'}) },
+  ]};
+  global.__mockDocs={ 'rooms/SN3':{ night:2, currentStep:'wolf', phase:'night' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/SN3']);
+  mod.__setMyRole('wolf');
+  global.window.jgFirebaseUid='deadWolfUid';
+  await mod.jgRoomRenderNightShell();
+  const deadWolfHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('白天被放逐、已死的狼：不會再看到出刀選人畫面', deadWolfHtml.includes('請選擇今晚要殺的對象'), false);
+  check('白天被放逐、已死的狼：落到「夜晚進行中」通用等待畫面', deadWolfHtml.includes('夜晚進行中'), true);
+
+  // 對照組：還活著的狼隊友應該正常看到出刀選人畫面（確認這次加的存活檢查沒有誤擋活人）
+  global.window.jgFirebaseUid='aliveWolfUid';
+  await mod.jgRoomRenderNightShell();
+  const aliveWolfHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('還活著的狼隊友：正常看到出刀選人畫面（沒有被誤擋）', aliveWolfHtml.includes('請選擇今晚要殺的對象'), true);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('同晚死亡仍可行動／死狼不再看到出刀畫面測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項同晚死亡仍可行動／死狼不再看到出刀畫面測試通過`);
 }

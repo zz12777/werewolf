@@ -2171,8 +2171,12 @@ async function jgRoomWitchViewHtml(night){
   // 走完整套流程避免洩露身分，但不能讓她知道今晚狼刀殺了誰、也不能透露解藥/毒藥還有沒有，
   // 兩個問題照樣問一次，直接給一顆「下一步」讓她（其實是不會真的動作）翻過這一步就好，不
   // 顯示任何「（法官搖頭）」之類會暗示存活狀態或藥剩餘量的提示。
+  // 這裡要用 jgRoomIsPubliclyDead 而不是直接讀 deadMe.alive——如果這個角色是「這一晚」
+  // 才被狼刀/女巫毒殺（死訊還沒公布），alive 已經被提早寫成 false 了，但依照規則，同一晚
+  // 的夜間行動都算「同時發生」，這一晚才死的人這一晚自己的技能還是要能正常使用，只有
+  // 「已經是前幾晚就死掉、死訊早就公布過」的人才要走這個「假裝還在走流程」的分支。
   const deadMe=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
-  if(deadMe&&deadMe.alive===false){
+  if(deadMe&&jgRoomIsPubliclyDead(deadMe,rd)){
     const deadActSnap=await getDoc(doc(db,'rooms',jgRoomCode,'witchActs',window.jgFirebaseUid));
     if(deadActSnap.exists()&&deadActSnap.data().night===night){
       return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><h1>已行動</h1></div>'
@@ -3858,7 +3862,13 @@ async function jgRoomRenderNightShell(){
   } else if(currentStep==='mechwolf'&&jgMyRole==='mechanicalwolf'){
     const r=await jgRoomMechWolfViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(currentStep==='wolf'&&typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(jgMyRole)&&jgMyRole!=='nightmare'&&jgMyRole!=='mechanicalwolf'
-    &&!(jgMyRole==='wolfbrother_y'&&!jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid&&p.wolfbrotherJoinedPack))){
+    &&!(jgMyRole==='wolfbrother_y'&&!jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid&&p.wolfbrotherJoinedPack))
+    // 這個判斷式原本沒檢查自己是不是還活著——狼白天被投票放逐、已經死亡之後，隔天晚上
+    // 這個角色本身的判斷式還是符合（身分還是狼），會讓死掉的狼繼續看到「選擇今晚要殺的
+    // 對象」選人畫面。加上「自己還活著」這個條件，死掉的狼落到最下面的 else，跟其他死掉
+    // 的非特殊角色一樣看到「夜晚進行中，請安靜閉眼等待」，不會顯示夜間互動畫面
+    // （jgRoomGetWolfUids 本來就已經濾掉死狼、只算活著的隊友，這裡只是補上畫面本身的門檻）。
+    &&jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid&&p.alive!==false)){
     // 已經確認先前卡住的根本原因是 Firestore 安全規則擋住了好幾個子集合的寫入（不是這裡
     // 的多人同步邏輯本身），規則調整過後恢復成每一位見面狼隊友都能操作的畫面。
     const r=await jgRoomWolfViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
@@ -3969,7 +3979,7 @@ async function jgRoomSeerViewHtml(night){
   // 預言家已出局：比照本機法官助手（steps.js seer-wake 的「Dead seer」分支）——仍然要走完
   // 流程避免洩露身分，但不能讓她真的查驗、也不能透露任何查驗結果，直接給一顆「下一步」。
   const deadMe=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
-  if(deadMe&&deadMe.alive===false){
+  if(deadMe&&jgRoomIsPubliclyDead(deadMe,rd)){
     const deadCheckSnap=await getDoc(doc(db,'rooms',jgRoomCode,'seerChecks',window.jgFirebaseUid));
     if(deadCheckSnap.exists()&&deadCheckSnap.data().night===night){
       return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><h1>已行動</h1></div>'
@@ -4053,7 +4063,7 @@ async function jgRoomMediumViewHtml(night){
   // 通靈師已出局：一樣比照本機法官助手（steps.js medium-wake 的「dead」分支）——仍然要走完
   // 流程避免洩露身分，但不能讓她真的查驗、也不能透露任何查驗結果，直接給一顆「下一步」。
   const deadMe=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
-  if(deadMe&&deadMe.alive===false){
+  if(deadMe&&jgRoomIsPubliclyDead(deadMe,rd)){
     const deadCheckSnap=await getDoc(doc(db,'rooms',jgRoomCode,'mediumChecks',window.jgFirebaseUid));
     if(deadCheckSnap.exists()&&deadCheckSnap.data().night===night){
       return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><h1>已行動</h1></div>'
@@ -4098,7 +4108,7 @@ async function jgRoomDemonhunterViewHtml(night){
   if(jgRoomAmIFeared(rd,night)) return jgRoomFearedNoticeHtml();
   const db=window.jgFirebaseDb;
   const deadMe=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
-  if(deadMe&&deadMe.alive===false){
+  if(deadMe&&jgRoomIsPubliclyDead(deadMe,rd)){
     const deadActSnap=await getDoc(doc(db,'rooms',jgRoomCode,'demonhunterActs',window.jgFirebaseUid));
     if(deadActSnap.exists()&&deadActSnap.data().night===night){
       return {needsTimer:false, html:'<div class="nbanner" style="margin-top:20px;"><h1>已行動</h1></div>'
