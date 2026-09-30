@@ -28,7 +28,7 @@
 <!-- ══════════════════════════════════════
      TAB 1: 規則
 ══════════════════════════════════════ -->
-<div id="t-rules" class="tab tab-wide">
+<div id="t-rules" class="tab tab-wide apple-ui-preview">
   <div class="nbanner">
     <h1>狼人殺</h1>
     <p class="sub" style="text-align:center;margin-top:8px;">角色介紹與遊戲規則</p>
@@ -379,7 +379,7 @@
 <!-- ══════════════════════════════════════
      TAB 3: 人工法官助手
 ══════════════════════════════════════ -->
-<div id="t-judge" class="tab tab-wide on">
+<div id="t-judge" class="tab tab-wide on apple-ui-preview">
 
 <!-- 法官設定 -->
 <div id="jg-p-setup" class="pg on">
@@ -446,7 +446,7 @@
 </div>
 
 <!-- 法官設定：玩家名單 -->
-<div id="jg-p-roster" class="pg">
+<div id="jg-p-roster" class="pg apple-ui-preview">
   <div class="nbanner">
     <div class="nicon">👥</div>
     <h2 class="ntitle">設定玩家名單</h2>
@@ -523,7 +523,7 @@
     <span>狼吞虎嚥排行榜</span>
     <div style="display:flex;align-items:center;gap:10px;">
       <div class="pd-seg" id="pd-seg">
-        <button type="button" class="pd-seg-btn active" id="pd-sort-simple" onclick="pdSetSortMode('simple')">簡單勝率</button>
+        <button type="button" class="pd-seg-btn active" id="pd-sort-simple" onclick="pdSetSortMode('simple')">勝率</button>
         <!-- 積分系統重新設計中，Bayesian Score 先隱藏／停用，公式與計算邏輯保留在 JS 裡沒刪，之後要恢復只要把這顆按鈕註解拿掉即可
         <button type="button" class="pd-seg-btn" id="pd-sort-bayes" onclick="pdSetSortMode('bayes')">Bayesian Score</button>
         -->
@@ -560,7 +560,7 @@
 <!-- ══════════════════════════════════════
      TAB: 專有名詞
 ══════════════════════════════════════ -->
-<div id="t-guide" class="tab tab-wide">
+<div id="t-guide" class="tab tab-wide apple-ui-preview">
   <div class="nbanner">
     <h1>攻略參考</h1>
     <p class="sub" style="text-align:center;margin-top:8px;">不定期更新狼人殺攻略文章</p>
@@ -582,7 +582,7 @@
 <!-- ══════════════════════════════════════
      TAB: 連線房間
 ══════════════════════════════════════ -->
-<div id="t-room" class="tab">
+<div id="t-room" class="tab apple-ui-preview">
   <div id="jg-room-content"></div>
   <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
     <button class="ghost" onclick="jgRoomLeave()" style="width:auto;padding:8px 16px;font-size:13px;">離開房間</button>
@@ -591,7 +591,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-09-30-b</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-09-30-d</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="data/games-history.js"></script>

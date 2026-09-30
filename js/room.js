@@ -1514,7 +1514,17 @@ function jgRoomSpeak(text){
   jgRoomVoiceSpokenLog.push(text);
   if(typeof window==='undefined'||!window.speechSynthesis) return;
   try{
-    window.speechSynthesis.cancel();
+    // 原本這裡每次講話前都先 speechSynthesis.cancel()，理由是想避免「舊狀態排隊排到現在
+    // 才念、跟畫面已經不相關」的殘留台詞——但這個 app 好幾個地方（jgRoomVoiceMaybeNarrate
+    // 的「XX請睜眼」廣播播報、jgRoomSpeakScriptLine 讀畫面上「你要...」的個人提示、房主
+    // 強制跳過等操作）常常在極短時間內連續呼叫 jgRoomSpeak 兩次以上，例如通靈師畫面剛念完
+    // 「你要查驗的對象是？」，緊接著房間文件更新觸發的「通靈師請睜眼」廣播就把它整句
+    // 打斷、蓋掉，兩句話糊在一起甚至聽起來像多出一個字（回報過的「機械狼請睜眼嗎」很可能
+    // 就是這樣兩句台詞尾巴黏在一起造成的）。改成不主動打斷，讓瀏覽器內建的語音佇列自然
+    // 依序播放完——真正「同一句話不要重複念」的去重邏輯本來就交給呼叫端各自的 key 比對
+    // （jgRoomVoiceSpeakOnce／jgRoomTimerLastSpokenKey／xxxAnnouncedNight 這幾個），不需要
+    // 靠這裡的 cancel() 來防止重複，拿掉之後同一時間有好幾句話要講，會排隊依序念完，不會
+    // 半途打斷彼此。
     const u=new SpeechSynthesisUtterance(text);
     u.lang='zh-TW';
     window.speechSynthesis.speak(u);
