@@ -968,6 +968,13 @@ async function jgRoomAdvanceToSheriffCampaign(){
 // 的 jgRoomFinishDemonhunterStep）才會真的呼叫 jgRoomReallyAdvanceToDayPhase 進入白天，
 // 這樣死訊才能正確包含他這一刀的結果；沒有獵魔人要接的話直接進白天。
 async function jgRoomAdvanceToDayPhase(night){
+  // 獵人的「技能使用狀況」手勢排在查驗類角色之後、獵魔人之前（跟本機法官助手 GOD_CHAIN
+  // 的順序一致：女巫→預言家/通靈師→獵人→…→獵魔人），見 jgRoomHunterPending 的說明。
+  if(jgRoomHunterPending(night)){
+    const db=window.jgFirebaseDb;
+    await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'hunter' },{ merge:true });
+    return;
+  }
   if(jgRoomDemonhunterPending(night)){
     const db=window.jgFirebaseDb;
     await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'demonhunter' },{ merge:true });
@@ -980,6 +987,68 @@ async function jgRoomAdvanceToDayPhase(night){
 // 誰，不用特地走一次沒有任何操作的空白睜眼畫面），從第二夜開始才真的排進流程。
 function jgRoomDemonhunterPending(night){
   return !!(jgRoomComp&&jgRoomComp.demonhunter>0&&night>=2&&!jgRoomGodSkillsSealedThisNight(night));
+}
+// 獵人「技能使用狀況」手勢——比照本機法官助手：獵人每一晚都要睜眼一次，法官比讚／倒讚
+// 告知他今晚槍還能不能用，不能只在真的被狼刀淘汰、要開槍帶人的那一刻才讓他看到任何畫面
+// （不然只要哪一晚突然跳出操作畫面，等於直接洩漏「你今晚被狼刀了」）。跟本機規則一致：
+// 被毒（含機械狼學到的毒、雙機械狼板任一台學到的毒）、被夢魘恐懼、被攝夢人連續兩晚夢遊
+// 致死，這三種情況技能被封印比倒讚；其餘情況（含正常存活、被狼刀但技能會在天亮啟動、
+// 早就死透的假流程）都比讚——真正「能不能開槍」的判斷完全交給既有的
+// jgRoomCheckShootEligible／pendingShootUids 那一套，這裡純粹只是每晚先讓他知道結果，
+// 不影響任何既有邏輯。跟獵魔人一樣排在查驗類角色之後、天亮之前；用 hunterStatusDoneNight
+// 記住「這一晚已經看過手勢了」，看完之後才會真的推進到下一步，避免每次重畫都重複觸發。
+function jgRoomHunterPending(night){
+  return !!(jgRoomComp&&jgRoomComp.hunter>0&&!jgRoomGodSkillsSealedThisNight(night)
+    &&!(jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.hunterStatusDoneNight===night));
+}
+function jgRoomThumbsUpSvg(){
+  return '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
+    +'<path d="M7 10v11H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h3z"></path>'
+    +'<path d="M7 10l4.5-7a2 2 0 0 1 2 2.2L13 9h5.5a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 16.2 20H10a3 3 0 0 1-3-3v-7z"></path>'
+    +'</svg>';
+}
+function jgRoomThumbsDownSvg(){
+  return '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
+    +'<path d="M17 14V3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-3z"></path>'
+    +'<path d="M17 14l-4.5 7a2 2 0 0 1-2-2.2L11 15H5.5a2 2 0 0 1-1.9-2.6l2.3-7A2 2 0 0 1 7.8 4H14a3 3 0 0 1 3 3v7z"></path>'
+    +'</svg>';
+}
+async function jgRoomHunterViewHtml(night){
+  const rd=jgRoomLatestRoomDoc||{};
+  const myUid=window.jgFirebaseUid;
+  // 技能被封印（比倒讚）的三種情況：被毒（含機械狼/雙機械狼板學到的毒）、被夢魘恐懼、
+  // 被攝夢人連續兩晚夢遊致死——跟 js/night.js 的 jgBuildHunterStatusHtml 同一套規則。
+  const poisoned=(rd.witchPoisonUid===myUid&&rd.witchPoisonNight===night)
+    ||(rd.mechWolfPoisonUid===myUid&&rd.mechWolfPoisonNight===night);
+  const feared=jgRoomAmIFeared(rd,night);
+  const dreamKilled=rd.dreamcatcherTargetNight===night&&rd.dreamcatcherTargetUid===myUid;
+  const sealed=poisoned||feared||dreamKilled;
+  return {needsTimer:true, html:jgRoomTimerHtml(20,'獵人請睜眼')
+    +'<div class="nbanner" style="margin-top:20px;"><h1>你的技能使用狀況</h1></div>'
+    +'<div style="text-align:center;padding:10px 0;color:'+(sealed?'var(--wolf,#b83828)':'var(--vil,#3a7a2a)')+';">'+(sealed?jgRoomThumbsDownSvg():jgRoomThumbsUpSvg())+'</div>'
+    +(sealed?'<div class="info-warn" style="text-align:center;">技能被封印，今晚就算被淘汰也不能開槍帶人</div>'
+      :'<div class="info-success" style="text-align:center;">技能正常，如果今晚或之後被淘汰可以開槍帶人</div>')
+    +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomHunterStatusAck('+night+')">已知道，下一步 →</button></div>'};
+}
+window.jgRoomHunterStatusAck=async function(night){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode),{ hunterStatusDoneNight:night },{ merge:true });
+  await jgRoomAfterHunterStep(night);
+  await jgRoomRefreshAndRenderCurrent();
+};
+// 獵人看完手勢、確認完之後銜接下一棒——故意不呼叫 jgRoomAdvanceToDayPhase（那個函式一
+// 進來就會重新檢查 jgRoomHunterPending，但這裡剛寫入的 hunterStatusDoneNight 可能還沒
+// 同步回 jgRoomLatestRoomDoc 這份畫面快取，會誤判「還沒看過」又把 currentStep 蓋回
+// 'hunter'，原地打轉出不去）。直接接手下一步（獵魔人／真正進白天），跟
+// jgRoomFinishDemonhunterStep 直接呼叫 jgRoomReallyAdvanceToDayPhase、不重新檢查自己
+// 剛完成的那一步是同一個做法。
+async function jgRoomAfterHunterStep(night){
+  const db=window.jgFirebaseDb;
+  if(jgRoomDemonhunterPending(night)){
+    await setDoc(doc(db,'rooms',jgRoomCode),{ currentStep:'demonhunter' },{ merge:true });
+    return;
+  }
+  await jgRoomReallyAdvanceToDayPhase(night);
 }
 // 血月使者自爆（見 jgRoomBloodmoonDetonateConfirm）封印的那一夜——這一晚除了狼隊正常
 // 出刀之外，守衛／女巫／查驗類角色／獵魔人這些「神牌」技能全部跳過，不受任何一步的
@@ -1458,7 +1527,8 @@ function jgRoomSpeak(text){
 const JG_ROOM_STEP_ROLE_NAME={
   thief:'盜賊', cupid:'邱比特', nightmare:'夢魘', magician:'魔術師', guard:'守衛',
   dreamcatcher:'攝夢人', wolfbrother:'狼兄狼弟', mechwolf:'機械狼', wolf:'狼人',
-  blackmarket:'黑市商人', witch:'女巫', seer:'預言家', medium:'通靈師', demonhunter:'獵魔人'
+  blackmarket:'黑市商人', witch:'女巫', seer:'預言家', medium:'通靈師', demonhunter:'獵魔人',
+  hunter:'獵人'
 };
 function jgRoomVoiceSpeakOnce(key, text){
   if(key===jgRoomVoiceState.key) return;
@@ -3888,6 +3958,8 @@ async function jgRoomRenderNightShell(){
     const r=jgRoomBadgeViewHtml(); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(jgMyRole==='medium'&&currentStep==='medium'){
     const r=await jgRoomMediumViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
+  } else if(jgMyRole==='hunter'&&currentStep==='hunter'){
+    const r=await jgRoomHunterViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(jgMyRole==='demonhunter'&&currentStep==='demonhunter'){
     const r=await jgRoomDemonhunterViewHtml(night); bodyHtml=r.html; needsTimer=r.needsTimer;
   } else if(currentStep==='bloodmoonlaststand'){
@@ -3916,7 +3988,7 @@ async function jgRoomRenderNightShell(){
 // 通靈師被狼刀殺死），這種情況下這個人不一定還有人拿著他的手機盯著螢幕操作，導致全場等
 // 不到一個不會再有人回應的動作。其餘還沒有明確安全預設的步驟（邱比特配對、夢魘恐懼、
 // 魔術師換人、攝夢人夢遊、狼兄狼弟）先不開放強制跳過，避免用錯預設值扭曲遊戲結果。
-const JG_ROOM_FORCE_SKIPPABLE_STEPS=new Set(['witch','seer','medium','mechwolf','guard','blackmarket','demonhunter']);
+const JG_ROOM_FORCE_SKIPPABLE_STEPS=new Set(['witch','seer','medium','mechwolf','guard','blackmarket','demonhunter','hunter']);
 function jgRoomHostAdvanceHtml(currentStep, night){
   const forceHtml=(jgRoomIsHost&&currentStep&&JG_ROOM_FORCE_SKIPPABLE_STEPS.has(currentStep))
     ?'<div style="text-align:center;margin-top:10px;"><button style="font-size:12px;color:var(--text3);" onclick="jgRoomHostForceAdvanceStep(\''+currentStep+'\','+night+')">⚠️ 卡住了？房主強制往下一步</button></div>'
@@ -3936,6 +4008,7 @@ function jgRoomHostAdvanceHtml(currentStep, night){
   if(currentStep==='seer') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">預言家（或持有查驗技能的幸運兒）查驗完之後，會自動往下一步。</div>'+forceHtml;
   if(currentStep==='medium') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">通靈師查驗完之後，會自動往下一步。</div>'+forceHtml;
   if(currentStep==='demonhunter') return forceHtml;
+  if(currentStep==='hunter') return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">獵人看過今晚的技能使用狀況、按下「已知道」之後，會自動往下一步。</div>'+forceHtml;
   if(!currentStep) return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">這一夜已經結束，正在自動接警長競選...</div>';
   return '<div class="info" style="font-size:12px;margin-top:20px;text-align:center;">目前只做了守衛、狼隊出刀、女巫、預言家、通靈師、夢魘、魔術師、攝夢人、機械狼、邱比特、狼兄狼弟、黑市商人、夜槍（獵人/黑狼王/幸運兒獵槍）當示範，其餘角色還在開發中。</div>';
 }
@@ -3967,6 +4040,9 @@ window.jgRoomHostForceAdvanceStep=async function(step, night){
   } else if(step==='demonhunter'){
     await jgRoomAppendNightLog(night, '獵 x');
     await jgRoomFinishDemonhunterStep(night);
+  } else if(step==='hunter'){
+    await setDoc(doc(db0,'rooms',jgRoomCode),{ hunterStatusDoneNight:night },{ merge:true });
+    await jgRoomAfterHunterStep(night);
   }
   await jgRoomRefreshAndRenderCurrent();
 };

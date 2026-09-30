@@ -74,6 +74,7 @@ function loadRoomLogicForGodView() {
     + 'jgRoomAssignRoles,jgRoomThiefChoose,jgRoomThiefViewHtml,jgRoomNextNightStep,jgRoomStepPresent,jgRoomCupidPickFirst,jgRoomCupidConfirmPair,jgRoomDealAssignRoles,'
     + 'jgRoomCheckBloodmoonLastStand,jgRoomComputeWinCheck,jgRoomDemonhunterHunt,'
     + 'jgRoomMaybeApplyBadgeSwallow,jgRoomWolfSelfBlowConfirm,jgRoomReallyAdvanceToDayPhase,'
+    + 'jgRoomHunterPending,jgRoomHunterStatusAck,jgRoomAdvanceToDayPhase,'
     + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal,__setMyRole,__getSuppressFlag};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
@@ -330,6 +331,7 @@ async function runAsync() {
   await runBloodmoonLastStandTest();
   await runBadgeSwallowTest();
   await runSameNightDeathStillActsTest();
+  await runHunterStatusGestureTest();
 })();
 
 async function runMechWolfNight1Test(){
@@ -1578,4 +1580,63 @@ async function runSameNightDeathStillActsTest(){
   const anyFail=results.some(r=>!r.ok);
   if(anyFail){ console.error('同晚死亡仍可行動／死狼不再看到出刀畫面測試有失敗！'); process.exit(1); }
   console.log(`全部 ${results.length} 項同晚死亡仍可行動／死狼不再看到出刀畫面測試通過`);
+}
+
+// 獵人「技能使用狀況」手勢：比照本機法官助手，每晚都要告知獵人比讚／比倒讚——沒被毒
+// 就比讚，被毒（含機械狼學到的毒）就比倒讚；看完按「已知道」才會真的推進到下一步。
+async function runHunterStatusGestureTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+  global.window.alert = global.alert = () => {};
+
+  mod.__setRoomCode('HT1');
+  mod.__setComp({ wolf:1, hunter:1, villager:4 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'狼', alive:true },
+    { uid:'hunterUid', seatNum:6, name:'獵人', alive:true },
+  ]);
+  global.__mockDocs={ 'rooms/HT1':{ night:1, currentStep:'hunter', phase:'night' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/HT1']);
+
+  check('板子有獵人、還沒看過這一晚的手勢：判斷為 pending', mod.jgRoomHunterPending(1), true);
+
+  mod.__setMyRole('hunter');
+  global.window.jgFirebaseUid='hunterUid';
+  await mod.jgRoomRenderNightShell();
+  const normalHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('沒被毒：顯示技能正常（比讚）', normalHtml.includes('技能正常'), true);
+  check('沒被毒：不會顯示技能被封印', normalHtml.includes('技能被封印'), false);
+
+  // 被女巫毒了這一晚：改成顯示技能被封印（比倒讚）
+  global.__mockDocs['rooms/HT1']=Object.assign({}, global.__mockDocs['rooms/HT1'], { witchPoisonUid:'hunterUid', witchPoisonNight:1 });
+  mod.__setRoomDoc(global.__mockDocs['rooms/HT1']);
+  await mod.jgRoomRenderNightShell();
+  const poisonedHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('被女巫毒了這一晚：顯示技能被封印（比倒讚）', poisonedHtml.includes('技能被封印'), true);
+
+  // 其他人（不是獵人）在這一步看到的是通用的夜晚等待畫面，看不到獵人的手勢內容
+  global.window.jgFirebaseUid='wolfUid';
+  mod.__setMyRole('wolf');
+  await mod.jgRoomRenderNightShell();
+  const othersHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('其他玩家看不到獵人的技能使用狀況畫面', othersHtml.includes('你的技能使用狀況'), false);
+  check('其他玩家看到通用的夜晚等待畫面', othersHtml.includes('夜晚進行中'), true);
+
+  // 獵人按「已知道」之後：hunterStatusDoneNight 記住這一晚看過了，board 沒有其他神職角色，
+  // 直接真的往下一步（沒有獵魔人、也沒有警長競選的話，會進到白天）
+  global.window.jgFirebaseUid='hunterUid';
+  await mod.jgRoomHunterStatusAck(1);
+  const afterAck=global.__mockDocs['rooms/HT1']||{};
+  check('按「已知道」之後：hunterStatusDoneNight 記住這一晚看過了', afterAck.hunterStatusDoneNight, 1);
+  check('按「已知道」之後：不會再判斷為 pending（同一晚不會重複卡住）', mod.jgRoomHunterPending(1), false);
+  check('按「已知道」之後：真的往下一步進入白天（board 沒有其他神職角色）', afterAck.phase, 'day-open');
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('獵人技能使用狀況手勢測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項獵人技能使用狀況手勢測試通過`);
 }
