@@ -73,6 +73,8 @@ function loadRoomLogicForGodView() {
     + 'jgRoomAdvanceToDayPhase,jgRoomJoinSheriff,jgRoomLockSheriffJoin,jgRoomRenderSheriffCampaign,jgRoomWolfConfirm,'
     + 'jgRoomAssignRoles,jgRoomThiefChoose,jgRoomThiefViewHtml,jgRoomNextNightStep,jgRoomStepPresent,jgRoomCupidPickFirst,jgRoomCupidConfirmPair,jgRoomDealAssignRoles,'
     + 'jgRoomCheckBloodmoonLastStand,jgRoomComputeWinCheck,jgRoomDemonhunterHunt,'
+    + 'jgRoomMaybeApplyBadgeSwallow,jgRoomWolfSelfBlowConfirm,jgRoomReallyAdvanceToDayPhase,'
+    + 'jgRoomHunterPending,jgRoomHunterStatusAck,jgRoomAdvanceToDayPhase,'
     + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal,__setMyRole,__getSuppressFlag};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
@@ -327,6 +329,9 @@ async function runAsync() {
   await runMechWolfThenWolfChainTest();
   await runGridSubmitFunctionsTest();
   await runBloodmoonLastStandTest();
+  await runBadgeSwallowTest();
+  await runSameNightDeathStillActsTest();
+  await runHunterStatusGestureTest();
 })();
 
 async function runMechWolfNight1Test(){
@@ -1401,4 +1406,237 @@ async function runGridSubmitFunctionsTest(){
   const anyFail=results.some(r=>!r.ok);
   if(anyFail){ console.error('圓點格子送出函式測試有失敗！'); process.exit(1); }
   console.log(`全部 ${results.length} 項圓點格子送出函式測試通過`);
+}
+
+// 自爆吞警徽（單爆／雙爆）——驗證 jgRoomMaybeApplyBadgeSwallow 在警長競選期間自爆時，
+// 單爆直接讓警徽流失；雙爆第一爆保留警徽、標記隔天續選，隔天再自爆（第二爆）警徽才真正
+// 流失；不在競選期間（已經選出警長）自爆則完全不影響警徽欄位。另外驗證
+// jgRoomReallyAdvanceToDayPhase 在 sheriffPostponedToDay2 標記下，會正確恢復成
+// sheriffPhase:'day2resume'，不會重新問候選人起立。
+async function runBadgeSwallowTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+  global.window.alert = global.alert = () => {};
+  global.window.confirm = global.confirm = () => true;
+
+  // ── 單爆：警長競選期間自爆，直接讓警徽流失 ──
+  mod.__setRoomCode('BADGE1');
+  mod.__setPlayers([
+    { uid:'w1', seatNum:2, name:'狼一', alive:true },
+    { uid:'p2', seatNum:3, name:'甲', alive:true },
+  ]);
+  global.__mockDocs={
+    'rooms/BADGE1':{ night:1, phase:'sheriff', sheriffPhase:'locked', sheriffWinnerSeatNum:null,
+      badgeMode:'single', sheriffCandidates:['w1','p2'], sheriffEverCandidates:['w1','p2'] },
+  };
+  mod.__setRoomDoc(global.__mockDocs['rooms/BADGE1']);
+  global.window.jgFirebaseUid='w1';
+  await mod.jgRoomWolfSelfBlowConfirm();
+  const single=global.__mockDocs['rooms/BADGE1']||{};
+  check('單爆：自爆後警徽流失（sheriffWinnerSeatNum 仍是 null）', single.sheriffWinnerSeatNum, null);
+  check('單爆：自爆的人從候選名單移除', (single.sheriffCandidates||[]).includes('w1'), false);
+  check('單爆：畫面收回白天（不留在競選畫面）', single.phase, 'day-open');
+  check('單爆：自己被標記死亡', (global.__mockDocs['rooms/BADGE1/players/w1']||{}).alive, false);
+  check('單爆：沒有標記隔天續選', !!single.sheriffPostponedToDay2, false);
+
+  // ── 雙爆：第一爆保留警徽、標記隔天續選 ──
+  mod.__setRoomCode('BADGE2');
+  mod.__setPlayers([
+    { uid:'w1', seatNum:2, name:'狼一', alive:true },
+    { uid:'w2', seatNum:5, name:'狼二', alive:true },
+    { uid:'p2', seatNum:3, name:'甲', alive:true },
+  ]);
+  global.__mockDocs={
+    'rooms/BADGE2':{ night:1, phase:'sheriff', sheriffPhase:'locked', sheriffWinnerSeatNum:null,
+      badgeMode:'double', sheriffCandidates:['w1','w2','p2'], sheriffEverCandidates:['w1','w2','p2'] },
+  };
+  mod.__setRoomDoc(global.__mockDocs['rooms/BADGE2']);
+  global.window.jgFirebaseUid='w1';
+  await mod.jgRoomWolfSelfBlowConfirm();
+  const firstBlow=global.__mockDocs['rooms/BADGE2']||{};
+  check('雙爆・第一爆：警徽保留（sheriffFirstBlowDone=true）', firstBlow.sheriffFirstBlowDone, true);
+  check('雙爆・第一爆：標記隔天續選', firstBlow.sheriffPostponedToDay2, true);
+  check('雙爆・第一爆：sheriffWinnerSeatNum 沒被清成 null 以外的值（本輪本來就沒有警長）', firstBlow.sheriffWinnerSeatNum, null);
+  check('雙爆・第一爆：自爆的人從候選名單移除，其餘候選人還在', firstBlow.sheriffCandidates, ['w2','p2']);
+
+  // 隔天：jgRoomReallyAdvanceToDayPhase 應該恢復成 day2resume，不重新問候選人起立
+  mod.__setRoomDoc(global.__mockDocs['rooms/BADGE2']);
+  await mod.jgRoomReallyAdvanceToDayPhase(2);
+  const resumed=global.__mockDocs['rooms/BADGE2']||{};
+  check('隔天恢復競選：phase 回到 sheriff', resumed.phase, 'sheriff');
+  check('隔天恢復競選：sheriffPhase 是 day2resume（不是重新 joining）', resumed.sheriffPhase, 'day2resume');
+  check('隔天恢復競選：sheriffPostponedToDay2 用完就清掉', !!resumed.sheriffPostponedToDay2, false);
+  check('隔天恢復競選：候選人名單沿用（沒有被重置）', resumed.sheriffCandidates, ['w2','p2']);
+
+  // 隔天續選過程中，第二名狼再次自爆：警徽這次才真正流失
+  mod.__setRoomDoc(resumed);
+  global.window.jgFirebaseUid='w2';
+  await mod.jgRoomWolfSelfBlowConfirm();
+  const secondBlow=global.__mockDocs['rooms/BADGE2']||{};
+  check('雙爆・第二爆：警徽真正流失', secondBlow.sheriffWinnerSeatNum, null);
+  check('雙爆・第二爆：候選人名單只剩沒自爆過的人', secondBlow.sheriffCandidates, ['p2']);
+  check('雙爆・第二爆：不會再標記隔天續選（isFirstBlow 已經是 false）', secondBlow.sheriffPhase, null);
+
+  // ── 不在競選期間（已經選出警長）自爆：完全不影響警徽欄位 ──
+  mod.__setRoomCode('BADGE3');
+  mod.__setPlayers([{ uid:'w1', seatNum:2, name:'狼一', alive:true }]);
+  global.__mockDocs={
+    'rooms/BADGE3':{ night:2, phase:'day-open', sheriffPhase:null, sheriffWinnerSeatNum:5,
+      badgeMode:'single', sheriffCandidates:['someoneElse'] },
+  };
+  const rdBefore=Object.assign({}, global.__mockDocs['rooms/BADGE3']);
+  mod.__setRoomDoc(global.__mockDocs['rooms/BADGE3']);
+  global.window.jgFirebaseUid='w1';
+  await mod.jgRoomMaybeApplyBadgeSwallow(rdBefore, 2, 2);
+  const untouched=global.__mockDocs['rooms/BADGE3']||{};
+  check('已經選出警長時自爆：sheriffWinnerSeatNum 不受影響', untouched.sheriffWinnerSeatNum, 5);
+  check('已經選出警長時自爆：candidates 名單不受影響（函式直接不做事）', untouched.sheriffCandidates, ['someoneElse']);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('自爆吞警徽測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項自爆吞警徽測試通過`);
+}
+
+// 「這一晚才死、死訊還沒公布」的角色，這一晚自己的技能還是要能正常使用（通靈師/預言家/
+// 女巫/獵魔人被狼刀當晚殺死，不代表這一晚不能查驗/用藥——只有「早就死掉、死訊已經公布
+// 過」的人才要走假裝還在走流程的分支）；另外驗證狼白天被放逐、已經真的死亡之後，隔天
+// 晚上不會再看到狼隊出刀選人畫面。
+async function runSameNightDeathStillActsTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+  global.window.alert = global.alert = () => {};
+
+  // ── 通靈師這一晚被狼刀殺死（diedNight 就是現在這一晚，死訊還沒公布）：仍要看到真的查驗畫面 ──
+  mod.__setRoomCode('SN1');
+  mod.__setComp({ wolf:1, medium:1 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'狼', alive:true },
+    { uid:'medUid', seatNum:5, name:'通靈師', alive:false, diedNight:1 },
+  ]);
+  global.__mockCollections={ 'rooms/SN1/secrets':[
+    { id:'wolfUid', data:()=>({role:'wolf'}) },
+    { id:'medUid', data:()=>({role:'medium'}) },
+  ]};
+  global.__mockDocs={ 'rooms/SN1':{ night:1, currentStep:'medium', phase:'night' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/SN1']);
+  mod.__setMyRole('medium');
+  global.window.jgFirebaseUid='medUid';
+  await mod.jgRoomRenderNightShell();
+  const sameNightHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('通靈師這一晚才死（死訊還沒公布）：看到真的查驗選人畫面', sameNightHtml.includes('請選擇查驗對象'), true);
+  check('通靈師這一晚才死：不會被誤判成「已出局，仍需走完流程」', sameNightHtml.includes('已出局，仍需走完流程'), false);
+
+  // ── 對照組：通靈師是「前一晚」就死了（死訊早就公布過），這一晚要走假裝流程 ──
+  mod.__setRoomCode('SN2');
+  mod.__setComp({ wolf:1, medium:1 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'狼', alive:true },
+    { uid:'medUid', seatNum:5, name:'通靈師', alive:false, diedNight:1 },
+  ]);
+  global.__mockDocs={ 'rooms/SN2':{ night:2, currentStep:'medium', phase:'night' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/SN2']);
+  await mod.jgRoomRenderNightShell();
+  const oldDeathHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('通靈師是前一晚死的（死訊已公布）：走假裝流程，不能真的查驗', oldDeathHtml.includes('已出局，仍需走完流程'), true);
+  check('通靈師是前一晚死的：不會出現真的查驗選人畫面', oldDeathHtml.includes('請選擇查驗對象'), false);
+
+  // ── 狼白天被放逐、已經死亡（沒有 diedNight，日間死亡本來就是公開的）：
+  //    隔天晚上不該再看到狼隊出刀選人畫面，應該落到「夜晚進行中」通用等待畫面 ──
+  mod.__setRoomCode('SN3');
+  mod.__setComp({ wolf:2 });
+  mod.__setPlayers([
+    { uid:'deadWolfUid', seatNum:2, name:'被放逐的狼', alive:false },
+    { uid:'aliveWolfUid', seatNum:4, name:'還活著的狼', alive:true },
+  ]);
+  global.__mockCollections={ 'rooms/SN3/secrets':[
+    { id:'deadWolfUid', data:()=>({role:'wolf'}) },
+    { id:'aliveWolfUid', data:()=>({role:'wolf'}) },
+  ]};
+  global.__mockDocs={ 'rooms/SN3':{ night:2, currentStep:'wolf', phase:'night' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/SN3']);
+  mod.__setMyRole('wolf');
+  global.window.jgFirebaseUid='deadWolfUid';
+  await mod.jgRoomRenderNightShell();
+  const deadWolfHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('白天被放逐、已死的狼：不會再看到出刀選人畫面', deadWolfHtml.includes('請選擇今晚要殺的對象'), false);
+  check('白天被放逐、已死的狼：落到「夜晚進行中」通用等待畫面', deadWolfHtml.includes('夜晚進行中'), true);
+
+  // 對照組：還活著的狼隊友應該正常看到出刀選人畫面（確認這次加的存活檢查沒有誤擋活人）
+  global.window.jgFirebaseUid='aliveWolfUid';
+  await mod.jgRoomRenderNightShell();
+  const aliveWolfHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('還活著的狼隊友：正常看到出刀選人畫面（沒有被誤擋）', aliveWolfHtml.includes('請選擇今晚要殺的對象'), true);
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('同晚死亡仍可行動／死狼不再看到出刀畫面測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項同晚死亡仍可行動／死狼不再看到出刀畫面測試通過`);
+}
+
+// 獵人「技能使用狀況」手勢：比照本機法官助手，每晚都要告知獵人比讚／比倒讚——沒被毒
+// 就比讚，被毒（含機械狼學到的毒）就比倒讚；看完按「已知道」才會真的推進到下一步。
+async function runHunterStatusGestureTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{
+    const ok=JSON.stringify(actual)===JSON.stringify(expected);
+    results.push({name, ok, actual, expected});
+  };
+  global.window.alert = global.alert = () => {};
+
+  mod.__setRoomCode('HT1');
+  mod.__setComp({ wolf:1, hunter:1, villager:4 });
+  mod.__setPlayers([
+    { uid:'wolfUid', seatNum:1, name:'狼', alive:true },
+    { uid:'hunterUid', seatNum:6, name:'獵人', alive:true },
+  ]);
+  global.__mockDocs={ 'rooms/HT1':{ night:1, currentStep:'hunter', phase:'night' } };
+  mod.__setRoomDoc(global.__mockDocs['rooms/HT1']);
+
+  check('板子有獵人、還沒看過這一晚的手勢：判斷為 pending', mod.jgRoomHunterPending(1), true);
+
+  mod.__setMyRole('hunter');
+  global.window.jgFirebaseUid='hunterUid';
+  await mod.jgRoomRenderNightShell();
+  const normalHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('沒被毒：顯示技能正常（比讚）', normalHtml.includes('技能正常'), true);
+  check('沒被毒：不會顯示技能被封印', normalHtml.includes('技能被封印'), false);
+
+  // 被女巫毒了這一晚：改成顯示技能被封印（比倒讚）
+  global.__mockDocs['rooms/HT1']=Object.assign({}, global.__mockDocs['rooms/HT1'], { witchPoisonUid:'hunterUid', witchPoisonNight:1 });
+  mod.__setRoomDoc(global.__mockDocs['rooms/HT1']);
+  await mod.jgRoomRenderNightShell();
+  const poisonedHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('被女巫毒了這一晚：顯示技能被封印（比倒讚）', poisonedHtml.includes('技能被封印'), true);
+
+  // 其他人（不是獵人）在這一步看到的是通用的夜晚等待畫面，看不到獵人的手勢內容
+  global.window.jgFirebaseUid='wolfUid';
+  mod.__setMyRole('wolf');
+  await mod.jgRoomRenderNightShell();
+  const othersHtml=global.document.getElementById('jg-room-content').innerHTML;
+  check('其他玩家看不到獵人的技能使用狀況畫面', othersHtml.includes('你的技能使用狀況'), false);
+  check('其他玩家看到通用的夜晚等待畫面', othersHtml.includes('夜晚進行中'), true);
+
+  // 獵人按「已知道」之後：hunterStatusDoneNight 記住這一晚看過了，board 沒有其他神職角色，
+  // 直接真的往下一步（沒有獵魔人、也沒有警長競選的話，會進到白天）
+  global.window.jgFirebaseUid='hunterUid';
+  await mod.jgRoomHunterStatusAck(1);
+  const afterAck=global.__mockDocs['rooms/HT1']||{};
+  check('按「已知道」之後：hunterStatusDoneNight 記住這一晚看過了', afterAck.hunterStatusDoneNight, 1);
+  check('按「已知道」之後：不會再判斷為 pending（同一晚不會重複卡住）', mod.jgRoomHunterPending(1), false);
+  check('按「已知道」之後：真的往下一步進入白天（board 沒有其他神職角色）', afterAck.phase, 'day-open');
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('獵人技能使用狀況手勢測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項獵人技能使用狀況手勢測試通過`);
 }
