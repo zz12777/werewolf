@@ -537,14 +537,19 @@ select{
 .nbanner-evil{background:rgba(184,56,40,0.12);border-radius:var(--r);}
 
 /* ══════════════════════════════════════════════════════════════════
-   Apple 介面風格試套用（僅限「遊玩數據」分頁，.apple-ui-preview 這個
-   class 目前只掛在 index.html 的 #t-data 上）。參考 Apple Human
-   Interface Guidelines 的幾個核心原則：更大的字級層級對比、iOS
-   分組列表（grouped list）的卡片＋內嵌分隔線手法、柔和陰影取代生硬邊框、
-   iOS 慣用的彈性緩動曲線與輕觸回饋（按下縮小＋變淡，而不是整塊變色）。
-   全部規則都包在 .apple-ui-preview 底下，不會影響其他分頁；原本的規則
-   完全沒有刪改，只是被這裡的規則覆蓋——要復原的話，把 index.html 裡
-   #t-data 上的 apple-ui-preview 這個 class 拿掉即可，其餘完全不用動。
+   Apple 介面風格：從「遊玩數據」單頁試套用開始，確認滿意後逐步推廣到
+   其他分頁。.apple-ui-preview 這個 class 目前掛在 index.html 的
+   #t-data／#t-rules／#t-judge／#t-guide／#t-room／#jg-p-roster 這幾個
+   容器上——法官の助手「主持中」的實際遊戲流程畫面（#jg-p-main）因為
+   裡面還有些自訂的深色背景特效（例如盜賊候選卡）沒有一併盤點過，這次
+   故意先不動，避免半套樣式讓正在進行的遊戲畫面變得不一致，等之後另外
+   仔細過一輪再套用。參考 Apple Human Interface Guidelines 的幾個核心
+   原則：更大的字級層級對比、iOS 分組列表（grouped list）的卡片＋內嵌
+   分隔線手法、柔和陰影取代生硬邊框、iOS 慣用的彈性緩動曲線與輕觸回饋
+   （按下縮小＋變淡，而不是整塊變色）。全部規則都包在 .apple-ui-preview
+   底下，不會影響沒掛這個 class 的畫面；原本的規則完全沒有刪改，只是被
+   這裡的規則覆蓋——要復原某一頁的話，把 index.html 裡對應容器上的
+   apple-ui-preview 這個 class 拿掉即可，其餘完全不用動。
    只調視覺樣式，沒有動到任何 .js 邏輯或 HTML 結構／按鈕行為。
    ══════════════════════════════════════════════════════════════════ */
 .apple-ui-preview{
@@ -634,4 +639,94 @@ select{
 .apple-ui-preview button{border:none;box-shadow:var(--au-shadow-sm);transition:transform .2s var(--au-ease),opacity .2s var(--au-ease);}
 .apple-ui-preview button:active{transform:scale(0.97);opacity:0.7;}
 .apple-ui-preview button.primary{box-shadow:0 2px 8px rgba(184,56,40,0.25);}
+
+/* ── 以下是「遊玩數據」之外，把同一套風格延伸套用到其他分頁時額外需要的規則——
+   角色與規則、攻略參考、法官の助手、連線房間都共用上面那些卡片/按鈕/分段控制的規則
+   （選擇器本來就沒有寫死只認 #t-data，只要外層有 .apple-ui-preview 這個 class 就會套用），
+   這裡只補這幾頁專屬、上面還沒涵蓋到的元件。一樣完全沒有動任何 .js 邏輯或 HTML 結構，
+   純粹是視覺樣式；也一樣只在有掛 .apple-ui-preview 這個 class 的分頁才生效。── */
+
+/* 表單欄位（文字輸入/數字輸入/下拉選單）：拿掉生硬邊框改陰影，背景改白色，跟卡片同一套語彙。 */
+.apple-ui-preview input[type=text],
+.apple-ui-preview input[type=number],
+.apple-ui-preview select{
+  border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;border-radius:var(--au-radius-sm);
+}
+.apple-ui-preview input[type=text]:focus,
+.apple-ui-preview input[type=number]:focus,
+.apple-ui-preview select:focus{box-shadow:0 0 0 2px var(--accent),var(--au-shadow-sm);}
+
+/* 提示框（info／警告／成功／危險四種語氣）：拿掉邊框改陰影，背景改白色，色彩只保留文字顏色
+   跟左側語氣，看起來更像 iOS 的提示卡片而不是傳統網頁的警告框。 */
+.apple-ui-preview .info,
+.apple-ui-preview .info-warn,
+.apple-ui-preview .info-danger,
+.apple-ui-preview .info-success,
+.apple-ui-preview .note{
+  border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-sm);background:#ffffff;
+}
+
+/* 角色卡（角色與規則）：拿掉外框改陰影，圓角加大，各陣營底色維持（半透明色調在白卡上一樣看得出來）。 */
+.apple-ui-preview .role-card{border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-md);}
+
+/* 可收合的角色卡片／夜晚流程步驟（.rcol／.script-step，角色與規則／法官の助手共用同一種
+   「標題列可點開、展開內容」的手風琴元件）：拿掉外框改陰影，展開後的內容區塊背景維持白色
+   跟標題列一致（不像原本刻意用 --bg／--bg2 區分兩層）。 */
+.apple-ui-preview .rcol,
+.apple-ui-preview .script-step{
+  border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-md);
+}
+.apple-ui-preview .rcol-hd,
+.apple-ui-preview .ss-header{background:#ffffff;border-radius:var(--au-radius-md);}
+.apple-ui-preview .rcol-body,
+.apple-ui-preview .ss-body{background:#ffffff;border-top:1px solid var(--au-sep);}
+.apple-ui-preview .rcol-hd.open{border-radius:var(--au-radius-md) var(--au-radius-md) 0 0;}
+
+/* 板子人數配置格（.comp-item）、名詞卡（.guide-tag-card）：背景改白色，陰影取代邊框。 */
+.apple-ui-preview .comp-item,
+.apple-ui-preview .guide-tag-card{background:#ffffff;border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-sm);}
+
+/* 法官助手玩家狀態欄（.roster-panel／.rp）：整條面板背景改白色，跟頁面灰底拉開層次；
+   每個玩家格子拿掉邊框改陰影，死亡格子維持原本的變灰效果。 */
+.apple-ui-preview .roster-panel{background:#ffffff;border-top:none;box-shadow:0 -1px 8px rgba(0,0,0,0.04);}
+.apple-ui-preview .rp{border:none;box-shadow:var(--au-shadow-sm);background:#f2f2f7;}
+
+/* 連線房間上帝視角的玩家狀態格（.pgrid／.pcell）：跟 .rp 同一種處理，白底頁面上用淺灰格子，
+   拉開跟卡片本身的層次。 */
+.apple-ui-preview .pcell{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;}
+
+/* 選人格子（開槍/查驗/自爆帶人等圓點格 .tap-grid .ptap、.rpick-grid .rpick）：拿掉方形
+   外框改陰影＋圓角，選中狀態用外框強調色標示，輕觸有微縮回饋。 */
+.apple-ui-preview .ptap,
+.apple-ui-preview .rpick{
+  border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-sm);
+  background:#ffffff;transition:transform .15s var(--au-ease),box-shadow .15s var(--au-ease);
+}
+.apple-ui-preview .ptap:active,
+.apple-ui-preview .rpick:active{transform:scale(0.93);}
+.apple-ui-preview .ptap.sel,
+.apple-ui-preview .rpick.sel{box-shadow:0 0 0 2px var(--accent),var(--au-shadow-sm);}
+.apple-ui-preview .rpick.locked{box-shadow:0 0 0 2px var(--gold),var(--au-shadow-sm);}
+
+/* 台詞框（.speech，法官助手念給玩家聽的台詞）：維持既有的「引言」視覺重點，只是邊框換陰影。 */
+.apple-ui-preview .speech{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;border-radius:var(--au-radius-sm);}
+
+/* 死訊/勝負/倒數這幾種game-state banner：拿掉邊框改陰影，色調底色維持，看起來更像卡片而不是警告框。 */
+.apple-ui-preview .killed-box,
+.apple-ui-preview .role-reveal,
+.apple-ui-preview .win-side{border:none;box-shadow:var(--au-shadow-sm);}
+.apple-ui-preview .timer-ring{background:#ffffff;border-radius:var(--au-radius-md);box-shadow:var(--au-shadow-sm);}
+
+/* 文字紀錄／log 區塊（.godlog／.log-box）、警長參選圓形編號牌（.step-badge）：拿掉邊框改陰影。 */
+.apple-ui-preview .godlog,
+.apple-ui-preview .log-box{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;}
+.apple-ui-preview .step-badge{background:#ffffff;box-shadow:var(--au-shadow-sm);}
+
+/* 玩家名單設定（.rname-slot／.rname-pool-btn）：跟其餘選人格子同一套處理。 */
+.apple-ui-preview .rname-slot,
+.apple-ui-preview .rname-pool-btn{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;}
+.apple-ui-preview .rname-slot.active{box-shadow:0 0 0 2px var(--accent),var(--au-shadow-sm);}
+
+/* 個人遊玩紀錄（.hist-item）：跟其餘卡片同一套白底陰影處理。 */
+.apple-ui-preview .hist-item{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;}
 
