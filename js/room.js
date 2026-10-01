@@ -143,6 +143,20 @@ async function jgRoomWaitAuth(){
   await window.jgFirebaseReady;
   return window.jgFirebaseUid;
 }
+// 加入房間一開始查房號是否存在，原本每個入口各自直接 getDoc、沒有包 try/catch，也沒先等
+// 匿名登入完成——只要讀取失敗（登入還沒跑完就被連點、Firestore 規則擋掉、網路不穩…），
+// 整段 async function 就直接拋出例外、什麼提示都不會顯示，使用者點了按鈕完全沒反應，
+// 還以為按鈕壞掉。統一包成這個小工具：先等登入完成，讀取失敗就跳出明確的錯誤訊息
+// （把實際錯誤原因一起顯示出來，方便回報問題時知道到底卡在哪）。
+async function jgRoomSafeGetRoomDoc(db, code){
+  await jgRoomWaitAuth();
+  try{
+    return await getDoc(doc(db,'rooms',code));
+  }catch(e){
+    alert('連線失敗，請檢查網路連線後再試一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
+    return null;
+  }
+}
 
 // ══════════════════════════════════════════
 // 連線房間發牌（跟上面完整的自動化流程是分開的一套簡化功能）：房主在法官助手設定好板子
@@ -195,10 +209,11 @@ window.jgRoomDealJoin=async function(codeRaw){
   const code=(codeRaw||'').trim();
   if(!/^\d{4,6}$/.test(code)){ alert('請輸入正確的房號（4-6碼數字）'); return; }
   const db=window.jgFirebaseDb;
-  const roomSnap=await getDoc(doc(db,'rooms',code));
+  const roomSnap=await jgRoomSafeGetRoomDoc(db, code);
+  if(!roomSnap) return;
   if(!roomSnap.exists()){ alert('找不到這個房號，請確認房號是否正確'); return; }
   if(roomSnap.data().mode!=='deal'){ alert('這不是發牌房，請確認房號。'); return; }
-  const uid=await jgRoomWaitAuth();
+  const uid=window.jgFirebaseUid;
   jgRoomIsHost=(roomSnap.data().hostUid===uid);
   try{ localStorage.setItem('jgLastRoomCode', code); }catch(e){}
   await jgRoomEnterLobby(code);
@@ -413,7 +428,8 @@ window.jgRoomSmartJoin=async function(codeRaw, name){
   const code=(codeRaw||'').trim();
   if(!/^\d{4,6}$/.test(code)){ alert('請輸入正確的房號（4-6碼數字）'); return; }
   const db=window.jgFirebaseDb;
-  const roomSnap=await getDoc(doc(db,'rooms',code));
+  const roomSnap=await jgRoomSafeGetRoomDoc(db, code);
+  if(!roomSnap) return;
   if(!roomSnap.exists()){ alert('找不到這個房號，請確認房號是否正確'); return; }
   if(roomSnap.data().mode==='deal'){
     await jgRoomDealJoin(code);
@@ -426,9 +442,10 @@ window.jgRoomJoin=async function(codeRaw, name){
   const nm=(name||'').trim();
   if(!/^\d{4,6}$/.test(code)){ alert('請輸入正確的房號（4-6碼數字）'); return; }
   if(!nm){ alert('請先輸入你的全名'); return; }
-  const uid=await jgRoomWaitAuth();
   const db=window.jgFirebaseDb;
-  const roomSnap=await getDoc(doc(db,'rooms',code));
+  const roomSnap=await jgRoomSafeGetRoomDoc(db, code);
+  if(!roomSnap) return;
+  const uid=window.jgFirebaseUid;
   if(!roomSnap.exists()){ alert('找不到這個房號，請確認房號是否正確'); return; }
   if(roomSnap.data().status!=='lobby'){ alert('這場遊戲已經開始，無法加入'); return; }
   jgRoomComp=roomSnap.data().comp||null;
@@ -451,7 +468,8 @@ window.jgRoomJoin=async function(codeRaw, name){
     });
   }catch(e){
     if(e&&e.message==='ROOM_FULL'){ alert('⚠️ 這個房間是 '+jgRoomTotal+' 人局，已經到齊了，無法加入。'); return; }
-    throw e;
+    alert('加入房間失敗，請檢查網路連線後再試一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
+    return;
   }
   jgRoomIsHost=(roomSnap.data().hostUid===uid);
   try{ localStorage.setItem('jgLastRoomCode', code); }catch(e){}
@@ -463,9 +481,10 @@ window.jgRoomJoin=async function(codeRaw, name){
 // 就不能再選（用「這個座位的 uid 是不是已經有別人在用」判斷，不是單純看名字）。
 window.jgRoomJoinPresetSeat=async function(codeRaw, seatNum){
   const code=(codeRaw||'').trim();
-  const uid=await jgRoomWaitAuth();
   const db=window.jgFirebaseDb;
-  const roomSnap=await getDoc(doc(db,'rooms',code));
+  const roomSnap=await jgRoomSafeGetRoomDoc(db, code);
+  if(!roomSnap) return;
+  const uid=window.jgFirebaseUid;
   if(!roomSnap.exists()){ alert('找不到這個房號，請確認房號是否正確'); return; }
   const rd=roomSnap.data();
   if(rd.status!=='lobby'){ alert('這場遊戲已經開始，無法加入'); return; }
@@ -486,7 +505,8 @@ window.jgRoomJoinPresetSeat=async function(codeRaw, seatNum){
     });
   }catch(e){
     if(e&&e.message==='SEAT_TAKEN'){ alert('這個座位已經有人選走了，請重新整理選別的座位'); return; }
-    throw e;
+    alert('加入房間失敗，請檢查網路連線後再試一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
+    return;
   }
   jgRoomIsHost=(rd.hostUid===uid);
   try{ localStorage.setItem('jgLastRoomCode', code); }catch(e){}
@@ -498,7 +518,8 @@ window.jgRoomCheckCodeThenJoin=async function(codeRaw){
   const code=(codeRaw||'').trim();
   if(!/^\d{4,6}$/.test(code)){ alert('請輸入正確的房號（4-6碼數字）'); return; }
   const db=window.jgFirebaseDb;
-  const roomSnap=await getDoc(doc(db,'rooms',code));
+  const roomSnap=await jgRoomSafeGetRoomDoc(db, code);
+  if(!roomSnap) return;
   if(!roomSnap.exists()){ alert('找不到這個房號，請確認房號是否正確'); return; }
   const rd=roomSnap.data();
   if(rd.mode==='deal'){
