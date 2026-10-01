@@ -6,7 +6,7 @@
 // js 檔互相看不到彼此的變數，所以這裡也把要給一般 script 用的函式掛到 window 上。
 // ═══════════════════════════════════════════
 import {
-  doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion, arrayRemove, runTransaction
+  doc, setDoc, updateDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion, arrayRemove, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 let jgRoomCode=null;       // 目前所在的房號
@@ -114,6 +114,57 @@ function jgRoomStopTimer(){
 function jgRoomGenCode(){
   return String(Math.floor(100000+Math.random()*900000));
 }
+
+// ══════════════════════════════════════════
+// 機械狼板「記錄玩家身分」手機輸入橋接——法官助手（js/core.js，非 module，看不到這裡的
+// Firestore import）在「記錄玩家身分」頁想讓法官改用手機點選（方便拿著手機一個個看牌），
+// 就是透過這幾個掛在 window 上的函式，借用連線房間同一套房號機制建一個臨時房間文件來
+// 同步，不是真正的連線房間、不會出現在玩家名單流程裡。流程結束（法官按下「確認配置」）
+// 就把這份臨時文件刪掉，不會留著佔用房號。
+// ══════════════════════════════════════════
+let jgMechAssignLinkCode=null;
+let jgMechAssignLinkUnsub=null;
+// payload: {total, playerNames:{num:name}, roles:[{id,abbr,name}], assign:{num:roleId|null}}
+// onUpdate(assignMap)：手機那邊點選之後，這裡會即時把最新的 assign 物件丟回去給 core.js 套用。
+window.jgRoomStartMechAssignLink=async function(payload, onUpdate){
+  const db=window.jgFirebaseDb;
+  const code=jgRoomGenCode();
+  const uid=await jgRoomWaitAuth();
+  try{
+    await setDoc(doc(db,'rooms',code),{
+      mode:'mech-assign', status:'lobby', hostUid:uid, createdAt:serverTimestamp(),
+      total: payload.total, playerNames: payload.playerNames||{}, roles: payload.roles||[], assign: payload.assign||{}
+    });
+  }catch(e){
+    alert('建立手機連線失敗，請檢查網路連線後再試一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
+    return null;
+  }
+  if(jgMechAssignLinkUnsub){ jgMechAssignLinkUnsub(); jgMechAssignLinkUnsub=null; }
+  jgMechAssignLinkCode=code;
+  jgMechAssignLinkUnsub=onSnapshot(doc(db,'rooms',code), (snap)=>{
+    if(!snap.exists()) return;
+    onUpdate(snap.data().assign||{});
+  });
+  return code;
+};
+// 法官在電腦上自己點（而不是手機）的時候，也把結果同步推到 Firestore，這樣手機畫面才會
+// 跟著更新——失敗就算了（法官本機狀態已經是對的，連線不穩不該卡住電腦這邊的操作）。
+window.jgRoomPushMechAssign=async function(num, role){
+  if(!jgMechAssignLinkCode) return;
+  const db=window.jgFirebaseDb;
+  try{
+    await updateDoc(doc(db,'rooms',jgMechAssignLinkCode), {['assign.'+num]: role});
+  }catch(e){ /* best-effort，連線失敗不影響法官繼續在電腦上操作 */ }
+};
+window.jgRoomStopMechAssignLink=async function(){
+  if(jgMechAssignLinkUnsub){ jgMechAssignLinkUnsub(); jgMechAssignLinkUnsub=null; }
+  if(jgMechAssignLinkCode){
+    const db=window.jgFirebaseDb;
+    const code=jgMechAssignLinkCode;
+    jgMechAssignLinkCode=null;
+    try{ await deleteDoc(doc(db,'rooms',code)); }catch(e){}
+  }
+};
 // 複製邀請連結：網址帶 ?room=房號，別人點開會自動跳到連線房間分頁、房號也先幫他填好，
 // 只要打自己的名字（或直接選座位，發牌房的話）就能加入，不用手動問房號、輸入房號。
 window.jgRoomCopyInviteLink=async function(){
@@ -526,10 +577,90 @@ window.jgRoomCheckCodeThenJoin=async function(codeRaw){
     await jgRoomDealJoin(code);
     return;
   }
+  if(rd.mode==='mech-assign'){
+    await jgRoomRenderMechAssignPicker(code, rd);
+    return;
+  }
   if(rd.presetNames&&Object.keys(rd.presetNames).length){
     await jgRoomRenderJoinSeatPicker(code, rd);
   } else {
     jgRoomRenderJoinNameInput(code);
+  }
+};
+// 機械狼板「記錄玩家身分」手機輸入畫面：不是真正加入房間（不寫 players 子集合），單純
+// 顯示跟法官助手「記錄玩家身分」頁一樣的「座位×角色」點選格，點一下就直接寫回這份臨時
+// 房間文件的 assign 欄位，法官助手那邊監聽同一份文件，會即時套用更新。用本機快取
+// （jgRoomMechAssignCache）記目前的選取狀態，點擊時先樂觀更新畫面，背景才真的寫 Firestore，
+// 不用每次點擊都先 getDoc 等一輪往返，操作起來比較跟手。
+let jgRoomMechAssignCache={};
+let jgRoomMechPickerUnsub=null;
+window.jgRoomRenderMechAssignPicker=async function(code, rd){
+  const root=document.getElementById('jg-room-content');
+  if(!root) return;
+  const db=window.jgFirebaseDb;
+  const total=rd.total||0;
+  const names=rd.playerNames||{};
+  const roles=rd.roles||[];
+  jgRoomMechAssignCache=rd.assign||{};
+  function renderGrid(){
+    let html='';
+    for(let i=1;i<=total;i++){
+      const cur=jgRoomMechAssignCache[i]||jgRoomMechAssignCache[String(i)]||'';
+      const nm=names[i]||names[String(i)]||'';
+      html+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
+        +'<div style="width:32px;height:32px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;">'+i+'</div>'
+        +(nm?'<div style="width:56px;font-size:12px;color:var(--text2);flex-shrink:0;">'+nm+'</div>':'')
+        +'<div id="jg-room-mech-role-'+i+'-grid" style="display:flex;flex-wrap:wrap;gap:6px;flex:1;">'
+        +roles.map(r=>{
+          const sel=cur===r.id;
+          return '<button type="button" data-role="'+r.id+'" onclick="jgRoomMechAssignTap(\''+code+'\','+i+',\''+r.id+'\')" title="'+r.name+'" '
+            +'style="width:38px;height:38px;border-radius:50%;padding:0;font-size:13px;font-weight:700;'
+            +(sel?'background:var(--success,#2e7d32);color:#fff;border-color:transparent;':'')+'">'+(r.abbr||r.id)+'</button>';
+        }).join('')
+        +'</div></div>';
+    }
+    return html;
+  }
+  root.innerHTML=`
+    <div class="nbanner">
+      <h1>記錄玩家身分</h1>
+      <p class="sub" style="text-align:center;margin-top:6px;">拿著手機看每個人的牌，點選對應角色，電腦畫面會即時同步</p>
+    </div>
+    <div class="card" style="margin-top:14px;" id="jg-room-mech-assign-body">${renderGrid()}</div>
+    <div id="jg-room-mech-assign-note" class="info" style="font-size:12px;margin-top:10px;">法官在電腦上按下「確認配置，進入夜晚」之後，這個畫面會自動停用。</div>
+  `;
+  if(jgRoomMechPickerUnsub){ jgRoomMechPickerUnsub(); jgRoomMechPickerUnsub=null; }
+  jgRoomMechPickerUnsub=onSnapshot(doc(db,'rooms',code), (snap)=>{
+    if(!snap.exists()){
+      const note=document.getElementById('jg-room-mech-assign-note');
+      if(note) note.innerHTML='<div class="info-success">法官已經在電腦上完成記錄，這個畫面可以關閉了。</div>';
+      const body=document.getElementById('jg-room-mech-assign-body');
+      if(body) body.querySelectorAll('button').forEach(b=>{ b.disabled=true; b.style.opacity='0.4'; });
+      return;
+    }
+    jgRoomMechAssignCache=snap.data().assign||{};
+    const body=document.getElementById('jg-room-mech-assign-body');
+    if(body) body.innerHTML=renderGrid();
+  });
+};
+window.jgRoomMechAssignTap=async function(code, num, role){
+  const db=window.jgFirebaseDb;
+  const cur=jgRoomMechAssignCache[num]||jgRoomMechAssignCache[String(num)];
+  const next=(cur===role)?null:role;
+  jgRoomMechAssignCache[num]=next;
+  const grid=document.getElementById('jg-room-mech-role-'+num+'-grid');
+  if(grid){
+    grid.querySelectorAll('button').forEach(b=>{
+      const isSel=next&&b.getAttribute('data-role')===next;
+      b.style.background=isSel?'var(--success,#2e7d32)':'';
+      b.style.color=isSel?'#fff':'';
+      b.style.borderColor=isSel?'transparent':'';
+    });
+  }
+  try{
+    await updateDoc(doc(db,'rooms',code), {['assign.'+num]: next});
+  }catch(e){
+    alert('同步失敗，請確認網路連線後再試一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
   }
 };
 // 房主有設定好座位姓名：列出所有座位，已經被別人選走的變成灰色不能點，其餘的可以點選
