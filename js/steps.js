@@ -2445,8 +2445,7 @@ function jgRenderMechWolf2Step(roleId){
         +(isRepick?'<button onclick="jgShowBigCard(\''+label+'\',\'學到機械狼，可以重新學習一個對象\')" style="margin-bottom:8px;width:100%;">📋 大字報顯示給'+label+'看</button>':'')
         +'<label>'+(st.learned?'重新選人學習':'學習對象號碼')+'（留空=本晚不學習，不能學自己）</label>'
         +jgNumSelectHtml('jg-'+roleId+'-learn','','jgMechWolf2LearnCheck',null,selfNums,'不能學習自己')
-        +'<div id="jg-'+roleId+'-learn-result"></div>'
-        +(st.learned?'':'<div class="info" style="font-size:12px;margin-top:4px;">通靈師查驗這個號碼時會顯示他學到的具體身分。若學到的是「另一隻機械狼」，之後的夜晚還能重新選人學習。</div>');
+        +'<div id="jg-'+roleId+'-learn-result"></div>';
     }
   } else if(canUseSkill){
     if(st.learned==='hunter'){

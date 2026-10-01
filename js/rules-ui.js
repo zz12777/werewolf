@@ -153,7 +153,9 @@ function renderRulesCards(){
   const sEl=document.getElementById('rules-special-list');
   if(wEl) wEl.innerHTML=WOLF_ROLES.map(makeCard).join('');
   if(vEl) vEl.innerHTML=VIL_ROLES.map(makeCard).join('');
-  if(gEl) gEl.innerHTML=GOD_ROLES.map(makeCard).join('');
+  // trickmage（詭術之境變體魔術師）跟一般魔術師規則幾乎相同，不需要在規則頁多開一張重複卡片，
+  // 這裡單純不渲染它——GOD_ROLES 陣列本身完全不動，法官助手其他邏輯（算神職人數等）都還是正常吃得到它。
+  if(gEl) gEl.innerHTML=GOD_ROLES.filter(r=>r!=='trickmage').map(makeCard).join('');
   if(sEl) sEl.innerHTML=SPECIAL_ROLES.map(makeCard).join('');
 }
 

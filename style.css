@@ -546,7 +546,10 @@ select{
    仔細過一輪再套用。參考 Apple Human Interface Guidelines 的幾個核心
    原則：更大的字級層級對比、iOS 分組列表（grouped list）的卡片＋內嵌
    分隔線手法、柔和陰影取代生硬邊框、iOS 慣用的彈性緩動曲線與輕觸回饋
-   （按下縮小＋變淡，而不是整塊變色）。全部規則都包在 .apple-ui-preview
+   （按下縮小＋變淡，而不是整塊變色）。頁面背景維持原本的 var(--bg)／
+   卡片維持原本的 var(--bg2)，不整頁換成灰底＋白卡對比（試過那個版本，
+   按鈕在灰底上會糊在一起看不清楚，所以改回只調陰影/圓角/字級這種比較
+   內斂的做法）。全部規則都包在 .apple-ui-preview
    底下，不會影響沒掛這個 class 的畫面；原本的規則完全沒有刪改，只是被
    這裡的規則覆蓋——要復原某一頁的話，把 index.html 裡對應容器上的
    apple-ui-preview 這個 class 拿掉即可，其餘完全不用動。
@@ -558,11 +561,6 @@ select{
   --au-shadow-sm:0 1px 2px rgba(0,0,0,0.04), 0 1px 6px rgba(0,0,0,0.03);
   --au-shadow-md:0 2px 6px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.05);
   --au-sep:rgba(0,0,0,0.08);
-  /* 整頁換成 iOS「設定」App 那種淺灰底＋白色卡片浮起來的分組列表配色——這是 iOS 介面
-     一眼就能認出的招牌組合，比只調陰影/圓角明顯很多，在真機上滑一下這一頁就能馬上
-     感覺到跟其他分頁不一樣，不用再對照截圖找差異。只改 background，不動 .tab 原本的
-     padding/margin/max-width，避免影響版面置中與寬度計算。 */
-  background:#f2f2f7;
 }
 
 /* 大標題區：比照 iOS Large Title，字級拉大、字距收緊，副標用較輕的顏色跟字重，
@@ -587,7 +585,7 @@ select{
 .apple-ui-preview .gcard,
 .apple-ui-preview .pd-formula-box{
   border:none;border-radius:var(--au-radius-lg);box-shadow:var(--au-shadow-sm);
-  background:#ffffff; /* 白色卡片浮在 #f2f2f7 灰底上，才是 iOS 分組列表真正的視覺重點 */
+  background:var(--bg2);
 }
 .apple-ui-preview .gcard{
   cursor:pointer;transition:transform .35s var(--au-ease),box-shadow .35s var(--au-ease);
@@ -622,13 +620,13 @@ select{
 
 /* 特別獎項：卡片圓角加大、加上柔和陰影，選中狀態改成陰影加深＋微縮，比原本純色外框更立體。
    背景也一併改成白色，跟排行榜/總覽卡片同一套「白卡浮在灰底上」的邏輯一致。 */
-.apple-ui-preview .award-card{background:#ffffff;border-radius:var(--au-radius-md);box-shadow:var(--au-shadow-sm);transition:transform .3s var(--au-ease),box-shadow .3s var(--au-ease);}
+.apple-ui-preview .award-card{background:var(--bg2);border-radius:var(--au-radius-md);box-shadow:var(--au-shadow-sm);transition:transform .3s var(--au-ease),box-shadow .3s var(--au-ease);}
 .apple-ui-preview .award-card:active{transform:scale(0.95);}
 .apple-ui-preview .award-card.sel{box-shadow:0 0 0 2px var(--accent),var(--au-shadow-sm);}
-.apple-ui-preview .award-detail{background:#ffffff;border:none;border-radius:var(--au-radius-md);box-shadow:var(--au-shadow-sm);}
+.apple-ui-preview .award-detail{background:var(--bg2);border:none;border-radius:var(--au-radius-md);box-shadow:var(--au-shadow-sm);}
 
 /* 篩選下拉選單：圓角加大、拿掉生硬邊框改陰影，背景改白色，維持原本的排列方式不變。 */
-.apple-ui-preview .filters select{border:none;border-radius:var(--au-radius-sm);box-shadow:var(--au-shadow-sm);background:#ffffff;}
+.apple-ui-preview .filters select{border:none;border-radius:var(--au-radius-sm);box-shadow:var(--au-shadow-sm);background:var(--bg2);}
 
 /* 標籤（陣營 chip）：改成藥丸狀更飽滿的觸感，可點擊的加上輕觸回饋。 */
 .apple-ui-preview .chip{border-radius:999px;font-weight:700;}
@@ -650,7 +648,7 @@ select{
 .apple-ui-preview input[type=text],
 .apple-ui-preview input[type=number],
 .apple-ui-preview select{
-  border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;border-radius:var(--au-radius-sm);
+  border:none;box-shadow:var(--au-shadow-sm);background:var(--bg2);border-radius:var(--au-radius-sm);
 }
 .apple-ui-preview input[type=text]:focus,
 .apple-ui-preview input[type=number]:focus,
@@ -663,7 +661,7 @@ select{
 .apple-ui-preview .info-danger,
 .apple-ui-preview .info-success,
 .apple-ui-preview .note{
-  border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-sm);background:#ffffff;
+  border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-sm);background:var(--bg2);
 }
 
 /* 角色卡（角色與規則）：拿掉外框改陰影，圓角加大，各陣營底色維持（半透明色調在白卡上一樣看得出來）。 */
@@ -677,30 +675,30 @@ select{
   border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-md);
 }
 .apple-ui-preview .rcol-hd,
-.apple-ui-preview .ss-header{background:#ffffff;border-radius:var(--au-radius-md);}
+.apple-ui-preview .ss-header{background:var(--bg2);border-radius:var(--au-radius-md);}
 .apple-ui-preview .rcol-body,
-.apple-ui-preview .ss-body{background:#ffffff;border-top:1px solid var(--au-sep);}
+.apple-ui-preview .ss-body{background:var(--bg2);border-top:1px solid var(--au-sep);}
 .apple-ui-preview .rcol-hd.open{border-radius:var(--au-radius-md) var(--au-radius-md) 0 0;}
 
 /* 板子人數配置格（.comp-item）、名詞卡（.guide-tag-card）：背景改白色，陰影取代邊框。 */
 .apple-ui-preview .comp-item,
-.apple-ui-preview .guide-tag-card{background:#ffffff;border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-sm);}
+.apple-ui-preview .guide-tag-card{background:var(--bg2);border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-sm);}
 
 /* 法官助手玩家狀態欄（.roster-panel／.rp）：整條面板背景改白色，跟頁面灰底拉開層次；
    每個玩家格子拿掉邊框改陰影，死亡格子維持原本的變灰效果。 */
-.apple-ui-preview .roster-panel{background:#ffffff;border-top:none;box-shadow:0 -1px 8px rgba(0,0,0,0.04);}
-.apple-ui-preview .rp{border:none;box-shadow:var(--au-shadow-sm);background:#f2f2f7;}
+.apple-ui-preview .roster-panel{background:var(--bg2);border-top:none;box-shadow:0 -1px 8px rgba(0,0,0,0.04);}
+.apple-ui-preview .rp{border:none;box-shadow:var(--au-shadow-sm);background:var(--bg);}
 
 /* 連線房間上帝視角的玩家狀態格（.pgrid／.pcell）：跟 .rp 同一種處理，白底頁面上用淺灰格子，
    拉開跟卡片本身的層次。 */
-.apple-ui-preview .pcell{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;}
+.apple-ui-preview .pcell{border:none;box-shadow:var(--au-shadow-sm);background:var(--bg2);}
 
 /* 選人格子（開槍/查驗/自爆帶人等圓點格 .tap-grid .ptap、.rpick-grid .rpick）：拿掉方形
    外框改陰影＋圓角，選中狀態用外框強調色標示，輕觸有微縮回饋。 */
 .apple-ui-preview .ptap,
 .apple-ui-preview .rpick{
   border:none;box-shadow:var(--au-shadow-sm);border-radius:var(--au-radius-sm);
-  background:#ffffff;transition:transform .15s var(--au-ease),box-shadow .15s var(--au-ease);
+  background:var(--bg2);transition:transform .15s var(--au-ease),box-shadow .15s var(--au-ease);
 }
 .apple-ui-preview .ptap:active,
 .apple-ui-preview .rpick:active{transform:scale(0.93);}
@@ -709,24 +707,24 @@ select{
 .apple-ui-preview .rpick.locked{box-shadow:0 0 0 2px var(--gold),var(--au-shadow-sm);}
 
 /* 台詞框（.speech，法官助手念給玩家聽的台詞）：維持既有的「引言」視覺重點，只是邊框換陰影。 */
-.apple-ui-preview .speech{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;border-radius:var(--au-radius-sm);}
+.apple-ui-preview .speech{border:none;box-shadow:var(--au-shadow-sm);background:var(--bg2);border-radius:var(--au-radius-sm);}
 
 /* 死訊/勝負/倒數這幾種game-state banner：拿掉邊框改陰影，色調底色維持，看起來更像卡片而不是警告框。 */
 .apple-ui-preview .killed-box,
 .apple-ui-preview .role-reveal,
 .apple-ui-preview .win-side{border:none;box-shadow:var(--au-shadow-sm);}
-.apple-ui-preview .timer-ring{background:#ffffff;border-radius:var(--au-radius-md);box-shadow:var(--au-shadow-sm);}
+.apple-ui-preview .timer-ring{background:var(--bg2);border-radius:var(--au-radius-md);box-shadow:var(--au-shadow-sm);}
 
 /* 文字紀錄／log 區塊（.godlog／.log-box）、警長參選圓形編號牌（.step-badge）：拿掉邊框改陰影。 */
 .apple-ui-preview .godlog,
-.apple-ui-preview .log-box{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;}
-.apple-ui-preview .step-badge{background:#ffffff;box-shadow:var(--au-shadow-sm);}
+.apple-ui-preview .log-box{border:none;box-shadow:var(--au-shadow-sm);background:var(--bg2);}
+.apple-ui-preview .step-badge{background:var(--bg2);box-shadow:var(--au-shadow-sm);}
 
 /* 玩家名單設定（.rname-slot／.rname-pool-btn）：跟其餘選人格子同一套處理。 */
 .apple-ui-preview .rname-slot,
-.apple-ui-preview .rname-pool-btn{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;}
+.apple-ui-preview .rname-pool-btn{border:none;box-shadow:var(--au-shadow-sm);background:var(--bg2);}
 .apple-ui-preview .rname-slot.active{box-shadow:0 0 0 2px var(--accent),var(--au-shadow-sm);}
 
 /* 個人遊玩紀錄（.hist-item）：跟其餘卡片同一套白底陰影處理。 */
-.apple-ui-preview .hist-item{border:none;box-shadow:var(--au-shadow-sm);background:#ffffff;}
+.apple-ui-preview .hist-item{border:none;box-shadow:var(--au-shadow-sm);background:var(--bg2);}
 

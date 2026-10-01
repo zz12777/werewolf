@@ -2165,12 +2165,18 @@ function jgProceedToNight(){
 // ── 機械狼板：一開始就記錄每位玩家的身分 ──
 let jgMechAssign={};   // num -> roleId, chosen by judge on the assignment page
 let jgMechAssignDone=false;
+// 手機輸入連線狀態：法官如果改用手機點選（方便拿著手機一個個看牌），這裡記錄目前連線中
+// 的房號；js/room.js（連線房間那套 Firestore 邏輯）透過 window.jgRoomStartMechAssignLink
+// 等函式幫忙建立/監聽/清掉那份臨時房間文件，詳見 js/room.js 對應註解。
+let jgMechAssignPhoneLinkCode=null;
 
 function jgRenderMechAssign(){
   const roles=Object.keys(jgComp);
   let html='<h2 style="margin-bottom:8px;">記錄玩家身分</h2>'
     +'<div class="speech">「<em>請所有人舉起手上的牌。</em>」法官依序看牌，記錄每位玩家的身分。</div>'
     +'<div class="info" style="font-size:12px;margin-top:8px;">應配置：'+roles.map(r=>jgFullRoleName(r)+'×'+jgComp[r]).join('　')+'</div>'
+    +'<div style="margin-top:8px;"><button type="button" class="ghost" onclick="jgMechAssignTogglePhoneLink()" id="jg-mech-phone-link-btn">改用手機輸入</button>'
+    +'<div id="jg-mech-phone-link-status" style="margin-top:6px;"></div></div>'
     +'<div style="display:flex;flex-direction:column;gap:12px;margin-top:10px;">';
   for(let i=1;i<=jgTotal;i++){
     const cur=jgMechAssign[i]||'';
@@ -2193,14 +2199,61 @@ function jgRenderMechAssign(){
   jgMechAssignUpdateStatus();
 }
 
+// 手機輸入連線的開/關切換：開啟時跟連線房間借一個臨時房號，把目前的角色清單／玩家名單／
+// 已選的配置都存進那份文件；手機那邊打開「連線房間」分頁輸入房號，看到的就是同一份
+// 「座位×角色」點選格，點下去會透過 Firestore 即時同步回這裡。
+async function jgMechAssignTogglePhoneLink(){
+  const btn=document.getElementById('jg-mech-phone-link-btn');
+  const box=document.getElementById('jg-mech-phone-link-status');
+  if(jgMechAssignPhoneLinkCode){
+    if(window.jgRoomStopMechAssignLink) await window.jgRoomStopMechAssignLink();
+    jgMechAssignPhoneLinkCode=null;
+    if(box) box.innerHTML='';
+    if(btn) btn.textContent='改用手機輸入';
+    return;
+  }
+  if(!window.jgRoomStartMechAssignLink){ alert('連線功能尚未載入，請稍後再試一次'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='連線中...'; }
+  const roles=Object.keys(jgComp);
+  const rolesPayload=roles.map(r=>({id:r, abbr:ROLE_ABBR[r]||r, name:jgFullRoleName(r)}));
+  const namesPayload={};
+  for(let i=1;i<=jgTotal;i++){ namesPayload[i]=jgPlayerNames[i]||''; }
+  const code=await window.jgRoomStartMechAssignLink(
+    {total:jgTotal, playerNames:namesPayload, roles:rolesPayload, assign:jgMechAssign},
+    (remoteAssign)=>{
+      Object.keys(remoteAssign||{}).forEach(numStr=>{
+        const num=Number(numStr);
+        const role=remoteAssign[numStr]||null;
+        if(jgMechAssign[num]!==role){
+          jgMechAssign[num]=role;
+          jgMechAssignRefreshCell(num);
+        }
+      });
+    }
+  );
+  if(btn) btn.disabled=false;
+  if(!code){ if(btn) btn.textContent='改用手機輸入'; return; }
+  jgMechAssignPhoneLinkCode=code;
+  if(btn) btn.textContent='停止手機輸入';
+  if(box) box.innerHTML='<div class="info-success" style="font-size:13px;">房號：<strong style="font-size:18px;letter-spacing:2px;">'+code+'</strong><br>請在手機打開「連線房間」分頁、輸入這組房號，點選角色就會直接帶入這個畫面。記錄完按一次上面的按鈕可以停止連線。</div>';
+}
+
 // Tap a role circle to assign it to a number (tapping the already-selected role clears it)
 function jgMechAssignPick(num, role){
   const already=jgMechAssign[num]===role;
   jgMechAssign[num]=already?null:role;
+  jgMechAssignRefreshCell(num);
+  if(jgMechAssignPhoneLinkCode&&window.jgRoomPushMechAssign) window.jgRoomPushMechAssign(num, jgMechAssign[num]);
+}
+
+// 重繪單一座位的角色按鈕選取狀態（本機點擊、或手機那邊同步回來的更新都共用這個），
+// 不用整頁重畫——手機那邊一直點的話，電腦畫面只會更新對應那一格，不會整頁閃爍。
+function jgMechAssignRefreshCell(num){
+  const role=jgMechAssign[num];
   const grid=document.getElementById('jg-mech-role-'+num+'-grid');
   if(grid){
     grid.querySelectorAll('button').forEach(b=>{
-      const isSel=!already&&b.getAttribute('data-role')===role;
+      const isSel=role&&b.getAttribute('data-role')===role;
       b.style.background=isSel?'var(--success,#2e7d32)':'';
       b.style.color=isSel?'#fff':'';
       b.style.borderColor=isSel?'transparent':'';
@@ -2224,6 +2277,12 @@ function jgMechAssignUpdateStatus(){
 }
 
 function jgConfirmMechAssign(){
+  // 不管法官是不是真的有開過手機連線，這裡都保險地收一次尾——避免留著一份沒人用的
+  // 臨時房間文件在 Firestore 裡（真的有連線中的話，順便停用手機那邊的畫面）。
+  if(jgMechAssignPhoneLinkCode&&window.jgRoomStopMechAssignLink){
+    window.jgRoomStopMechAssignLink();
+    jgMechAssignPhoneLinkCode=null;
+  }
   const counts={};
   Object.values(jgMechAssign).forEach(r=>{ if(r) counts[r]=(counts[r]||0)+1; });
   const mismatch=Object.keys(jgComp).filter(r=>(counts[r]||0)!==jgComp[r])

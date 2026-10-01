@@ -85,13 +85,13 @@ function jgUpdateSheriffToggleStyle(){
   const wrap=document.getElementById('jg-badge-mode-wrap');
   if(!cb||!lb) return;
   if(cb.checked){
-    lb.style.background='var(--accent,#2e7d32)';
-    lb.style.borderColor='var(--accent,#2e7d32)';
-    lb.querySelector('span').style.color='#fff';
+    lb.style.background='rgba(184,56,40,0.1)';
+    lb.style.boxShadow='0 0 0 2px var(--accent), var(--au-shadow-sm, 0 1px 3px rgba(0,0,0,0.08))';
+    lb.querySelector('span').style.color='var(--accent)';
     if(wrap) wrap.style.display='';
   } else {
-    lb.style.background='rgba(46,125,50,0.08)';
-    lb.style.borderColor='var(--accent,#2e7d32)';
+    lb.style.background='var(--bg2)';
+    lb.style.boxShadow='var(--au-shadow-sm, 0 1px 3px rgba(0,0,0,0.08))';
     lb.querySelector('span').style.color='';
     if(wrap) wrap.style.display='none';
   }
