@@ -470,7 +470,6 @@ function jgRenderStep(step){
       <div class="speech">「<em>小女孩請睜眼。</em>」</div>
       ${idHtml}
       ${dead?'<div class="info-warn">小女孩已出局，仍需走完流程</div>':''}
-      <div class="info" style="font-size:12px;">小女孩會跟狼人牌一起睜眼、參與擊殺對象討論，實際刀口選擇在下一步「狼人（大野狼）+小女孩」畫面進行，這裡只需要記錄身分。</div>
       <div class="speech" style="margin-top:10px;">「<em>小女孩請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveLittlegirl()">已紀錄，下一步 →</button>
     `,'👧 小女孩');
@@ -692,15 +691,17 @@ function jgRenderStep(step){
       +'<div id="jg-wolf-selfcut-notice">'+jgWolfWakeSelfCutNoticeHtml()+'</div>'
       +((jgDivinerMarkUsed&&jgDivinerMarkNight===jgNight&&jgDivinerMarkNum)?'<div class="info-warn" style="font-size:12px;margin-bottom:4px;">⚠️ 占卜師今晚發動了標記技能，狼隊只能從 '+jgDivinerMarkNum+' 號及其左右相鄰號碼中選擇刀口（或空刀）</div>':'')
       +'<div id="jg-wolf-rec-wrap">'+jgNumSelectHtml('jg-wolf-rec', killVal, null, null, jgWolfWakeSelfCutInfo().nums.concat(jgDivinerMarkExcludeNums()))+'</div>';
-    // 大野狼+小女孩板：第二夜起，狼隊選完殺人對象後，多一次指認小女孩的機會（一局限一次
-    // 「這一晚」用，指認成功小女孩代替死亡，失敗則無事發生、原本刀口照常結算）。
+    // 大野狼+小女孩板：每晚狼隊選完殺人對象後，都多一次指認小女孩的機會（指認成功小女孩
+    // 代替死亡，失敗則無事發生、原本刀口照常結算）——不限定從第二夜才開始，第一夜也適用。
     const hasLittlegirlRole=jgNight===1?(jgComp.littlegirl>0):jgHasRoleAny(['littlegirl']);
     // 詭術之境板：詭術師稍早已經自己睜過一次眼（見 trickster-wake，換票技能），但詭術師
     // 本人也算狼隊一份子，要跟狼人一起在這一步睜眼、一起討論刀口——跟 hasTrickster 判斷
     // 用同一套規則（jgNight===1 看 jgComp，之後看場上是否還有這個角色存活）。
     const hasTricksterRole=(jgNight===1?(jgComp.trickster>0):jgHasRoleAny(['trickster']))||jgThiefBuriedActiveTonight('trickster');
-    const wolfWakeLabel=hasTricksterRole?(hasLittlegirlRole?'詭術師、狼人與小女孩':'詭術師與狼人'):(hasLittlegirlRole?'狼人與小女孩':'狼人');
-    const identifySectionHtml=(hasLittlegirlRole&&jgNight>=2)
+    // 小女孩是偷窺混入狼隊睜眼，不是被法官另外叫醒的身分，口白不特別報她的名字（跟規則頁
+    // 「每晚狼人睜眼時可以偷窺」一致），只有詭術師這種真的要一起睜眼行動的身分才會報出來。
+    const wolfWakeLabel=hasTricksterRole?'詭術師與狼人':'狼人';
+    const identifySectionHtml=hasLittlegirlRole
       ?'<div class="divider"></div><label>指認小女孩（留空=不指認；猜中：小女孩代替原本刀口死亡，守衛/女巫都無法阻止；猜錯：無事發生，原本刀口照常結算）</label>'
         +jgNumSelectHtml('jg-wolf-identify-rec', jgRecord.wolfIdentifyGuessRaw||'')
         +'<div class="info" style="font-size:12px;margin-top:4px;">「請指認小女孩，三秒後投票，三、二、一」</div>'
@@ -717,7 +718,7 @@ function jgRenderStep(step){
       <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}">${wolfKillSectionHtml}${identifySectionHtml}</div>`
       :('<div class="info-warn">'+((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0||jgComp.biggreywolf>0)?'小狼已全滅，仍須走完流程':'狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程')+'</div>'
         +((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0||jgComp.biggreywolf>0)?'<div class="speech" style="margin-top:8px;">「<em>今晚要殺的是？</em>」</div>':''))}
-      <div class="speech" style="margin-top:12px;">「<em>${hasLittlegirlRole?'狼人與小女孩':'狼人'}請閉眼。</em>」</div>
+      <div class="speech" style="margin-top:12px;">「<em>狼人請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
     `,'🐺 狼人');
   }
