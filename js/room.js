@@ -484,9 +484,12 @@ window.jgRoomCreate=async function(hostName, comp, total, usePresetNames, sherif
   if(presetNames){ for(let i=1;i<=total;i++) presetNames[i]=(typeof jgPlayerNames!=='undefined'&&jgPlayerNames[i])||(i+'號'); }
   const finalHostName=presetNames?presetNames[1]:name;
   if(!finalHostName){ alert('請先輸入你的全名'); return; }
+  // playerCount／seatTaken：分別給 jgRoomJoin（自動排隊入座）跟 jgRoomJoinPresetSeat（指定
+  // 座位入座）用來判斷座位的輔助欄位，房主一開始就佔走 1 號座位，這裡要一起初始化，不然
+  // 後面第一個真正加入的玩家會跟房主的 1 號座位算重複。詳見這兩個函式內的註解。
   await setDoc(doc(db,'rooms',code),Object.assign(
-    { hostUid:uid, status:'lobby', createdAt:serverTimestamp(), comp:comp, total:total, sheriffEnabled:!!sheriffEnabled, badgeMode:badgeMode==='double'?'double':'single' },
-    presetNames?{presetNames:presetNames}:{}
+    { hostUid:uid, status:'lobby', createdAt:serverTimestamp(), comp:comp, total:total, sheriffEnabled:!!sheriffEnabled, badgeMode:badgeMode==='double'?'double':'single', playerCount:1 },
+    presetNames?{presetNames:presetNames, seatTaken:{1:uid}}:{}
   ));
   await setDoc(doc(db,'rooms',code,'players',uid),{
     name:finalHostName, seatNum:1, joinedAt:serverTimestamp(), alive:true
@@ -532,15 +535,25 @@ window.jgRoomJoin=async function(codeRaw, name){
   // Firestore transaction，交易引擎會自動偵測衝突並重試，保證不會有兩人拿到同一個座位。
   // 房間設定是幾人局，就只能加入到那個人數——已經加入過的人（重新整理、重新連線）不受
   // 這個限制，可以照樣回到原本的座位。
+  // 人數改用房間文件上的 playerCount 欄位（原子遞增），不在 transaction 裡用 tx.get(query)
+  // 查整個 players 子集合——在 transaction 裡對整個集合下 query 查詢，手機瀏覽器實測會直接
+  // 噴出內部錯誤（undefined is not an object (evaluating 'i.path')），改成只讀兩份已知路徑
+  // 的「單一文件」（房間文件本身、跟自己 uid 對應的 player 文件），這是 transaction 裡最基本
+  // 也最穩定支援的操作，不會有這個問題。
   try{
     await runTransaction(db, async(tx)=>{
-      const playersSnap=await tx.get(query(collection(db,'rooms',code,'players')));
-      const existing=playersSnap.docs.find(d=>d.id===uid);
-      if(!existing&&jgRoomTotal&&playersSnap.size>=jgRoomTotal) throw new Error('ROOM_FULL');
-      const seatNum=existing?existing.data().seatNum:(playersSnap.size+1);
-      tx.set(doc(db,'rooms',code,'players',uid),{
-        name:nm, seatNum:seatNum, joinedAt:serverTimestamp(), alive:true
-      });
+      const roomRef=doc(db,'rooms',code);
+      const playerRef=doc(db,'rooms',code,'players',uid);
+      const [roomTx, playerTx]=await Promise.all([tx.get(roomRef), tx.get(playerRef)]);
+      if(playerTx.exists()){
+        tx.set(playerRef,{ name:nm, seatNum:playerTx.data().seatNum, joinedAt:serverTimestamp(), alive:true });
+        return;
+      }
+      const playerCount=(roomTx.data()||{}).playerCount||0;
+      if(jgRoomTotal&&playerCount>=jgRoomTotal) throw new Error('ROOM_FULL');
+      const seatNum=playerCount+1;
+      tx.set(playerRef,{ name:nm, seatNum:seatNum, joinedAt:serverTimestamp(), alive:true });
+      tx.update(roomRef,{ playerCount:seatNum });
     });
   }catch(e){
     if(e&&e.message==='ROOM_FULL'){ alert('⚠️ 這個房間是 '+jgRoomTotal+' 人局，已經到齊了，無法加入。'); return; }
@@ -568,16 +581,22 @@ window.jgRoomJoinPresetSeat=async function(codeRaw, seatNum){
   jgRoomComp=rd.comp||null;
   jgRoomTotal=rd.total||null;
   // 跟 jgRoomJoin 同樣的道理：座位是不是「已經有人選走」要在同一個 transaction 裡讀+寫，
-  // 避免兩支手機同時點同一個座位，各自在交易外都讀到「還沒人選」而同時寫入衝突。
+  // 避免兩支手機同時點同一個座位，各自在交易外都讀到「還沒人選」而同時寫入衝突。用房間
+  // 文件上的 seatTaken 這個「座位→uid」對照表來判斷，不在 transaction 裡對整個 players
+  // 子集合下 query（原因同 jgRoomJoin 的註解：手機瀏覽器實測會噴內部錯誤），只讀房間文件
+  // 本身這一份單一文件。
   try{
     await runTransaction(db, async(tx)=>{
-      const playersSnap=await tx.get(query(collection(db,'rooms',code,'players')));
-      const existing=playersSnap.docs.find(d=>d.id===uid);
-      const seatTaken=playersSnap.docs.find(d=>d.id!==uid&&d.data().seatNum===seatNum);
-      if(seatTaken&&!existing) throw new Error('SEAT_TAKEN');
-      tx.set(doc(db,'rooms',code,'players',uid),{
+      const roomRef=doc(db,'rooms',code);
+      const playerRef=doc(db,'rooms',code,'players',uid);
+      const roomTx=await tx.get(roomRef);
+      const seatTaken=(roomTx.data()||{}).seatTaken||{};
+      const takenBy=seatTaken[seatNum]||seatTaken[String(seatNum)];
+      if(takenBy&&takenBy!==uid) throw new Error('SEAT_TAKEN');
+      tx.set(playerRef,{
         name: presetNames[seatNum]||(seatNum+'號'), seatNum:seatNum, joinedAt:serverTimestamp(), alive:true
       });
+      tx.update(roomRef,{ ['seatTaken.'+seatNum]: uid });
     });
   }catch(e){
     if(e&&e.message==='SEAT_TAKEN'){ alert('這個座位已經有人選走了，請重新整理選別的座位'); return; }
