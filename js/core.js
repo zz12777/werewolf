@@ -645,7 +645,7 @@ function jgFormatNightLog(){
   // 大灰狼襲擊技能：只在真的發動的那一晚記一行（跟占卜師標記同樣的邏輯，整局限一次）。
   if(jgBigGreyWolfAssaultNight===jgNight&&jgBigGreyWolfAssaultTarget) lines.push('大灰狼襲擊'+jgBigGreyWolfAssaultTarget);
   const lgP2=jgPlayers.find(p=>p.role==='littlegirl');
-  if(lgP2&&jgNight>=2) lines.push(jgRecord.wolfIdentifyGuessRaw?('指認'+jgRecord.wolfIdentifyGuessRaw+(jgRecord._littlegirlSubstituteKill?'(成功)':'(失敗)')):'指認x');
+  if(lgP2) lines.push(jgRecord.wolfIdentifyGuessRaw?('指認'+jgRecord.wolfIdentifyGuessRaw+(jgRecord._littlegirlSubstituteKill?'(成功)':'(失敗)')):'指認x');
   // 雙機械狼板：大／小機械狼各自的刀口（可能雙刀）、若學到女巫/守衛則另外記下毒/守的對象
   ['bigmechwolf','smallmechwolf'].forEach(roleId=>{
     const mp=jgPlayers.find(p=>p.role===roleId);

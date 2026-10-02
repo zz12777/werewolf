@@ -6,7 +6,7 @@
 // js 檔互相看不到彼此的變數，所以這裡也把要給一般 script 用的函式掛到 window 上。
 // ═══════════════════════════════════════════
 import {
-  doc, setDoc, updateDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion, arrayRemove, runTransaction
+  doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion, arrayRemove, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 let jgRoomCode=null;       // 目前所在的房號
@@ -121,9 +121,28 @@ function jgRoomGenCode(){
 // 就是透過這幾個掛在 window 上的函式，借用連線房間同一套房號機制建一個臨時房間文件來
 // 同步，不是真正的連線房間、不會出現在玩家名單流程裡。流程結束（法官按下「確認配置」）
 // 就把這份臨時文件刪掉，不會留著佔用房號。
+//
+// 寫入位置特別選用 rooms/{code}/players/{自己的uid} 這個子集合、而不是直接寫房間文件本身
+// 的欄位——因為房間文件（rooms/{code}）一般只有「房主」自己的裝置會直接寫入，手機是另一支
+// 裝置、匿名登入拿到的是不同的 uid，照一般連線房間的安全規則來看並不是房主，直接寫房間文件
+// 會被 Firestore 規則擋下來（permission-denied）。players 子集合「自己的 uid 當文件 ID」
+// 這個寫法才是每個人（不限房主）加入任何一個連線房間時都在用、確定行得通的權限模式，所以
+// 電腦跟手機都借用這個模式各自寫一份自己的紀錄，兩邊都監聽整個子集合、取最新更新時間的那份
+// 當作目前的正確答案（反正同一時間只會有一邊在操作，不用處理真的同時輸入衝突的情況）。
 // ══════════════════════════════════════════
 let jgMechAssignLinkCode=null;
+let jgMechAssignLinkUid=null;
 let jgMechAssignLinkUnsub=null;
+let jgMechAssignLinkLocalMap={};
+function jgMechAssignPickLatestDoc(snap){
+  let latest=null, latestTime=-1;
+  snap.forEach(d=>{
+    const data=d.data();
+    const t=typeof data.updatedAt==='number'?data.updatedAt:0;
+    if(t>=latestTime){ latestTime=t; latest=data; }
+  });
+  return latest;
+}
 // payload: {total, playerNames:{num:name}, roles:[{id,abbr,name}], assign:{num:roleId|null}}
 // onUpdate(assignMap)：手機那邊點選之後，這裡會即時把最新的 assign 物件丟回去給 core.js 套用。
 window.jgRoomStartMechAssignLink=async function(payload, onUpdate){
@@ -133,17 +152,20 @@ window.jgRoomStartMechAssignLink=async function(payload, onUpdate){
   try{
     await setDoc(doc(db,'rooms',code),{
       mode:'mech-assign', status:'lobby', hostUid:uid, createdAt:serverTimestamp(),
-      total: payload.total, playerNames: payload.playerNames||{}, roles: payload.roles||[], assign: payload.assign||{}
+      total: payload.total, playerNames: payload.playerNames||{}, roles: payload.roles||[]
     });
+    jgMechAssignLinkLocalMap=Object.assign({}, payload.assign||{});
+    await setDoc(doc(db,'rooms',code,'players',uid), {assign: jgMechAssignLinkLocalMap, updatedAt: Date.now()});
   }catch(e){
     alert('建立手機連線失敗，請檢查網路連線後再試一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
     return null;
   }
   if(jgMechAssignLinkUnsub){ jgMechAssignLinkUnsub(); jgMechAssignLinkUnsub=null; }
   jgMechAssignLinkCode=code;
-  jgMechAssignLinkUnsub=onSnapshot(doc(db,'rooms',code), (snap)=>{
-    if(!snap.exists()) return;
-    onUpdate(snap.data().assign||{});
+  jgMechAssignLinkUid=uid;
+  jgMechAssignLinkUnsub=onSnapshot(collection(db,'rooms',code,'players'), (snap)=>{
+    const latest=jgMechAssignPickLatestDoc(snap);
+    if(latest&&latest.assign) onUpdate(latest.assign);
   });
   return code;
 };
@@ -151,9 +173,10 @@ window.jgRoomStartMechAssignLink=async function(payload, onUpdate){
 // 跟著更新——失敗就算了（法官本機狀態已經是對的，連線不穩不該卡住電腦這邊的操作）。
 window.jgRoomPushMechAssign=async function(num, role){
   if(!jgMechAssignLinkCode) return;
+  jgMechAssignLinkLocalMap[num]=role;
   const db=window.jgFirebaseDb;
   try{
-    await updateDoc(doc(db,'rooms',jgMechAssignLinkCode), {['assign.'+num]: role});
+    await setDoc(doc(db,'rooms',jgMechAssignLinkCode,'players',jgMechAssignLinkUid), {assign: jgMechAssignLinkLocalMap, updatedAt: Date.now()});
   }catch(e){ /* best-effort，連線失敗不影響法官繼續在電腦上操作 */ }
 };
 window.jgRoomStopMechAssignLink=async function(){
@@ -162,6 +185,8 @@ window.jgRoomStopMechAssignLink=async function(){
     const db=window.jgFirebaseDb;
     const code=jgMechAssignLinkCode;
     jgMechAssignLinkCode=null;
+    jgMechAssignLinkUid=null;
+    jgMechAssignLinkLocalMap={};
     try{ await deleteDoc(doc(db,'rooms',code)); }catch(e){}
   }
 };
@@ -587,21 +612,27 @@ window.jgRoomCheckCodeThenJoin=async function(codeRaw){
     jgRoomRenderJoinNameInput(code);
   }
 };
-// 機械狼板「記錄玩家身分」手機輸入畫面：不是真正加入房間（不寫 players 子集合），單純
-// 顯示跟法官助手「記錄玩家身分」頁一樣的「座位×角色」點選格，點一下就直接寫回這份臨時
-// 房間文件的 assign 欄位，法官助手那邊監聽同一份文件，會即時套用更新。用本機快取
-// （jgRoomMechAssignCache）記目前的選取狀態，點擊時先樂觀更新畫面，背景才真的寫 Firestore，
-// 不用每次點擊都先 getDoc 等一輪往返，操作起來比較跟手。
+// 機械狼板「記錄玩家身分」手機輸入畫面：不是真正加入房間，單純顯示跟法官助手「記錄玩家
+// 身分」頁一樣的「座位×角色」點選格。寫入方式比照上面 jgRoomStartMechAssignLink 的說明，
+// 用自己的 uid 當文件 ID 寫進 rooms/{code}/players/{uid}（不是直接寫房間文件本身），這是
+// 連線房間本來就通得過安全規則的寫法；同一個子集合裡電腦跟手機各自一份，兩邊都監聽整個
+// 子集合、取最新更新時間的那份當作目前的正確答案。另外用本機快取（jgRoomMechAssignCache）
+// 記目前的選取狀態，點擊時先樂觀更新畫面，背景才真的寫 Firestore，不用每次點擊都先等一輪
+// 網路往返，操作起來比較跟手。
 let jgRoomMechAssignCache={};
-let jgRoomMechPickerUnsub=null;
+let jgRoomMechAssignUid=null;
+let jgRoomMechPlayersUnsub=null;
+let jgRoomMechRoomUnsub=null;
 window.jgRoomRenderMechAssignPicker=async function(code, rd){
   const root=document.getElementById('jg-room-content');
   if(!root) return;
   const db=window.jgFirebaseDb;
+  const uid=await jgRoomWaitAuth();
+  jgRoomMechAssignUid=uid;
   const total=rd.total||0;
   const names=rd.playerNames||{};
   const roles=rd.roles||[];
-  jgRoomMechAssignCache=rd.assign||{};
+  jgRoomMechAssignCache={};
   function renderGrid(){
     let html='';
     for(let i=1;i<=total;i++){
@@ -629,18 +660,21 @@ window.jgRoomRenderMechAssignPicker=async function(code, rd){
     <div class="card" style="margin-top:14px;" id="jg-room-mech-assign-body">${renderGrid()}</div>
     <div id="jg-room-mech-assign-note" class="info" style="font-size:12px;margin-top:10px;">法官在電腦上按下「確認配置，進入夜晚」之後，這個畫面會自動停用。</div>
   `;
-  if(jgRoomMechPickerUnsub){ jgRoomMechPickerUnsub(); jgRoomMechPickerUnsub=null; }
-  jgRoomMechPickerUnsub=onSnapshot(doc(db,'rooms',code), (snap)=>{
-    if(!snap.exists()){
-      const note=document.getElementById('jg-room-mech-assign-note');
-      if(note) note.innerHTML='<div class="info-success">法官已經在電腦上完成記錄，這個畫面可以關閉了。</div>';
-      const body=document.getElementById('jg-room-mech-assign-body');
-      if(body) body.querySelectorAll('button').forEach(b=>{ b.disabled=true; b.style.opacity='0.4'; });
-      return;
-    }
-    jgRoomMechAssignCache=snap.data().assign||{};
+  if(jgRoomMechPlayersUnsub){ jgRoomMechPlayersUnsub(); jgRoomMechPlayersUnsub=null; }
+  if(jgRoomMechRoomUnsub){ jgRoomMechRoomUnsub(); jgRoomMechRoomUnsub=null; }
+  jgRoomMechPlayersUnsub=onSnapshot(collection(db,'rooms',code,'players'), (snap)=>{
+    const latest=jgMechAssignPickLatestDoc(snap);
+    if(!latest||!latest.assign) return;
+    jgRoomMechAssignCache=latest.assign;
     const body=document.getElementById('jg-room-mech-assign-body');
     if(body) body.innerHTML=renderGrid();
+  });
+  jgRoomMechRoomUnsub=onSnapshot(doc(db,'rooms',code), (snap)=>{
+    if(snap.exists()) return;
+    const note=document.getElementById('jg-room-mech-assign-note');
+    if(note) note.innerHTML='<div class="info-success">法官已經在電腦上完成記錄，這個畫面可以關閉了。</div>';
+    const body=document.getElementById('jg-room-mech-assign-body');
+    if(body) body.querySelectorAll('button').forEach(b=>{ b.disabled=true; b.style.opacity='0.4'; });
   });
 };
 window.jgRoomMechAssignTap=async function(code, num, role){
@@ -658,7 +692,7 @@ window.jgRoomMechAssignTap=async function(code, num, role){
     });
   }
   try{
-    await updateDoc(doc(db,'rooms',code), {['assign.'+num]: next});
+    await setDoc(doc(db,'rooms',code,'players',jgRoomMechAssignUid), {assign: jgRoomMechAssignCache, updatedAt: Date.now()});
   }catch(e){
     alert('同步失敗，請確認網路連線後再試一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
   }
