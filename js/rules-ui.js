@@ -111,7 +111,9 @@ function jgPopulateBoardPresetDropdown(){
 const JG_PRESET_WOLF_BASE=['wolf','wolfking','whitewolf'];
 // 混血兒不放進這個通用清單：只有在板子本身就固定包含混血兒（見 JG_BOARD_PRESETS）時，
 // 才會以「鎖定」格子出現在該板子裡，不會讓混血兒出現在其他跟他無關的板子讓大家誤選。
-const JG_PRESET_GOD_BASE=['seer','witch','hunter','guard','knight','fool','demonhunter'];
+// 魔術師則相反——放進通用清單，讓任何板子（含「殭屍」板）都能自由加選，搭配殭屍要排在
+// 魔術師之前睜眼的順序（見 js/night.js jgAfterNightmareStep），兩者可以安全地搭配出現。
+const JG_PRESET_GOD_BASE=['seer','witch','hunter','guard','knight','fool','demonhunter','magician'];
 
 // Role picker state: {roleId: count}
 let jgRolePick = {wolf:2, villager:2, seer:1, witch:1};
@@ -641,11 +643,12 @@ function renderPresetPicker(){
 
   // 混血兒、邱比特、盜賊、殭屍這些不算「神職」的特殊角色（各自陣營歸屬跟一般玩法不同）：
   // 本板固定包含的（例如「邱比特」板固定邱比特、「殭屍」板固定殭屍）一律用鎖定格子顯示在
-  // 這裡，不會混進上面的「神職」區塊；混血兒、盜賊即使本板沒有固定包含，也開放任何板子
-  // 自由加選。
+  // 這裡，不會混進上面的「神職」區塊；混血兒、盜賊、殭屍即使本板沒有固定包含，也開放任何
+  // 板子自由加選（殭屍要排在魔術師之前睜眼的順序已經處理過，見 js/night.js，搭配魔術師板
+  // 使用也不會有問題）。
   const fixedSpecialKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&!GOD_ROLES.includes(k)&&k!=='villager');
   const specialTiles=fixedSpecialKeys.map(jgPresetLockedTileHtml).join('')
-    + ['hybrid','thief'].filter(id=>!fixedKeys.includes(id)).map(id=>{
+    + ['hybrid','thief','zombie'].filter(id=>!fixedKeys.includes(id)).map(id=>{
       const r=ALL_ROLES[id]; const cnt=state[id]||0;
       return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
         +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
