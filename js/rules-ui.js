@@ -582,7 +582,11 @@ function renderPresetPicker(){
   const state=jgRolePick;
   const fixedKeys=Object.keys(preset.fixed);
   const fixedWolfKeys=fixedKeys.filter(k=>WOLF_ROLES.includes(k));
-  const fixedGodKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&k!=='villager'&&k!=='zombie');
+  // 原本用「排除法」判斷神職（不是狼、不是平民、不是殭屍就算神職），漏掉了邱比特、混血兒
+  // 這類本來就不算神職的特殊角色——板子固定包含邱比特時（例如「邱比特」板），會被錯誤歸進
+  // 「神職」區塊顯示。改成「白名單」：只有真的在 GOD_ROLES 裡的才算神職，其餘（邱比特、
+  // 混血兒、殭屍……）都交給下面的「特殊角色」區塊處理。
+  const fixedGodKeys=fixedKeys.filter(k=>GOD_ROLES.includes(k));
   const wolfCount=state.wolf||0;
   const vilCount=state.villager||0;
 
@@ -635,16 +639,18 @@ function renderPresetPicker(){
   html+='</div>';
   if(excludeSeer) html+='<div style="font-size:11px;color:var(--text3);margin:4px 0 0;">本板固定為通靈師，不會重複出現預言家</div>';
 
-  // 混血兒、盜賊不算「神職」（各自陣營歸屬跟一般玩法不同），但任何板子都應該能自由加選——
-  // 本板固定包含時已經在上面用鎖定格子顯示過了，這裡只用來讓「原本沒固定包含」的板子
-  // 也能自由加選這兩個角色。殭屍是獨立的第三方陣營，固定包含時也放在這裡顯示鎖定格子，
-  // 不跟「神職」混在一起。
-  const specialTiles=['hybrid','thief'].filter(id=>!fixedKeys.includes(id)).map(id=>{
-    const r=ALL_ROLES[id]; const cnt=state[id]||0;
-    return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
-      +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
-      +(cnt>0?'<span class="rp-cnt">✓</span>':'')+'</div>';
-  }).join('') + (fixedKeys.includes('zombie')?jgPresetLockedTileHtml('zombie'):'');
+  // 混血兒、邱比特、盜賊、殭屍這些不算「神職」的特殊角色（各自陣營歸屬跟一般玩法不同）：
+  // 本板固定包含的（例如「邱比特」板固定邱比特、「殭屍」板固定殭屍）一律用鎖定格子顯示在
+  // 這裡，不會混進上面的「神職」區塊；混血兒、盜賊即使本板沒有固定包含，也開放任何板子
+  // 自由加選。
+  const fixedSpecialKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&!GOD_ROLES.includes(k)&&k!=='villager');
+  const specialTiles=fixedSpecialKeys.map(jgPresetLockedTileHtml).join('')
+    + ['hybrid','thief'].filter(id=>!fixedKeys.includes(id)).map(id=>{
+      const r=ALL_ROLES[id]; const cnt=state[id]||0;
+      return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
+        +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
+        +(cnt>0?'<span class="rp-cnt">✓</span>':'')+'</div>';
+    }).join('');
   if(specialTiles){
     html+='<div style="font-size:11px;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:0.5px;">特殊角色</div>'
       +'<div class="rpick-grid">'+specialTiles+'</div>';
