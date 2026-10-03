@@ -119,16 +119,21 @@ function jgRoomGenCode(){
 // 機械狼板「記錄玩家身分」手機輸入橋接——法官助手（js/core.js，非 module，看不到這裡的
 // Firestore import）在「記錄玩家身分」頁想讓法官改用手機點選（方便拿著手機一個個看牌），
 // 就是透過這幾個掛在 window 上的函式，借用連線房間同一套房號機制建一個臨時房間文件來
-// 同步，不是真正的連線房間、不會出現在玩家名單流程裡。流程結束（法官按下「確認配置」）
-// 就把這份臨時文件刪掉，不會留著佔用房號。
+// 同步，不是真正的連線房間、不會出現在玩家名單流程裡。
 //
 // 寫入位置特別選用 rooms/{code}/players/{自己的uid} 這個子集合、而不是直接寫房間文件本身
-// 的欄位——因為房間文件（rooms/{code}）一般只有「房主」自己的裝置會直接寫入，手機是另一支
-// 裝置、匿名登入拿到的是不同的 uid，照一般連線房間的安全規則來看並不是房主，直接寫房間文件
-// 會被 Firestore 規則擋下來（permission-denied）。players 子集合「自己的 uid 當文件 ID」
-// 這個寫法才是每個人（不限房主）加入任何一個連線房間時都在用、確定行得通的權限模式，所以
-// 電腦跟手機都借用這個模式各自寫一份自己的紀錄，兩邊都監聽整個子集合、取最新更新時間的那份
-// 當作目前的正確答案（反正同一時間只會有一邊在操作，不用處理真的同時輸入衝突的情況）。
+// 的欄位——因為 Firestore 安全規則規定要先是房間成員（自己的 players/{uid} 文件已經存在）
+// 才能更新房間文件本身，手機是另一支裝置、匿名登入拿到的是不同 uid，一開始還不是成員，
+// 直接寫房間文件會被規則擋下來（permission-denied）。players 子集合「自己的 uid 當文件 ID」
+// 這個寫法建立文件只檢查「auth.uid==自己的uid」，不需要先是成員，每個人加入任何一個連線
+// 房間時都在用、確定行得通，所以電腦跟手機都借用這個模式各自寫一份自己的紀錄，兩邊都監聽
+// 整個子集合、取最新更新時間的那份當作目前的正確答案（反正同一時間只會有一邊在操作，不用
+// 處理真的同時輸入衝突的情況）。
+//
+// 流程結束（法官按下「確認配置」）會嘗試刪掉房間文件本身，但規則並沒有開放刪除權限，這個
+// 刪除請求實際上會被拒絕、靜默失敗（已包在 try/catch 裡，不會跳錯誤給使用者）——這份臨時
+// 文件會一直留著，跟房主解散房間（jgRoomDissolve）也只能標記不能真刪是同樣的限制，不影響
+// 功能，房號不會再被使用，純粹留著不礙事。
 // ══════════════════════════════════════════
 let jgMechAssignLinkCode=null;
 let jgMechAssignLinkUid=null;
@@ -484,12 +489,12 @@ window.jgRoomCreate=async function(hostName, comp, total, usePresetNames, sherif
   if(presetNames){ for(let i=1;i<=total;i++) presetNames[i]=(typeof jgPlayerNames!=='undefined'&&jgPlayerNames[i])||(i+'號'); }
   const finalHostName=presetNames?presetNames[1]:name;
   if(!finalHostName){ alert('請先輸入你的全名'); return; }
-  // playerCount／seatTaken：分別給 jgRoomJoin（自動排隊入座）跟 jgRoomJoinPresetSeat（指定
-  // 座位入座）用來判斷座位的輔助欄位，房主一開始就佔走 1 號座位，這裡要一起初始化，不然
-  // 後面第一個真正加入的玩家會跟房主的 1 號座位算重複。詳見這兩個函式內的註解。
+  // playerCount：給 jgRoomJoin（自動排隊入座）用來決定下一個座位號碼的計數器，房主一開始
+  // 就佔走 1 號座位，這裡要一起初始化成 1，不然後面第一個真正加入的玩家會跟房主的 1 號座位
+  // 算重複。詳見 jgRoomJoin 內的註解。
   await setDoc(doc(db,'rooms',code),Object.assign(
     { hostUid:uid, status:'lobby', createdAt:serverTimestamp(), comp:comp, total:total, sheriffEnabled:!!sheriffEnabled, badgeMode:badgeMode==='double'?'double':'single', playerCount:1 },
-    presetNames?{presetNames:presetNames, seatTaken:{1:uid}}:{}
+    presetNames?{presetNames:presetNames}:{}
   ));
   await setDoc(doc(db,'rooms',code,'players',uid),{
     name:finalHostName, seatNum:1, joinedAt:serverTimestamp(), alive:true
@@ -529,32 +534,39 @@ window.jgRoomJoin=async function(codeRaw, name){
   if(roomSnap.data().status!=='lobby'){ alert('這場遊戲已經開始，無法加入'); return; }
   jgRoomComp=roomSnap.data().comp||null;
   jgRoomTotal=roomSnap.data().total||null;
-  // 座位號碼要用 transaction 原子性分配——原本是交易外先 getDocs 算「目前人數+1」再
-  // setDoc，好幾個人同時按「加入房間」時各自讀到同一份舊人數，會算出同一個座位號碼
-  // 互相衝突（畫面上出現重複的座位號）。改成整段「讀目前人數→決定座位→寫入」包進同一個
-  // Firestore transaction，交易引擎會自動偵測衝突並重試，保證不會有兩人拿到同一個座位。
-  // 房間設定是幾人局，就只能加入到那個人數——已經加入過的人（重新整理、重新連線）不受
-  // 這個限制，可以照樣回到原本的座位。
-  // 人數改用房間文件上的 playerCount 欄位（原子遞增），不在 transaction 裡用 tx.get(query)
-  // 查整個 players 子集合——在 transaction 裡對整個集合下 query 查詢，手機瀏覽器實測會直接
-  // 噴出內部錯誤（undefined is not an object (evaluating 'i.path')），改成只讀兩份已知路徑
-  // 的「單一文件」（房間文件本身、跟自己 uid 對應的 player 文件），這是 transaction 裡最基本
-  // 也最穩定支援的操作，不會有這個問題。
+  const roomRef=doc(db,'rooms',code);
+  const playerRef=doc(db,'rooms',code,'players',uid);
+  // 座位號碼要唯一分配，但 Firestore 安全規則規定「要先是房間成員（自己的 players/{uid}
+  // 文件已經存在）才能更新房間文件本身」（isMember()），沒辦法在單一個 transaction 裡
+  // 同時「建立自己的玩家文件」又「更新房間文件的人數計數器」——transaction commit 當下，
+  // 規則看到的是「這個 transaction 開始之前」的資料庫狀態，這時候我還不是成員，會被
+  // permission-denied 擋下來（這正是上一版的問題）。另外，在 transaction 裡對整個 players
+  // 子集合下 query 查詢（tx.get(query(...))）也實測在手機瀏覽器上會直接噴出 SDK 內部錯誤，
+  // 一樣要避開。
+  // 改成拆兩步：
+  // 1) 先用一般寫入建立自己的玩家文件（這一步的規則只檢查「auth.uid==自己的uid」，不需要
+  //    先是成員，一定會成功）——這步落地之後，我才正式成為這個房間的成員。
+  // 2) 成員身分確立後，才能用 transaction 安全地遞增房間文件上的 playerCount 欄位決定座位
+  //    號碼——這個 transaction 只讀寫「單一文件」（房間文件、自己的玩家文件），不是查詢整個
+  //    集合，兩人同時加入時 Firestore 會自動序列化處理，保證不會分到同一個座位號碼。
   try{
-    await runTransaction(db, async(tx)=>{
-      const roomRef=doc(db,'rooms',code);
-      const playerRef=doc(db,'rooms',code,'players',uid);
-      const [roomTx, playerTx]=await Promise.all([tx.get(roomRef), tx.get(playerRef)]);
-      if(playerTx.exists()){
-        tx.set(playerRef,{ name:nm, seatNum:playerTx.data().seatNum, joinedAt:serverTimestamp(), alive:true });
-        return;
+    const existingSnap=await getDoc(playerRef);
+    if(existingSnap.exists()){
+      // 已經加入過（重新整理、重新連線）：保留原本座位，只更新名字跟上線時間。
+      await setDoc(playerRef,{ name:nm, seatNum:existingSnap.data().seatNum, joinedAt:serverTimestamp(), alive:true });
+    } else {
+      if(jgRoomTotal){
+        const freshRoom=await getDoc(roomRef);
+        if(((freshRoom.data()||{}).playerCount||0)>=jgRoomTotal) throw new Error('ROOM_FULL');
       }
-      const playerCount=(roomTx.data()||{}).playerCount||0;
-      if(jgRoomTotal&&playerCount>=jgRoomTotal) throw new Error('ROOM_FULL');
-      const seatNum=playerCount+1;
-      tx.set(playerRef,{ name:nm, seatNum:seatNum, joinedAt:serverTimestamp(), alive:true });
-      tx.update(roomRef,{ playerCount:seatNum });
-    });
+      await setDoc(playerRef,{ name:nm, seatNum:null, joinedAt:serverTimestamp(), alive:true });
+      await runTransaction(db, async(tx)=>{
+        const roomTx=await tx.get(roomRef);
+        const seatNum=((roomTx.data()||{}).playerCount||0)+1;
+        tx.update(roomRef,{ playerCount:seatNum });
+        tx.update(playerRef,{ seatNum:seatNum });
+      });
+    }
   }catch(e){
     if(e&&e.message==='ROOM_FULL'){ alert('⚠️ 這個房間是 '+jgRoomTotal+' 人局，已經到齊了，無法加入。'); return; }
     alert('加入房間失敗，請檢查網路連線後再試一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
@@ -580,23 +592,19 @@ window.jgRoomJoinPresetSeat=async function(codeRaw, seatNum){
   const presetNames=rd.presetNames||{};
   jgRoomComp=rd.comp||null;
   jgRoomTotal=rd.total||null;
-  // 跟 jgRoomJoin 同樣的道理：座位是不是「已經有人選走」要在同一個 transaction 裡讀+寫，
-  // 避免兩支手機同時點同一個座位，各自在交易外都讀到「還沒人選」而同時寫入衝突。用房間
-  // 文件上的 seatTaken 這個「座位→uid」對照表來判斷，不在 transaction 裡對整個 players
-  // 子集合下 query（原因同 jgRoomJoin 的註解：手機瀏覽器實測會噴內部錯誤），只讀房間文件
-  // 本身這一份單一文件。
+  // 這裡選位不能靠房間文件上的任何計數／對照表欄位來做 transaction（跟 jgRoomJoin 同樣的
+  // 規則限制：還不是房間成員就不能更新房間文件本身，詳見 jgRoomJoin 內的註解），改成單純讀
+  // 一次目前的玩家名單，確認這個座位還沒被「別人」佔走，再寫自己的玩家文件——兩支手機同時
+  // 點同一個座位這種情況理論上還是有極小機率同時通過檢查，但選座位畫面本來就是依照最新讀到
+  // 的名單即時畫成「已反白、不能點」，真的撞在一起的機率非常低，跟自動排隊入座（jgRoomJoin，
+  // 更常見好幾人同時連按「加入房間」）不是同一個等級的風險。
+  const playerRef=doc(db,'rooms',code,'players',uid);
   try{
-    await runTransaction(db, async(tx)=>{
-      const roomRef=doc(db,'rooms',code);
-      const playerRef=doc(db,'rooms',code,'players',uid);
-      const roomTx=await tx.get(roomRef);
-      const seatTaken=(roomTx.data()||{}).seatTaken||{};
-      const takenBy=seatTaken[seatNum]||seatTaken[String(seatNum)];
-      if(takenBy&&takenBy!==uid) throw new Error('SEAT_TAKEN');
-      tx.set(playerRef,{
-        name: presetNames[seatNum]||(seatNum+'號'), seatNum:seatNum, joinedAt:serverTimestamp(), alive:true
-      });
-      tx.update(roomRef,{ ['seatTaken.'+seatNum]: uid });
+    const playersSnap=await getDocs(collection(db,'rooms',code,'players'));
+    const takenByOther=playersSnap.docs.find(d=>d.id!==uid&&d.data().seatNum===seatNum);
+    if(takenByOther) throw new Error('SEAT_TAKEN');
+    await setDoc(playerRef,{
+      name: presetNames[seatNum]||(seatNum+'號'), seatNum:seatNum, joinedAt:serverTimestamp(), alive:true
     });
   }catch(e){
     if(e&&e.message==='SEAT_TAKEN'){ alert('這個座位已經有人選走了，請重新整理選別的座位'); return; }
