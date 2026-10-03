@@ -484,7 +484,7 @@ function jgAfterZombieStep(){
   return jgAfterInfectedStep();
 }
 function jgAfterInfectedStep(){
-  return jgAfterTrickmageChainEntry();
+  return jgMagicianChainEntry();
 }
 // 詭術之境板：魔術師（換技能）優先行動，接著詭術師（換票，跟一般狼人睜眼是分開的
 // 獨立回合），再接一般狼人睜眼（詭術師會在那邊跟狼隊一起參與出刀決策，不是這裡）。
@@ -1989,8 +1989,16 @@ function jgAfterMaskStep(){
   if(hasNightmare) return 'nightmare-wake';
   return jgAfterNightmareStep();
 }
-// Where to go once nightmare is done (or skipped because there's no nightmare)
+// Where to go once nightmare is done (or skipped because there's no nightmare)。殭屍要排在
+// 魔術師之前睜眼，選定的感染對象才不會被魔術師的換號技能轉走（殭屍的感染不是「以號碼為
+// 目標」的一般夜間技能，不該被換流影響）；但要排在夢魘之後，才能正常吃到夢魘恐懼封印技能
+// 的效果——所以插在這兩者中間，不是像舊版那樣排在狼隊睜眼前後那一大串特殊狼角色裡面。
 function jgAfterNightmareStep(){
+  const hasZombie=(jgNight===1?(jgComp.zombie>0):jgHasRoleAny(['zombie']))||jgThiefBuriedActiveTonight('zombie');
+  if(hasZombie) return 'zombie-wake';
+  return jgMagicianChainEntry();
+}
+function jgMagicianChainEntry(){
   const hasMagician = (jgNight===1 ? (jgComp.magician>0) : jgHasRoleAny(['magician'])) || jgThiefBuriedActiveTonight('magician');
   if(hasMagician) return 'magician-wake';
   return jgAfterMagicianStep();
@@ -2120,14 +2128,7 @@ function jgAfterDivinerStep(){
   return jgAfterBigGreyWolfStep();
 }
 function jgAfterBigGreyWolfStep(){
-  return jgAfterZombieChainEntry();
-}
-// 殭屍不需要跟狼隊互動，排在大灰狼之後、一般狼人睜眼之前——這個位置本身沒有特別的
-// 先後依賴，純粹跟診斷師/大灰狼分在同一群「不跟主要狼群一起行動的特殊角色」裡。
-function jgAfterZombieChainEntry(){
-  const hasZombie=(jgNight===1?(jgComp.zombie>0):jgHasRoleAny(['zombie']))||jgThiefBuriedActiveTonight('zombie');
-  if(hasZombie) return 'zombie-wake';
-  return jgAfterZombieStep();
+  return jgAfterTrickmageChainEntry();
 }
 // True if 狼兄 has died and 狼弟 (still alive) hasn't had their one-time awakening kill yet.
 function jgWolfBrotherAwakenPending(){
