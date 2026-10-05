@@ -111,6 +111,9 @@ button.gold{background:var(--gold);color:#fff;border-color:var(--gold);}
 button.ghost{background:transparent;border-color:var(--border2);}
 button.danger{background:rgba(184,56,40,0.08);color:#922418;border-color:rgba(184,56,40,0.25);}
 button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(58,122,42,0.25);}
+/* 鵝黃色調的「問題回報」按鈕——原本跟 .ghost 一樣透明無色，在白底頁面上太不顯眼容易被忽略，
+   改用跟 .danger／.success 同一套「淺色調＋同色邊框」的語彙，只是換成偏黃的 --gold。 */
+button.report{background:rgba(154,124,40,0.1);color:var(--gold);border-color:rgba(154,124,40,0.3);}
 .btn2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
 .btn2 button{margin-top:0;}
 
@@ -335,6 +338,19 @@ button.success{background:rgba(58,122,42,0.08);color:#2a601c;border-color:rgba(5
 .data-narrow{max-width:460px;margin:0 auto;}
 @media (min-width:680px){
   .data-narrow{max-width:560px;}
+}
+/* ── 大型桌機螢幕（≥1440px）再放寬一階，兩側留白才不會隨螢幕越寬越誇張；1440px 以下
+   （含手機、平板、一般筆電）完全不受影響，沿用上面原本那幾階。卡片類網格（.card-grid／
+   .rpick-grid／.pgrid 等）本來就是 grid auto-fill，容器一變寬就會自動多排幾欄、不用
+   逐一改每個網格本身；這裡只需要放寬外層容器的 max-width。法官の助手設定表單、遊玩數據
+   總覽這類「閱讀寬度」頁面也跟著放寬一點，但刻意只放寬到 760px／680px，不跟著無上限
+   拉伸，避免輸入欄位、按鈕在超寬螢幕上被拉得太誇張難以操作。 */
+@media (min-width:1440px){
+  .tab-wide{max-width:1400px;}
+  #jg-p-setup,#jg-p-roster,#jg-main-scroll,#jg-roster-wrap{max-width:760px;}
+  .data-narrow{max-width:680px;}
+  #jg-play-area{max-width:1400px;}
+  #jg-side-panel{width:340px;}
 }
 .rcol-hd{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;background:var(--bg2);-webkit-user-select:none;user-select:none;}
 .rcol-icon{font-size:22px;flex-shrink:0;}
