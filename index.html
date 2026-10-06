@@ -505,11 +505,8 @@
     <p class="sub">狼人殺紀錄・場次 / 勝率 / 身分統計</p>
   </div>
 
-  <!-- 電腦寬螢幕時「總覽」改放右側固定側欄、排行榜＋場次紀錄當主欄；手機／平板（1024px以下）
-       維持原本上下堆疊、總覽在最上面——順序完全靠 DOM 本身（總覽寫在前面），桌面版才用
-       flex order 把它搬到右邊，手機版不套用 order，視覺順序不會變。 -->
-  <div id="pd-layout">
-  <div id="pd-side">
+  <!-- 總覽 + 排行榜：維持較窄、易讀的寬度 -->
+  <div class="data-narrow">
   <div class="big-section-title">總覽</div>
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-num" id="ov-games">–</div><div class="stat-lbl">總場次</div></div>
@@ -518,11 +515,8 @@
     <div class="stat-card evil"><div class="stat-num" id="ov-evil">–</div><div class="stat-lbl">邪惡陣營勝率</div></div>
   </div>
   <div class="bar"><span class="g" id="ov-bar-g"></span><span class="e" id="ov-bar-e"></span></div>
-  </div>
 
-  <div id="pd-main">
-  <!-- 排行榜：維持較窄、易讀的寬度 -->
-  <div class="data-narrow">
+  <!-- 排行榜 -->
   <div class="big-section-title" style="display:flex;align-items:center;justify-content:space-between;">
     <span>狼吞虎嚥排行榜</span>
     <div style="display:flex;align-items:center;gap:10px;">
@@ -555,8 +549,6 @@
   </div>
   <div class="gcount" id="gcount"></div>
   <div id="game-list" class="card-grid"></div>
-  </div>
-  </div>
 
   <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
     <button class="report" onclick="jgOpenReportLink(REPORT_FORM_URL)" style="width:auto;padding:8px 16px;font-size:13px;">問題回報</button>
@@ -597,7 +589,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-05-b</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-06-a</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="data/games-history.js"></script>

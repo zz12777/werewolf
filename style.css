@@ -339,22 +339,19 @@ button.report{background:rgba(154,124,40,0.1);color:var(--gold);border-color:rgb
 @media (min-width:680px){
   .data-narrow{max-width:560px;}
 }
-/* 遊玩數據：電腦寬螢幕（≥1024px）把「總覽」改成右側固定側欄，跟左邊的排行榜／場次紀錄
-   並排，左右都有實際內容在用，不是單純把中間欄位拉寬留一堆沒用到的空白。手機／平板
-   （1024px以下）完全不受影響——#pd-side 在 HTML 裡本來就寫在 #pd-main 前面，預設
-   flex-direction:column 時就是「總覽在上面」，跟原本的版面一模一樣，只有在寬螢幕切成
-   左右並排時才用 order 把總覽搬到右邊。 */
-#pd-layout{display:flex;flex-direction:column;}
-@media (min-width:1024px){
-  #pd-layout{flex-direction:row;align-items:flex-start;gap:24px;}
-  #pd-side{order:2;width:280px;flex-shrink:0;position:sticky;top:14px;}
-  #pd-main{order:1;flex:1 1 auto;min-width:0;}
+/* 連線房間入口畫面：手機／平板維持原本「設定板子卡片→加入房間卡片→目前進度」上下堆疊；
+   電腦寬螢幕（≥680px）把設定板子、加入房間兩張卡片併成左右兩欄，目前進度仍固定在最下方
+   整欄顯示，版面比單欄堆疊更緊湊好讀。 */
+#room-entry-grid{display:flex;flex-direction:column;}
+@media (min-width:680px){
+  #room-entry-grid{flex-direction:row;align-items:stretch;gap:14px;}
+  #room-entry-grid > .card{flex:1 1 0;margin-top:14px;}
 }
 /* ── 大型桌機螢幕（≥1440px）再放寬一階，兩側留白才不會隨螢幕越寬越誇張；1440px 以下
    （含手機、平板、一般筆電）完全不受影響，沿用上面原本那幾階。卡片類網格（.card-grid／
    .rpick-grid／.pgrid 等）本來就是 grid auto-fill，容器一變寬就會自動多排幾欄、不用
    逐一改每個網格本身；這裡只需要放寬外層容器的 max-width。法官の助手設定表單、遊玩數據
-   排行榜這類「閱讀寬度」頁面也跟著放寬一點，但刻意只放寬到 760px／680px，不跟著無上限
+   總覽這類「閱讀寬度」頁面也跟著放寬一點，但刻意只放寬到 760px／680px，不跟著無上限
    拉伸，避免輸入欄位、按鈕在超寬螢幕上被拉得太誇張難以操作。 */
 @media (min-width:1440px){
   .tab-wide{max-width:1400px;}
@@ -362,7 +359,6 @@ button.report{background:rgba(154,124,40,0.1);color:var(--gold);border-color:rgb
   .data-narrow{max-width:680px;}
   #jg-play-area{max-width:1400px;}
   #jg-side-panel{width:340px;}
-  #pd-side{width:320px;}
 }
 .rcol-hd{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;background:var(--bg2);-webkit-user-select:none;user-select:none;}
 .rcol-icon{font-size:22px;flex-shrink:0;}

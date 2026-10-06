@@ -5557,22 +5557,20 @@ window.jgRoomRenderEntry=async function(){
       <h1>連線房間</h1>
       <p class="sub" style="text-align:center;margin-top:6px;">多支手機同時加入同一場，各自的手機只看得到自己的身分</p>
     </div>
-    <div class="card" style="margin-top:14px;">
-      <div class="info" style="font-size:13px;">要建立新房間的話，請先到「法官の助手」分頁設定好人數跟板子，設定完會有「建立連線房間」的按鈕。</div>
-      <button class="primary" style="margin-top:10px;" onclick="switchTab('t-judge')">前往設定板子 →</button>
-    </div>
-    <div class="card" style="margin-top:14px;">
-      <label>房號</label>
-      <input type="text" id="jg-room-code-join" placeholder="輸入房號" inputmode="numeric">
-      <button class="primary" style="margin-top:10px;" onclick="jgRoomCheckCodeThenJoin(document.getElementById('jg-room-code-join').value)">加入房間</button>
+    <div id="room-entry-grid">
+      <div class="card" style="margin-top:14px;">
+        <div class="info" style="font-size:13px;">要建立新房間的話，請先到「法官の助手」分頁設定好人數跟板子，設定完會有「建立連線房間」的按鈕。</div>
+        <button class="primary" style="margin-top:10px;" onclick="switchTab('t-judge')">前往設定板子 →</button>
+      </div>
+      <div class="card" style="margin-top:14px;">
+        <label>房號</label>
+        <input type="text" id="jg-room-code-join" placeholder="輸入房號" inputmode="numeric">
+        <button class="primary" style="margin-top:10px;" onclick="jgRoomCheckCodeThenJoin(document.getElementById('jg-room-code-join').value)">加入房間</button>
+      </div>
     </div>
     <div class="info" style="font-size:12px;margin-top:10px;">
-      <div>目前進度：</div>
-      <ul style="margin:6px 0 6px 18px;padding:0;">
-        <li>手機發牌：全部板子都可用（只負責把身分發到手機上，之後交給法官用本機工具主持）。</li>
-        <li>連線房間全自動功能目前尚未完善，僅有部分板子可使用，勝負尚無法自動判定。</li>
-      </ul>
-      <div>以上功能都還沒經過完整實機測試，可能會有 bug，歡迎回報問題。</div>
+      <div>目前進度：手機發牌全部板子都可用（只負責把身分發到手機上，之後交給法官用本機工具主持）；連線房間全自動功能僅部分板子可用，勝負尚無法自動判定。</div>
+      <div style="margin-top:4px;">以上功能都還沒經過完整實機測試，可能會有 bug，歡迎回報問題。</div>
     </div>
   `;
   // 如果是從邀請連結點進來的（網址帶 ?room=房號），直接把房號填好，玩家只要打名字就好，
