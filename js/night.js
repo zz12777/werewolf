@@ -581,7 +581,7 @@ function jgSaveTrickster(){
 function jgGodIdHtml(roleId,existingP){
   if(jgNight!==1) return '';
   const RZHMAP={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面',littlegirl:'小女孩',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',diviner:'占卜師',biggreywolf:'大灰狼',zombie:'殭屍',trickmage:'魔術師',trickster:'詭術師',sequenceprince:'定序王子'};
-  const rn=RZHMAP[roleId]||roleId;
+  const rn=RZHMAP[roleId]||RNAME[roleId]||roleId;
   return jgIdFieldHtml(rn, existingP, 'jg-god-who-'+roleId, 'jg-god-name-'+roleId);
 }
 
@@ -602,7 +602,7 @@ function jgRequireFirstId(elId, label){
 function jgSaveGodId(roleId){
   if(jgNight!==1) return true;
   const RZHMAP2={seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',purewhitemaiden:'純白之女',dancer:'舞者',mask:'假面',littlegirl:'小女孩',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼'};
-  if(!jgRequireFirstId('jg-god-who-'+roleId, RZHMAP2[roleId]||roleId)) return false;
+  if(!jgRequireFirstId('jg-god-who-'+roleId, RZHMAP2[roleId]||RNAME[roleId]||roleId)) return false;
   const whoNum=parseInt((document.getElementById('jg-god-who-'+roleId)||{}).value||'0');
   const name=(document.getElementById('jg-god-name-'+roleId)||{}).value?.trim()||'';
   if(whoNum){
@@ -1235,7 +1235,7 @@ function jgSaveWolfBeautyNight(){
   }
   const wbPfinal=jgPlayers.find(p=>p.role==='wolfbeauty');
   const wbDead=wbPfinal&&!wbPfinal.alive;
-  const wbFeared=jgFeared(wbPfinal);
+  const wbFeared=jgFeared(wbPfinal)||jgFoxcubCharmed(wbPfinal);
   const newCharm=wbFeared?null:((document.getElementById('jg-wolfbeauty-charm')||{}).value?.trim()||null);
   if(!wbDead&&!wbFeared){
     if(!newCharm){
@@ -1908,7 +1908,8 @@ function jgSaveWolf(){
   { const identifyRawVal=(document.getElementById('jg-wolf-identify-rec')||{}).value?.trim()||null;
     jgRecord.wolfIdentifyGuessRaw=identifyRawVal;
     jgRecord.wolfIdentifyGuess=identifyRawVal?jgMagicSwapNum(identifyRawVal):null; }
-  if(jgRecord.nightmareBlocksWolf) jgRecord.wolfKill=null;
+  if(jgRecord.nightmareBlocksWolf||jgRecord.foxcubBlocksWolf) jgRecord.wolfKill=null;
+  if(isFirst&&jgIsAnimalDream()){ jgRecord.wolfKill=null; jgRecord.wolfKillRaw=null; }
   // Bloodmoon seal: skip all god steps this night
   if(jgRecord.bloodmoonSealNight){
     jgRecord.bloodmoonSealNight=false; // clear after use
@@ -1980,6 +1981,7 @@ function jgWitchSaveChange(){
 
 // Returns first pending sub-wolf step, or 'witch-wake'
 function jgNextWolfStep(){
+  if(jgNight===1&&jgIsAnimalDream()) return jgPostWolfStep();
   if(jgNight===1){
     if(jgComp.wolfbeauty>0||jgThiefBuriedActiveTonight('wolfbeauty')) return 'wolfbeauty-wake';
   } else {
@@ -2013,6 +2015,12 @@ function jgNightStartNext(){
   if((jgNight===1 && jgComp.cupid>0 && !jgCupidChosen) || jgThiefBuriedActiveTonight('cupid')){
     return 'cupid-wake';
   }
+  // 動物夢境板：子狐每晚第一個睜眼（第一夜只確認身分）。
+  const hasFoxcub=(jgNight===1?(jgComp.foxcub>0):jgHasRoleAny(['foxcub']));
+  if(hasFoxcub) return 'foxcub-wake';
+  return jgAfterFoxcubStep();
+}
+function jgAfterFoxcubStep(){
   // 假面舞會板：舞者 → 假面，排在整個晚上最前面（比夢魘還早）——這個板子本身不會跟夢魘/
   // 魔術師/守衛/攝夢人等板子混用，這裡直接插在最前面即可，不影響其他板子原本的順序。
   const hasDancer=(jgNight===1?(jgComp.dancer>0):jgHasRoleAny(['dancer']))||jgThiefBuriedActiveTonight('dancer');
@@ -2263,6 +2271,10 @@ function jgNextAfterSubWolf(currentStep){
 // jgAfterGravkeeperStep／jgAfterGargoyleStep）；GOD_CHAIN 現在只涵蓋「女巫→預言家」
 // 之後、天亮之前的神職鏈：通靈師 → 獵人 → 騎士 → 獵魔人。
 const GOD_CHAIN=[
+  // 動物夢境：熊 → 河豚 → 白貓，只有第一夜睜眼確認身分（之後的技能都在白天發動）。
+  {step:'bear-wake',        role:'bear',         check:(n,c)=>n===1&&c.bear>0},
+  {step:'pufferfish-wake',  role:'pufferfish',   check:(n,c)=>n===1&&c.pufferfish>0},
+  {step:'whitecat-wake',    role:'whitecat',     check:(n,c)=>n===1&&c.whitecat>0},
   {step:'medium-wake',      role:'medium',       check:(n,c)=>(n===1?(c.medium>0):jgHasRoleAny(['medium']))||jgThiefBuriedActiveTonight('medium')},
   {step:'hunter-wake',      role:'hunter',       check:(n,c)=>(n===1?(c.hunter>0):jgHasRoleAny(['hunter']))||jgMechWolfHunterActive()||jgThiefBuriedActiveTonight('hunter')},
   {step:'knight-wake',      role:'knight',       check:(n,c)=>(n===1&&c.knight>0)||jgThiefBuriedActiveTonight('knight')},
@@ -2472,7 +2484,10 @@ function jgSaveBloodMoonLastNight(){
 // 不能沿用一般的 jgCheckWin()（它的「狼隊全滅→好人勝利」規則會搶在屠邊判定之前生效）。
 function jgSaveWolfBeautyCharmKill(){
   const target=jgRecord._wolfbeautyKillCharm?jgFind(jgRecord._wolfbeautyKillCharm):null;
-  if(target&&target.alive){target.alive=false;}
+  if(target&&target.alive&&target.role==='whitecat'){
+    jgApplyDeath(target);
+    alert(target.num+'號 是白貓，翻牌免疫這次死亡（下一次放逐階段結束後才會死亡）。');
+  } else if(target&&target.alive){target.alive=false;}
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}
   jgGoStep('vote-last-words');
@@ -2543,3 +2558,77 @@ function jgSaveHunter(){
 // Only used from night 2 onward (night 1 is still establishing identities).
 // Skipped whenever the witch is still alive with an unused antidote and could still
 // save the wolf-kill victim — in that case we must continue to her step to find out.
+
+// ── 動物夢境板 ──
+// 子狐這一晚魅惑到的是不是這位玩家（狼美人被魅惑時當晚不能魅惑人）。
+function jgFoxcubCharmed(p){
+  return !!(p&&jgRecord&&jgRecord.foxcubCharm&&p.num.toString()===jgRecord.foxcubCharm.toString());
+}
+// 子狐：第一夜只確認身分；第二夜起整局可以魅惑一次。魅惑到狼隊（含狼美人）當晚狼人不能殺人，
+// 魅惑到狼美人當晚狼美人也不能魅惑；魅惑到好人無事發生。
+function jgSaveFoxcub(){
+  if(!jgSaveGodId('foxcub')) return;
+  const fx=jgPlayers.find(p=>p.role==='foxcub');
+  jgRecord.foxcubCharm=null; jgRecord.foxcubBlocksWolf=false;
+  if(jgNight>=2&&fx&&fx.alive&&!fx.foxcubUsed){
+    const v=(document.getElementById('jg-foxcub-charm')||{}).value?.trim()||'';
+    if(v&&v===fx.num.toString()){ alert('⚠️ 子狐不能魅惑自己，請重新選擇！'); return; }
+    if(v){
+      fx.foxcubUsed=true;
+      jgRecord.foxcubCharm=v;
+      const t=jgFind(v);
+      jgRecord.foxcubBlocksWolf=!!(t&&jgIsWolfPackMember(t));
+    }
+  }
+  jgGoStep(jgAfterFoxcubStep());
+}
+// 熊／河豚／白貓：第一夜確認身分後接回神職鏈。
+function jgSaveAnimalGodId(roleId){
+  if(!jgSaveGodId(roleId)) return;
+  jgGoStep(jgNextGodStep(roleId+'-wake'));
+}
+// 熊的咆哮：往左右各找最近、目前還活著的玩家（跳過死人，圓桌頭尾相連），有狼就咆哮。
+function jgBearGrowlInfo(){
+  const bear=jgPlayers.find(p=>p.role==='bear');
+  if(!bear) return null;
+  if(!bear.alive) return {bear, dead:true};
+  const n=jgTotal;
+  const find=dir=>{
+    for(let k=1;k<n;k++){
+      const seat=((bear.num-1+dir*k)%n+n)%n+1;
+      const p=jgByNum(seat);
+      if(p&&p.alive) return p;
+    }
+    return null;
+  };
+  const left=find(-1), right=find(1);
+  const growl=[left,right].some(p=>p&&jgIsWolfPackMember(p));
+  return {bear, dead:false, left, right, growl};
+}
+// 河豚：這次放逐投票（含 PK）有沒有人可以被炸。回傳 null＝不用問河豚。
+// counts：這一輪各號碼的得票；top：這一輪最高票的號碼。
+function jgPufferfishPromptInfo(counts, top){
+  const pf=jgPlayers.find(p=>p.role==='pufferfish');
+  if(!pf||!pf.alive||pf.pufferUsed) return null;
+  const goingToPk=top.length>1&&!jgVotePkRound;
+  const thisRound=((counts.find(c=>Number(c.target)===pf.num)||{}).voters||[]).map(Number);
+  if(goingToPk&&top.map(Number).includes(pf.num)){
+    // 河豚自己進入平票 PK：先記下第一輪投給他的人，PK 結束再一起問要不要翻牌。
+    jgRecord._pufferRound1Voters=thisRound.slice();
+    return null;
+  }
+  let pool=thisRound.slice();
+  if(jgVotePkRound&&jgRecord._pufferRound1Voters) pool=pool.concat(jgRecord._pufferRound1Voters);
+  if(!goingToPk) jgRecord._pufferRound1Voters=null;
+  pool=[...new Set(pool)];
+  const soleOut=top.length===1?Number(top[0]):null;
+  const voters=pool.filter(n=>{
+    const p=jgFind(n);
+    if(!p||!p.alive) return false;
+    if(n===soleOut) return false; // 最高票出局的人照常出局，不算在炸的名單裡
+    if(p.role==='whitecat'&&p.whitecatFlipped) return false; // 已翻牌的白貓炸不死
+    return true;
+  });
+  if(voters.length===0) return null;
+  return {pfNum:pf.num, voters:voters.sort((a,b)=>a-b), all:pool.sort((a,b)=>a-b)};
+}

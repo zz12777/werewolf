@@ -673,8 +673,12 @@ function jgUpdateVoteTallySummary(){
 
 function jgSaveVote(){ jgSaveVoteInner(); jgLiveSyncPush(); }
 function jgSaveVoteInner(){
-  const targets=jgVoteTargets();
-  const voters=jgVoteVoters();
+  // 動物夢境：問完河豚要不要翻牌之後會再呼叫一次這個函式，這時候要沿用問之前的投票名單，
+  // 不然被河豚炸死的人會從「可投票對象」消失，害這一輪的計票結果跟剛剛公布的不一樣。
+  const frozen=jgRecord._voteFrozen||null;
+  jgRecord._voteFrozen=null;
+  const targets=frozen?frozen.targets:jgVoteTargets();
+  const voters=frozen?frozen.voters:jgVoteVoters();
   const fmt=w=>Number.isInteger(w)?String(w):w.toFixed(1);
   const counts=targets.map(t=>{
     const marks=jgVoteTally[t]||{};
@@ -695,10 +699,24 @@ function jgSaveVoteInner(){
   // 一眼就能看出這輪票是誰出局，不用自己再重新算一次最高票。平票／無人得票則不加註（沒人真的出局）。
   const soleOut=top.length===1?top[0]:null;
 
+  // 動物夢境：有人投給河豚、河豚還沒用過技能，先問河豚要不要翻牌，再繼續結算這一輪。
+  if(!frozen){
+    const pfInfo=jgPufferfishPromptInfo(counts, top);
+    if(pfInfo){
+      jgRecord._voteFrozen={targets, voters};
+      jgRecord._pufferPending=pfInfo;
+      jgGoStep('pufferfish-choice');
+      return;
+    }
+  }
+  // 這一輪投票是不是放逐階段的最後結果（不是第一次平票要進 PK）——白貓翻牌後要等這個結束才死。
+  if(!(top.length>1&&!jgVotePkRound)) jgRecord._exileVoteHeld=true;
+
   const prefix=jgVotePkRound?'PK票':'票';
   const withVotes=counts.filter(c=>c.voters.length>0).sort((a,b)=>b.weight-a.weight||a.target-b.target);
   let voteLines=withVotes.map(c=>prefix+c.target+'：'+c.voters.join(',')+(c.weight!==c.voters.length?'（'+fmt(c.weight)+'票）':'')+(soleOut===c.target?' （'+c.target+'號出局）':''));
   if(abstainNums.length>0) voteLines.push((jgVotePkRound?'PK棄票':'棄票')+'：'+abstainNums.join(','));
+  if(frozen&&frozen.pufferLog) voteLines.push(frozen.pufferLog);
 
   jgAbstainVoters={};
 
@@ -729,7 +747,7 @@ function jgSaveVoteInner(){
     voteLines.push('平票：'+top.join('、')+'號，進入 PK（PK 發言順序：'+jgVotePkOrder.join('→')+'）');
     jgDayLog[jgNight]=(jgDayLog[jgNight]||[]).concat(voteLines);
     jgVotePkRound=true;
-    jgVotePkCandidates=top;
+    jgVotePkCandidates=top.filter(n=>{ const p=jgFind(n); return p&&p.alive; });
     jgVoteTally={};
     // 進入 PK 是全新的一輪發言，強制清空計時器的「舊順序」標記，保證從第一位開始算，
     // 理由跟警上 PK 那邊一樣（見 jgSaveSheriffVoteInner）。
@@ -775,8 +793,23 @@ function jgSaveVoteInner(){
 // 這幾種情況，都要走同一份收尾邏輯（開槍連鎖、血月封印、勝負判定……），不用維護兩份
 // 幾乎一樣的程式碼、以後改一邊忘記改另一邊。
 function jgFinishVoteOut(found, eliminatedRole){
+    const wasFlippedCat=found.role==='whitecat'&&found.whitecatFlipped;
     const trulyDied=jgApplyDeath(found);
     jgRecord._voteOutTrulyDied=trulyDied;
+    if(found.role==='whitecat'&&!trulyDied){
+      // 動物夢境：白貓被投出局會翻牌免死（已經翻過牌的白貓則根本不能被投票出局）。
+      if(wasFlippedCat){
+        alert(found.num+'號 白貓已經翻過牌，無法被投票出局，這次放逐無人出局。');
+        jgPushDayLog('白貓'+found.num+'已翻牌，無法被放逐');
+      } else {
+        delete found._whitecatJustFlipped;
+        alert(found.num+'號 是白貓，翻牌免疫這次出局，要等下一次放逐階段結束後才會死亡。\n\n法官口白：「'+found.num+'號 是白貓，翻牌。」');
+        jgPushDayLog('白貓'+found.num+'被放逐翻牌免死');
+      }
+      jgRenderRoster();
+      jgGoStep('next-night');
+      return;
+    }
     // 邱比特情侶殉情：被投票出局的人如果是情侶其中一人，另一人立刻跟著殉情
     { const loverDeadNum=jgCascadeLoverDeath(found.num, trulyDied);
       if(loverDeadNum){
@@ -962,3 +995,31 @@ function jgSaveKnightDuel(){
   }
 }
 
+
+// 動物夢境：河豚決定要不要翻牌。翻牌就炸死名單裡所有人（白貓沒翻過牌的話會翻牌免死），
+// 然後照原本的投票結果繼續結算（出局／PK／無人出局）。
+window.jgPufferfishDecide=function(flip){
+  const info=jgRecord._pufferPending;
+  jgRecord._pufferPending=null;
+  if(flip&&info){
+    const pf=jgFind(info.pfNum);
+    if(pf) pf.pufferUsed=true;
+    const died=[], catFlipped=[];
+    info.voters.forEach(n=>{
+      const p=jgFind(n);
+      if(!p||!p.alive) return;
+      const wasCat=p.role==='whitecat';
+      if(jgApplyDeath(p)) died.push(p.num);
+      else if(wasCat){ catFlipped.push(p.num); delete p._whitecatJustFlipped; }
+    });
+    const line='河豚'+info.pfNum+'翻牌炸'+info.voters.join(',')+(catFlipped.length?'（白貓'+catFlipped.join(',')+'翻牌免死）':'');
+    if(jgRecord._voteFrozen) jgRecord._voteFrozen.pufferLog=line;
+    else jgPushDayLog(line);
+    alert(info.pfNum+'號 河豚翻牌！'+(died.length?died.join('、')+'號 被炸死。':'')+(catFlipped.length?'\n'+catFlipped.join('、')+'號 是白貓，翻牌免死，下一次放逐階段結束後才會死亡。':'')+'\n\n法官口白：「'+info.pfNum+'號 河豚翻牌，'+(died.length?died.join('、')+'號 淘汰。':'無人淘汰。')+'」');
+    jgRenderRoster();
+    const win=jgCheckWin();
+    if(win){ jgRecord._voteFrozen=null; jgShowWin(win); return; }
+  }
+  jgSaveVoteInner();
+  jgLiveSyncPush();
+};

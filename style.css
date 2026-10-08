@@ -262,6 +262,11 @@ button.report{background:rgba(154,124,40,0.1);color:var(--gold);border-color:rgb
 .rp-cupid .rp-role{background:rgba(194,59,122,0.1);color:#8f2a5e;}
 .rp-thief .rp-role{background:rgba(138,109,31,0.14);color:#6b5417;}
 .rp-blackmarket .rp-role{background:rgba(122,74,26,0.12);color:#5e3810;}
+/* 動物夢境：熊／子狐／河豚／白貓 */
+.rp-bear .rp-role{background:rgba(110,78,46,0.12);color:#5a3c1e;}
+.rp-foxcub .rp-role{background:rgba(196,98,30,0.12);color:#8a4410;}
+.rp-pufferfish .rp-role{background:rgba(26,110,136,0.1);color:#0f5c74;}
+.rp-whitecat .rp-role{background:rgba(0,0,0,0.04);color:var(--text);border:1px solid var(--border2);}
 /* 純白之女：維持白色（跟她名字呼應），用淺灰邊框跟背景色區塊區分開來，不跟其他神職搶顏色 */
 .rp-purewhitemaiden .rp-role{background:#ffffff;color:#3a3a3a;border:1px solid rgba(0,0,0,0.14);}
 /* 舞者：假面舞會板專屬，用金黃色——跟狼隊的紅色/假面舞會裡的暖橘色都拉開，不會被誤認成狼隊 */

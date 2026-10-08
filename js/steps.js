@@ -51,6 +51,74 @@ function jgRenderStep(step){
   else if(step==='mech-assign'){
     jgRenderMechAssign();
   }
+  // ── 動物夢境：子狐（每晚第一個睜眼；第一夜只確認身分，第二夜起整局可魅惑一次）──
+  else if(step==='foxcub-wake'){
+    const isFirst=jgIsFirstNight();
+    const fxP=jgPlayers.find(p=>p.role==='foxcub');
+    const idHtml=jgGodIdHtml('foxcub',fxP);
+    const dead=fxP&&!fxP.alive;
+    let actionHtml='';
+    if(isFirst){
+      actionHtml='<div class="info" style="font-size:12px;">第一夜無人可以使用技能，只確認子狐是誰。</div>';
+    } else if(dead){
+      actionHtml='<div class="info-warn">子狐已出局，仍需走完流程</div>'
+        +'<div class="speech">「<em>今晚要魅惑的對象是？</em>」</div>';
+    } else if(fxP&&fxP.foxcubUsed){
+      actionHtml='<div class="speech">「<em>今晚要魅惑的對象是？</em>」</div>'
+        +'<div class="info-warn">（法官搖頭）技能已經用過了</div>';
+    } else {
+      actionHtml='<div class="speech">「<em>今晚要魅惑的對象是？</em>」</div>'
+        +'<label>魅惑的對象（留空＝今晚不使用，整局限用一次）</label>'
+        +jgNumSelectHtml('jg-foxcub-charm', jgRecord.foxcubCharm||'', null, null, fxP?[fxP.num]:[])
+        +'<div class="info" style="font-size:12px;margin-top:6px;">魅惑到狼人陣營：今晚狼人不能殺人（狼人不知道是誰被魅惑）；魅惑到狼美人：今晚狼美人也不能魅惑。魅惑到好人：無事發生。</div>';
+    }
+    jgShowPg(`
+      <h2>子狐睜眼</h2>
+      <div class="speech">「<em>子狐請睜眼。</em>」</div>
+      ${idHtml}
+      ${actionHtml}
+      <div class="speech" style="margin-top:10px;">「<em>子狐請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveFoxcub()">已紀錄，下一步 →</button>
+    `,'子狐');
+  }
+  // ── 動物夢境：熊／河豚／白貓只有第一夜睜眼確認身分 ──
+  else if(step==='bear-wake'||step==='pufferfish-wake'||step==='whitecat-wake'){
+    const roleId=step.replace('-wake','');
+    const rn=RNAME[roleId];
+    const p0=jgPlayers.find(p=>p.role===roleId);
+    const note={
+      bear:'之後每天白天由法官宣布熊有沒有咆哮（系統會在天亮畫面自動算好）。',
+      pufferfish:'之後在放逐投票有人投給河豚時，系統會詢問河豚要不要翻牌。',
+      whitecat:'之後白貓任何原因死亡都會自動翻牌免死，直到下一次放逐階段結束才死亡。'
+    }[roleId];
+    jgShowPg(`
+      <h2>${rn}睜眼</h2>
+      <div class="speech">「<em>${rn}請睜眼。</em>」</div>
+      ${jgGodIdHtml(roleId,p0)}
+      <div class="info" style="font-size:12px;">第一夜只確認${rn}是誰。${note}</div>
+      <div class="speech" style="margin-top:10px;">「<em>${rn}請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveAnimalGodId('${roleId}')">已紀錄，下一步 →</button>
+    `,rn);
+  }
+  // ── 動物夢境：放逐投票有人投給河豚時，問河豚要不要翻牌 ──
+  else if(step==='pufferfish-choice'){
+    const info=jgRecord._pufferPending;
+    if(!info){ jgSaveVoteInner(); return; }
+    const allTxt=info.all.join('、')+'號';
+    const boomTxt=info.voters.join('、')+'號';
+    const skipped=info.all.filter(n=>!info.voters.includes(n));
+    jgShowPg(`
+      <h2>河豚要翻牌嗎？</h2>
+      <div class="info" style="font-size:13px;">這次放逐投票${jgVotePkRound?'（含 PK 前那一輪）':''}投給河豚（${info.pfNum}號）的玩家：${allTxt}</div>
+      ${skipped.length?'<div class="info" style="font-size:12px;">其中 '+skipped.join('、')+'號 不會被炸（最高票出局的人照常出局，或是已經翻牌的白貓）。</div>':''}
+      <div class="speech" style="margin-top:8px;">「<em>河豚要翻牌嗎？</em>」</div>
+      <div class="info-warn" style="font-size:13px;">翻牌會炸死：${boomTxt}（整局限用一次）</div>
+      <div class="btn2" style="margin-top:10px;">
+        <button class="danger" onclick="jgPufferfishDecide(true)">河豚翻牌</button>
+        <button class="ghost" onclick="jgPufferfishDecide(false)">不翻牌，繼續</button>
+      </div>
+    `,'河豚');
+  }
   else if(step==='dual-assign'){
     jgRenderDualAssign();
   }
@@ -724,11 +792,12 @@ function jgRenderStep(step){
       ${(isFirst&&jgComp.biggreywolf>0)?'<div class="info" style="font-size:12px;">（給法官的註記：大灰狼這裡僅確認身分並比讚，之後都不會參與殺人討論，除非狼隊友死光）</div>':''}
       ${needId?wolfFieldsInner+'<div class="divider" style="margin:12px 0 8px;"></div>':''}
       ${puppetSectionHtml}
-      ${mainPackAlive?`<div class="speech">「<em>請選擇今晚要殺的對象。</em>」</div>
+      ${(isFirst&&jgIsAnimalDream())?'<div class="info">動物夢境第一夜無人可以使用技能：狼人只確認身分（狼人、狼美人各是誰），今晚不殺人。</div>':mainPackAlive?`<div class="speech">「<em>請選擇今晚要殺的對象。</em>」</div>
       ${compatNote}
       <div id="jg-wolf-blocked-msg" style="${jgRecord.nightmareBlocksWolf?'':'display:none;'}"><div class="info-danger">⚠️ 夢魘恐懼到狼隊友，狼人今晚不得殺人</div></div>
+      ${jgRecord.foxcubBlocksWolf?'<div class="info-danger">子狐魅惑到狼人陣營，今晚狼人不能殺人（法官搖頭，不用說是哪一隻被魅惑）</div>':''}
       ${wbNote}
-      <div id="jg-wolf-kill-section" style="${jgRecord.nightmareBlocksWolf?'display:none;':''}">${wolfKillSectionHtml}${identifySectionHtml}</div>`
+      <div id="jg-wolf-kill-section" style="${(jgRecord.nightmareBlocksWolf||jgRecord.foxcubBlocksWolf)?'display:none;':''}">${wolfKillSectionHtml}${identifySectionHtml}</div>`
       :('<div class="info-warn">'+((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0||jgComp.biggreywolf>0)?'小狼已全滅，仍須走完流程':'狼隊已全滅，今晚沒有人可以選擇殺人對象，仍需照常走完流程')+'</div>'
         +((jgComp.bigmechwolf>0||jgComp.smallmechwolf>0||jgComp.biggreywolf>0)?'<div class="speech" style="margin-top:8px;">「<em>今晚要殺的是？</em>」</div>':''))}
       <div class="speech" style="margin-top:12px;">「<em>狼人請閉眼。</em>」</div>
@@ -820,7 +889,8 @@ function jgRenderStep(step){
     const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>狼美人</strong>號碼</label>${jgNumSelectHtml('jg-wolfbeauty-who','','jgSoloIdFearCheck')}</div><div class="divider"></div>`:'';
     const curCharm=jgRecord.wolfbeautyCharm||'';
     const dead=wbP&&!wbP.alive;
-    const feared=jgFeared(wbP);
+    const foxCharmed=jgFoxcubCharmed(wbP);
+    const feared=jgFeared(wbP)||foxCharmed;
     const wbAlive=needId||(wbP&&wbP.alive);
     jgShowPg(`
       <h2>狼美人睜眼</h2>
@@ -828,7 +898,7 @@ function jgRenderStep(step){
       ${idHtml}
       ${dead?'<div class="info-warn">狼美人已出局，仍需走完流程</div>':''}
       <div class="speech">「<em>今晚要魅惑的對象是？</em>」</div>
-      ${dead?'':`<div id="jg-wolfbeauty-feared-note" class="info-warn" style="${feared?'':'display:none;'}">（法官搖頭）你被恐懼了，無法使用技能</div>
+      ${dead?'':`<div id="jg-wolfbeauty-feared-note" class="info-warn" style="${feared?'':'display:none;'}">${foxCharmed?'（法官搖頭）子狐魅惑到狼美人，今晚無法魅惑':'（法官搖頭）你被恐懼了，無法使用技能'}</div>
       <div id="jg-wolfbeauty-action" style="${feared?'display:none;':''}">
       <label>魅惑的對象（號碼，每晚必須魅惑一人，不能選自己）</label>
       ${jgNumSelectHtml('jg-wolfbeauty-charm', curCharm, 'jgWolfBeautyCheck', null, wbP?[wbP.num]:[])}
@@ -1655,7 +1725,16 @@ function jgRenderStep(step){
     // the player keeps playing under their second card and must NOT be announced as dead.
     let trulyDiedNums=[];
     let swappedNums=[];
-    deads.forEach(d=>{ const p=jgFind(d); if(p){ const trulyDied=jgApplyDeath(p); if(trulyDied){ p._diedThisDawn=true; trulyDiedNums.push(p.num); } else { swappedNums.push(p.num); } } });
+    // 動物夢境：白貓被殺會翻牌免死（jgApplyDeath 回傳 false），要跟雙身分「換牌」分開處理。
+    let whitecatFlipNums=[];
+    deads.forEach(d=>{ const p=jgFind(d); if(p){ const wasCat=p.role==='whitecat'; const trulyDied=jgApplyDeath(p); if(trulyDied){ p._diedThisDawn=true; trulyDiedNums.push(p.num); } else if(wasCat){ if(p._whitecatJustFlipped){ whitecatFlipNums.push(p.num); delete p._whitecatJustFlipped; } } else { swappedNums.push(p.num); } } });
+    // 動物夢境：河豚吃刀出局，白天翻牌，當天白天狼美人的魅惑技能失效。
+    let pufferRevealNum=null;
+    { const pf=jgPlayers.find(p=>p.role==='pufferfish');
+      if(pf&&trulyDiedNums.includes(pf.num)&&jgRecord.wolfKill&&pf.num.toString()===jgRecord.wolfKill.toString()){
+        pufferRevealNum=pf.num;
+        jgRecord.wolfbeautyCharm=null;
+      } }
     // 警上競選過程中若有狼人自爆（雙爆的第一爆、或最終真的流失警徽的一爆），他的死亡在進
     // 這個 dawn 步驟之前就已經用 jgApplyDeath 另外處理過了，不會出現在上面的 deads 清單裡；
     // 這裡把他併入遺言名單，讓自爆的人跟一般死亡玩家一樣可以發表遺言。注意：自爆是白天當場
@@ -2037,11 +2116,32 @@ function jgRenderStep(step){
             +'<button class="danger" style="margin-top:6px;" onclick="jgDeclareBloodmoonWin()">🌑 直接公布狼人獲勝，不用等流程走完 →</button>';
       }
     }
+    // 動物夢境：白貓翻牌、河豚吃刀翻牌、熊的咆哮，都在天亮公布死訊之後宣布。
+    let animalDawnHtml='';
+    whitecatFlipNums.forEach(n=>{
+      animalDawnHtml+='<div class="speech">「<em>'+n+'號 是白貓，翻牌免疫本次死亡，下一次放逐階段結束後才會死亡。</em>」</div>';
+      jgPushDayLog('白貓'+n+'翻牌免死');
+    });
+    if(pufferRevealNum){
+      animalDawnHtml+='<div class="speech">「<em>'+pufferRevealNum+'號 是河豚，吃刀出局翻牌。今天白天狼美人的魅惑技能失效。</em>」</div>';
+      jgPushDayLog('河豚'+pufferRevealNum+'吃刀翻牌，狼美人今天魅惑失效');
+    }
+    if(jgComp.bear>0){
+      const gi=jgBearGrowlInfo();
+      if(gi&&!gi.dead){
+        animalDawnHtml+='<div class="speech" style="font-size:16px;">「<em>'+(gi.growl?'熊咆哮了！':'熊沒有咆哮。')+'</em>」</div>'
+          +'<div class="info" style="font-size:12px;">（給法官：熊是 '+gi.bear.num+'號，左右最近的存活玩家是 '+(gi.left?gi.left.num:'-')+'號、'+(gi.right?gi.right.num:'-')+'號）</div>';
+        jgPushDayLog(gi.growl?'熊咆哮':'熊未咆哮');
+      } else if(gi&&gi.dead){
+        animalDawnHtml+='<div class="info" style="font-size:12px;">熊已出局，不再咆哮。</div>';
+      }
+    }
     jgShowPg(`
       <h2>天亮了！</h2>
       ${sheriffJustResolved?sheriffBannerHtml:'<div class="speech" style="font-size:16px;">「<em>天亮請睜眼。</em>」</div>'}
       ${sdMsg?'<div class="speech" style="font-size:16px;">「<em>'+sdMsg+'</em>」</div>':''}
       <div class="speech" style="font-size:16px;">「<em>${dawnMsg}</em>」</div>
+      ${animalDawnHtml}
       ${bloodmoonEndgameHtml}
       ${hunterShotHtml}
       ${lwHtml}
@@ -2393,6 +2493,16 @@ function jgRenderStep(step){
     `,'💬 遺言');
   }
   else if(step==='next-night'){
+    if(jgRecord._exileVoteHeld){
+      jgPlayers.forEach(p=>{
+        if(p.role==='whitecat'&&p.alive&&p.whitecatFlipped&&p.whitecatDeathDay!=null&&p.whitecatDeathDay<=jgNight){
+          p.alive=false;
+          jgPushDayLog('白貓'+p.num+'放逐階段結束後死亡');
+          alert(p.num+'號 白貓：翻牌後的放逐階段已經結束，現在死亡。\n\n法官口白：「'+p.num+'號 白貓死亡。」');
+        }
+      });
+      jgRenderRoster();
+    }
     const res=jgCheckWin();
     if(res){jgShowWin(res);return;}
     jgNight++;
