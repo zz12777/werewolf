@@ -91,6 +91,10 @@ const JG_BOARD_PRESETS = {
   biggreywolf_diviner:{label:'大灰狼+占卜師', fixed:{biggreywolf:1, diviner:1, seer:1, witch:1, hunter:1}},
   zombie_board:{label:'殭屍', fixed:{wolfking:1, seer:1, witch:1, hunter:1, zombie:1}},
   trickery_realm:{label:'詭術之境', fixed:{trickster:1, seer:1, witch:1, trickmage:1, sequenceprince:1}},
+  // 唯鄰是從：沒有新角色，是「狼人第一夜在開刀前選一位跟狼人相鄰的玩家當傀儡」的板子規則
+  // （見 js/night.js jgSaveWolf 的傀儡判定）。defaultByN：指定人數時直接套用這份建議配置，
+  // 不走一般「狼/神/民 1:1:1」的自動推算。
+  neighbor_puppet:{label:'唯鄰是從', fixed:{}, defaultByN:{12:{wolf:3, villager:5, seer:1, witch:1, hunter:1, guard:1}}},
 };
 
 // 選板子的下拉選單以前是寫死在 index.html 裡的 <option>，跟這裡的 JG_BOARD_PRESETS 是兩份
@@ -522,6 +526,10 @@ function jgSetBoardPreset(val){
 function jgApplyPresetDefaults(n){
   const preset=JG_BOARD_PRESETS[jgBoardPreset];
   if(!preset) return;
+  if(preset.defaultByN&&preset.defaultByN[n]){
+    jgRolePick=Object.assign({}, preset.defaultByN[n], {_init:true});
+    return;
+  }
   const rp={};
   Object.entries(preset.fixed).forEach(([k,v])=>{ rp[k]=v; });
   if(!rp.wolf) rp.wolf=1;

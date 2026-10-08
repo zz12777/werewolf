@@ -820,6 +820,12 @@ function jgSaveGuard(){
   jgLastGuardTarget=tv||null;
   jgRecord.guardTargetRaw=tv||null;
   jgRecord.guardTarget=tv?jgMagicSwapNum(tv):null;
+  // 唯鄰是從：守衛是傀儡，守護照樣選（他不知道自己被傀），但完全不生效。
+  jgRecord._puppetGuardVoid=null;
+  if(guardPfinal&&guardPfinal.puppet&&tv){
+    jgRecord._puppetGuardVoid=tv;
+    jgRecord.guardTarget=null;
+  }
   jgRenderRoster();
   jgGoStep(jgAfterGuardStep());
 }
@@ -1806,8 +1812,21 @@ function jgSaveLuckyoneNight(){
 
 function jgSeerAppearsWolf(p){
   if(!p) return false;
+  // 唯鄰是從：傀儡不管底牌是什麼，被查驗一律是查殺。
+  if(p.puppet) return true;
   if(p.role==='wolfbrother_y'&&!jgWolfBrotherAwakened) return false;
   return WOLF_ROLES.includes(p.role);
+}
+// 預言家「自己看到的」查驗結果：唯鄰是從裡預言家本人是傀儡時，技能錯亂、查驗結果整個相反。
+// 只套用在真正的預言家身上（幸運兒拿到的查驗技能不受影響）。
+function jgSeerResultIsWolf(target){
+  const base=jgSeerAppearsWolf(target);
+  const seerP=jgPlayers.find(p=>p.role==='seer');
+  return (seerP&&seerP.puppet)?!base:base;
+}
+function jgSeerCheckLabel(target){
+  if(!target) return '';
+  return jgSeerResultIsWolf(target)?'(狼)':'(好)';
 }
 
 function jgUpdateLuckyoneSeerResult(){
@@ -1859,6 +1878,21 @@ function jgSaveWolf(){
     // 不再跟狼人擠在同一個畫面裡（見上方 wolf-wake 的畫面已移除石像鬼欄位）。
     jgRenderRoster();
   }
+  // 唯鄰是從：第一晚開刀前必須選好傀儡（狼人左右相鄰、本身不是狼人，圓桌頭尾相連）。
+  if(jgPuppetMode&&isFirst){
+    const pv=(document.getElementById('jg-puppet-pick')||{}).value?.trim()||'';
+    if(!pv){ alert('⚠️ 唯鄰是從：狼人第一晚開刀前必須先選一位跟狼人相鄰的玩家當傀儡！'); return; }
+    const wolfNums=jgPlayers.filter(p=>jgIsWolfPackMember(p)).map(p=>p.num);
+    const cands=jgPuppetCandidateNums(wolfNums);
+    if(!cands.includes(parseInt(pv))){
+      alert('⚠️ '+pv+'號 不能當傀儡：傀儡只能選狼人左右相鄰、而且本身不是狼人的玩家。\n目前可選：'+(cands.length?cands.join('、')+'號':'（請先確認狼人號碼）'));
+      return;
+    }
+    jgPlayers.forEach(p=>{ delete p.puppet; });
+    const pp=jgFind(pv);
+    if(pp) pp.puppet=true;
+    jgRenderRoster();
+  }
   { const wolfRecEl=document.getElementById('jg-wolf-rec');
     // 小狼已全滅（大灰狼／機械狼接管）時，這個畫面不會渲染 jg-wolf-rec 這個欄位，維持
     // 接管者自己畫面已經寫進 jgRecord.wolfKill 的值，不要在這裡用「找不到欄位」的空值
@@ -1892,10 +1926,12 @@ function jgUpdateSeerResult(){
   const actualVal=jgMagicSwapNum(val);
   const found=jgFind(actualVal);
   if(!found){if(box)box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
-  const isWolf=jgSeerAppearsWolf(found);
+  const isWolf=jgSeerResultIsWolf(found);
+  const _seerSelf=jgPlayers.find(p=>p.role==='seer');
+  const puppetNote=(_seerSelf&&_seerSelf.puppet)?'<div style="font-size:11px;color:var(--text2);margin-top:4px;">（預言家是傀儡，查驗結果已經反過來，請直接照上面顯示的結果比手勢）</div>':'';
   const dn=found.name&&found.name!==found.num+'號'?found.name:'';
   const swapNote=actualVal!==val?'<div style="font-size:11px;color:var(--text2);margin-top:4px;">（魔術師換牌，實際查驗 '+found.num+'號，法官心裡有數即可，不用告知玩家原因）</div>':'';
-  if(box) box.innerHTML='<div class="'+(isWolf?'info-danger':'info-success')+'" style="font-size:20px;font-weight:800;text-align:center;padding:18px;">'+found.num+'號'+(dn?' '+dn:'')+' → '+(isWolf?'狼人 👎':'好人 👍')+'</div>'+swapNote;
+  if(box) box.innerHTML='<div class="'+(isWolf?'info-danger':'info-success')+'" style="font-size:20px;font-weight:800;text-align:center;padding:18px;">'+found.num+'號'+(dn?' '+dn:'')+' → '+(isWolf?'狼人 👎':'好人 👍')+'</div>'+swapNote+puppetNote;
 }
 
 function jgSaveSeer(){
@@ -2398,6 +2434,15 @@ function jgSaveWitch(){
         jgEvilKnightRevengeUsed=true; // 整局限一次；若同一晚預言家已先發動，這裡會被上面的判斷擋掉
       }
     }
+  }
+  // 唯鄰是從：女巫是傀儡，解藥／毒藥照樣算用掉（她不知道自己被傀），但都不會生效。
+  jgRecord._puppetWitchVoidSave=false; jgRecord._puppetWitchVoidPoison=null;
+  if(witchPfinal&&witchPfinal.puppet&&!witchFearedFinal){
+    jgRecord._puppetWitchVoidSave=!!jgRecord.witchSave;
+    jgRecord._puppetWitchVoidPoison=jgRecord.witchPoisonRaw||null;
+    jgRecord.witchSave=null;
+    jgRecord.witchPoison=null; jgRecord.witchPoisonRaw=null;
+    jgRecord.evilknightRevengeWitch=false;
   }
   jgRecord.witchStepDone=true;
   if(jgTryEarlyEnd()) return;

@@ -706,11 +706,24 @@ function jgRenderStep(step){
         +jgNumSelectHtml('jg-wolf-identify-rec', jgRecord.wolfIdentifyGuessRaw||'')
         +'<div class="info" style="font-size:12px;margin-top:4px;">「請指認小女孩，三秒後投票，三、二、一」</div>'
       :'';
+    // 唯鄰是從：第一晚狼人在開刀前必須先選一位跟狼人相鄰的玩家當傀儡。
+    let puppetSectionHtml='';
+    if(jgPuppetMode&&isFirst){
+      const knownWolfNums=jgPlayers.filter(p=>jgIsWolfPackMember(p)).map(p=>p.num);
+      const curPuppet=jgPuppetPlayer();
+      const candHint=knownWolfNums.length?'<div class="info" style="font-size:12px;margin-top:4px;">可選（狼人左右相鄰、且不是狼人）：'+jgPuppetCandidateNums(knownWolfNums).join('、')+'號</div>':'<div class="info" style="font-size:12px;margin-top:4px;">只能選狼人左右相鄰、且本身不是狼人的玩家（1號與最後一號也算相鄰），按下一步時會自動檢查。</div>';
+      puppetSectionHtml='<div class="speech">「<em>請選擇一位與狼人相鄰的玩家作為傀儡。</em>」</div>'
+        +'<label>傀儡號碼（必選）</label>'
+        +jgNumSelectHtml('jg-puppet-pick', curPuppet?curPuppet.num:'')
+        +candHint
+        +'<div class="divider" style="margin:12px 0 8px;"></div>';
+    }
     jgShowPg(`
       <h2>狼人睜眼</h2>
       <div class="speech">「<em>${wolfWakeLabel}請睜眼。${(isFirst&&jgComp.biggreywolf>0)?'大灰狼請比讚，大灰狼請閉眼。':''}</em>」</div>
       ${(isFirst&&jgComp.biggreywolf>0)?'<div class="info" style="font-size:12px;">（給法官的註記：大灰狼這裡僅確認身分並比讚，之後都不會參與殺人討論，除非狼隊友死光）</div>':''}
       ${needId?wolfFieldsInner+'<div class="divider" style="margin:12px 0 8px;"></div>':''}
+      ${puppetSectionHtml}
       ${mainPackAlive?`<div class="speech">「<em>請選擇今晚要殺的對象。</em>」</div>
       ${compatNote}
       <div id="jg-wolf-blocked-msg" style="${jgRecord.nightmareBlocksWolf?'':'display:none;'}"><div class="info-danger">⚠️ 夢魘恐懼到狼隊友，狼人今晚不得殺人</div></div>
@@ -1110,7 +1123,8 @@ function jgRenderStep(step){
     const hunterExists=(jgNight===1&&jgComp.hunter>0)||hunterP;
     if(!hunterExists){ jgGoStep(jgAfterHunterStep()); return; }
     const idHtml=jgIdFieldHtml('獵人', hunterP, 'jg-hunter-who', 'jg-hunter-name', 'jgHunterIdCheck');
-    const statusHtml=hunterP?jgBuildHunterStatusHtml(hunterP):'';
+    const statusHtml=(hunterP&&hunterP.puppet?'<div class="info" style="font-size:12px;">（給法官的註記：這位獵人是傀儡，死亡時技能會失效無法開槍；手勢照常比，不要讓他發現自己被傀）</div>':'')
+      +(hunterP?jgBuildHunterStatusHtml(hunterP):'');
     jgShowPg(`
       <h2>獵人睜眼</h2>
       <div class="speech">「<em>獵人請睜眼。</em>」</div>

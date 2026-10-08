@@ -136,13 +136,13 @@
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-icon">🎩</span>
-      <span class="rcol-name">魔術師＋黑/白狼王</span>
+      <span class="rcol-name">魔術師</span>
       <span class="rcol-arrow">▶</span>
     </div>
     <div class="rcol-body" data-ov="board-magician-wolfking">
       <span class="board-role">魔術師</span>：每晚最早行動，可以交換兩個號碼牌，當晚所有以號碼為目標的技能（狼刀、查驗、毒藥、守護等）都會被「換流」到對方身上，是很容易翻盤或誤傷隊友的關鍵神職。<br><span class="role-link" onclick="jumpToRole('magician')">→ 查看魔術師完整規則</span>
       <br><br>
-      <span class="board-role">黑狼王／白狼王</span>：這個板子的狼王身分可以彈性選擇黑狼王或白狼王（法官在選角時二選一）。黑狼王被狼刀（夜槍）或被票出局（白天槍）淘汰時可以開槍帶走一名玩家，就算被守衛與女巫同時作用「奶穿」也照樣能帶人；但被女巫毒殺、或選擇自爆時，就不能發動這個技能。白狼王則是改成「自爆帶人」：白天除了投票環節以外的任何階段都可以主動自爆並帶走一名玩家，但被放逐、被獵人帶走、或夜間被隊友自刀時都不能帶人。<br><span class="role-link" onclick="jumpToRole('wolfking')">→ 查看黑狼王完整規則</span>　<span class="role-link" onclick="jumpToRole('whitewolf')">→ 查看白狼王完整規則</span>
+      <span class="board-role">黑狼王／白狼王（可選）</span>：這個板子不一定要加狼王，法官選角時可以自由加選黑狼王或白狼王（二選一），也可以都不加。黑狼王被狼刀（夜槍）或被票出局（白天槍）淘汰時可以開槍帶走一名玩家，就算被守衛與女巫同時作用「奶穿」也照樣能帶人；但被女巫毒殺、或選擇自爆時，就不能發動這個技能。白狼王則是改成「自爆帶人」：白天除了投票環節以外的任何階段都可以主動自爆並帶走一名玩家，但被放逐、被獵人帶走、或夜間被隊友自刀時都不能帶人。<br><span class="role-link" onclick="jumpToRole('wolfking')">→ 查看黑狼王完整規則</span>　<span class="role-link" onclick="jumpToRole('whitewolf')">→ 查看白狼王完整規則</span>
     </div>
   </div>
 
@@ -276,6 +276,20 @@
       <span class="role-link" onclick="jumpToRole('bigmechwolf')">→ 查看大機械狼完整規則</span>　<span class="role-link" onclick="jumpToRole('smallmechwolf')">→ 查看小機械狼完整規則</span>
       <br><br>
       <a href="https://youtu.be/l0NQIKWmsZs?si=ErImvl2415TlXJb3" target="_blank" rel="noopener">🎬 實玩影片</a>
+    </div>
+  </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h16"/><path d="M7 3v6M17 3v6M12 3v3.5"/><circle cx="12" cy="9" r="2.5"/><path d="M12 11.5V17M7 9l5 4 5-4M9 21l3-4 3 4"/></svg></span>
+      <span class="rcol-name">唯鄰是從</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body" data-ov="board-neighbor-puppet">
+      <span class="board-role">傀儡</span>：狼人首晚在開刀前，必須選擇一位與狼人相鄰的玩家作為傀儡（座位圍成一圈，1號與最後一號也算相鄰）。傀儡的底牌不變，但被查驗為查殺，且技能會錯亂：<br>
+      · 預言家：查驗結果相反<br>
+      · 女巫、獵人、守衛：技能失效<br>
+      傀儡不會知道自己被傀，也不知道狼隊有誰，且無法自爆；如果其他狼隊友都出局，傀儡也不會入隊。<br><br>
+      <div class="info" style="font-size:12px;">建議配置（12人）：狼人×3、平民×5、預言家、女巫、獵人、守衛。</div>
     </div>
   </div>
   </div>
@@ -589,7 +603,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-08-b</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-08-c</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="data/games-history.js"></script>
