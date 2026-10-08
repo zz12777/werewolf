@@ -35,8 +35,8 @@
   </div>
 
   <!-- 搜尋 -->
-  <div class="rules-search-wrap">
-    <input type="search" id="rules-search" class="rules-search-input" placeholder="🔍 搜尋角色、板子、名詞…" oninput="rulesSearch(this.value)">
+  <div class="rules-search-wrap"><span class="rules-search-ico"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></span>
+    <input type="search" id="rules-search" class="rules-search-input" placeholder="搜尋角色、板子、名詞…" oninput="rulesSearch(this.value)">
   </div>
   <div class="empty" id="rules-search-empty" style="display:none;">沒有符合「<span id="rules-search-empty-term"></span>」的結果</div>
 
@@ -57,9 +57,9 @@
   <div class="card-grid">
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🤖</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="2.5"/><circle cx="12" cy="4.5" r="1.2"/><path d="M12 5.7V8M9.5 12.5h.01M14.5 12.5h.01M9.5 16h5M3 12v3M21 12v3"/></svg></span>
       <span class="rcol-name">機械狼＋通靈師</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-mechwolf-medium">
       <span class="board-role">機械狼</span>：不與其他狼人相認、全程不可自爆，靠夜晚「學習」一名玩家的身份技能，次晚起就能使用該技能；等其餘狼隊友全滅後，機械狼會獨自帶刀殺人。<br><span class="role-link" onclick="jumpToRole('mechanicalwolf')">→ 查看機械狼完整規則</span>
@@ -70,9 +70,9 @@
 
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🌙</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.5 14.5A7.5 7.5 0 1 1 9 5a6 6 0 0 0 9.5 9.5z"/><path d="M15 3h4l-4 4h4"/></svg></span>
       <span class="rcol-name">攝夢人＋夢魘</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-dreamcatcher-nightmare">
       <span class="board-role">夢魘</span>：在狼人行動前搶先發動技能，恐懼一名玩家使其當晚技能失效（若恐懼到隊友，狼人當晚就無法殺人）。<br><span class="role-link" onclick="jumpToRole('nightmare')">→ 查看夢魘完整規則</span>
@@ -83,9 +83,9 @@
 
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">💰</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.5h6L13.5 7h-3z"/><path d="M10.5 7C6 9 4.5 13 4.5 16a4 4 0 0 0 4 4h7a4 4 0 0 0 4-4c0-3-1.5-7-6-9"/><path d="M12 10.5v8M14 12.3h-2.8a1.2 1.2 0 0 0 0 2.4h1.6a1.2 1.2 0 0 1 0 2.4H10"/></svg></span>
       <span class="rcol-name">黑市商人＋狼兄狼弟</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-blackmarket-wolfbrothers">
       <span class="board-role">狼兄／狼弟</span>：首夜互相確認身份；狼兄陣亡前，狼弟形同「隱狼」——不參與狼人殺人、查驗也顯示好人，直到狼兄陣亡的下一晚才會覺醒並被迫殺一人復仇，之後才正式加入狼窩。<br><span class="role-link" onclick="jumpToRole('wolfbrother_e')">→ 查看狼兄完整規則</span>　<span class="role-link" onclick="jumpToRole('wolfbrother_y')">→ 查看狼弟完整規則</span>
@@ -96,9 +96,9 @@
 
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">💋</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 4.5L9.5 14.5M19.5 4.5h-4M19.5 4.5v4"/><path d="M7 12l5 5M8.5 15.5L5 19M3.5 20.5l1.5-1.5"/></svg></span>
       <span class="rcol-name">狼美人＋騎士</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-wolfbeauty-knight">
       <span class="board-role">狼美人</span>：每晚必須魅惑一名玩家（不能連續兩晚選同一人），一旦狼美人出局或被毒，魅惑對象就會殉情陪葬。<br><span class="role-link" onclick="jumpToRole('wolfbeauty')">→ 查看狼美人完整規則</span>
@@ -109,9 +109,9 @@
 
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🗿</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V10a6 6 0 0 1 12 0v11"/><path d="M4 21h16M12 8.5v6M9.5 11h5"/></svg></span>
       <span class="rcol-name">石像鬼＋守墓人</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-gargoyle-gravkeeper">
       <span class="board-role">石像鬼</span>：每晚查驗一名玩家的具體角色；不與狼隊見面，隊友全滅前不能殺人，隊友全滅後可在查驗之外額外選擇今晚的帶刀對象殺人，不可自爆但可自刀。<br><span class="role-link" onclick="jumpToRole('gargoyle')">→ 查看石像鬼完整規則</span>
@@ -122,9 +122,9 @@
 
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🌑</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M14 4.3a8 8 0 0 1 0 15.4 10 10 0 0 0 0-15.4z"/><path d="M8 9.5h.01M9.5 14h.01"/></svg></span>
       <span class="rcol-name">血月使者＋獵魔人</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-bloodmoon-demonhunter">
       <span class="board-role">血月使者</span>：白天自己發言階段可自爆直接進入黑夜，並封印當晚所有神牌技能；若是最後一個被放逐的狼人，還能暫時存活到夜晚再殺一人，達成屠邊就直接獲勝。<br><span class="role-link" onclick="jumpToRole('bloodmoon')">→ 查看血月使者完整規則</span>
@@ -135,9 +135,9 @@
 
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🎩</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.5 15.5V5h9v10.5"/><path d="M7.5 12h9"/><ellipse cx="12" cy="17" rx="9.5" ry="2.5"/></svg></span>
       <span class="rcol-name">魔術師</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-magician-wolfking">
       <span class="board-role">魔術師</span>：每晚最早行動，可以交換兩個號碼牌，當晚所有以號碼為目標的技能（狼刀、查驗、毒藥、守護等）都會被「換流」到對方身上，是很容易翻盤或誤傷隊友的關鍵神職。<br><span class="role-link" onclick="jumpToRole('magician')">→ 查看魔術師完整規則</span>
@@ -148,9 +148,9 @@
 
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🧬</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3c0 4.5 10 4.5 10 9s-10 4.5-10 9"/><path d="M17 3c0 4.5-10 4.5-10 9s10 4.5 10 9"/><path d="M8.5 6h7M8.5 18h7"/></svg></span>
       <span class="rcol-name">混血兒＋黑/白狼王＋血月</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-hybrid-wolfking-bloodmoon">
       <span class="board-role">混血兒</span>：第一晚選擇一位玩家作為支持對象後就沒有其他夜間動作，勝負跟著支持對象的陣營走，但自己不知道對方是好是壞，全靠發言判斷；查驗永遠顯示好人，人數與屠邊判定上也算平民。<br><span class="role-link" onclick="jumpToRole('hybrid')">→ 查看混血兒完整規則</span>
@@ -160,9 +160,9 @@
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🖤</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3.2 8.5-7 10-3.8-1.5-7-5-7-10V6z"/><path d="M12 7.5v9M8.5 11h7"/></svg></span>
       <span class="rcol-name">惡靈騎士＋守衛</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-evilknight-guard">
       <span class="board-role">惡靈騎士</span>：夜間免疫狼殺、女巫毒與夜槍，但被預言家查驗或被女巫毒殺後，隔天會反傷對方（預言家／女巫）死亡，是很容易讓神職誤觸的陷阱狼。<br><span class="role-link" onclick="jumpToRole('evilknight')">→ 查看惡靈騎士完整規則</span>
@@ -172,9 +172,9 @@
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">💘</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M3 21L21 3M21 3h-4M21 3v4"/></svg></span>
       <span class="rcol-name">邱比特</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-cupid">
       <span class="board-role">邱比特</span>：全場第一個睜眼的角色，第一夜指定兩名玩家（可以鏈自己）成為情侶；兩人隨後互相確認彼此，但不知道誰是邱比特、也不知道對方陣營。若兩人陣營相同（人人鏈／狼狼鏈），邱比特的勝負跟著那個陣營走；若一人好人一人狼人（人狼鏈），邱比特與這對情侶會獨立成為第三方陣營，勝負規則完全不同（見下方「勝利條件」）。情侶其中一人死亡，另一人會立刻殉情，殉情者原本的技能不會發動。建議搭配 10 人（3神3民3狼+邱比特）或 13 人（4神4民4狼+邱比特）板子使用；本板狼隊刀人需刀型一致，不一致視為空刀。<br><span class="role-link" onclick="jumpToRole('cupid')">→ 查看邱比特完整規則</span>
@@ -182,9 +182,9 @@
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🐺</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l3 5h8l3-5v8l-3 6-4 4-4-4-3-6z"/><path d="M9.5 12h.01M14.5 12h.01M11 16l1 1 1-1"/></svg></span>
       <span class="rcol-name">大灰狼＋占卜師</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-biggreywolf-diviner">
       <span class="board-role">大灰狼</span>：全程單獨睜眼，法官會告知彼此位置。第二晚起可以選擇發動一次「襲擊技能」額外殺一人；若占卜師同一晚也發動標記技能，大灰狼當晚一定要用襲擊技能出刀。一旦一般狼人全滅，大灰狼改成負責正常狼刀。<br><span class="role-link" onclick="jumpToRole('biggreywolf')">→ 查看大灰狼完整規則</span>
@@ -194,9 +194,9 @@
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🧟</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18"/><path d="M8 21v-7a1.2 1.2 0 0 1 2.4 0v-2a1.2 1.2 0 0 1 2.4 0v1a1.2 1.2 0 0 1 2.4 0v1a1.2 1.2 0 0 1 2.4 0v4.5L16.5 21"/><path d="M8 16.5l-2.5-2"/></svg></span>
       <span class="rcol-name">殭屍</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-zombie">
       <span class="board-role">殭屍</span>：獨立於好人／狼人之外的第三方陣營，每晚可以感染0～2名玩家（不能感染自己）。被感染的玩家會互相認識彼此，感染是永久的，不會治癒。當場上除了殭屍自己以外的存活玩家都被感染，殭屍就單獨獲勝。被預言家查驗一律顯示金水，不會被驗成狼人。建議搭配黑狼王、預言家、女巫、獵人使用。<br><span class="role-link" onclick="jumpToRole('zombie')">→ 查看殭屍完整規則</span>
@@ -204,9 +204,9 @@
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🎭</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 9-9 9-9-9z"/><path d="M7.5 12s1.8-2.7 4.5-2.7 4.5 2.7 4.5 2.7-1.8 2.7-4.5 2.7S7.5 12 7.5 12z"/><path d="M12 12h.01"/></svg></span>
       <span class="rcol-name">詭術之境</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-trickery">
       <span class="board-role">詭術師</span>：跟一般狼人一起睜眼參與出刀決策，可以自爆；每晚另外有自己獨立的「換票」回合，交換兩個玩家的號碼牌，隔天白天投給這兩個號碼的票數會互相對調（只對那一天有效），不能連續兩晚選同一個號碼。<br><span class="role-link" onclick="jumpToRole('trickster')">→ 查看詭術師完整規則</span>
@@ -220,9 +220,9 @@
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🔮</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="10" r="6"/><path d="M9.5 8.5a3 3 0 0 1 2.5-1.5"/><path d="M8.5 15.5L7.5 19M15.5 15.5l1 3.5M5.5 21h13"/></svg></span>
       <span class="rcol-name">狼巫＋純白之女</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-wolfshaman-purewhitemaiden">
       <span class="board-role">狼巫</span>：與其餘狼人一同睜眼、參與商議選擇獵殺對象；刀口決定後，獨自睜眼查驗一名玩家的真實身份，第二夜起若查到純白之女，純白之女立即死亡（守衛與女巫都無法保護）。<br><span class="role-link" onclick="jumpToRole('wolfshaman')">→ 查看狼巫完整規則</span>
@@ -232,23 +232,23 @@
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🎭</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9c2-1.5 5.5-1.5 9 0 3.5-1.5 7-1.5 9 0-.5 4.5-3 6.5-5.5 6.5-2 0-3-1.5-3.5-2.5-.5 1-1.5 2.5-3.5 2.5C6 15.5 3.5 13.5 3 9z"/><path d="M6.5 11h2.5M15 11h2.5"/></svg></span>
       <span class="rcol-name">假面舞會（假面＋舞者）</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-mask-dancer">
       <span class="board-role">假面</span>：不與狼隊見面、不可自爆；其餘正牌狼人全滅後可獨自帶刀殺人。第二夜起可先查驗一名玩家今晚是否在舞池中，之後可給予1名玩家面具，改變該玩家「當夜」在舞池陣營判定中的陣營；查驗與給予面具都不能連續兩晚指定同一人。<br><span class="role-link" onclick="jumpToRole('mask')">→ 查看假面完整規則</span>
       <br><br>
       <span class="board-role">舞者</span>：第二夜起每晚強制選3名玩家共舞（可以選自己），這3人若陣營相同無事發生，不同則人數較少的一方死亡；每位玩家整局只能共舞一次。若舞者選自己進入舞池，當晚舞池中所有人都免疫狼刀。<br><span class="role-link" onclick="jumpToRole('dancer')">→ 查看舞者完整規則</span>
       <br><br>
-      <a href="https://youtu.be/ZT3tIQmRszE?si=VZ8JMzdC0nTuCf8W" target="_blank" rel="noopener">📺 板子介紹影片</a>　<a href="https://youtu.be/vz_vDFL_N08?si=pkzyScdeYlmSz1ZQ" target="_blank" rel="noopener">🎬 實玩影片</a>
+      <a href="https://youtu.be/ZT3tIQmRszE?si=VZ8JMzdC0nTuCf8W" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;margin-right:3px;"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z"/></svg>板子介紹影片</a>　<a href="https://youtu.be/vz_vDFL_N08?si=pkzyScdeYlmSz1ZQ" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;margin-right:3px;"><path d="M4 9.5h16V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 9.5l1-4 15 2.5-.5 1.5M8.5 6l1.5 3.5M13.5 6.8l1.5 2.7"/></svg>實玩影片</a>
     </div>
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🐺</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="15.5" r="3.5"/><circle cx="6" cy="10.5" r="1.7"/><circle cx="9.7" cy="6.5" r="1.7"/><circle cx="14.3" cy="6.5" r="1.7"/><circle cx="18" cy="10.5" r="1.7"/></svg></span>
       <span class="rcol-name">大野狼＋小女孩</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-bigbadwolf-littlegirl">
       <span class="board-role">大野狼</span>：與狼隊一同睜眼決定殺人對象，可以被隊友自刀，也可以自己自爆。只要場上四隻狼（狼人×3＋大野狼）全部存活，可以在女巫結束之後額外殺一人（跟正常狼刀分開，可能同時造成兩人死亡）；只要有任何一隻狼已經陣亡，這個技能就失效。<br><span class="role-link" onclick="jumpToRole('bigbadwolf')">→ 查看大野狼完整規則</span>
@@ -258,9 +258,9 @@
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
-      <span class="rcol-icon">🤖</span>
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="9.5" width="9" height="8" rx="2"/><rect x="12.5" y="6.5" width="9" height="8" rx="2"/><path d="M5.5 13.5h.01M8.5 13.5h.01M15.5 10.5h.01M18.5 10.5h.01M7 9.5V7.5M17 6.5V4.5"/></svg></span>
       <span class="rcol-name">雙機械狼（大機械狼＋小機械狼）</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-bigmechwolf-smallmechwolf">
       <span class="board-role">大機械狼／小機械狼</span>：都不與其他狼見面，只在自己睜眼階段單獨睜眼；帶刀優先順序是「一般狼人 → 大機械狼 → 小機械狼」，前面的全滅才輪到後面的。兩隻都不能自爆。<br>
@@ -275,14 +275,14 @@
       · 兩個機械狼都學到狼人：小機械狼下一晚直接回歸狼隊，且當夜狼隊刀為無敵刀（可破守衛的盾）；大機械狼仍照原本順序，輪到時第一晚帶雙刀<br>
       <span class="role-link" onclick="jumpToRole('bigmechwolf')">→ 查看大機械狼完整規則</span>　<span class="role-link" onclick="jumpToRole('smallmechwolf')">→ 查看小機械狼完整規則</span>
       <br><br>
-      <a href="https://youtu.be/l0NQIKWmsZs?si=ErImvl2415TlXJb3" target="_blank" rel="noopener">🎬 實玩影片</a>
+      <a href="https://youtu.be/l0NQIKWmsZs?si=ErImvl2415TlXJb3" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;margin-right:3px;"><path d="M4 9.5h16V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M4 9.5l1-4 15 2.5-.5 1.5M8.5 6l1.5 3.5M13.5 6.8l1.5 2.7"/></svg>實玩影片</a>
     </div>
   </div>
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h16"/><path d="M7 3v6M17 3v6M12 3v3.5"/><circle cx="12" cy="9" r="2.5"/><path d="M12 11.5V17M7 9l5 4 5-4M9 21l3-4 3 4"/></svg></span>
       <span class="rcol-name">唯鄰是從</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-neighbor-puppet">
       <span class="board-role">傀儡</span>：狼人首晚在開刀前，必須選擇一位與狼人相鄰的玩家作為傀儡（座位圍成一圈，1號與最後一號也算相鄰）。傀儡的底牌不變，但被查驗為查殺，且技能會錯亂：<br>
@@ -296,7 +296,7 @@
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/><path d="M16 4.5v3M14.5 6h3"/></svg></span>
       <span class="rcol-name">動物夢境</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="board-animal-dream">
       <strong>配置（12人）</strong><br>
@@ -319,10 +319,10 @@
   <!-- 勝利條件 -->
   <div class="rules-section" id="sec-win">
   <div class="rules-h1">勝利條件</div>
-  <div class="info-danger" style="margin-bottom:8px;" data-ov="wincond-wolf">🐺 狼人勝利：存活狼人數 ≥ 存活好人數，或所有神職死亡，或所有平民死亡</div>
-  <div class="info-success" style="margin-bottom:8px;" data-ov="wincond-good">✓ 好人勝利：所有狼人被淘汰</div>
-  <div class="info" style="margin-bottom:8px;" data-ov="wincond-cupid">💘 邱比特板（人狼鏈成立時）：邱比特＋情侶獨立成第三方陣營。第三方需屠光其餘所有玩家（屠城）才算獲勝；若第三方存活3人而場上其餘存活人數剩2人，直接判定第三方獲勝；若第三方人數少於3人，則與其餘玩家人數相當時，第三方獲勝。「狼人與好人陣營」除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。</div>
-  <div class="info" style="margin-bottom:8px;" data-ov="wincond-zombie">🧟 殭屍板：殭屍是獨立的第三方陣營，當場上除了殭屍自己以外的存活玩家都被感染，殭屍就單獨獲勝；殭屍死亡的話，就照一般好人／狼人規則判定勝負。</div>
+  <div class="info-danger" style="margin-bottom:8px;" data-ov="wincond-wolf"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M5 3l3 5h8l3-5v8l-3 6-4 4-4-4-3-6z"/><path d="M9.5 12h.01M14.5 12h.01M11 16l1 1 1-1"/></svg> 狼人勝利：存活狼人數 ≥ 存活好人數，或所有神職死亡，或所有平民死亡</div>
+  <div class="info-success" style="margin-bottom:8px;" data-ov="wincond-good"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M5 12.5l4.5 4.5L19 7"/></svg> 好人勝利：所有狼人被淘汰</div>
+  <div class="info" style="margin-bottom:8px;" data-ov="wincond-cupid"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M3 21L21 3M21 3h-4M21 3v4"/></svg> 邱比特板（人狼鏈成立時）：邱比特＋情侶獨立成第三方陣營。第三方需屠光其餘所有玩家（屠城）才算獲勝；若第三方存活3人而場上其餘存活人數剩2人，直接判定第三方獲勝；若第三方人數少於3人，則與其餘玩家人數相當時，第三方獲勝。「狼人與好人陣營」除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。</div>
+  <div class="info" style="margin-bottom:8px;" data-ov="wincond-zombie"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M3 21h18"/><path d="M8 21v-7a1.2 1.2 0 0 1 2.4 0v-2a1.2 1.2 0 0 1 2.4 0v1a1.2 1.2 0 0 1 2.4 0v1a1.2 1.2 0 0 1 2.4 0v4.5L16.5 21"/><path d="M8 16.5l-2.5-2"/></svg> 殭屍板：殭屍是獨立的第三方陣營，當場上除了殭屍自己以外的存活玩家都被感染，殭屍就單獨獲勝；殭屍死亡的話，就照一般好人／狼人規則判定勝負。</div>
   </div>
 
   <!-- 狼人陣營 -->
@@ -355,7 +355,7 @@
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-name">計票方式與平票 PK</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="voting-rules">
             <strong>結果判定：</strong>多數票者出局。<br>
@@ -370,7 +370,7 @@
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-name">自爆吞警徽規則</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="sheriff-badge-rules">
             <strong>是什麼：</strong>狼人在警長競選（警上）過程中主動自爆，讓警徽提前流失、拖慢好人陣營的查驗與投票節奏的操作。依照各房間／賽事規則不同，主流有兩種：<br><br>
@@ -388,7 +388,7 @@
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-name">MVP選擇機制</span>
-      <span class="rcol-arrow">▶</span>
+      <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
     </div>
     <div class="rcol-body" data-ov="mvp-mechanism">
             由玩家提出MVP候選人若干。<br>
@@ -441,7 +441,7 @@
   <div id="jg-role-picker"></div>
   <div id="jg-preset-picker" style="display:none;"></div>
   <div id="jg-fool-mode-row" style="display:none;margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);">
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">🃏 傻瓜規則</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M4 18c2-1 4-1.5 8-1.5s6 .5 8 1.5L18.5 8.5 15 12 12 5.5 9 12 5.5 8.5z"/><circle cx="5.5" cy="7" r="1.2"/><circle cx="12" cy="4" r="1.2"/><circle cx="18.5" cy="7" r="1.2"/></svg> 傻瓜規則</div>
     <div class="pd-seg" id="jg-fool-mode-seg">
       <button type="button" class="pd-seg-btn" id="jg-fool-mode-chase" onclick="jgSetFoolChaseMode('chase')">要追刀</button>
       <button type="button" class="pd-seg-btn" id="jg-fool-mode-nochase" onclick="jgSetFoolChaseMode('nochase')">不需追刀</button>
@@ -449,7 +449,7 @@
     <div class="info" id="jg-fool-mode-desc" style="font-size:12px;margin-top:8px;"></div>
   </div>
   <div id="jg-nightmare-mode-row" style="display:none;margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);">
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">😈 夢魘規則・是否每晚強制恐懼</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M5 3.5l3 4M19 3.5l-3 4"/><circle cx="12" cy="13" r="7"/><path d="M9 11.5l1.5 1M15 11.5l-1.5 1M9.5 16.5c1.5 1 3.5 1 5 0"/></svg> 夢魘規則・是否每晚強制恐懼</div>
     <div class="pd-seg" id="jg-nightmare-mode-seg">
       <button type="button" class="pd-seg-btn" id="jg-nightmare-mode-force" onclick="jgSetNightmareForceMode('force')">強制恐懼</button>
       <button type="button" class="pd-seg-btn" id="jg-nightmare-mode-optional" onclick="jgSetNightmareForceMode('optional')">可不恐懼</button>
@@ -481,7 +481,7 @@
 <!-- 法官設定：玩家名單 -->
 <div id="jg-p-roster" class="pg apple-ui-preview">
   <div class="nbanner">
-    <div class="nicon">👥</div>
+    <div class="nicon"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5"/></svg></div>
     <h2 class="ntitle">設定玩家名單</h2>
   </div>
   <div id="jg-roster-setup-rows"></div>
@@ -624,9 +624,10 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-08-g</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-08-i</span></footer>
 
 <!-- 純資料檔先載入 -->
+<script src="js/icons.js"></script>
 <script src="data/games-history.js"></script>
 
 <!-- 邏輯檔：core 最先，main 最後（main 裡的程式會立刻呼叫其他檔案定義的函式，必須確保它們都已載入） -->

@@ -175,9 +175,9 @@ function jgRenderSheriffCandidates(){
   jgShowPg(`
     <h2>警長競選・候選人</h2>
     <div class="speech" style="font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">「<em>現在開始競選警長，候選人請起立。</em>」<span style="display:inline-flex;gap:6px;">
-      <button type="button" onclick="jgSheriffAudioPlay()" title="播放" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">▶️</button>
-      <button type="button" onclick="jgSheriffAudioPause()" title="暫停" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">⏸️</button>
-      <button type="button" onclick="jgSheriffAudioReplay()" title="重播" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">🔁</button>
+      <button type="button" onclick="jgSheriffAudioPlay()" title="播放" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">${jgIcon('play')}</button>
+      <button type="button" onclick="jgSheriffAudioPause()" title="暫停" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">${jgIcon('pause')}</button>
+      <button type="button" onclick="jgSheriffAudioReplay()" title="重播" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">${jgIcon('replay')}</button>
     </span></div>
     <div class="info" style="font-size:12px;">（等候約 5 秒，讓想上警的玩家站起來，再點選以下號碼記錄候選人）</div>
     ${badgeBanner}
@@ -300,7 +300,7 @@ function jgRenderSheriffSpeechOrder(){
     <h2>警長競選・政見發表順序</h2>
     <div class="speech">「<em>請抽警長政見發表順序。</em>」</div>
     <div class="info" style="font-size:13px;">候選人：${cands.join('、')}號</div>
-    <div class="info" id="jg-sheriff-wheel-wrap"><button onclick="jgSpinSheriffWheel()">🎡 轉動轉盤</button><div id="jg-sheriff-wheel-result"></div></div>
+    <div class="info" id="jg-sheriff-wheel-wrap"><button onclick="jgSpinSheriffWheel()">${jgIcon('wheel')} 轉動轉盤</button><div id="jg-sheriff-wheel-result"></div></div>
     <button class="primary" style="margin-top:14px;" onclick="jgConfirmSheriffSpeechOrder()">開始政見發表 →</button>
   `,'🎖️ 警長競選');
 }
@@ -767,7 +767,7 @@ function jgRenderSheriffTransfer(){
     <div class="info" style="font-size:13px;">${deadName} 是警長，已經陣亡。請警長指定一位存活玩家繼承警徽，或選擇撕毀警徽。</div>
     <label>指定新警長（點選號碼）</label>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">${aliveNums.map(n=>'<button type="button" onclick="jgTransferSheriff('+n+')" style="width:44px;height:44px;border-radius:50%;padding:0;font-size:14px;font-weight:700;">'+n+'</button>').join('')||'（無存活玩家）'}</div>
-    <button class="danger" style="margin-top:14px;" onclick="jgTearSheriffBadge()">🔥 撕毀警徽（本局往後不再有警長）</button>
+    <button class="danger" style="margin-top:14px;" onclick="jgTearSheriffBadge()">${jgIcon('flame')} 撕毀警徽（本局往後不再有警長）</button>
   `,'🎖️ 交接警徽');
 }
 function jgTransferSheriff(n){

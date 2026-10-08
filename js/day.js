@@ -65,7 +65,7 @@ function jgDiscussExtraButtonsHtml(){
   // （封印當晚神職技能），選到一般狼人／黑狼王則走一般自爆流程，不用另外分開兩顆按鈕。
   // 自刀自爆規則：狼兄不可自爆（可自刀）、狼弟可自爆（可自刀），一併算進「狼人自爆」這顆按鈕的資格判斷
   const canWolfBlow=jgPlayers.some(p=>p.alive&&(p.role==='wolf'||p.role==='wolfking'||p.role==='bloodmoon'||p.role==='wolfbrother_y'||p.role==='wolfshaman'||p.role==='bigbadwolf'));
-  if(canWolfBlow) html+='<button class="danger" onclick="jgGoStep(\'wolf-selfblow\')" style="margin-top:6px;">🐺 狼人自爆 →<div style="font-size:11px;font-weight:400;opacity:0.85;margin-top:2px;">發言階段狼人可隨時自爆</div></button>';
+  if(canWolfBlow) html+='<button class="danger" onclick="jgGoStep(\'wolf-selfblow\')" style="margin-top:6px;">'+jgIcon('wolf')+' 狼人自爆 →<div style="font-size:11px;font-weight:400;opacity:0.85;margin-top:2px;">發言階段狼人可隨時自爆</div></button>';
   return html;
 }
 function jgFirstDayCompCheckHtml(){
@@ -109,7 +109,7 @@ function jgFirstDayCompCheckHtml(){
       +'</select></div>';
   }
   return '<div class="info-danger" style="margin-bottom:10px;font-size:13px;">⚠️ 身分配置與原始設定不符，請確認是否有神/狼身分忘記記錄：<br>'+mismatches.join('<br>')+'<br>目前：'+summary+'</div>'
-    +'<button style="margin-bottom:10px;" onclick="document.getElementById(\'jg-compfix-panel\').style.display=\'block\';this.style.display=\'none\';">🔧 直接修正身分</button>'
+    +'<button style="margin-bottom:10px;" onclick="document.getElementById(\'jg-compfix-panel\').style.display=\'block\';this.style.display=\'none\';">'+jgIcon('wrench')+' 直接修正身分</button>'
     +'<div id="jg-compfix-panel" style="display:none;margin-bottom:10px;">'
     +fixRows
     +'<button class="primary" style="margin-top:6px;" onclick="jgApplyCompFix()">套用修正</button>'

@@ -130,7 +130,7 @@ function jgRenderStep(step){
         +'<select id="jg-thief-wheel-cand2" onchange="jgThiefWheelManualUpdate()">'+jgThiefRoleOptionsHtml(cand2)+'</select>'
         +'<div id="jg-thief-wheel-manual-warn" style="margin-top:8px;"></div>'
         +'<div style="display:flex;gap:10px;margin-top:14px;">'
-        +'<button style="flex:1;" onclick="jgThiefWheelUseSpin()">🎡 改用轉盤抽取</button>'
+        +'<button style="flex:1;" onclick="jgThiefWheelUseSpin()">'+jgIcon('wheel')+' 改用轉盤抽取</button>'
         +'<button class="primary" style="flex:1;" onclick="jgThiefConfirmWheel()">已發牌，確認 →</button>'
         +'</div>';
     } else {
@@ -145,11 +145,11 @@ function jgRenderStep(step){
           +'</div>'
           +'<div class="info" style="font-size:12px;margin-top:8px;">請照這個結果去實際牌堆裡把這兩張牌拿起來（單獨保留給盜賊，不要洗進去），其餘的牌正常發給其他玩家。發完牌之後再點下方確認。</div>'
           +'<div style="display:flex;gap:10px;margin-top:14px;">'
-          +'<button style="flex:1;" onclick="jgThiefSpinWheel()">🔄 重新抽一次</button>'
+          +'<button style="flex:1;" onclick="jgThiefSpinWheel()">'+jgIcon('replay')+' 重新抽一次</button>'
           +'<button class="primary" style="flex:1;" onclick="jgThiefConfirmWheel()">已發牌，確認 →</button>'
           +'</div>'
         ):(
-          '<button class="primary" style="margin-top:14px;" onclick="jgThiefSpinWheel()">🎡 抽取候選身分</button>'
+          '<button class="primary" style="margin-top:14px;" onclick="jgThiefSpinWheel()">'+jgIcon('wheel')+' 抽取候選身分</button>'
         ))
         +'<div style="margin-top:10px;"><button onclick="jgThiefWheelUseManual()">或者，手動指定兩個候選</button></div>';
     }
@@ -172,7 +172,7 @@ function jgRenderStep(step){
         +'<select id="jg-thief-cand1" onchange="jgThiefUpdateChoiceUI()">'+jgThiefRoleOptionsHtml(cand1)+'</select>'
         +'<label style="margin-top:12px;">候選身分 B</label>'
         +'<select id="jg-thief-cand2" onchange="jgThiefUpdateChoiceUI()">'+jgThiefRoleOptionsHtml(cand2)+'</select>'
-        +'<button onclick="jgThiefShowBigCard()" style="margin-top:10px;width:100%;">📋 大字報顯示給盜賊看</button>'
+        +'<button onclick="jgThiefShowBigCard()" style="margin-top:10px;width:100%;">'+jgIcon('clip')+' 大字報顯示給盜賊看</button>'
         +(hasWheelResult?'<div style="margin-top:6px;"><button onclick="jgThiefUseWheelResult()">改用轉盤抽到的結果（'+jgFullRoleName(jgThiefWheelCand1)+' / '+jgFullRoleName(jgThiefWheelCand2)+'）</button></div>':'');
     } else {
       jgRecord._thiefCand1=jgThiefWheelCand1;
@@ -182,7 +182,7 @@ function jgRenderStep(step){
         +'<div class="ntitle" style="font-size:20px;">候選 A：'+jgFullRoleName(jgThiefWheelCand1)+'</div>'
         +'<div class="ntitle" style="font-size:20px;margin-top:4px;">候選 B：'+jgFullRoleName(jgThiefWheelCand2)+'</div>'
         +'</div>'
-        +'<button onclick="jgThiefShowBigCard()" style="margin-top:6px;width:100%;">📋 大字報顯示給盜賊看</button>'
+        +'<button onclick="jgThiefShowBigCard()" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給盜賊看</button>'
         +'<div style="margin-top:6px;"><button onclick="jgThiefUseManualMode()">改成手動指定候選</button></div>';
     }
     jgShowPg(`
@@ -1512,7 +1512,7 @@ function jgRenderStep(step){
       <div class="speech" style="margin-top:10px;">「<em>被拍到肩膀的人，等一下聽到『幸運兒請睜眼』時要睜眼。</em>」</div>
       <div class="info" style="font-size:13px;">${success?'法官起身，繞場走一圈，輕拍 '+ly.num+' 號玩家的肩膀':'法官起身，繞場走一圈，不用拍肩膀'}</div>
       <div class="speech" style="margin-top:10px;">「<em>幸運兒請睜眼。</em>」</div>
-      ${success?'<button onclick="jgShowBigCard(\''+ly.num+'號\',\''+giftLabel+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示技能給幸運兒看</button>':'<div class="info" style="font-size:12px;">（此為掩護動作，沒有人是幸運兒，直接進行下一步）</div>'}
+      ${success?'<button onclick="jgShowBigCard(\''+ly.num+'號\',\''+giftLabel+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示技能給幸運兒看</button>':'<div class="info" style="font-size:12px;">（此為掩護動作，沒有人是幸運兒，直接進行下一步）</div>'}
       <div class="speech" style="margin-top:10px;">「<em>幸運兒請閉眼。</em>」</div>
       <button class="primary" onclick="jgGoStep('witch-wake')">下一步 →</button>
     `,'🍀 幸運兒');
@@ -2094,7 +2094,7 @@ function jgRenderStep(step){
         bloodmoonEndgameHtml=stillThreat
           ?'<div class="info-warn" style="font-size:13px;padding:10px 14px;margin-top:8px;">⚠️ 場上剩血月＋1神（'+jgFullRoleName(godRole)+'）＋1民，但這位神職還有主動技能沒用，好人仍有機會反殺血月，請照正常流程繼續走。</div>'
           :'<div class="info-success" style="font-size:13px;padding:10px 14px;margin-top:8px;">✅ 場上剩血月＋1神（'+jgFullRoleName(godRole)+'，已無主動技能可以反殺血月）＋1民：不管白天投不投得到血月，血月最後都穩贏（票走了還有屠邊最後一擊，沒票走就繼續刀）。</div>'
-            +'<button class="danger" style="margin-top:6px;" onclick="jgDeclareBloodmoonWin()">🌑 直接公布狼人獲勝，不用等流程走完 →</button>';
+            +'<button class="danger" style="margin-top:6px;" onclick="jgDeclareBloodmoonWin()">'+jgIcon('bloodmoon')+' 直接公布狼人獲勝，不用等流程走完 →</button>';
       }
     }
     // 動物夢境：白貓翻牌、河豚吃刀翻牌、熊的咆哮，都在天亮公布死訊之後宣布。
@@ -2234,8 +2234,8 @@ function jgRenderStep(step){
       ${speakStart?jgSpeakTimerWidgetHtml(jgDaySpeechOrderList(jgNight)):''}
       ${jgNight===1?jgFirstDayCompCheckHtml():''}
       <div class="speech">「<em>${jgLastNightPeaceful?'今晚是平安夜，抽籤決定發言順序。':(needDirection?'請轉動轉盤決定發言方向，從死亡玩家的下一位開始發言。':(speakStartLabel||'請抽取發言順序，依序發言。'))}</em>」</div>
-      ${jgLastNightPeaceful?'<div class="info" id="jg-wheel-wrap"><button onclick="jgSpinWheel()">🎡 轉動轉盤</button><div id="jg-wheel-result"></div></div>':''}
-      ${needDirection?'<div class="info" id="jg-wheel-wrap"><button onclick="jgSpinDirectionOnly()">🎡 轉動轉盤（決定順/逆）</button><div id="jg-wheel-result"></div></div>':''}
+      ${jgLastNightPeaceful?'<div class="info" id="jg-wheel-wrap"><button onclick="jgSpinWheel()">'+jgIcon('wheel')+' 轉動轉盤</button><div id="jg-wheel-result"></div></div>':''}
+      ${needDirection?'<div class="info" id="jg-wheel-wrap"><button onclick="jgSpinDirectionOnly()">'+jgIcon('wheel')+' 轉動轉盤（決定順/逆）</button><div id="jg-wheel-result"></div></div>':''}
       ${jgDiscussExtraButtonsHtml()}
       ${jgHanTiaoInputHtml('jg-hantiao-discuss-input', jgHanTiaoDiscussNotes[jgNight], 'jgUpdateHanTiaoDiscuss')}
       <button class="primary" onclick="jgDiscussGoVote()" style="margin-top:8px;">發言結束，進入投票 →</button>
@@ -2276,8 +2276,8 @@ function jgRenderStep(step){
       <h2>投票結果 · 定序王子選擇</h2>
       <div class="info-warn" style="font-size:15px;font-weight:700;padding:12px 14px;">目前投票結果：${outNum}號 出局</div>
       <div class="info" style="font-size:13px;">場上還有定序王子（${spP?spP.num+'號':'?'}），整局限發動一次「翻牌重新投票」——要不要讓王子翻牌？</div>
-      <button class="primary" style="margin-top:10px;" onclick="jgSequencePrinceFlip()">👑 定序王子翻牌，重新投票</button>
-      <button class="danger" style="margin-top:8px;" onclick="jgConfirmVoteOutResult()">✅ 不翻牌，確認 ${outNum}號 出局</button>
+      <button class="primary" style="margin-top:10px;" onclick="jgSequencePrinceFlip()">${jgIcon('sequenceprince')} 定序王子翻牌，重新投票</button>
+      <button class="danger" style="margin-top:8px;" onclick="jgConfirmVoteOutResult()">${jgIcon('check')} 不翻牌，確認 ${outNum}號 出局</button>
     `,'👑 定序王子');
   }
   else if(step==='sequenceprince-speech'){
@@ -2519,8 +2519,8 @@ function jgRenderMechWolf2Step(roleId){
       <h2>${label}睜眼</h2>
       <div class="speech">「<em>${label}請睜眼。</em>」</div>
       <div class="info" style="font-size:12px;">因大小機皆學到狼人，小機今晚回歸狼隊</div>
-      <button onclick="jgShowBigCard('小機械狼','待會回歸狼隊（狼人睜眼時一起睜眼）')" style="margin-top:6px;width:100%;">📋 大字報顯示給小機械狼看</button>
-      ${bigP?'<button onclick="jgMechWolf2ShowOtherBigCard(\'smallmechwolf\')" style="margin-top:6px;width:100%;">📋 給小機械狼看大機械狼是幾號與身分</button>':''}
+      <button onclick="jgShowBigCard('小機械狼','待會回歸狼隊（狼人睜眼時一起睜眼）')" style="margin-top:6px;width:100%;">${jgIcon('clip')} 大字報顯示給小機械狼看</button>
+      ${bigP?'<button onclick="jgMechWolf2ShowOtherBigCard(\'smallmechwolf\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 給小機械狼看大機械狼是幾號與身分</button>':''}
       <div class="divider"></div>
       <div class="speech">「<em>你要使用技能嗎？</em>」</div>
       <div class="speech">「<em>今晚的帶刀手勢是？（👍 讚）</em>」</div>
@@ -2558,7 +2558,7 @@ function jgRenderMechWolf2Step(roleId){
       // 大字報私下告知法官/機械狼本人，不會被唸出來。
       const isRepick=!!st.learned;
       learnHtml='<div class="speech">「<em>'+(isRepick?'你要使用技能嗎？':'今晚要學習的對象是？')+'</em>」</div>'
-        +(isRepick?'<button onclick="jgShowBigCard(\''+label+'\',\'學到機械狼，可以重新學習一個對象\')" style="margin-bottom:8px;width:100%;">📋 大字報顯示給'+label+'看</button>':'')
+        +(isRepick?'<button onclick="jgShowBigCard(\''+label+'\',\'學到機械狼，可以重新學習一個對象\')" style="margin-bottom:8px;width:100%;">'+jgIcon('clip')+' 大字報顯示給'+label+'看</button>':'')
         +'<label>'+(st.learned?'重新選人學習':'學習對象號碼')+'（留空=本晚不學習，不能學自己）</label>'
         +jgNumSelectHtml('jg-'+roleId+'-learn','','jgMechWolf2LearnCheck',null,selfNums,'不能學習自己')
         +'<div id="jg-'+roleId+'-learn-result"></div>';
@@ -2585,7 +2585,7 @@ function jgRenderMechWolf2Step(roleId){
   if(!dead&&!feared&&jgNight===2){
     const otherLearnedDisplay=otherP?(!otherSt.learned?'尚未學到':((otherSt.learned==='bigmechwolf'||otherSt.learned==='smallmechwolf')?'機械狼':jgFullRoleName(otherSt.learned))):'（尚未記錄身分）';
     otherInfoHtml='<div class="info" style="font-size:12px;padding:8px 12px;">🤝 '+otherLabel+'是 <strong>'+(otherP?otherP.num+'號':'?')+'</strong>，目前學到的身分是：<strong>'+otherLearnedDisplay+'</strong>'
-      +(otherP?' <button onclick="jgMechWolf2ShowOtherBigCard(\''+roleId+'\')" style="margin-top:6px;width:100%;">📋 給'+label+'看'+otherLabel+'是幾號與身分</button>':'')+'</div>';
+      +(otherP?' <button onclick="jgMechWolf2ShowOtherBigCard(\''+roleId+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 給'+label+'看'+otherLabel+'是幾號與身分</button>':'')+'</div>';
   }
 
   // Part 2：帶刀手勢（第二晚起才有）——就算已出局，這句台詞也要照樣問一次，只是死亡沒有

@@ -310,8 +310,9 @@ button.report{background:rgba(154,124,40,0.1);color:var(--gold);border-color:rgb
 /* ── COLLAPSIBLE ROLE CARDS ── */
 .rcol{border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden;}
 /* ── 角色與規則：搜尋框、目錄 ── */
-.rules-search-wrap{margin:14px 0 10px;}
-.rules-search-input{width:100%;padding:13px 14px;font-size:15px;color:var(--text);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);outline:none;-webkit-appearance:none;appearance:none;}
+.rules-search-wrap{margin:14px 0 10px;position:relative;}
+.rules-search-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:17px;color:var(--text3);pointer-events:none;line-height:0;}
+.rules-search-input{width:100%;padding:13px 14px 13px 40px;font-size:15px;color:var(--text);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);outline:none;-webkit-appearance:none;appearance:none;}
 .rules-search-input:focus{border-color:var(--accent);}
 .rules-toc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px;}
 .toc-btn{display:inline-block;padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:20px;text-decoration:none;white-space:nowrap;}
@@ -544,10 +545,11 @@ select{
 
 /* ── 盜賊候選身分大字報：左右兩張卡牌，點擊挑選、動畫收合 ── */
 .jg-thief-cards-wrap{display:flex;gap:5vw;align-items:center;justify-content:center;flex-wrap:nowrap;width:100%;}
-.jg-thief-card{width:44vw;max-width:300px;max-height:48vh;border:3px solid rgba(255,255,255,0.65);border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 8px;background:rgba(255,255,255,0.04);cursor:pointer;transition:transform 0.45s cubic-bezier(.22,.8,.32,1),opacity 0.4s ease,filter 0.4s ease,flex-basis 0.45s ease,width 0.45s ease,margin 0.45s ease,border-width 0.3s ease;flex:0 0 auto;box-sizing:border-box;}
-.jg-thief-card .jg-tc-num{font-size:clamp(16px,4vw,26px);opacity:0.55;font-weight:800;}
-.jg-thief-card .jg-tc-icon{font-size:clamp(56px,15vw,120px);max-width:100%;margin:8px 0;line-height:1;}
-.jg-thief-card .jg-tc-name{font-size:clamp(24px,7vw,42px);font-weight:900;word-break:break-word;}
+.jg-thief-card{width:44vw;max-width:440px;height:min(66vh,600px,135vw);border:3px solid rgba(255,255,255,0.65);border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;padding:16px 8px;background:rgba(255,255,255,0.04);cursor:pointer;transition:transform 0.45s cubic-bezier(.22,.8,.32,1),opacity 0.4s ease,filter 0.4s ease,flex-basis 0.45s ease,width 0.45s ease,margin 0.45s ease,border-width 0.3s ease;flex:0 0 auto;box-sizing:border-box;}
+.jg-thief-card .jg-tc-num{font-size:clamp(36px,min(12vw,10vh),110px);font-weight:900;line-height:1;opacity:0.85;}
+.jg-thief-card .jg-tc-name{font-size:clamp(34px,min(13vw,20vh),96px);font-weight:900;line-height:1.2;word-break:break-word;}
+/* 手機直拿：卡片又高又窄，角色名改成一字一行直排，字才能放到最大 */
+@media (orientation:portrait) and (max-width:600px){.jg-thief-card .jg-tc-name{font-size:min(22vw,10vh);line-height:1.1;}.jg-thief-card .jg-tc-name span{display:block;}}
 .jg-thief-card.picked{transform:scale(1.08);border-color:#ffd166;box-shadow:0 0 24px rgba(255,209,102,0.35);}
 .jg-thief-card.faded{transform:scale(0.6);opacity:0;width:0;max-width:0;min-height:0;padding:0;margin:0;border-width:0;pointer-events:none;overflow:hidden;}
 .jg-thief-card.jtc-disabled{opacity:0.32;filter:grayscale(1);cursor:default;}
