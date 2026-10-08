@@ -97,6 +97,7 @@ async function run(){
   startVote({11:{1:true,2:true}, 5:{3:true,4:true,6:true,7:true,8:true,9:true,10:true,12:true}});
   check('投票畫面有河豚翻牌按鈕', !!window.document.getElementById('jg-puffer-btn'), true);
   ev('jgPufferfishFlipBtn()');
+  check('口白逐一唸出被炸死的號碼', window.document.getElementById('jg-puffer-status').textContent.includes('11號 河豚翻牌，1號 2號 淘汰。'), true);
   check('1 號被炸死', ev('jgFind(1).alive'), false);
   check('2 號被炸死', ev('jgFind(2).alive'), false);
   check('河豚技能用掉', ev('jgFind(11).pufferUsed'), true);

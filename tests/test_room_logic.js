@@ -828,13 +828,17 @@ async function runDeadWolfNotBlockingTest(){
     results.push({name, ok, actual, expected});
   };
 
+  // 好人要多於狼隊，不然狼刀一刀下去就「狼人人數已達多數」直接結束遊戲（狼刀在先），
+  // 不會走到下一步的通靈師，測不到「死掉的狼隊友不該卡流程」這件事。
   mod.__setRoomCode('ROOMD1');
-  mod.__setComp({ wolf:2, medium:1 });
+  mod.__setComp({ wolf:2, medium:1, villager:3 });
   mod.__setPlayers([
     { uid:'wolfAlive', seatNum:1, name:'活狼', alive:true },
     { uid:'wolfDead', seatNum:2, name:'死狼', alive:false }, // 已經死掉的狼隊友
     { uid:'medUid', seatNum:3, name:'通靈師', alive:true },
     { uid:'targetUid', seatNum:4, name:'丁', alive:true },
+    { uid:'v5Uid', seatNum:5, name:'戊', alive:true },
+    { uid:'v6Uid', seatNum:6, name:'己', alive:true },
   ]);
   global.window.jgFirebaseUid='wolfAlive';
   global.__mockCollections={
@@ -843,6 +847,8 @@ async function runDeadWolfNotBlockingTest(){
       { id:'wolfDead', data:()=>({role:'wolf'}) },
       { id:'medUid', data:()=>({role:'medium'}) },
       { id:'targetUid', data:()=>({role:'villager'}) },
+      { id:'v5Uid', data:()=>({role:'villager'}) },
+      { id:'v6Uid', data:()=>({role:'villager'}) },
     ],
   };
   global.__mockDocs={ 'rooms/ROOMD1':{ night:2, currentStep:'wolf' } };
@@ -1240,14 +1246,18 @@ async function runMultiWolfConsensusTest(){
     results.push({name, ok, actual, expected});
   };
 
+  // 好人要多於狼隊，不然狼刀一刀下去就「狼人人數已達多數」直接結束遊戲（狼刀在先），
+  // 根本不會走到下一步的通靈師。
   mod.__setRoomCode('ROOM6');
-  mod.__setComp({ wolf:2, medium:1, villager:2 });
+  mod.__setComp({ wolf:2, medium:1, villager:4 });
   mod.__setPlayers([
     { uid:'wolf1Uid', seatNum:1, name:'狼甲', alive:true },
     { uid:'wolf2Uid', seatNum:2, name:'狼乙', alive:true },
     { uid:'medUid', seatNum:3, name:'通靈師', alive:true },
     { uid:'v1Uid', seatNum:4, name:'民甲', alive:true },
     { uid:'v2Uid', seatNum:5, name:'民乙', alive:true },
+    { uid:'v3Uid', seatNum:6, name:'民丙', alive:true },
+    { uid:'v4Uid', seatNum:7, name:'民丁', alive:true },
   ]);
   global.__mockCollections={
     'rooms/ROOM6/secrets':[
@@ -1256,6 +1266,8 @@ async function runMultiWolfConsensusTest(){
       { id:'medUid', data:()=>({role:'medium'}) },
       { id:'v1Uid', data:()=>({role:'villager'}) },
       { id:'v2Uid', data:()=>({role:'villager'}) },
+      { id:'v3Uid', data:()=>({role:'villager'}) },
+      { id:'v4Uid', data:()=>({role:'villager'}) },
     ],
   };
   global.__mockDocs={ 'rooms/ROOM6':{ night:1, currentStep:'wolf' } };
