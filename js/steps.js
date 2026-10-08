@@ -36,13 +36,13 @@ function jgRenderStep(step){
   const witchAlive = jgPlayers.some(p=>p.role==='witch'&&p.alive);
 
   if(step==='deal'){
-    const needCardReminder = jgNight===1 && (jgComp.mechanicalwolf>0);
+    const needMechAssignReminder = jgNight===1 && (jgComp.mechanicalwolf>0||jgComp.gargoyle>0||jgComp.purewhitemaiden>0||jgComp.bigmechwolf>0||jgComp.smallmechwolf>0);
     const needDualReminder = jgNight===1 && jgDualIdentityMode;
     const needThiefReminder = jgNight===1 && jgComp.thief>0 && jgThiefWheelDone;
     jgShowPg(`
       <h2 style="margin-bottom:8px;">發牌・確認身分</h2>
       <div class="speech">1. 逐一發牌<br>2. 給玩家約 15 秒記住自己的身分。<br>3. 15 秒後，法官說「<em>天黑請閉眼</em>」</div>
-      ${needCardReminder?'<div class="info-warn" style="margin-top:8px;">⚠️ 本局含機械狼：請提醒所有玩家先找好自己的牌，待會兒閉眼後，請依法官指示舉起牌讓法官記錄身分。</div>':''}
+      ${needMechAssignReminder?'<div class="info-warn" style="margin-top:8px;">⚠️ 本局含機械狼／石像鬼等角色：待會請大家閉眼前找好牌，閉眼後舉起讓法官紀錄身分。</div><div class="info" style="margin-top:6px;">法官可以先按到下一步，趁大家閉眼找牌的空檔用手機加入連線房間，等一下就能直接用手機記錄身分。</div>':''}
       ${needDualReminder?'<div class="info-warn" style="margin-top:8px;">⚠️ 本局為雙身分模式：每人有 2 張牌，請提醒玩家先找好兩張牌，待會兒閉眼後，請依法官指示舉起牌讓法官記錄身分。</div>':''}
       ${needThiefReminder?'<div class="info-warn" style="margin-top:8px;">⚠️ 本局含盜賊：請確認候選轉盤抽到的那兩張牌已經另外拿起來（不在這次發的牌裡），剩下的牌才發給大家。</div>':''}
       <button class="primary" style="margin-top:14px;" onclick="jgProceedToNight()">大家都閉眼了 →</button>
@@ -1571,6 +1571,31 @@ function jgRenderStep(step){
     if(_mw2PoisonSmall&&!jgMechWolf2GuardProtects(_mw2PoisonSmall)) deads.push(_mw2PoisonSmall);
     jgRecord['mechwolf2Poison_bigmechwolf']=null;
     jgRecord['mechwolf2Poison_smallmechwolf']=null;
+    // 雙機械狼板：大／小機械狼各自輪到帶刀時選的目標（可能是「一般帶刀」或「雙刀其中一刀」，
+    // 見 jgSaveMechWolf2）。狼刀在先——兩隻機械狼都排在一般狼人、女巫之前睜眼，牠們的刀口
+    // 必須併入最前面這批死亡清單一起判斷勝負，不能拖到女巫毒藥結算完才處理，否則機械狼這一刀
+    // 其實已經先達成的狼隊勝利條件，會被時序上晚一點才生效的女巫解藥／毒藥蓋過去，誤判成
+    // 好人贏（這正是使用者回報的 bug：機械狼刀殺到人、狼隊本該獲勝，卻還等女巫毒掉最後一隻狼
+    // 才宣布好人獲勝）。只受一般守衛／機械守衛保護影響，女巫這時候還沒輪到，不用排除。真的
+    // 死掉的號碼另外記一份到 _mechwolf2KillVictims，因為稍後判斷「這一晚被狼隊刀到的人能不能
+    // 開槍」時，這些欄位已經被清空、讀不到了——但欄位本身要留到文字紀錄（jgFormatNightLog）
+    // 讀過之後才清空，不能在這裡就清掉，否則文字紀錄會看不到這一刀刀了誰。
+    jgRecord._mechwolf2KillVictims=[];
+    ['bigmechwolf','smallmechwolf'].forEach(roleId=>{
+      [1,2].forEach(idx=>{
+        const key='mechwolf2Kill_'+roleId+'_'+idx;
+        const target=jgRecord[key];
+        if(target){
+          const t=jgFind(target);
+          const guardedThis=!!(jgRecord.guardTarget&&jgRecord.guardTarget.toString()===target.toString());
+          const mechGuardedThis=!!(jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===target.toString());
+          if(t&&t.alive&&!guardedThis&&!mechGuardedThis&&!jgMechWolf2GuardProtects(target)){
+            deads.push(target);
+            jgRecord._mechwolf2KillVictims.push(target);
+          }
+        }
+      });
+    });
     deads=[...new Set(deads)];
 
     // Hunter night shot (only valid if hunter was actually killed by the wolf-kill path,
@@ -1605,6 +1630,11 @@ function jgRenderStep(step){
     const _pendingDemonhunterWolfKill=!!(_pendingDhP&&_pendingDhTarget&&_pendingDhTarget.alive&&WOLF_ROLES.includes(_pendingDhTarget.role));
     const _isMajorityReason=r=>!!(r&&r.winner==='wolf'&&typeof r.msg==='string'&&r.msg.indexOf('人數已達多數')>=0);
     if(!jgNightLog[jgNight]) jgNightLog[jgNight]=jgFormatNightLog();
+    jgRecord._mechwolf2InvincibleKnifeNight=false;
+    jgRecord['mechwolf2Kill_bigmechwolf_1']=null;
+    jgRecord['mechwolf2Kill_bigmechwolf_2']=null;
+    jgRecord['mechwolf2Kill_smallmechwolf_1']=null;
+    jgRecord['mechwolf2Kill_smallmechwolf_2']=null;
     // Apply wolf-side deaths first (wolf kill, witch poison that kills good people)
     // Then check if wolf already won BEFORE applying good-side deaths (evilknight revenge etc.)
     // jgApplyDeath handles 雙身分模式 transparently: if this is a swap (not a true elimination),
@@ -1781,30 +1811,6 @@ function jgRenderStep(step){
       const mechGuardedThis2=!!(jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===jgBigGreyWolfAssaultTarget.toString());
       if(bgt&&bgt.alive&&!guardedThis2&&!mechGuardedThis2&&!jgMechWolf2GuardProtects(jgBigGreyWolfAssaultTarget)){ bgt.alive=false; if(!deads.includes(bgt.num))deads.push(bgt.num); }
     }
-    // 雙機械狼板：大／小機械狼各自輪到帶刀時選的目標（可能是「一般帶刀」或「雙刀其中一刀」，
-    // 見 jgSaveMechWolf2）。這是跟主要狼刀「分開」的獨立目標，只受一般守衛/機械守衛保護
-    // 影響——女巫這時候早就結束回合了（機械狼排在女巫之後才睜眼），時序上根本碰不到這個
-    // 目標，不用特別排除。真的死掉的號碼另外記一份到 _mechwolf2KillVictims，因為稍後
-    // 判斷「這一晚被狼隊刀到的人能不能開槍」時，這些欄位已經被這裡清空、讀不到了。
-    jgRecord._mechwolf2KillVictims=[];
-    ['bigmechwolf','smallmechwolf'].forEach(roleId=>{
-      [1,2].forEach(idx=>{
-        const key='mechwolf2Kill_'+roleId+'_'+idx;
-        const target=jgRecord[key];
-        if(target){
-          const t=jgFind(target);
-          const guardedThis=!!(jgRecord.guardTarget&&jgRecord.guardTarget.toString()===target.toString());
-          const mechGuardedThis=!!(jgRecord.mechWolfGuardTarget&&jgRecord.mechWolfGuardTarget.toString()===target.toString());
-          if(t&&t.alive&&!guardedThis&&!mechGuardedThis&&!jgMechWolf2GuardProtects(target)){
-            t.alive=false;
-            if(!deads.includes(t.num))deads.push(t.num);
-            jgRecord._mechwolf2KillVictims.push(t.num);
-          }
-          jgRecord[key]=null;
-        }
-      });
-    });
-    jgRecord._mechwolf2InvincibleKnifeNight=false;
     // 假面舞會板：舞池陣營判定。3人若陣營相同，無事發生；若不同，人數較少的一方死亡——
     // 陣營若被假面「給予面具」改變過，以改變後的陣營為準。這個死亡是舞池機制本身的判定，
     // 不是狼刀，不受守衛／女巫影響（規則沒有特別說可以擋，先當作不可擋，若之後要改成

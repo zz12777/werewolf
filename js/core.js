@@ -227,7 +227,7 @@ const ROLE_ABBR={
 // appeared this game — e.g. 通靈師+機械狼 present → "通靈師機械狼".
 // 標題固定的角色排列順序（跟角色實際發在幾號玩家身上無關）。
 // 直接照法官選板子那個下拉選單列出的順序去排（機械狼+通靈師／攝夢人+夢魘／黑市商人+狼兄狼弟／
-// 狼美人+騎士／石像鬼+守墓人／血月使者+獵魔人／魔術師+黑狼王／混血兒+黑狼王+血月……），
+// 狼美人+騎士／石像鬼+守墓人／血月使者+獵魔人／魔術師／混血兒+黑狼王+血月……），
 // 這樣文字紀錄標題就會跟板子選單的排法完全一致。不在任何預設組合裡的角色（白狼王、惡靈騎士、
 // 警長、幸運兒）沒有既定順序可以照抄，就近安插在概念相近的角色旁邊；
 // 之後如果排出來的順序覺得怪怪的，直接調整這個陣列裡任兩個角色的先後位置就好。
@@ -249,7 +249,25 @@ function jgAutoGameTitle(){
   // 跟法官自己選的板子名稱不一致）。只有選「自訂角色」時才維持原本從角色清單推導的邏輯。
   if(typeof jgBoardPreset!=='undefined'&&jgBoardPreset&&jgBoardPreset!=='custom'
      &&typeof JG_BOARD_PRESETS!=='undefined'&&JG_BOARD_PRESETS[jgBoardPreset]){
-    return JG_BOARD_PRESETS[jgBoardPreset].label;
+    const preset=JG_BOARD_PRESETS[jgBoardPreset];
+    let title=preset.label;
+    // 混血兒／盜賊／殭屍是任何板子都能自由加選的特殊角色（見 renderPresetPicker 的「特殊角色」
+    // 區塊），不是這個板子本來固定搭配的角色——法官如果真的加選了，標題要如實補上，不然光看
+    // 標題會以為這場完全沒有這個角色（例如選了「魔術師」板又加選殭屍，標題只寫「魔術師」，
+    // 看不出這場其實還有殭屍）。用 jgComp（開局當下就固定的板子組成）判斷有沒有加選，
+    // 不能用 jgPlayers 目前的角色（盜賊選完之後 role 已經變成別的身分，查不到了）。
+    ['hybrid','thief','zombie'].forEach(id=>{
+      if(preset.fixed[id]) return; // 已經算在板子固定組合，標題本來就會提到，不用重複加
+      if(jgComp&&jgComp[id]>0) title+='+'+jgFullRoleName(id);
+    });
+    // 魔術師板子的黑狼王／白狼王是完全自由選配，不是這個板子固定搭配的角色，標題預設不寫；
+    // 法官如果真的加選了才動態補上對應的那一種（取代舊版不管有沒有真的選、甚至兩個都沒選
+    // 都照樣寫死顯示「+黑/白狼王」的問題）。
+    if(jgBoardPreset==='magician_wolfking'&&!preset.fixed.wolfking&&!preset.fixed.whitewolf&&jgComp){
+      if(jgComp.wolfking>0) title+='+黑狼王';
+      else if(jgComp.whitewolf>0) title+='+白狼王';
+    }
+    return title;
   }
   const baseline=new Set(['villager','wolf','seer','witch','hunter','guard']);
   const specialRoles=[];
@@ -565,6 +583,27 @@ function jgFormatNightLog(){
     const v=jgRecord.gargoyleCheck;
     lines.push('石驗 '+(v||'x')+mediumCheckResult(v));
   }
+  // 雙機械狼板：大／小機械狼睜眼排在石像鬼之後、一般機械狼之前（見 jgAfterGargoyleStep／
+  // jgAfterBigMechWolfStep），文字紀錄順序跟著調整，不要放在整個函式最後面。
+  ['bigmechwolf','smallmechwolf'].forEach(roleId=>{
+    const mp=jgPlayers.find(p=>p.role===roleId);
+    if(!mp||!mp.alive) return;
+    const label=roleId==='bigmechwolf'?'大機':'小機';
+    const st=jgMechWolf2State[roleId];
+    // 這一晚剛學到（不管學到的是真的身分還是另一台機械狼）都要記一行「學X」，X是跟誰學的號碼
+    if(st.learnedNight===jgNight&&st.learnTargetNum) lines.push(label+'學'+st.learnTargetNum);
+    const k1=jgRecord['mechwolf2Kill_'+roleId+'_1'];
+    const k2=jgRecord['mechwolf2Kill_'+roleId+'_2'];
+    if(k1) lines.push(label+'刀'+k1+(k2?('+'+k2):''));
+    if(st.learned==='witch'){
+      const pv=jgRecord['mechwolf2Poison_'+roleId];
+      if(pv) lines.push(label+'毒'+pv);
+    }
+    if(st.learned==='guard'){
+      const gv=jgRecord['mechwolf2Guard_'+roleId];
+      if(gv) lines.push(label+'守'+gv);
+    }
+  });
   if(mwP&&mwP.alive){
     const learnedBeforeTonight=jgMechWolfLearned&&jgMechWolfLearnedNight!==null&&jgMechWolfLearnedNight<jgNight;
     if(!learnedBeforeTonight){
@@ -646,26 +685,6 @@ function jgFormatNightLog(){
   if(jgBigGreyWolfAssaultNight===jgNight&&jgBigGreyWolfAssaultTarget) lines.push('大灰狼襲擊'+jgBigGreyWolfAssaultTarget);
   const lgP2=jgPlayers.find(p=>p.role==='littlegirl');
   if(lgP2) lines.push(jgRecord.wolfIdentifyGuessRaw?('指認'+jgRecord.wolfIdentifyGuessRaw+(jgRecord._littlegirlSubstituteKill?'(成功)':'(失敗)')):'指認x');
-  // 雙機械狼板：大／小機械狼各自的刀口（可能雙刀）、若學到女巫/守衛則另外記下毒/守的對象
-  ['bigmechwolf','smallmechwolf'].forEach(roleId=>{
-    const mp=jgPlayers.find(p=>p.role===roleId);
-    if(!mp||!mp.alive) return;
-    const label=roleId==='bigmechwolf'?'大機':'小機';
-    const st=jgMechWolf2State[roleId];
-    // 這一晚剛學到（不管學到的是真的身分還是另一台機械狼）都要記一行「學X」，X是跟誰學的號碼
-    if(st.learnedNight===jgNight&&st.learnTargetNum) lines.push(label+'學'+st.learnTargetNum);
-    const k1=jgRecord['mechwolf2Kill_'+roleId+'_1'];
-    const k2=jgRecord['mechwolf2Kill_'+roleId+'_2'];
-    if(k1) lines.push(label+'刀'+k1+(k2?('+'+k2):''));
-    if(st.learned==='witch'){
-      const pv=jgRecord['mechwolf2Poison_'+roleId];
-      if(pv) lines.push(label+'毒'+pv);
-    }
-    if(st.learned==='guard'){
-      const gv=jgRecord['mechwolf2Guard_'+roleId];
-      if(gv) lines.push(label+'守'+gv);
-    }
-  });
   return lines;
 }
 // jgPlayers: {num, name, role, alive}

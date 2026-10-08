@@ -476,6 +476,12 @@ function jgSaveZombie(){
       if(t){ t.infected=true; jgRecord.zombieInfectThisNight.push(t.num); }
     });
   }
+  jgRenderRoster();
+  // 殭屍是整晚最先睜眼的角色之一（狼刀在先的同一道理）：如果這一晚剛好感染完場上最後
+  // 1～2位還沒被感染的玩家，殭屍當場就已經單獨獲勝，必須立刻宣布結果，不能繼續走完
+  // 剩下的夜晚流程（狼刀、女巫毒等）才判定——那些都是晚於殭屍感染才發生的動作。
+  const win=jgCheckWin();
+  if(win){jgShowWin(win);return;}
   jgGoStep(jgAfterZombieStep());
 }
 function jgAfterZombieStep(){

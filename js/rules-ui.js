@@ -80,7 +80,7 @@ const JG_BOARD_PRESETS = {
   wolfbeauty_knight:       {label:'狼美人+騎士',     fixed:{wolfbeauty:1, knight:1}},
   gargoyle_gravkeeper:     {label:'石像鬼+守墓人',   fixed:{gargoyle:1, gravkeeper:1}},
   bloodmoon_demonhunter:   {label:'血月使者+獵魔人', fixed:{bloodmoon:1, demonhunter:1}},
-  magician_wolfking:       {label:'魔術師+黑/白狼王',     fixed:{magician:1}, wolfkingDefault:'wolfking'},
+  magician_wolfking:       {label:'魔術師',     fixed:{magician:1}},
   hybrid_wolfking_bloodmoon:{label:'混血兒+黑/白狼王+血月', fixed:{hybrid:1, bloodmoon:1}, wolfkingDefault:'wolfking'},
   evilknight_guard:        {label:'惡靈騎士+守衛',   fixed:{evilknight:1, guard:1}},
   cupid_board:             {label:'邱比特', fixed:{cupid:1}},
