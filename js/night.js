@@ -1881,11 +1881,11 @@ function jgSaveWolf(){
   // 唯鄰是從：第一晚開刀前必須選好傀儡（狼人左右相鄰、本身不是狼人，圓桌頭尾相連）。
   if(jgPuppetMode&&isFirst){
     const pv=(document.getElementById('jg-puppet-pick')||{}).value?.trim()||'';
-    if(!pv){ alert('⚠️ 唯鄰是從：狼人第一晚開刀前必須先選一位跟狼人相鄰的玩家當傀儡！'); return; }
+    if(!pv){ alert('唯鄰是從：狼人第一晚開刀前必須先選一位跟狼人相鄰的玩家當傀儡！'); return; }
     const wolfNums=jgPlayers.filter(p=>jgIsWolfPackMember(p)).map(p=>p.num);
     const cands=jgPuppetCandidateNums(wolfNums);
     if(!cands.includes(parseInt(pv))){
-      alert('⚠️ '+pv+'號 不能當傀儡：傀儡只能選狼人左右相鄰、而且本身不是狼人的玩家。\n目前可選：'+(cands.length?cands.join('、')+'號':'（請先確認狼人號碼）'));
+      alert(pv+'號 不能當傀儡：傀儡只能選狼人左右相鄰、而且本身不是狼人的玩家。\n目前可選：'+(cands.length?cands.join('、')+'號':'（請先確認狼人號碼）'));
       return;
     }
     jgPlayers.forEach(p=>{ delete p.puppet; });
@@ -2572,7 +2572,7 @@ function jgSaveFoxcub(){
   jgRecord.foxcubCharm=null; jgRecord.foxcubBlocksWolf=false;
   if(jgNight>=2&&fx&&fx.alive&&!fx.foxcubUsed){
     const v=(document.getElementById('jg-foxcub-charm')||{}).value?.trim()||'';
-    if(v&&v===fx.num.toString()){ alert('⚠️ 子狐不能魅惑自己，請重新選擇！'); return; }
+    if(v&&v===fx.num.toString()){ alert('子狐不能魅惑自己，請重新選擇！'); return; }
     if(v){
       fx.foxcubUsed=true;
       jgRecord.foxcubCharm=v;
