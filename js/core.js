@@ -6,9 +6,9 @@
 // ═══════════════════════════════════
 // SHARED DATA
 // ═══════════════════════════════════
-const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',biggreywolf:'大灰狼',trickster:'詭術師',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',trickmage:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',diviner:'占卜師',zombie:'殭屍',sequenceprince:'定序王子',sheriff:'警長',luckyone:'幸運兒'};
-const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',biggreywolf:'bw',trickster:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs',diviner:'bdiviner',zombie:'bcupid',trickmage:'bs',sequenceprince:'bg2'};
-const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',biggreywolf:'av-wolf',trickster:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer',diviner:'av-diviner',zombie:'av-cupid',trickmage:'av-seer',sequenceprince:'av-guard'};
+const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',biggreywolf:'大灰狼',trickster:'詭術師',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',trickmage:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',diviner:'占卜師',zombie:'殭屍',sequenceprince:'定序王子',bear:'熊',foxcub:'子狐',pufferfish:'河豚',whitecat:'白貓',sheriff:'警長',luckyone:'幸運兒'};
+const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',biggreywolf:'bw',trickster:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs',diviner:'bdiviner',zombie:'bcupid',trickmage:'bs',sequenceprince:'bg2',bear:'bg2',foxcub:'bs',pufferfish:'bs',whitecat:'bg2'};
+const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',biggreywolf:'av-wolf',trickster:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer',diviner:'av-diviner',zombie:'av-cupid',trickmage:'av-seer',sequenceprince:'av-guard',bear:'av-guard',foxcub:'av-seer',pufferfish:'av-seer',whitecat:'av-guard'};
 
 function getComp(n){
   const t={
@@ -221,7 +221,7 @@ const ROLE_ABBR={
   villager:'民', hybrid:'混血', cupid:'邱比特', thief:'盜賊', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
   gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面', bigbadwolf:'大野狼', bigmechwolf:'大機', smallmechwolf:'小機', biggreywolf:'大灰狼',
   mechanicalwolf:'機', seer:'預', witch:'巫', hunter:'獵', guard:'守', dreamcatcher:'攝夢', knight:'騎士', magician:'魔術',
-  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', littlegirl:'小女孩', diviner:'占卜', zombie:'殭屍', trickster:'詭術', trickmage:'魔術', sequenceprince:'定序', sheriff:'警長', luckyone:'幸運'
+  demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', littlegirl:'小女孩', diviner:'占卜', zombie:'殭屍', bear:'熊', foxcub:'子狐', pufferfish:'河豚', whitecat:'白貓', trickster:'詭術', trickmage:'魔術', sequenceprince:'定序', sheriff:'警長', luckyone:'幸運'
 };
 // Builds a short label for the export header from whichever "special" (non-baseline) roles
 // appeared this game — e.g. 通靈師+機械狼 present → "通靈師機械狼".
@@ -367,6 +367,17 @@ function jgCopyExportText(){
 // this needs to be checked as an alternate trigger.
 function jgApplyDeath(p){
   if(!p) return false;
+  // 動物夢境：白貓任何原因死亡都能翻牌、免疫這一次死亡，要等到「下一次放逐階段結束」才真的死
+  // （見 steps.js 的 next-night）。翻牌之後到真正死亡之前，任何死法都對她無效。
+  // 夜裡（天亮結算）翻牌：當天白天的放逐階段結束就死；白天翻牌：要等隔天的放逐階段結束。
+  if(p.role==='whitecat'&&p.alive){
+    if(!p.whitecatFlipped){
+      p.whitecatFlipped=true;
+      p.whitecatDeathDay=(typeof jgCurrentStep!=='undefined'&&jgCurrentStep==='dawn')?jgNight:jgNight+1;
+      p._whitecatJustFlipped=true;
+    }
+    return false;
+  }
   if(jgDualIdentityMode&&p.role2&&!p.identity1Dead){
     p.identity1Dead=true;
     p.deadRole1=p.role;
@@ -393,7 +404,11 @@ function jgApplyDeath(p){
 function jgCascadeWolfBeautyDeath(wasRole, trulyDied){
   if(trulyDied&&wasRole==='wolfbeauty'&&jgRecord.wolfbeautyCharm){
     const ct=jgFind(jgRecord.wolfbeautyCharm);
-    if(ct&&ct.alive){ jgApplyDeath(ct); return ct.num; }
+    if(ct&&ct.alive){
+      const wasCat=ct.role==='whitecat';
+      const died=jgApplyDeath(ct);
+      return (died||!wasCat)?ct.num:null; // 白貓翻牌免死，不算殉情
+    }
   }
   return null;
 }
@@ -499,7 +514,8 @@ function jgMechWolf2HunterActive(roleId){
 // （雙身分模式換牌後 role 會變，開槍資格要看死前那張牌），並回傳具體是哪一種資格
 // （真獵人／機械狼學到獵人／幸運兒得到獵槍），方便連鎖開槍畫面顯示正確的角色名稱。
 function jgHunterCapableTag(role, num){
-  if(role==='hunter') return 'hunter';
+  // 唯鄰是從：獵人被選成傀儡，技能錯亂失效，死亡時不能開槍。
+  if(role==='hunter') return jgIsPuppetNum(num)?null:'hunter';
   if(role==='wolfking') return 'wolfking';
   if(role==='mechanicalwolf'&&jgMechWolfHunterActive()) return 'mechanicalwolf';
   if((role==='bigmechwolf'||role==='smallmechwolf')&&jgMechWolf2HunterActive(role)) return role;
@@ -524,7 +540,7 @@ function jgFormatNightLog(){
   if(jgNight===1 && jgThiefChosen && jgThiefFinalNum){
     const finalAbbr=ROLE_ABBR[jgThiefFinalRole]||jgThiefFinalRole;
     const buriedAbbr=ROLE_ABBR[jgThiefBuriedRole]||jgThiefBuriedRole;
-    lines.push('盜 '+buriedAbbr+'or'+finalAbbr+'→'+finalAbbr);
+    lines.push('盜 '+jgThiefFinalNum+' '+buriedAbbr+'or'+finalAbbr+'→'+finalAbbr);
   }
   // 邱比特是整局第一個睜眼的角色（僅第一夜），配對結果只記錄這一次
   if(jgNight===1 && jgCupidChosen && jgLovers && jgLovers.length===2){
@@ -560,11 +576,18 @@ function jgFormatNightLog(){
   // 夢魘(恐) → 魔術師(換) → 守衛(守) → 攝夢人(夢) → 狼兄狼弟覺醒刀 → 機械狼 → 狼刀 → 黑市商人(易)
   // → 女巫(救/毒) → 預言家(驗) → 通靈師(通驗，含幸運兒後續行動) → 獵魔人(狩)。
   // 換流用 jgSwapDisplay：法官喊的號碼(raw)跟魔術師換流後實際生效的號碼不同時，寫成「raw→actual」。
+  // 動物夢境：子狐每晚第一個睜眼，魅惑整局限一次（只在真的魅惑的那一晚記一行）。
+  const fxP=jgPlayers.find(p=>p.role==='foxcub');
+  if(fxP&&fxP.alive&&jgRecord.foxcubCharm) lines.push('狐魅 '+jgRecord.foxcubCharm+(jgRecord.foxcubBlocksWolf?'(狼，今晚狼人不能殺人)':''));
+  const _animalNight1=jgNight===1&&jgIsAnimalDream(); // 動物夢境第一夜無人可使用技能
   const nmP=jgPlayers.find(p=>p.role==='nightmare');
   if(nmP&&nmP.alive) lines.push('恐 '+(jgRecord.nightmareTarget||'x'));
   const mgP0=jgPlayers.find(p=>p.role==='magician');
   if(mgP0&&mgP0.alive) lines.push('換 '+((jgRecord.magicianA&&jgRecord.magicianB)?(jgRecord.magicianA+'-'+jgRecord.magicianB):'x'));
-  if(guardP&&guardP.alive) lines.push('守 '+jgSwapDisplay(jgRecord.guardTargetRaw, jgRecord.guardTarget));
+  if(guardP&&guardP.alive){
+    if(guardP.puppet) lines.push('守 '+(jgRecord._puppetGuardVoid||'x')+(jgRecord._puppetGuardVoid?'(傀儡失效)':''));
+    else lines.push('守 '+jgSwapDisplay(jgRecord.guardTargetRaw, jgRecord.guardTarget));
+  }
   const dcP=jgPlayers.find(p=>p.role==='dreamcatcher');
   if(dcP&&dcP.alive) lines.push('夢 '+(jgRecord.dreamcatcherTarget||'x')+(jgRecord.dreamcatcherKillTarget?'(連續兩晚致死)':''));
   const wbyP=jgPlayers.find(p=>p.role==='wolfbrother_y');
@@ -619,9 +642,10 @@ function jgFormatNightLog(){
       if(!jgMechWolfBonusKillUsed||jgRecord.mechWolfBonusKillTarget) lines.push('機刀 '+(jgRecord.mechWolfBonusKillTarget||'x'));
     }
   }
-  if(hasWolf) lines.push('刀 '+jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill)+(jgRecord._mechwolf2InvincibleKnifeNight?'（無敵刀，可破守衛盾）':''));
+  if(jgPuppetMode&&jgNight===1&&jgPuppetPlayer()) lines.push('傀儡 '+jgPuppetPlayer().num);
+  if(hasWolf&&!_animalNight1) lines.push('刀 '+jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill)+(jgRecord._mechwolf2InvincibleKnifeNight?'（無敵刀，可破守衛盾）':''));
   const wbP3=jgPlayers.find(p=>p.role==='wolfbeauty');
-  if(wbP3&&wbP3.alive) lines.push('魅 '+(jgRecord.wolfbeautyCharm||'x'));
+  if(wbP3&&wbP3.alive&&!_animalNight1) lines.push('魅 '+(jgRecord.wolfbeautyCharm||'x'));
   const bmP2=jgPlayers.find(p=>p.role==='blackmarket');
   if(bmP2&&bmP2.alive&&jgRecord.blackmarketTarget!==undefined){
     const skillAbbr={seer:'驗',witch:'毒',hunter:'獵'}[jgRecord.blackmarketSkill]||'';
@@ -642,12 +666,18 @@ function jgFormatNightLog(){
     // 這裡原本是 if/else if，意味著「救」跟「毒」只會記錄其中一個——只要當晚有刀可以給女巫看
     // （會記錄「救」那一行），就算她這晚同時也用了毒藥，「毒」那一行也會被跳過、完全沒記錄到。
     // 救人跟下毒是女巫同一晚的兩個獨立決定，不是互斥的，要各自獨立判斷是否要記一行。
-    if(jgRecord._witchCanShowKilled) lines.push('救 '+(jgRecord.witchSave?jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill):'x'));
-    if(jgRecord.witchPoisonRaw||!jgWitchPoisonUsed) lines.push('毒 '+jgSwapDisplay(jgRecord.witchPoisonRaw, jgRecord.witchPoison));
+    if(witchP.puppet&&(jgRecord._puppetWitchVoidSave||jgRecord._puppetWitchVoidPoison)){
+      // 唯鄰是從：女巫是傀儡，解藥／毒藥照樣用掉，但不會生效。
+      if(jgRecord._puppetWitchVoidSave) lines.push('救 '+(jgRecord.wolfKillRaw||jgRecord.wolfKill||'x')+'(傀儡失效)');
+      if(jgRecord._puppetWitchVoidPoison) lines.push('毒 '+jgRecord._puppetWitchVoidPoison+'(傀儡失效)');
+    } else {
+      if(jgRecord._witchCanShowKilled) lines.push('救 '+(jgRecord.witchSave?jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill):'x'));
+      if(jgRecord.witchPoisonRaw||!jgWitchPoisonUsed) lines.push('毒 '+jgSwapDisplay(jgRecord.witchPoisonRaw, jgRecord.witchPoison));
+    }
   }
   if(seerP&&seerP.alive){
     const v=jgRecord.seerChecked;
-    lines.push('驗 '+jgSwapDisplay(jgRecord.seerCheckedRaw, v)+seerCheckResult(v));
+    lines.push('驗 '+jgSwapDisplay(jgRecord.seerCheckedRaw, v)+(v?jgSeerCheckLabel(jgFind(v)):'')+(seerP.puppet&&v?'(傀儡，結果相反)':''));
   }
   const mdP=jgPlayers.find(p=>p.role==='medium');
   if(mdP&&mdP.alive){
@@ -838,6 +868,26 @@ let jgVotePkOrder=[];       // 白天放逐票 PK 的明確發言順序（number
 let jgSheriffPkOrder=[];    // 警長競選票 PK 的明確發言順序（number[]）
 // ── 雙身分模式：每位玩家 2 張牌，一次只有一張生效；第一張陣亡才換上第二張 ──
 let jgDualIdentityMode=false;
+// ── 唯鄰是從板：狼人第一夜在開刀前選一位跟狼人相鄰的玩家當傀儡（玩家物件上的 p.puppet 旗標，
+// 會跟著 jgPlayers 一起進「上一步」的快照）。jgPuppetMode 只在開局當下依選的板子決定，整局不變。
+let jgPuppetMode=false;
+function jgPuppetPlayer(){ return jgPlayers.find(p=>p.puppet)||null; }
+function jgIsPuppetNum(num){
+  const p=num!=null?jgFind(num):null;
+  return !!(p&&p.puppet);
+}
+// 圓桌座位：1號跟最後一號也算相鄰。回傳「跟任一狼人相鄰、而且自己不是狼人」的號碼清單。
+function jgPuppetCandidateNums(wolfNums){
+  const wolfSet=new Set(wolfNums.map(Number));
+  const out=new Set();
+  wolfSet.forEach(w=>{
+    [w-1,w+1].forEach(n=>{
+      const seat=((n-1+jgTotal)%jgTotal)+1;
+      if(!wolfSet.has(seat)) out.add(seat);
+    });
+  });
+  return [...out].sort((a,b)=>a-b);
+}
 let jgDualAssign={};      // num -> [roleA, roleB], chosen by judge on the assignment page
 let jgDualAssignDone=false;
 const JG_DUAL_ROLE_POOL=['villager','seer','witch','guard','hunter','knight','wolf','wolfking','dreamcatcher','nightmare'];
@@ -1474,6 +1524,7 @@ function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal, thiefCand1, thief
   document.getElementById('jg-count').value=n;
   jgComp=dealtComp||getPickComp(jgRolePick); jgRoleCounts={...jgComp};
   jgDualIdentityMode=false; jgDualAssign={}; jgDualAssignDone=false;
+  jgPuppetMode=typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='neighbor_puppet';
   jgPlayers=[]; jgNight=1;
   jgWitchSaveUsed=false; jgWitchPoisonUsed=false;
   jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,hunterNightShot:null,witchStepDone:false};
@@ -1593,6 +1644,7 @@ function jgStart(){
   }
   jgTotal=n; jgComp=compCheck; jgRoleCounts={...jgComp};
   jgDualIdentityMode=isDualStart;
+  jgPuppetMode=!isDualStart&&typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='neighbor_puppet';
   jgDualAssign={};
   jgDualAssignDone=false;
   jgPlayers=[]; jgNight=1;
@@ -1809,7 +1861,13 @@ function jgRoleDisplayName(p){
     if(st.learned==='bigmechwolf'||st.learned==='smallmechwolf') return prefix+'-機械狼';
     return prefix+'-'+jgFullRoleName(st.learned);
   }
+  // 動物夢境：平民在這個板子叫「羊駝」（規則完全等同平民）。
+  if((p.role==='villager'||!p.role)&&jgIsAnimalDream()) return '羊駝';
   return RNAME[p.role]||'平民';
+}
+// 動物夢境板：板子上有熊／子狐／河豚／白貓任一個就算（這幾個角色只在這個板子出現）。
+function jgIsAnimalDream(){
+  return !!(jgComp&&((jgComp.bear||0)+(jgComp.foxcub||0)+(jgComp.pufferfish||0)+(jgComp.whitecat||0))>0);
 }
 
 // Feature: on the first day's discussion, verify that every number's assigned role
@@ -1859,6 +1917,11 @@ function jgRenderRoster(){
       // 提醒法官不會再看到「定序王子翻牌」的選項（jgSequencePrinceUsed 是整局唯一的旗標，
       // 不分是哪一天用掉的，用過就是用過）。
       const princeUsedTag=(role==='sequenceprince'&&jgSequencePrinceUsed)?'<span class="rp-tag-lover" style="color:var(--gold);" title="定序王子已經翻過牌，整局限一次，不會再出現">👑已翻牌</span>':'';
+      // 殭屍板：被感染的玩家法官視角加註標籤，方便對照場上還剩幾位沒被感染——玩家本人
+      // 看不到這個標籤，感染本身也不影響這位玩家平常的查驗/死亡結算（只影響殭屍的勝負判定）。
+      const infectedTag=p.infected?'<span class="rp-tag-lover" style="color:var(--thief);" title="已被殭屍感染">感染</span>':'';
+      // 唯鄰是從：傀儡（底牌不變，但被查驗為查殺；預言家查驗相反，女巫/獵人/守衛技能失效）。
+      const puppetTag=p.puppet?'<span class="rp-tag-lover" style="color:var(--wolf);" title="傀儡：被查驗為查殺；預言家查驗結果相反，女巫／獵人／守衛技能失效">傀儡</span>':'';
       // 混血兒：第一夜選完支持對象之後，法官自己視角就加註「狼人混」或「好人混」標籤，
       // 不用等遊戲結束才知道——法官心裡要有數（例如屠民判定、狼隊出刀名單這些場上互動）
       // 混血兒本人一律當一般平民處理，這個標籤純粹是給法官自己看的參考，不代表混血兒
@@ -1867,7 +1930,7 @@ function jgRenderRoster(){
         ?(()=>{ const tp=jgFind(jgHybridTarget); if(!tp) return ''; const isWolf=jgIsWolfPackMember(tp);
             return '<span class="rp-tag-lover" style="color:'+(isWolf?'var(--wolf,#b91c1c)':'var(--good,#2e7d32)')+';" title="混血兒支持 '+tp.num+'號（'+(isWolf?'狼人陣營':'好人陣營')+'），僅供法官自己參考：混血兒本人查驗/屠民判定一律仍算好人／平民">'+(isWolf?'狼人混':'好人混')+'</span>'; })()
         :'';
-      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}${princeUsedTag}${hybridSideTag}</div>`;
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}${princeUsedTag}${hybridSideTag}${infectedTag}${puppetTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <button type="button" class="rp-toggle-btn" title="手動修改死亡狀態（安全網，避免忘記勾選/漏改）" onclick="jgManualToggleAlive(${p.num})">⇄</button>

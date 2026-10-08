@@ -136,13 +136,13 @@
   <div class="rcol">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-icon">🎩</span>
-      <span class="rcol-name">魔術師＋黑/白狼王</span>
+      <span class="rcol-name">魔術師</span>
       <span class="rcol-arrow">▶</span>
     </div>
     <div class="rcol-body" data-ov="board-magician-wolfking">
       <span class="board-role">魔術師</span>：每晚最早行動，可以交換兩個號碼牌，當晚所有以號碼為目標的技能（狼刀、查驗、毒藥、守護等）都會被「換流」到對方身上，是很容易翻盤或誤傷隊友的關鍵神職。<br><span class="role-link" onclick="jumpToRole('magician')">→ 查看魔術師完整規則</span>
       <br><br>
-      <span class="board-role">黑狼王／白狼王</span>：這個板子的狼王身分可以彈性選擇黑狼王或白狼王（法官在選角時二選一）。黑狼王被狼刀（夜槍）或被票出局（白天槍）淘汰時可以開槍帶走一名玩家，就算被守衛與女巫同時作用「奶穿」也照樣能帶人；但被女巫毒殺、或選擇自爆時，就不能發動這個技能。白狼王則是改成「自爆帶人」：白天除了投票環節以外的任何階段都可以主動自爆並帶走一名玩家，但被放逐、被獵人帶走、或夜間被隊友自刀時都不能帶人。<br><span class="role-link" onclick="jumpToRole('wolfking')">→ 查看黑狼王完整規則</span>　<span class="role-link" onclick="jumpToRole('whitewolf')">→ 查看白狼王完整規則</span>
+      <span class="board-role">黑狼王／白狼王（可選）</span>：這個板子不一定要加狼王，法官選角時可以自由加選黑狼王或白狼王（二選一），也可以都不加。黑狼王被狼刀（夜槍）或被票出局（白天槍）淘汰時可以開槍帶走一名玩家，就算被守衛與女巫同時作用「奶穿」也照樣能帶人；但被女巫毒殺、或選擇自爆時，就不能發動這個技能。白狼王則是改成「自爆帶人」：白天除了投票環節以外的任何階段都可以主動自爆並帶走一名玩家，但被放逐、被獵人帶走、或夜間被隊友自刀時都不能帶人。<br><span class="role-link" onclick="jumpToRole('wolfking')">→ 查看黑狼王完整規則</span>　<span class="role-link" onclick="jumpToRole('whitewolf')">→ 查看白狼王完整規則</span>
     </div>
   </div>
 
@@ -276,6 +276,41 @@
       <span class="role-link" onclick="jumpToRole('bigmechwolf')">→ 查看大機械狼完整規則</span>　<span class="role-link" onclick="jumpToRole('smallmechwolf')">→ 查看小機械狼完整規則</span>
       <br><br>
       <a href="https://youtu.be/l0NQIKWmsZs?si=ErImvl2415TlXJb3" target="_blank" rel="noopener">🎬 實玩影片</a>
+    </div>
+  </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3h16"/><path d="M7 3v6M17 3v6M12 3v3.5"/><circle cx="12" cy="9" r="2.5"/><path d="M12 11.5V17M7 9l5 4 5-4M9 21l3-4 3 4"/></svg></span>
+      <span class="rcol-name">唯鄰是從</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body" data-ov="board-neighbor-puppet">
+      <span class="board-role">傀儡</span>：狼人首晚在開刀前，必須選擇一位與狼人相鄰的玩家作為傀儡（座位圍成一圈，1號與最後一號也算相鄰）。傀儡的底牌不變，但被查驗為查殺，且技能會錯亂：<br>
+      · 預言家：查驗結果相反<br>
+      · 女巫、獵人、守衛：技能失效<br>
+      傀儡不會知道自己被傀，也不知道狼隊有誰，且無法自爆；如果其他狼隊友都出局，傀儡也不會入隊。<br><br>
+      <div class="info" style="font-size:12px;">建議配置（12人）：狼人×3、平民×5、預言家、女巫、獵人、守衛。</div>
+    </div>
+  </div>
+  <div class="rcol">
+    <div class="rcol-hd" onclick="toggleRcol(this)">
+      <span class="rcol-icon"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/><path d="M16 4.5v3M14.5 6h3"/></svg></span>
+      <span class="rcol-name">動物夢境</span>
+      <span class="rcol-arrow">▶</span>
+    </div>
+    <div class="rcol-body" data-ov="board-animal-dream">
+      <strong>配置（12人）</strong><br>
+      狼人陣營：小狼×3、狼美人×1<br>
+      好人陣營：羊駝×4、熊（馴熊師）×1、子狐×1、河豚×1、白貓×1<br>
+      10人局：拿掉白貓、一隻小狼。<br><br>
+      <span class="board-role">羊駝</span>：同「平民」，沒有特殊技能，黑夜全程閉眼，靠白天得到的資訊投票放逐疑似狼人的玩家。<br><br>
+      <span class="board-role">熊</span>：每次白天法官會提示熊有沒有咆哮，讓所有玩家得知熊身邊左右最近、而且白天依然存活的兩位玩家之中有沒有狼人（例：1號是熊、2號晚上死了，熊的查驗是3號和12號）。有狼人熊便會咆哮（狼 熊 好、狼 熊 狼）；反之不會咆哮（好 熊 好）。<br><span class="role-link" onclick="jumpToRole('bear')">→ 查看熊完整規則</span><br><br>
+      <span class="board-role">子狐</span>：技能只能使用一次，第二夜起可以選擇魅惑一個玩家。魅惑到狼人陣營時，當晚狼人不能砍人，狼人無法得知是哪隻狼被魅惑；若魅惑到狼美人，當天狼美人也無法魅惑人。魅惑到好人則無事發生。<br><span class="role-link" onclick="jumpToRole('foxcub')">→ 查看子狐完整規則</span><br><br>
+      <span class="board-role">河豚</span>：技能只能使用一次。放逐投票階段，只要有人投票給河豚，河豚就可以翻牌，炸死這次投票給河豚的所有玩家；若河豚進入平票 PK，可以炸死兩次投票中所有投給河豚的玩家。（沒有人投給河豚，或唯一投給河豚的玩家是最高票出局的人、或是已經翻牌的白貓，河豚不能翻牌。）河豚吃刀出局時，白天會翻牌，當天白天狼美人的魅惑技能失效。<br><span class="role-link" onclick="jumpToRole('pufferfish')">→ 查看河豚完整規則</span><br><br>
+      <span class="board-role">白貓</span>：任何原因死亡都能翻牌，免疫本次死亡，要等下一次放逐階段結束後才會死亡；翻牌的白貓無法被狼人殺、被狼美人帶走、被河豚炸死、被投票出局。狼人砍了場上最後一神白貓、好人在白天推了最後一狼，判定好人獲勝。<br><span class="role-link" onclick="jumpToRole('whitecat')">→ 查看白貓完整規則</span><br><br>
+      <strong>夜間睜眼順序</strong>（此板子第一夜無人可使用技能，只有熊還是會咆哮）<br>
+      第一晚：子狐 → 狼人（狼美人） → 熊 → 河豚 → 白貓（都只確認身分）<br>
+      第二晚之後：子狐（選擇魅惑對象） → 狼人（選擇擊殺目標） → 狼美人（選擇魅惑對象）
     </div>
   </div>
   </div>
@@ -589,7 +624,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-08-a</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-08-f</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="data/games-history.js"></script>

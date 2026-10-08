@@ -6,6 +6,17 @@
 // ═══════════════════════════════════
 // ROLE DATA & RULES CARDS
 // ═══════════════════════════════════
+// 新角色的圖示：線條 SVG（寬高 1em，跟著所在位置的字級縮放，顏色跟著文字顏色走）。
+const JG_SVG_ICON=(()=>{
+  const wrap=inner=>'<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;">'+inner+'</svg>';
+  return {
+    bear: wrap('<circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="6.5" r="2.5"/><circle cx="12" cy="13" r="7"/><circle cx="12" cy="15.5" r="2"/><path d="M9.5 11.5h.01M14.5 11.5h.01"/>'),
+    foxcub: wrap('<path d="M4 3l4 6h8l4-6-1.5 9L12 21l-6.5-9z"/><path d="M9.5 12.5h.01M14.5 12.5h.01M11 16l1 1 1-1"/>'),
+    pufferfish: wrap('<circle cx="11" cy="12" r="6"/><path d="M17 12l4-3v6z"/><path d="M11 3.5v2M11 18.5v2M5.5 6.5l1.4 1.4M5.5 17.5l1.4-1.4M2.5 12h2"/><path d="M9 11h.01"/>'),
+    whitecat: wrap('<path d="M5 20v-8.5L4 4l5 4h6l5-4-1 7.5V20z"/><path d="M9.5 13h.01M14.5 13h.01M11 16.5h2"/>'),
+    dream: wrap('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/><path d="M16 4.5v3M14.5 6h3"/>')
+  };
+})();
 const ALL_ROLES = {
   // Wolf pack
   wolf:     {icon:'🐺', name:'狼人',   team:'wolf', teamLabel:'狼人陣營', desc:'每晚與同伴商議選擇獵殺對象。白天偽裝好人，引導投票淘汰好人。<br><strong>目標：</strong>狼人數 ≥ 好人數。<br><strong>自刀自爆：</strong>可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽），發言階段可隨時自爆，不用等到自己發言的回合。'},
@@ -62,12 +73,17 @@ const ALL_ROLES = {
   trickster:{icon:'🎭', name:'詭術師', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>狼刀：</strong>每晚與狼隊一同睜眼、參與商議並選擇當晚的擊殺對象，可以選擇空刀或自刀。<br><strong>自爆：</strong>白天發言階段任何時候都可以自爆淘汰自己，強制進入夜晚。<br><strong>交換（換票）：</strong>每晚可以選擇交換兩個玩家的號碼牌（可以空換），交換後隔天白天，投給這兩個號碼的票數會互相對調——只在「交換後的那一個白天」有效，之後就失效。不能連續兩晚選同一個號碼。<br><strong>不受魔術師影響：</strong>就算魔術師這一晚剛好換了同一組號碼，詭術師自己的換票效果仍然正常生效（只有魔術師那邊會失效）。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，通常與魔術師、定序王子搭配出現</span>'},
   trickmage:{icon:'🪄', name:'魔術師', team:'good', teamLabel:'神職', desc:'<strong>交換（換技能）：</strong>每晚優先行動（在詭術師之前），可以選擇交換兩個玩家的號碼牌（可以空換）——交換後，這兩個玩家「當晚」所有技能會互相對調，只對當晚有效，隔天就失效，其餘規則跟一般魔術師完全相同。<br><strong>每個號碼限用一次：</strong>整局遊戲中，每一個號碼牌最多只能被交換過一次，用過的號碼之後不能再被選進交換名單。<br><strong>唯一的差異：</strong>如果詭術師這一晚剛好也換了同一組號碼（不論順序），魔術師這次的交換效果就會失效、視為沒有交換（但「用過這個號碼」的紀錄仍然算數，不能重複使用）；詭術師自己的換票效果不受影響。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，是「詭術之境」板子裡的魔術師變體，通常與詭術師、定序王子搭配出現</span>'},
   sequenceprince:{icon:'👑', name:'定序王子', team:'good', teamLabel:'神職', desc:'<strong>翻牌重來：</strong>每天第一次放逐投票結束、公布結果後，可以選擇翻開身分牌發動技能——發動後時間倒轉回到這次投票前，所有人重新發言一次（王子自己享有額外一次發言機會），發言結束後重新進行一次放逐投票。<br><strong>整局限一次：</strong>這個技能整場遊戲只能發動一次，發動之後即使又遇到平票或其他放逐投票，也不能再次發動。<br><span style="color:var(--seer);font-size:12px;">⚡ 詭術之境板專屬角色，通常與詭術師、魔術師搭配出現</span>'},
+  // ── 動物夢境板專屬角色（圖示一律用線條 SVG，不用 emoji）──
+  bear:{icon:JG_SVG_ICON.bear, name:'熊', team:'good', teamLabel:'神職', desc:'<strong>咆哮：</strong>每次白天，法官會提示熊是否有咆哮，讓所有玩家得知熊身邊左右最近、而且白天依然存活的兩位玩家之中有沒有狼人。有狼人熊便會咆哮（例：狼 熊 好、狼 熊 狼）；沒有則不會咆哮（例：好 熊 好）。<br><strong>相鄰怎麼算：</strong>跳過已經死亡的玩家，往左右各找最近的存活玩家（例：1號是熊、2號晚上死了，熊的查驗對象是3號和12號）。<br><strong>第一天也會咆哮：</strong>這個板子第一夜無人可以使用技能，只有熊還是會咆哮。<br><span style="color:var(--seer);font-size:12px;">動物夢境板專屬角色</span>'},
+  foxcub:{icon:JG_SVG_ICON.foxcub, name:'子狐', team:'good', teamLabel:'神職', desc:'<strong>魅惑（整局限用一次）：</strong>第二夜起，可以選擇魅惑一名玩家。<br>魅惑到狼人陣營：當晚狼人不能殺人，狼人無法得知是哪一隻狼被魅惑；若魅惑到狼美人，當晚狼美人也無法魅惑人。<br>魅惑到好人：無事發生。<br><strong>睜眼順序：</strong>每晚第一個睜眼。<br><span style="color:var(--seer);font-size:12px;">動物夢境板專屬角色</span>'},
+  pufferfish:{icon:JG_SVG_ICON.pufferfish, name:'河豚', team:'good', teamLabel:'神職', desc:'<strong>翻牌炸人（整局限用一次）：</strong>放逐投票階段，只要有人投票給河豚，河豚就可以翻牌，炸死這次投票中所有投給河豚的玩家；若河豚進入平票 PK，可以炸死兩次投票中所有投給河豚的玩家。<br><strong>不能翻牌：</strong>沒有人投票給河豚；或唯一投給河豚的玩家是最高票出局的人，或是已經翻牌的白貓。<br><strong>吃刀出局：</strong>河豚被狼人殺死時，白天會翻牌，當天白天狼美人的魅惑技能失效。<br><span style="color:var(--seer);font-size:12px;">動物夢境板專屬角色</span>'},
+  whitecat:{icon:JG_SVG_ICON.whitecat, name:'白貓', team:'good', teamLabel:'神職', desc:'<strong>翻牌免死：</strong>任何原因死亡，白貓都能翻牌，免疫本次死亡；要等到下一次放逐階段結束後，白貓才會死亡。翻牌後的白貓無法被狼人殺、被狼美人帶走、被河豚炸死、被投票出局。<br><strong>勝負：</strong>白貓翻牌後到死亡之前仍算存活的神職；若狼人砍了場上最後一神白貓，好人在白天推了最後一狼，判定好人獲勝。<br><span style="color:var(--seer);font-size:12px;">動物夢境板專屬角色</span>'},
   zombie:{icon:'🧟', name:'殭屍', team:'third', teamLabel:'第三方陣營', desc:'<strong>感染：</strong>每晚可以選擇感染0～2名玩家（不能感染自己，已經感染過的人不用重複選）。感染是永久的，不會被治癒，只會因為被感染的玩家死亡而失去意義。<br><strong>感染者互相確認：</strong>被感染的玩家每晚會被拍肩叫醒，並在「感染者」共同睜眼的階段，看到目前所有感染者是誰。<br><strong>單獨獲勝：</strong>當場上除了殭屍自己以外，所有存活玩家都已經被感染，殭屍就單獨獲勝（好人、狼人都算輸）。<br><strong>免疫查驗：</strong>被預言家查驗一律顯示金水（好人），不會被驗成狼人。<br><span style="color:var(--seer);font-size:12px;">⚡ 通常搭配黑狼王、預言家、女巫、獵人出現，是獨立於好人／狼人之外的第三方陣營</span>'},
 };
 
 const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask','bigbadwolf','bigmechwolf','smallmechwolf','biggreywolf','trickster'];
 const VIL_ROLES  = ['villager','hybrid'];
-const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer','littlegirl','diviner','trickmage','sequenceprince'];
+const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer','littlegirl','diviner','trickmage','sequenceprince','bear','foxcub','pufferfish','whitecat'];
 const SPECIAL_ROLES = ['sheriff','luckyone','cupid','thief','zombie'];
 
 // 單身分限定的「板子」預設：每個板子固定包含一組常見搭配的特殊角色（狼隊或神職），
@@ -91,6 +107,17 @@ const JG_BOARD_PRESETS = {
   biggreywolf_diviner:{label:'大灰狼+占卜師', fixed:{biggreywolf:1, diviner:1, seer:1, witch:1, hunter:1}},
   zombie_board:{label:'殭屍', fixed:{wolfking:1, seer:1, witch:1, hunter:1, zombie:1}},
   trickery_realm:{label:'詭術之境', fixed:{trickster:1, seer:1, witch:1, trickmage:1, sequenceprince:1}},
+  // 唯鄰是從：沒有新角色，是「狼人第一夜在開刀前選一位跟狼人相鄰的玩家當傀儡」的板子規則
+  // （見 js/night.js jgSaveWolf 的傀儡判定）。defaultByN：指定人數時直接套用這份建議配置，
+  // 不走一般「狼/神/民 1:1:1」的自動推算。
+  neighbor_puppet:{label:'唯鄰是從', fixed:{}, defaultByN:{12:{wolf:3, villager:5, seer:1, witch:1, hunter:1, guard:1}}},
+  // 動物夢境：羊駝＝平民（villagerLabel 只改畫面上的稱呼）；白貓不是固定角色，10 人局拿掉
+  // 白貓跟一隻小狼，所以放在 extraGods 讓法官自己勾選。
+  animal_dream:{label:'動物夢境', fixed:{wolfbeauty:1, bear:1, foxcub:1, pufferfish:1}, extraGods:['whitecat'], villagerLabel:'羊駝（平民）',
+    defaultByN:{
+      12:{wolf:3, wolfbeauty:1, villager:4, bear:1, foxcub:1, pufferfish:1, whitecat:1},
+      10:{wolf:2, wolfbeauty:1, villager:4, bear:1, foxcub:1, pufferfish:1}
+    }},
 };
 
 // 選板子的下拉選單以前是寫死在 index.html 裡的 <option>，跟這裡的 JG_BOARD_PRESETS 是兩份
@@ -125,7 +152,8 @@ let jgFoolChaseMode='chase';
 // 「屠神」勝負判定用的神職清單：只有「要追刀」規則才把傻瓜算進去（狼隊必須連傻瓜一起殺光才算屠神）；
 // 「不需追刀」規則傻瓜被放逐就直接出局，不需要、也不會被當成屠神判定的一員。
 function jgAllGodsForWin(){
-  const base=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','purewhitemaiden','dancer','littlegirl'];
+  // 直接用 GOD_ROLES（所有神職），以後新增神職不用再回來補這份清單；傻瓜另外依規則決定。
+  const base=GOD_ROLES.filter(r=>r!=='fool');
   if(jgFoolChaseMode==='chase') base.push('fool');
   return base;
 }
@@ -188,7 +216,8 @@ const ROLE_DESC_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1v
 // 跟 Alt+Enter 換行。區塊代號要對照 index.html 裡標了 data-ov="..." 屬性的區塊，可以用
 // 瀏覽器「檢查元素」找到某段文字對應的代號，或參考下面清單：
 //   board-cupid／board-biggreywolf-diviner／board-zombie／board-trickery／
-//   board-wolfshaman-purewhitemaiden／board-mechwolf／wincond-wolf／wincond-good／
+//   board-wolfshaman-purewhitemaiden／board-mechwolf／board-neighbor-puppet／board-animal-dream／
+//   wincond-wolf／wincond-good／
 //   wincond-cupid／wincond-zombie／voting-rules／sheriff-badge-rules
 // 發布成 CSV 後，把網址貼進下面 CONTENT_BLOCKS_SHEET_CSV_URL 的單引號中間即可，
 // 用法（發布到網路、CSV 格式）跟角色說明那份試算表完全一樣。
@@ -522,6 +551,10 @@ function jgSetBoardPreset(val){
 function jgApplyPresetDefaults(n){
   const preset=JG_BOARD_PRESETS[jgBoardPreset];
   if(!preset) return;
+  if(preset.defaultByN&&preset.defaultByN[n]){
+    jgRolePick=Object.assign({}, preset.defaultByN[n], {_init:true});
+    return;
+  }
   const rp={};
   Object.entries(preset.fixed).forEach(([k,v])=>{ rp[k]=v; });
   if(!rp.wolf) rp.wolf=1;
@@ -618,19 +651,21 @@ function renderPresetPicker(){
     +'<button onclick="jgPresetAdjWolf(1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">＋</button>'
     +'<span style="font-size:13px;color:var(--text2);">狼人</span></div>';
 
-  html+='<div style="font-size:11px;font-weight:700;color:var(--vil);margin:6px 0 4px;letter-spacing:0.5px;">平民</div>';
+  const vilLabel=preset.villagerLabel||'平民';
+  html+='<div style="font-size:11px;font-weight:700;color:var(--vil);margin:6px 0 4px;letter-spacing:0.5px;">'+vilLabel+'</div>';
   html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
     +'<button onclick="jgPresetAdjVillager(-1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">−</button>'
     +'<div style="font-size:18px;font-weight:800;min-width:24px;text-align:center;">'+vilCount+'</div>'
     +'<button onclick="jgPresetAdjVillager(1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">＋</button>'
-    +'<span style="font-size:13px;color:var(--text2);">平民</span></div>';
+    +'<span style="font-size:13px;color:var(--text2);">'+vilLabel+'</span></div>';
 
   html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職</div>';
   html+='<div class="rpick-grid">';
   fixedGodKeys.forEach(id=>{ html+=jgPresetLockedTileHtml(id); });
   // 通靈師（medium）與預言家（seer）查驗效果重疊，本板固定通靈師時就不再顯示預言家可選
   const excludeSeer=fixedKeys.includes('medium');
-  JG_PRESET_GOD_BASE.forEach(id=>{
+  // extraGods：只在特定板子出現的可選神職（例如動物夢境的白貓），不放進所有板子共用的清單。
+  JG_PRESET_GOD_BASE.concat(preset.extraGods||[]).forEach(id=>{
     if(fixedKeys.includes(id)) return; // 這個板子已經把這個角色當固定角色了，不重複顯示
     if(id==='seer'&&excludeSeer) return;
     const r=ALL_ROLES[id]; const cnt=state[id]||0;
