@@ -1038,10 +1038,13 @@ window.jgPufferfishFlipBtn=function(){
   });
   const line='河豚'+pf.num+'翻牌炸'+pool.join(',')+(catFlipped.length?'（白貓'+catFlipped.join(',')+'翻牌免死）':'')+(immune.length?'（已翻牌白貓'+immune.join(',')+'免疫）':'');
   jgRecord._voteFrozen.pufferLog=line;
-  const msg=pf.num+'號 河豚翻牌！'+(died.length?died.join('、')+'號 被炸死。':'沒有人被炸死。')
-    +(catFlipped.length?' '+catFlipped.join('、')+'號 是白貓，翻牌免死，下一次放逐階段結束後才會死亡。':'');
-  alert(msg+'\n\n法官口白：「'+pf.num+'號 河豚翻牌，'+(died.length?died.join('、')+'號 淘汰。':'無人淘汰。')+'」\n\n接著照常按「確認投票結果」。');
-  if(statusEl) statusEl.innerHTML='<div class="info-danger" style="font-size:13px;margin-top:6px;">'+msg+'</div>';
+  // 法官口白：「11號 河豚翻牌，1號 2號 淘汰。」（被炸死的號碼逐一唸出來）
+  const speech=pf.num+'號 河豚翻牌，'+(died.length?died.map(n=>n+'號').join(' ')+' 淘汰。':'無人淘汰。');
+  const catSpeech=catFlipped.length?catFlipped.map(n=>n+'號').join(' ')+' 是白貓，翻牌免死。':'';
+  alert('法官口白：「'+speech+'」'+(catSpeech?'\n「'+catSpeech+'」（下一次放逐階段結束後才會死亡）':'')+'\n\n接著照常按「確認投票結果」。');
+  if(statusEl) statusEl.innerHTML='<div class="speech" style="font-size:16px;margin-top:8px;">「<em>'+speech+'</em>」</div>'
+    +(catSpeech?'<div class="speech" style="margin-top:6px;">「<em>'+catSpeech+'</em>」</div><div class="info" style="font-size:12px;">白貓要等下一次放逐階段結束後才會死亡。</div>':'')
+    +'<div class="info" style="font-size:12px;margin-top:4px;">接著照常按「確認投票結果」。</div>';
   const btn=document.getElementById('jg-puffer-btn'); if(btn) btn.style.display='none';
   jgRenderRoster();
   const win=jgCheckWin();
