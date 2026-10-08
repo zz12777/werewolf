@@ -152,7 +152,8 @@ let jgFoolChaseMode='chase';
 // 「屠神」勝負判定用的神職清單：只有「要追刀」規則才把傻瓜算進去（狼隊必須連傻瓜一起殺光才算屠神）；
 // 「不需追刀」規則傻瓜被放逐就直接出局，不需要、也不會被當成屠神判定的一員。
 function jgAllGodsForWin(){
-  const base=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','purewhitemaiden','dancer','littlegirl','bear','foxcub','pufferfish','whitecat'];
+  // 直接用 GOD_ROLES（所有神職），以後新增神職不用再回來補這份清單；傻瓜另外依規則決定。
+  const base=GOD_ROLES.filter(r=>r!=='fool');
   if(jgFoolChaseMode==='chase') base.push('fool');
   return base;
 }

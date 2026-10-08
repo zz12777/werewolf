@@ -100,25 +100,6 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveAnimalGodId('${roleId}')">已紀錄，下一步 →</button>
     `,rn);
   }
-  // ── 動物夢境：放逐投票有人投給河豚時，問河豚要不要翻牌 ──
-  else if(step==='pufferfish-choice'){
-    const info=jgRecord._pufferPending;
-    if(!info){ jgSaveVoteInner(); return; }
-    const allTxt=info.all.join('、')+'號';
-    const boomTxt=info.voters.join('、')+'號';
-    const skipped=info.all.filter(n=>!info.voters.includes(n));
-    jgShowPg(`
-      <h2>河豚要翻牌嗎？</h2>
-      <div class="info" style="font-size:13px;">這次放逐投票${jgVotePkRound?'（含 PK 前那一輪）':''}投給河豚（${info.pfNum}號）的玩家：${allTxt}</div>
-      ${skipped.length?'<div class="info" style="font-size:12px;">其中 '+skipped.join('、')+'號 不會被炸（最高票出局的人照常出局，或是已經翻牌的白貓）。</div>':''}
-      <div class="speech" style="margin-top:8px;">「<em>河豚要翻牌嗎？</em>」</div>
-      <div class="info-warn" style="font-size:13px;">翻牌會炸死：${boomTxt}（整局限用一次）</div>
-      <div class="btn2" style="margin-top:10px;">
-        <button class="danger" onclick="jgPufferfishDecide(true)">河豚翻牌</button>
-        <button class="ghost" onclick="jgPufferfishDecide(false)">不翻牌，繼續</button>
-      </div>
-    `,'河豚');
-  }
   else if(step==='dual-assign'){
     jgRenderDualAssign();
   }
@@ -2276,6 +2257,10 @@ function jgRenderStep(step){
       <!-- 快速輸入投票已停用，改用下方「N號投給」逐一點選 -->
       <div id="jg-vote-tally"></div>
       <div id="jg-vote-tally-summary" style="margin-top:6px;"></div>
+      ${(()=>{ const pf=jgPlayers.find(p=>p.role==='pufferfish'); return (pf&&pf.alive&&!pf.pufferUsed)
+        ?'<button class="ghost" id="jg-puffer-btn" onclick="jgPufferfishFlipBtn()" style="margin-top:10px;">河豚翻牌</button><div class="info" style="font-size:12px;margin-top:4px;">先點好票再按；不能翻牌的時候會提示「現在不能翻牌」。</div>'
+        :''; })()}
+      <div id="jg-puffer-status"></div>
       <button class="danger" onclick="jgSaveVote()" style="margin-top:10px;">確認投票結果 →</button>
     `,'🗳 投票');
     jgRenderVoteTally();

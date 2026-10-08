@@ -2605,30 +2605,3 @@ function jgBearGrowlInfo(){
   const growl=[left,right].some(p=>p&&jgIsWolfPackMember(p));
   return {bear, dead:false, left, right, growl};
 }
-// 河豚：這次放逐投票（含 PK）有沒有人可以被炸。回傳 null＝不用問河豚。
-// counts：這一輪各號碼的得票；top：這一輪最高票的號碼。
-function jgPufferfishPromptInfo(counts, top){
-  const pf=jgPlayers.find(p=>p.role==='pufferfish');
-  if(!pf||!pf.alive||pf.pufferUsed) return null;
-  const goingToPk=top.length>1&&!jgVotePkRound;
-  const thisRound=((counts.find(c=>Number(c.target)===pf.num)||{}).voters||[]).map(Number);
-  if(goingToPk&&top.map(Number).includes(pf.num)){
-    // 河豚自己進入平票 PK：先記下第一輪投給他的人，PK 結束再一起問要不要翻牌。
-    jgRecord._pufferRound1Voters=thisRound.slice();
-    return null;
-  }
-  let pool=thisRound.slice();
-  if(jgVotePkRound&&jgRecord._pufferRound1Voters) pool=pool.concat(jgRecord._pufferRound1Voters);
-  if(!goingToPk) jgRecord._pufferRound1Voters=null;
-  pool=[...new Set(pool)];
-  const soleOut=top.length===1?Number(top[0]):null;
-  const voters=pool.filter(n=>{
-    const p=jgFind(n);
-    if(!p||!p.alive) return false;
-    if(n===soleOut) return false; // 最高票出局的人照常出局，不算在炸的名單裡
-    if(p.role==='whitecat'&&p.whitecatFlipped) return false; // 已翻牌的白貓炸不死
-    return true;
-  });
-  if(voters.length===0) return null;
-  return {pfNum:pf.num, voters:voters.sort((a,b)=>a-b), all:pool.sort((a,b)=>a-b)};
-}

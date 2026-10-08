@@ -699,18 +699,8 @@ function jgSaveVoteInner(){
   // 一眼就能看出這輪票是誰出局，不用自己再重新算一次最高票。平票／無人得票則不加註（沒人真的出局）。
   const soleOut=top.length===1?top[0]:null;
 
-  // 動物夢境：有人投給河豚、河豚還沒用過技能，先問河豚要不要翻牌，再繼續結算這一輪。
-  if(!frozen){
-    const pfInfo=jgPufferfishPromptInfo(counts, top);
-    if(pfInfo){
-      jgRecord._voteFrozen={targets, voters};
-      jgRecord._pufferPending=pfInfo;
-      jgGoStep('pufferfish-choice');
-      return;
-    }
-  }
   // 這一輪投票是不是放逐階段的最後結果（不是第一次平票要進 PK）——白貓翻牌後要等這個結束才死。
-  if(!(top.length>1&&!jgVotePkRound)) jgRecord._exileVoteHeld=true;
+  if(!(top.length>1&&!jgVotePkRound)){ jgRecord._exileVoteHeld=true; jgRecord._pufferRound1Voters=null; }
 
   const prefix=jgVotePkRound?'PK票':'票';
   const withVotes=counts.filter(c=>c.voters.length>0).sort((a,b)=>b.weight-a.weight||a.target-b.target);
@@ -746,6 +736,10 @@ function jgSaveVoteInner(){
     }
     voteLines.push('平票：'+top.join('、')+'號，進入 PK（PK 發言順序：'+jgVotePkOrder.join('→')+'）');
     jgDayLog[jgNight]=(jgDayLog[jgNight]||[]).concat(voteLines);
+    // 動物夢境：記下第一輪投給河豚的人——河豚如果進了 PK，PK 時翻牌可以連這一輪的人一起炸。
+    { const pf=jgPlayers.find(p=>p.role==='pufferfish');
+      const pc=pf?counts.find(c=>Number(c.target)===pf.num):null;
+      jgRecord._pufferRound1Voters=pc?pc.voters.slice():[]; }
     jgVotePkRound=true;
     jgVotePkCandidates=top.filter(n=>{ const p=jgFind(n); return p&&p.alive; });
     jgVoteTally={};
@@ -761,6 +755,12 @@ function jgSaveVoteInner(){
   const val=String(top[0]);
   jgVotePkRound=false; jgVotePkCandidates=[];
   const found=jgFind(val);
+  // 動物夢境：最高票的人剛剛已經被河豚炸死，就不用再放逐一次。
+  if(found&&!found.alive){
+    jgPushDayLog(found.num+'號已被河豚炸死，本輪無人放逐');
+    jgGoStep('next-night');
+    return;
+  }
   // 傻瓜被投出局：不再自動假設他一定會翻牌（真實桌上翻不翻牌是玩家自己的選擇，法官不該替他
   // 決定）——預設跟一般玩家一樣直接死亡，遺言頁面會有一個「已翻牌」的勾選框，法官照桌上實際
   // 情況勾選即可（見 jgToggleFoolReveal，會依「要不要追刀」規則決定勾選後死亡狀態怎麼變）。
@@ -996,30 +996,54 @@ function jgSaveKnightDuel(){
 }
 
 
-// 動物夢境：河豚決定要不要翻牌。翻牌就炸死名單裡所有人（白貓沒翻過牌的話會翻牌免死），
-// 然後照原本的投票結果繼續結算（出局／PK／無人出局）。
-window.jgPufferfishDecide=function(flip){
-  const info=jgRecord._pufferPending;
-  jgRecord._pufferPending=null;
-  if(flip&&info){
-    const pf=jgFind(info.pfNum);
-    if(pf) pf.pufferUsed=true;
-    const died=[], catFlipped=[];
-    info.voters.forEach(n=>{
-      const p=jgFind(n);
-      if(!p||!p.alive) return;
-      const wasCat=p.role==='whitecat';
-      if(jgApplyDeath(p)) died.push(p.num);
-      else if(wasCat){ catFlipped.push(p.num); delete p._whitecatJustFlipped; }
-    });
-    const line='河豚'+info.pfNum+'翻牌炸'+info.voters.join(',')+(catFlipped.length?'（白貓'+catFlipped.join(',')+'翻牌免死）':'');
-    if(jgRecord._voteFrozen) jgRecord._voteFrozen.pufferLog=line;
-    else jgPushDayLog(line);
-    alert(info.pfNum+'號 河豚翻牌！'+(died.length?died.join('、')+'號 被炸死。':'')+(catFlipped.length?'\n'+catFlipped.join('、')+'號 是白貓，翻牌免死，下一次放逐階段結束後才會死亡。':'')+'\n\n法官口白：「'+info.pfNum+'號 河豚翻牌，'+(died.length?died.join('、')+'號 淘汰。':'無人淘汰。')+'」');
-    jgRenderRoster();
-    const win=jgCheckWin();
-    if(win){ jgRecord._voteFrozen=null; jgShowWin(win); return; }
+// 動物夢境：投票畫面上的「河豚翻牌」按鈕。依目前已經點好的票判斷能不能翻牌：
+// 不能翻牌＝沒有人投給河豚，或唯一投給河豚的玩家是最高票出局的人，或是已經翻牌的白貓。
+// 可以翻牌就炸死這次投票所有投給河豚的玩家；河豚在平票 PK 中，連第一輪投他的人一起炸。
+// 炸完之後法官照常按「確認投票結果」，計票沿用炸之前的名單（不會因為有人死掉而改變結果）。
+window.jgPufferfishFlipBtn=function(){
+  const statusEl=document.getElementById('jg-puffer-status');
+  const say=msg=>{ if(statusEl) statusEl.innerHTML='<div class="info-warn" style="font-size:13px;margin-top:6px;">'+msg+'</div>'; alert(msg); };
+  const pf=jgPlayers.find(p=>p.role==='pufferfish');
+  if(!pf||!pf.alive||pf.pufferUsed){ say('現在不能翻牌（河豚已出局或已經用過技能）。'); return; }
+  const targets=jgVoteTargets();
+  const voters=jgVoteVoters();
+  const counts=targets.map(t=>{
+    const marks=jgVoteTally[t]||{};
+    const vs=Object.keys(marks).filter(v=>marks[v]).map(Number).sort((a,b)=>a-b);
+    return {target:t, voters:vs, weight:vs.reduce((s,v)=>s+jgVoteWeight(v),0)};
+  });
+  const maxWeight=Math.max(0,...counts.map(c=>c.weight));
+  const top=counts.filter(c=>c.weight===maxWeight&&maxWeight>0).map(c=>Number(c.target));
+  const soleOut=top.length===1?top[0]:null;
+  let pool=((counts.find(c=>Number(c.target)===pf.num)||{}).voters||[]).slice();
+  if(jgVotePkRound&&jgVotePkCandidates.map(Number).includes(pf.num)&&jgRecord._pufferRound1Voters){
+    pool=pool.concat(jgRecord._pufferRound1Voters);
   }
-  jgSaveVoteInner();
-  jgLiveSyncPush();
+  pool=[...new Set(pool.map(Number))].sort((a,b)=>a-b);
+  const isFlippedCat=n=>{ const p=jgFind(n); return !!(p&&p.role==='whitecat'&&p.whitecatFlipped); };
+  if(pool.length===0){ say('現在不能翻牌：沒有玩家投票給河豚。'); return; }
+  if(pool.length===1&&pool[0]===soleOut){ say('現在不能翻牌：唯一投票給河豚的 '+pool[0]+'號 是最高票出局的人。'); return; }
+  if(pool.length===1&&isFlippedCat(pool[0])){ say('現在不能翻牌：唯一投票給河豚的 '+pool[0]+'號 是已經翻牌的白貓。'); return; }
+  // 翻牌：先把計票名單凍結起來，再套用死亡
+  if(!jgRecord._voteFrozen) jgRecord._voteFrozen={targets, voters};
+  pf.pufferUsed=true;
+  const died=[], catFlipped=[], immune=[];
+  pool.forEach(n=>{
+    const p=jgFind(n);
+    if(!p||!p.alive) return;
+    if(isFlippedCat(n)){ immune.push(n); return; }
+    const wasCat=p.role==='whitecat';
+    if(jgApplyDeath(p)) died.push(p.num);
+    else if(wasCat){ catFlipped.push(p.num); delete p._whitecatJustFlipped; }
+  });
+  const line='河豚'+pf.num+'翻牌炸'+pool.join(',')+(catFlipped.length?'（白貓'+catFlipped.join(',')+'翻牌免死）':'')+(immune.length?'（已翻牌白貓'+immune.join(',')+'免疫）':'');
+  jgRecord._voteFrozen.pufferLog=line;
+  const msg=pf.num+'號 河豚翻牌！'+(died.length?died.join('、')+'號 被炸死。':'沒有人被炸死。')
+    +(catFlipped.length?' '+catFlipped.join('、')+'號 是白貓，翻牌免死，下一次放逐階段結束後才會死亡。':'');
+  alert(msg+'\n\n法官口白：「'+pf.num+'號 河豚翻牌，'+(died.length?died.join('、')+'號 淘汰。':'無人淘汰。')+'」\n\n接著照常按「確認投票結果」。');
+  if(statusEl) statusEl.innerHTML='<div class="info-danger" style="font-size:13px;margin-top:6px;">'+msg+'</div>';
+  const btn=document.getElementById('jg-puffer-btn'); if(btn) btn.style.display='none';
+  jgRenderRoster();
+  const win=jgCheckWin();
+  if(win){ jgRecord._voteFrozen=null; jgShowWin(win); return; }
 };

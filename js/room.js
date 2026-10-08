@@ -1620,7 +1620,8 @@ function jgRoomAllGodsForWin(){
   // jgAllGodsForWin() 一致）。魔術師雖然只是換號碼、不算查驗/救人這種主動反殺技能，但
   // 本機法官助手的規則裡他仍然算「神」（不是「民」）——加進這份清單，不然屠民/屠神判斷
   // 會把還活著的魔術師誤算成兩邊都不是，可能提前誤判成屠民。
-  return ['seer','witch','hunter','guard','dreamcatcher','medium','blackmarket','magician','demonhunter'];
+  // 所有神職都列進來（跟本機法官助手 jgAllGodsForWin 一致；傻瓜另外處理，這裡不算）。
+  return ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','purewhitemaiden','dancer','littlegirl','diviner','trickmage','sequenceprince','bear','foxcub','pufferfish','whitecat'];
 }
 async function jgRoomComputeWinCheck(){
   const db=window.jgFirebaseDb;

@@ -85,28 +85,59 @@ async function run(){
   ev("jgRecord._exileVoteHeld=true; jgGoStep('next-night');");
   check('放逐階段結束後白貓死亡', ev('jgFind(12).alive'), false);
 
-  // ── 河豚：有人投給河豚，翻牌炸死投他的人（最高票出局的人照常出局）──
-  newGame();
-  ev("jgNight=2; jgVotePkRound=false; jgVotePkCandidates=[]; jgAbstainVoters={}; jgDayVoteOutResolvedOnce=true;");
-  ev("jgGoStep('vote');");
-  ev("jgVoteTally={11:{1:true,2:true}, 5:{3:true,4:true,6:true,7:true,8:true,9:true,10:true,12:true}};");
-  ev("jgSaveVoteInner();");
-  check('有人投河豚會先問河豚', ev('jgCurrentStep'), 'pufferfish-choice');
-  check('炸的名單是 1、2', ev('jgRecord._pufferPending.voters'), [1,2]);
-  ev('jgPufferfishDecide(true)');
+  // ── 河豚：投票畫面上的「河豚翻牌」按鈕 ──
+  const startVote = tally=>{
+    newGame();
+    alerts.length = 0;
+    ev("jgNight=2; jgVotePkRound=false; jgVotePkCandidates=[]; jgAbstainVoters={}; jgDayVoteOutResolvedOnce=true; jgRecord._pufferRound1Voters=null;");
+    ev("jgGoStep('vote');");
+    window.__t = tally;
+    ev("jgVoteTally=JSON.parse(JSON.stringify(window.__t));");
+  };
+  startVote({11:{1:true,2:true}, 5:{3:true,4:true,6:true,7:true,8:true,9:true,10:true,12:true}});
+  check('投票畫面有河豚翻牌按鈕', !!window.document.getElementById('jg-puffer-btn'), true);
+  ev('jgPufferfishFlipBtn()');
   check('1 號被炸死', ev('jgFind(1).alive'), false);
   check('2 號被炸死', ev('jgFind(2).alive'), false);
-  check('5 號照常被放逐', ev('jgFind(5).alive'), false);
   check('河豚技能用掉', ev('jgFind(11).pufferUsed'), true);
+  ev('jgSaveVoteInner()');
+  check('5 號照常被放逐（計票沿用炸之前的名單）', ev('jgFind(5).alive'), false);
   check('文字紀錄有河豚翻牌', ev('(jgDayLog[2]||[]).some(l=>l.includes("河豚11翻牌炸1,2"))'), true);
 
-  // 唯一投給河豚的人就是最高票出局的人：河豚不能翻牌
-  newGame();
-  ev("jgNight=2; jgVotePkRound=false; jgVotePkCandidates=[]; jgAbstainVoters={}; jgDayVoteOutResolvedOnce=true;");
+  startVote({5:{1:true,2:true,3:true}});
+  ev('jgPufferfishFlipBtn()');
+  check('沒人投河豚：現在不能翻牌', alerts.some(a=>a.includes('現在不能翻牌')), true);
+  check('不能翻牌時技能沒用掉', ev('!!jgFind(11).pufferUsed'), false);
+
+  startVote({11:{5:true}, 5:{1:true,2:true,3:true}});
+  ev('jgPufferfishFlipBtn()');
+  check('唯一投河豚的人是最高票出局：現在不能翻牌', alerts.some(a=>a.includes('現在不能翻牌')), true);
+  check('5 號沒被炸', ev('jgFind(5).alive'), true);
+
+  startVote({11:{12:true}, 5:{1:true,2:true,3:true}});
+  ev('jgFind(12).whitecatFlipped=true;');
+  ev('jgPufferfishFlipBtn()');
+  check('唯一投河豚的是已翻牌白貓：現在不能翻牌', alerts.some(a=>a.includes('現在不能翻牌')), true);
+
+  // 投河豚的人裡面有最高票出局的人，但不只他一個：全部都炸
+  startVote({11:{5:true,6:true}, 5:{1:true,2:true,3:true}});
+  ev('jgPufferfishFlipBtn()');
+  check('5、6 號都被炸死', [ev('jgFind(5).alive'), ev('jgFind(6).alive')], [false,false]);
+  ev('jgSaveVoteInner()');
+  check('最高票的 5 號已經被炸死，不再放逐', ev('(jgDayLog[2]||[]).some(l=>l.includes("5號已被河豚炸死"))'), true);
+
+  // PK：河豚進入平票 PK，翻牌連第一輪投他的人一起炸
+  startVote({11:{1:true,2:true}, 5:{3:true,4:true}});
+  ev('jgSaveVoteInner()');
+  check('第一輪平票進 PK', ev('jgVotePkRound'), true);
   ev("jgGoStep('vote');");
-  ev("jgVoteTally={11:{5:true}, 5:{1:true,2:true,3:true}};");
-  ev("jgSaveVoteInner();");
-  check('唯一投河豚的人被放逐：不問河豚', ev('jgCurrentStep')!=='pufferfish-choice', true);
+  ev("jgVoteTally={11:{6:true}, 5:{7:true,8:true}};");
+  ev('jgPufferfishFlipBtn()');
+  check('PK 翻牌炸兩輪投河豚的人', [1,2,6].map(n=>ev('jgFind('+n+').alive')), [false,false,false]);
+
+  // ── 屠神清單包含所有神職 ──
+  check('屠神清單包含新神職與占卜師／定序王子／詭術之境魔術師',
+    ['bear','foxcub','pufferfish','whitecat','diviner','sequenceprince','trickmage'].every(r=>ev('jgAllGodsForWin()').includes(r)), true);
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail = results.some(r=>!r.ok);
