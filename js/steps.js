@@ -42,7 +42,7 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2 style="margin-bottom:8px;">發牌・確認身分</h2>
       <div class="speech">1. 逐一發牌<br>2. 給玩家約 15 秒記住自己的身分。<br>3. 15 秒後，法官說「<em>天黑請閉眼</em>」</div>
-      ${needMechAssignReminder?'<div class="info-warn" style="margin-top:8px;">⚠️ 本局含機械狼／石像鬼等角色：待會請大家閉眼前找好牌，閉眼後舉起讓法官紀錄身分。</div><div class="info" style="margin-top:6px;">法官可以先按到下一步，趁大家閉眼找牌的空檔用手機加入連線房間，等一下就能直接用手機記錄身分。</div>':''}
+      ${needMechAssignReminder?'<div class="info-warn" style="margin-top:8px;">⚠️ 本局含機械狼／石像鬼等角色：待會請大家閉眼前找好牌，閉眼後舉起讓法官紀錄身分。</div><div class="info" style="margin-top:6px;">法官可以先按到下一步，趁大家抿牌時用手機加入連線房間記錄身分。</div>':''}
       ${needDualReminder?'<div class="info-warn" style="margin-top:8px;">⚠️ 本局為雙身分模式：每人有 2 張牌，請提醒玩家先找好兩張牌，待會兒閉眼後，請依法官指示舉起牌讓法官記錄身分。</div>':''}
       ${needThiefReminder?'<div class="info-warn" style="margin-top:8px;">⚠️ 本局含盜賊：請確認候選轉盤抽到的那兩張牌已經另外拿起來（不在這次發的牌裡），剩下的牌才發給大家。</div>':''}
       <button class="primary" style="margin-top:14px;" onclick="jgProceedToNight()">大家都閉眼了 →</button>

@@ -524,7 +524,7 @@ function jgFormatNightLog(){
   if(jgNight===1 && jgThiefChosen && jgThiefFinalNum){
     const finalAbbr=ROLE_ABBR[jgThiefFinalRole]||jgThiefFinalRole;
     const buriedAbbr=ROLE_ABBR[jgThiefBuriedRole]||jgThiefBuriedRole;
-    lines.push('盜 '+buriedAbbr+'or'+finalAbbr+'→'+finalAbbr);
+    lines.push('盜 '+jgThiefFinalNum+' '+buriedAbbr+'or'+finalAbbr+'→'+finalAbbr);
   }
   // 邱比特是整局第一個睜眼的角色（僅第一夜），配對結果只記錄這一次
   if(jgNight===1 && jgCupidChosen && jgLovers && jgLovers.length===2){
@@ -1859,6 +1859,9 @@ function jgRenderRoster(){
       // 提醒法官不會再看到「定序王子翻牌」的選項（jgSequencePrinceUsed 是整局唯一的旗標，
       // 不分是哪一天用掉的，用過就是用過）。
       const princeUsedTag=(role==='sequenceprince'&&jgSequencePrinceUsed)?'<span class="rp-tag-lover" style="color:var(--gold);" title="定序王子已經翻過牌，整局限一次，不會再出現">👑已翻牌</span>':'';
+      // 殭屍板：被感染的玩家法官視角加註標籤，方便對照場上還剩幾位沒被感染——玩家本人
+      // 看不到這個標籤，感染本身也不影響這位玩家平常的查驗/死亡結算（只影響殭屍的勝負判定）。
+      const infectedTag=p.infected?'<span class="rp-tag-lover" style="color:var(--thief);" title="已被殭屍感染">🧟感染</span>':'';
       // 混血兒：第一夜選完支持對象之後，法官自己視角就加註「狼人混」或「好人混」標籤，
       // 不用等遊戲結束才知道——法官心裡要有數（例如屠民判定、狼隊出刀名單這些場上互動）
       // 混血兒本人一律當一般平民處理，這個標籤純粹是給法官自己看的參考，不代表混血兒
@@ -1867,7 +1870,7 @@ function jgRenderRoster(){
         ?(()=>{ const tp=jgFind(jgHybridTarget); if(!tp) return ''; const isWolf=jgIsWolfPackMember(tp);
             return '<span class="rp-tag-lover" style="color:'+(isWolf?'var(--wolf,#b91c1c)':'var(--good,#2e7d32)')+';" title="混血兒支持 '+tp.num+'號（'+(isWolf?'狼人陣營':'好人陣營')+'），僅供法官自己參考：混血兒本人查驗/屠民判定一律仍算好人／平民">'+(isWolf?'狼人混':'好人混')+'</span>'; })()
         :'';
-      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}${princeUsedTag}${hybridSideTag}</div>`;
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}${princeUsedTag}${hybridSideTag}${infectedTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <button type="button" class="rp-toggle-btn" title="手動修改死亡狀態（安全網，避免忘記勾選/漏改）" onclick="jgManualToggleAlive(${p.num})">⇄</button>
