@@ -1007,7 +1007,7 @@ function jgRenderRosterSetupRows_OLD(){
       +'oninput="jgRosterInputChange('+i+')" onfocus="jgRosterInputChange('+i+')" onblur="jgRosterBlur('+i+')" autocomplete="off"/>'
       +'<div class="rname-suggest" id="jg-roster-suggest-'+i+'"></div>'
       +'</div>'
-      +'<button type="button" class="rname-btn" onclick="jgRosterClear('+i+')" title="清空這一格">✕</button>'
+      +'<button type="button" class="rname-btn" onclick="jgRosterClear('+i+')" title="清空這一格">'+jgIcon('x')+'</button>'
       +'</div>';
   }
   box.innerHTML=html;
@@ -1192,7 +1192,7 @@ function jgRenderRosterSetupRows(){
     const cur=jgPlayerNames[i]||'';
     const isActive=(i===jgRosterActiveSlot);
     slotsHtml+='<div class="rname-slot'+(isActive?' active':'')+'" onclick="jgRosterSetActiveSlot('+i+')">'
-      +(cur?'<button type="button" class="rname-slot-x" onclick="event.stopPropagation();jgRosterClearSlot('+i+')" title="清空這一格">✕</button>':'')
+      +(cur?'<button type="button" class="rname-slot-x" onclick="event.stopPropagation();jgRosterClearSlot('+i+')" title="清空這一格">'+jgIcon('x')+'</button>':'')
       +'<div class="rname-slot-num">'+i+'</div>'
       +'<div class="rname-slot-name">'+(cur||'（空）')+'</div>'
       +'<input type="hidden" id="jg-roster-input-'+i+'" value="'+cur.replace(/"/g,'&quot;')+'">'
@@ -1372,10 +1372,10 @@ function jgSpeakTimerWidgetHtml(order, forceReset){
       <div style="font-size:12px;color:var(--text2);">⏱️ 目前發言（90 秒倒數）</div>
       <div style="font-size:24px;font-weight:800;margin:4px 0;">${nm}</div>
       <div id="jg-speak-timer-clock" style="font-size:42px;font-weight:800;font-variant-numeric:tabular-nums;color:${jgSpeakTimerDone?'var(--wolf)':'var(--text)'};">${jgSpeakTimerFmt(jgSpeakTimerSec)}</div>
-      <div id="jg-speak-timer-uptxt" style="font-size:12px;color:${jgSpeakTimerDone?'#922418':'var(--text3)'};min-height:16px;margin-top:2px;">${jgSpeakTimerDone?'⏰ 時間到':''}</div>
+      <div id="jg-speak-timer-uptxt" style="font-size:12px;color:${jgSpeakTimerDone?'#922418':'var(--text3)'};min-height:16px;margin-top:2px;">${jgSpeakTimerDone?jgIcon('alarm')+' 時間到':''}</div>
       <div style="display:flex;gap:8px;margin-top:10px;">
-        <button type="button" id="jg-speak-timer-toggle-btn" onclick="jgSpeakTimerToggle()" style="flex:1;margin:0;">${jgSpeakTimerRunning?'⏸ 暫停':'▶️ 開始'}</button>
-        <button type="button" onclick="jgSpeakTimerReplayAudio()" style="flex:1;margin:0;">🔁 重播音效</button>
+        <button type="button" id="jg-speak-timer-toggle-btn" onclick="jgSpeakTimerToggle()" style="flex:1;margin:0;">${jgSpeakTimerRunning?jgIcon('pause')+' 暫停':jgIcon('play')+' 開始'}</button>
+        <button type="button" onclick="jgSpeakTimerReplayAudio()" style="flex:1;margin:0;">${jgIcon('replay')} 重播音效</button>
         <button type="button" class="primary" onclick="jgSpeakTimerNext()" style="flex:1;margin:0;">過，下一位 →</button>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:8px;">${upcoming?'接下來：'+upcoming:'（最後一位）'}</div>
@@ -1397,9 +1397,9 @@ function jgSpeakTimerTick(){
     const clock=document.getElementById('jg-speak-timer-clock');
     if(clock) clock.style.color='var(--wolf)';
     const uptxt=document.getElementById('jg-speak-timer-uptxt');
-    if(uptxt){ uptxt.textContent='⏰ 時間到'; uptxt.style.color='#922418'; }
+    if(uptxt){ uptxt.innerHTML=jgIcon('alarm')+' 時間到'; uptxt.style.color='#922418'; }
     const btn=document.getElementById('jg-speak-timer-toggle-btn');
-    if(btn) btn.textContent='▶️ 開始';
+    if(btn) btn.innerHTML=jgIcon('play')+' 開始';
   }
 }
 // 開始／暫停倒數（不影響音效播放狀態）；時間已經到 0 時按「開始」＝重新倒數 90 秒。
@@ -1421,7 +1421,7 @@ function jgSpeakTimerToggle(){
     jgSpeakTimerHandle=setInterval(jgSpeakTimerTick,1000);
   }
   const btn=document.getElementById('jg-speak-timer-toggle-btn');
-  if(btn) btn.textContent=jgSpeakTimerRunning?'⏸ 暫停':'▶️ 開始';
+  if(btn) btn.innerHTML=jgSpeakTimerRunning?jgIcon('pause')+' 暫停':jgIcon('play')+' 開始';
 }
 // 重播提示音效：只重播聲音，不會重置或影響倒數本身。
 function jgSpeakTimerReplayAudio(){
@@ -2868,8 +2868,8 @@ function jgShowWin(res){
     </div>
     <div class="section-title" style="margin-top:16px;">🏆 本場 MVP（選填）</div>
     <div id="jg-mvp-picker-wrap">${jgMvpPickerHtml()}</div>
-    <button onclick="jgShowExportModal()" style="margin-top:14px;">📋 匯出文字紀錄</button>
-    <button onclick="pdSubmitGameRecord()" style="margin-top:8px;">🔒 送出到遊玩數據</button>
+    <button onclick="jgShowExportModal()" style="margin-top:14px;">${jgIcon('clip')} 匯出文字紀錄</button>
+    <button onclick="pdSubmitGameRecord()" style="margin-top:8px;">${jgIcon('lock')} 送出到遊玩數據</button>
     <button class="primary" onclick="jgReset()" style="margin-top:8px;">再玩一局</button>
   `;
   document.getElementById('jg-phase-badge').innerHTML='🏁 遊戲結束';

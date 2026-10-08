@@ -964,12 +964,12 @@ function jgThiefShowBigCard(){
 // 卡牌本身的 HTML（含 id，方便之後只更新 class/style 做動畫，不用整個重新渲染整份 innerHTML，
 // 不然瀏覽器沒有「舊狀態→新狀態」可以動畫，直接就是最終結果，感覺不到過渡效果）。
 function jgThiefCardBoxHtml(idx, roleId, disabled){
-  const r=ALL_ROLES[roleId]||{icon:'🎴',name:jgFullRoleName(roleId)};
+  const r=ALL_ROLES[roleId]||{name:jgFullRoleName(roleId)};
   return '<div id="jg-thiefcard-'+idx+'" class="jg-thief-card'+(disabled?' jtc-disabled':'')+'" '
     +(disabled?'':'onclick="jgThiefCardTap('+idx+')"')+'>'
-    +'<div class="jg-tc-num">'+(idx===1?'①':'②')+'</div>'
-    +'<div class="jg-tc-icon">'+r.icon+'</div>'
-    +'<div class="jg-tc-name">'+r.name+'</div>'
+    +'<div class="jg-tc-num">'+idx+'</div>'
+    // 每個字包成 span：手機直拿時卡片又高又窄，改成一字一行直排，字才能放到最大
+    +'<div class="jg-tc-name">'+Array.from(r.name).map(ch=>'<span>'+ch+'</span>').join('')+'</div>'
     +'</div>';
 }
 
@@ -1011,8 +1011,8 @@ function jgThiefBigCardSync(forcedIdx){
     const r=ALL_ROLES[roleId]||{icon:'🎴',name:jgFullRoleName(roleId)};
     bottom.innerHTML='<div class="jtc-picked-label">已選定：'+r.name+'</div>'
       +'<div class="jtc-btn-row">'
-      +'<button onclick="jgThiefCardReset()">🔄 重新選</button>'
-      +'<button class="primary" onclick="jgThiefCardConfirm(\''+roleId+'\')">✅ 確定</button>'
+      +'<button onclick="jgThiefCardReset()">'+jgIcon('replay')+' 重新選</button>'
+      +'<button class="primary" onclick="jgThiefCardConfirm(\''+roleId+'\')">'+jgIcon('check')+' 確定</button>'
       +'</div>';
   } else if(forcedIdx){
     bottom.innerHTML='<div class="jtc-forced-warn">⚠️ 候選中有狼人陣營，必須選擇狼人</div>';
@@ -1409,7 +1409,7 @@ function jgMechWolf2MediumCheckLive(id, val){
   const label=jgFullRoleName(jgCheckDisplayRole(found.role||'villager'));
   const mwLabel=roleId==='bigmechwolf'?'大機械狼':'小機械狼';
   box.innerHTML='<div class="info-success" style="font-size:16px;font-weight:800;text-align:center;padding:10px;">'+found.num+'號 → '+label+'</div>'
-    +'<button onclick="jgMechWolf2ShowBigCardRaw('+found.num+')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+mwLabel+'看</button>';
+    +'<button onclick="jgMechWolf2ShowBigCardRaw('+found.num+')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給'+mwLabel+'看</button>';
 }
 // 雙機械狼板：已經學到明確身分（不是另一台機械狼）、且過了學到的那一晚，可以使用技能——
 // 跟單一機械狼的 jgMechWolfSkillUseHtml 是同一套邏輯，只是要照 roleId 分開讀寫欄位／狀態。
@@ -1423,7 +1423,7 @@ function jgMechWolf2LearnCheck(id, val){
   const label=jgFullRoleName(jgMechWolf2RawRoleDisplay(found.role));
   const mwLabel=roleId==='bigmechwolf'?'大機械狼':'小機械狼';
   box.innerHTML='<div class="info-success" style="font-size:16px;font-weight:800;text-align:center;padding:10px;">'+found.num+'號 → '+label+'</div>'
-    +'<button onclick="jgMechWolf2ShowBigCardRaw('+found.num+')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+mwLabel+'看</button>';
+    +'<button onclick="jgMechWolf2ShowBigCardRaw('+found.num+')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給'+mwLabel+'看</button>';
 }
 function jgSaveDancer(){
   if(!jgSaveGodId('dancer')) return;
@@ -1494,7 +1494,7 @@ function jgGargoyleCheck(){
   const r=found.role||'villager';
   const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
   box.innerHTML='<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+jgFullRoleName(jgCheckDisplayRole(r))+'</div>'
-    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給石像鬼看</button>';
+    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給石像鬼看</button>';
 }
 
 function jgSaveGargoyleNight(){
@@ -1610,7 +1610,7 @@ function jgMechWolfLearnCheck(){
   const label=jgFullRoleName(found.role||'villager');
   const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
   box.innerHTML='<div class="info-success" style="font-size:16px;font-weight:800;text-align:center;padding:10px;">'+found.num+'號 → '+label+'</div>'
-    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給機械狼看</button>';
+    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給機械狼看</button>';
 }
 
 // Builds the "use skill" inputs shown on night 2+ once the mechanical wolf has learned
@@ -1668,7 +1668,7 @@ function jgMechWolf2MediumCheckLive(id, val){
   const label=jgFullRoleName(jgCheckDisplayRole(found.role||'villager'));
   const mwLabel=roleId==='bigmechwolf'?'大機械狼':'小機械狼';
   box.innerHTML='<div class="info-success" style="font-size:16px;font-weight:800;text-align:center;padding:10px;">'+found.num+'號 → '+label+'</div>'
-    +'<button onclick="jgBigCardFor(\''+val+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給'+mwLabel+'看</button>';
+    +'<button onclick="jgBigCardFor(\''+val+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給'+mwLabel+'看</button>';
 }
 // 雙機械狼板：學到技能之後、真正輪到可以使用那一晚（jgNight>learnedNight）要顯示的操作介面——
 // 跟單一機械狼的 jgMechWolfSkillUseHtml 是同一套邏輯，只是要多帶 roleId 參數分辨是哪一隻。
@@ -1710,7 +1710,7 @@ function jgMechWolfMediumCheckLive(){
   const label=jgFullRoleName(jgCheckDisplayRole(r));
   const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
   box.innerHTML='<div class="info-success" style="font-size:16px;font-weight:800;text-align:center;padding:10px;">'+found.num+'號 → '+label+'</div>'
-    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給機械狼看</button>';
+    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給機械狼看</button>';
 }
 
 // 狼巫／純白之女查驗真實身份的大字報顯示，跟通靈師（jgMediumCheck）同一套做法：
@@ -1726,7 +1726,7 @@ function jgWolfshamanCheckLive(){
   const label=jgFullRoleName(jgCheckDisplayRole(found.role||'villager'));
   const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
   box.innerHTML='<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+label+'</div>'
-    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給狼巫看</button>';
+    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給狼巫看</button>';
 }
 function jgPurewhitemaidenCheckLive(){
   const val=(document.getElementById('jg-purewhitemaiden-target')||{}).value?.trim()||'';
@@ -1738,7 +1738,7 @@ function jgPurewhitemaidenCheckLive(){
   const label=jgFullRoleName(jgCheckDisplayRole(found.role||'villager'));
   const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
   box.innerHTML='<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+label+'</div>'
-    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給純白之女看</button>';
+    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給純白之女看</button>';
 }
 function jgMediumCheck(){
   const val=(document.getElementById('jg-medium-check')||{}).value?.trim()||'';
@@ -1751,7 +1751,7 @@ function jgMediumCheck(){
   const label=jgFullRoleName(jgCheckDisplayRole(r));
   const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
   box.innerHTML='<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+label+'</div>'
-    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">📋 大字報顯示給通靈師看</button>';
+    +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給通靈師看</button>';
 }
 
 function jgSaveMedium(){
