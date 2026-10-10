@@ -1133,6 +1133,10 @@ async function runDealAllRolesTest(){
     { name:'大野狼+大灰狼+假面+狼巫板', comp:{ bigbadwolf:1, biggreywolf:1, mask:1, wolfshaman:1, seer:1, villager:1 } },
   ];
 
+  // 發牌房的房主（法官）不認領座位，分配身分前會先補建自己的成員文件（seatNum 為 null），
+  // 不然資料庫規則會擋下寫入。
+  global.serverTimestamp=()=>0;
+  global.window.jgFirebaseUid='dealHostUid';
   for(const board of boards){
     const total=Object.values(board.comp).reduce((a,b)=>a+b,0);
     mod.__setRoomCode('ROOM_'+board.name);
@@ -1155,6 +1159,10 @@ async function runDealAllRolesTest(){
       return doc?doc.role:null;
     });
     check(board.name+'：每個人都拿到了角色（沒有 null）', dealtRoles.every(r=>!!r), true);
+    const hostDoc=global.__mockDocs['rooms/ROOM_'+board.name+'/players/dealHostUid'];
+    check(board.name+'：房主成為成員但不佔座位', !!hostDoc&&hostDoc.seatNum===null, true);
+    check(board.name+'：房主沒有被發到身分', !!global.__mockDocs['rooms/ROOM_'+board.name+'/secrets/dealHostUid'], false);
+    check(board.name+'：房間標記已發牌', !!(global.__mockDocs['rooms/ROOM_'+board.name]||{}).dealtDone, true);
   }
 
   console.log(JSON.stringify(results, null, 2));

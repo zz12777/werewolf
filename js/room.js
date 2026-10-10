@@ -265,9 +265,28 @@ window.jgRoomDealCreate=async function(hostName, comp, total, presetNames){
   jgRoomIsHost=true;
   jgRoomComp=comp; jgRoomTotal=total;
   window.jgRoomPendingComp=null; window.jgRoomPendingDeal=null;
+  try{ await jgRoomDealEnsureHostMember(code, name); }catch(e){ console.error('發牌房房主加入成員失敗', e); }
   try{ localStorage.setItem('jgLastRoomCode', code); }catch(e){}
   await jgRoomEnterLobby(code);
 };
+// 發牌房的房主自己不一定會認領座位，但 Firestore 安全規則規定「自己的 players/{uid}
+// 文件存在（是房間成員）」才能寫入 secrets、更新房間文件——房主不是成員的話，按「分配身分」
+// 會被規則整個擋下來（PERMISSION_DENIED），畫面上看起來就是按了沒反應。所以房主一建房就先
+// 建立一份自己的成員文件（seatNum 是 null，不佔任何座位），跟一般連線房間的加入流程同一種
+// 寫法。舊版建立、房主還不是成員的房間，按分配身分時也會先補建一次。已經有文件（例如房主
+// 自己也認領了座位）就不動，避免把座位蓋掉。
+async function jgRoomDealEnsureHostMember(code, hostName){
+  const uid=await jgRoomWaitAuth();
+  const db=window.jgFirebaseDb;
+  const ref=doc(db,'rooms',code,'players',uid);
+  const snap=await getDoc(ref);
+  if(snap.exists()) return;
+  await setDoc(ref,{ name:(hostName||'房主'), seatNum:null, joinedAt:serverTimestamp(), alive:true });
+}
+// 發牌房真正佔座位的玩家：排除房主那份 seatNum 為 null 的成員文件。
+function jgRoomDealSeatedPlayers(){
+  return jgRoomLatestPlayers.filter(p=>p.seatNum!=null);
+}
 // 加入發牌房：不用打名字，直接從房主預先設好的座位清單裡點選「我是幾號」——
 // 一個座位只能被一個人認領，避免兩支手機都宣稱自己是同一號。
 window.jgRoomDealClaimSeat=async function(seatNum, seatName){
@@ -302,45 +321,62 @@ window.jgRoomDealJoin=async function(codeRaw){
 // 房主分配身分：洗牌、寫進每個座位的 secrets，再把整份「座位→身分」的結果套進本機的
 // 法官助手（jgApplyDealtRoles，定義在 js/core.js），直接把房主的畫面切回法官助手繼續
 // 主持——玩家手機那邊則靠 dealtDone 這個欄位，各自從 secrets 讀出自己的身分顯示大字。
+let jgRoomDealAssigning=false; // 分配身分寫入中，避免連按
 window.jgRoomDealAssignRoles=async function(){
   if(!jgRoomCode) return;
   const rd=jgRoomLatestRoomDoc||{};
   const presetNames=rd.presetNames||{};
   const totalSeats=Object.keys(presetNames).length;
-  const claimedSeats=jgRoomLatestPlayers.length;
+  const seated=jgRoomDealSeatedPlayers();
+  const claimedSeats=seated.length;
   if(claimedSeats!==totalSeats){
     alert('⚠️ 還有座位沒有人認領（'+claimedSeats+' / '+totalSeats+'），請等所有人都加入再分配身分。');
     return;
   }
+  if(!jgRoomComp){ alert('這個房間沒有記錄板子配置，無法分配身分（可能是用舊版連結建立的房間）。'); return; }
+  if(jgRoomDealAssigning) return; // 避免連按送出兩次
+  jgRoomDealAssigning=true;
+  const btn=document.getElementById('jg-deal-assign-btn');
+  if(btn){ btn.disabled=true; btn.textContent='分配中...'; }
   const db=window.jgFirebaseDb;
-  const players=jgRoomLatestPlayers.slice().sort((a,b)=>a.seatNum-b.seatNum);
+  const players=seated.slice().sort((a,b)=>a.seatNum-b.seatNum);
   const seatRoleMap={};
   let thiefCand1=null, thiefCand2=null;
-  if(jgRoomComp.thief>0){
-    // 跟一般連線房間的邏輯一樣：有盜賊時板子設定的角色總數是「人數+2」，要先抽出2張
-    // 候選身分放一邊，剩下人數-1張＋盜賊本身湊成人數張才發給玩家（詳見
-    // jgRoomAssignRoles 那邊的完整說明，這裡是同一套邏輯，只是接下來要把結果交給房主
-    // 的本機法官助手接手，所以候選身分也要一起傳過去，見 jgApplyDealtRoles）。
-    const fullPool=buildPool(jgRoomComp);
-    const thiefIdx=fullPool.indexOf('thief');
-    fullPool.splice(thiefIdx,1);
-    const shuffledRest=shuffle(fullPool.slice());
-    thiefCand1=shuffledRest[0]; thiefCand2=shuffledRest[1];
-    const pool=shuffle(shuffledRest.slice(2).concat(['thief']));
-    await Promise.all(players.map((p,i)=>{
-      const role=pool[i]||'villager';
-      seatRoleMap[p.seatNum]=role;
-      return setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:role, seatNum:p.seatNum });
-    }));
-  } else {
-    const pool=shuffle(buildPool(jgRoomComp));
-    await Promise.all(players.map((p,i)=>{
-      const role=pool[i]||'villager';
-      seatRoleMap[p.seatNum]=role;
-      return setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:role, seatNum:p.seatNum });
-    }));
+  try{
+    await jgRoomDealEnsureHostMember(jgRoomCode, '房主');
+    if(jgRoomComp.thief>0){
+      // 跟一般連線房間的邏輯一樣：有盜賊時板子設定的角色總數是「人數+2」，要先抽出2張
+      // 候選身分放一邊，剩下人數-1張＋盜賊本身湊成人數張才發給玩家（詳見
+      // jgRoomAssignRoles 那邊的完整說明，這裡是同一套邏輯，只是接下來要把結果交給房主
+      // 的本機法官助手接手，所以候選身分也要一起傳過去，見 jgApplyDealtRoles）。
+      const fullPool=buildPool(jgRoomComp);
+      const thiefIdx=fullPool.indexOf('thief');
+      fullPool.splice(thiefIdx,1);
+      const shuffledRest=shuffle(fullPool.slice());
+      thiefCand1=shuffledRest[0]; thiefCand2=shuffledRest[1];
+      const pool=shuffle(shuffledRest.slice(2).concat(['thief']));
+      await Promise.all(players.map((p,i)=>{
+        const role=pool[i]||'villager';
+        seatRoleMap[p.seatNum]=role;
+        return setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:role, seatNum:p.seatNum });
+      }));
+    } else {
+      const pool=shuffle(buildPool(jgRoomComp));
+      await Promise.all(players.map((p,i)=>{
+        const role=pool[i]||'villager';
+        seatRoleMap[p.seatNum]=role;
+        return setDoc(doc(db,'rooms',jgRoomCode,'secrets',p.uid),{ role:role, seatNum:p.seatNum });
+      }));
+    }
+    await setDoc(doc(db,'rooms',jgRoomCode),{ dealtDone:true, status:'role-assigned' },{ merge:true });
+  }catch(e){
+    // 寫入失敗（網路不穩、權限被擋）一定要跳出提示，不然畫面上看起來就是按了沒反應。
+    jgRoomDealAssigning=false;
+    if(btn){ btn.disabled=false; btn.textContent='分配身分（'+claimedSeats+' / '+totalSeats+' 人）'; }
+    alert('分配身分失敗，請檢查網路連線後再按一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
+    return;
   }
-  await setDoc(doc(db,'rooms',jgRoomCode),{ dealtDone:true, status:'role-assigned' },{ merge:true });
+  jgRoomDealAssigning=false;
   // 房主自己的裝置：直接把這份結果套進本機法官助手，跳回去繼續主持，不用再看發牌房畫面。
   // 有盜賊的話，把已經抽好的 2 張候選一起帶過去，本機才不會又重新抽一次（見
   // jgApplyDealtRoles 裡的說明）。
@@ -360,10 +396,11 @@ function jgRoomRenderDealLobby(){
   const rd=jgRoomLatestRoomDoc||{};
   const presetNames=rd.presetNames||{};
   const seats=Object.entries(presetNames).map(([num,name])=>({num:parseInt(num), name}));
+  const seated=jgRoomDealSeatedPlayers();
   const claimedBySeat={};
-  jgRoomLatestPlayers.forEach(p=>{ claimedBySeat[p.seatNum]=p; });
+  seated.forEach(p=>{ claimedBySeat[p.seatNum]=p; });
   const myUid=window.jgFirebaseUid;
-  const myClaimed=jgRoomLatestPlayers.some(p=>p.uid===myUid);
+  const myClaimed=seated.some(p=>p.uid===myUid);
   // 房主如果在法官助手設定畫面沒有先填真名，座位姓名會全部是預設的「X號」佔位文字——
   // 這種情況不該讓大家直接盲選一個「1號」「2號」這種號碼（誰也不知道哪個號碼是自己），
   // 應該讓大家自己打全名（打完的全名會存成真正的玩家名字，之後遊玩紀錄／匯入玩家名單才
@@ -388,7 +425,7 @@ function jgRoomRenderDealLobby(){
       +'<button style="width:auto;padding:8px 14px;" onclick="jgRoomDealClaimSeat('+s.num+', document.getElementById(\'jg-deal-name-'+s.num+'\').value)">認領</button></div>';
   }).join('');
   const hostBtn=jgRoomIsHost
-    ?'<button class="primary" style="margin-top:14px;" onclick="jgRoomDealAssignRoles()">分配身分（'+jgRoomLatestPlayers.length+' / '+seats.length+' 人）</button>'
+    ?'<button class="primary" id="jg-deal-assign-btn" style="margin-top:14px;" onclick="jgRoomDealAssignRoles()"'+(jgRoomDealAssigning?' disabled':'')+'>'+(jgRoomDealAssigning?'分配中...':'分配身分（'+seated.length+' / '+seats.length+' 人）')+'</button>'
     :'<div class="info" style="font-size:12px;text-align:center;margin-top:10px;">'+(myClaimed?'已認領座位，等待房主分配身分...':(hasRealNames?'請從上方點選你的姓名':'請選一個座位、輸入你的全名並按認領'))+'</div>';
   root.innerHTML=`
     <div class="nbanner"><h1>房間 ${jgRoomCode}（發牌）</h1></div>
