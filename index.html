@@ -420,8 +420,11 @@
     <h2 class="ntitle">法官の助手</h2>
     <p class="sub" style="text-align:center;">幫助法官主持遊戲的腳本與紀錄系統</p>
   </div>
-  <div class="big-section-title" style="margin-top:8px;">遊戲基本設定</div>
-  <label>身分模式</label>
+  <!-- 設定分成四個區塊卡片（比照角色與規則頁）；電腦寬螢幕改成左欄基本設定／警長／開始，右欄選板子 -->
+  <div class="jg-setup-grid">
+  <div class="rules-section jg-sec-basic">
+  <div class="rules-h1">遊戲基本設定</div>
+  <label style="margin-top:0;">身分模式</label>
   <div class="btn2" style="margin-top:0;">
     <button type="button" id="jg-mode-single" class="primary" onclick="jgSetMode(false)">單身分</button>
     <button type="button" id="jg-mode-dual" onclick="jgSetMode(true)">雙身分</button>
@@ -430,10 +433,11 @@
   <input type="checkbox" id="jg-dual-mode" style="display:none;"/>
   <label id="jg-count-label" style="margin-top:12px;">玩家人數（6～16）</label>
   <input type="number" id="jg-count" min="6" max="16" value="6" inputmode="numeric" oninput="jgUpdateComp()"/>
-  <div class="big-section-title">選擇板子</div>
+  </div>
+  <div class="rules-section jg-sec-board">
+  <div class="rules-h1">選擇板子</div>
   <div id="jg-board-preset-row">
-    <label for="jg-board-preset">選擇板子</label>
-    <select id="jg-board-preset" onchange="jgSetBoardPreset(this.value)">
+    <select id="jg-board-preset" aria-label="選擇板子" onchange="jgSetBoardPreset(this.value)">
       <option value="custom">自訂角色（可能有bug，遇到狀況請用「問題回報」回報）</option>
     </select>
   </div>
@@ -456,7 +460,9 @@
     </div>
     <div class="info" id="jg-nightmare-mode-desc" style="font-size:12px;margin-top:8px;"></div>
   </div>
-  <div class="big-section-title">警長設定（選填）</div>
+  </div>
+  <div class="rules-section jg-sec-sheriff">
+  <div class="rules-h1">警長設定（選填）</div>
   <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:0;padding:14px 16px;border-radius:12px;border:none;background:var(--bg2);box-shadow:var(--au-shadow-sm,0 1px 3px rgba(0,0,0,0.08));cursor:pointer;transition:background .15s,box-shadow .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
     <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
     <span style="font-weight:800;font-size:16px;">上警局 -- 開放警長競選</span>
@@ -469,13 +475,17 @@
     </div>
     <div class="info" id="jg-badge-mode-desc" style="font-size:12px;margin-top:8px;">單爆吞警徽：只要有狼人在首個白天的警上環節自爆，警徽立刻流失，本局不再有警長。</div>
   </div>
-  <div class="big-section-title">開始遊戲</div>
-  <button onclick="jgOpenRosterSetup()">設定本局玩家名單（選填）</button>
+  </div>
+  <div class="rules-section jg-sec-start">
+  <div class="rules-h1">開始遊戲</div>
+  <button style="margin-top:0;" onclick="jgOpenRosterSetup()">設定本局玩家名單（選填）</button>
   <button class="primary" style="margin-top:14px;" onclick="jgStart()">開始主持 →</button>
   <div style="display:flex;gap:8px;margin-top:8px;">
     <button style="flex:1;" onclick="jgRoomCreateFromSetup()">建立連線房間</button>
     <button style="flex:1;" onclick="jgRoomDealFromSetup()">使用手機發牌</button>
   </div>
+  </div>
+  </div><!-- /jg-setup-grid -->
 </div>
 
 <!-- 法官設定：玩家名單 -->
@@ -518,8 +528,8 @@
 </div>
 
 <!-- 即時票型紀錄（公開，任何人打開這個頁面都看得到；資料來自法官端同步過去的 Google 試算表） -->
-<div class="card" style="margin:16px 0;">
-  <div class="section-title">即時票型紀錄</div>
+<div class="rules-section" style="margin:16px 0;">
+  <div class="rules-h1">即時票型紀錄</div>
   <div class="info" style="font-size:12px;">法官記完一輪投票會自動同步到這裡，若還沒出來請稍等一下或問法官。</div>
   <div id="jg-live-session-view" style="margin-top:10px;"></div>
 </div>
@@ -624,7 +634,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-10-a</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-10-b</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="js/icons.js"></script>

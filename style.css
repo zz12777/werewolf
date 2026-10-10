@@ -366,6 +366,22 @@ button.report{background:rgba(154,124,40,0.1);color:var(--gold);border-color:rgb
   #jg-play-area{max-width:1400px;}
   #jg-side-panel{width:340px;}
 }
+/* 法官の助手設定頁：手機、平板依序堆疊四個區塊；電腦寬螢幕（≥1240px）改成左右兩欄，
+   左欄放基本設定／警長設定／開始遊戲，右欄整欄給選板子（角色格子最多，需要最寬的空間），
+   兩側空間才不會空著。 */
+@media (min-width:680px){
+  #jg-p-setup{max-width:none;}
+  .rpick-grid{grid-template-columns:repeat(auto-fill,minmax(86px,1fr));}
+  .rpick .rp-ico{font-size:27px;}
+  .rpick .rp-nm{font-size:14px;}
+}
+@media (min-width:1240px){
+  .jg-setup-grid{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);grid-template-rows:auto auto 1fr;grid-template-areas:"basic board" "sheriff board" "start board";column-gap:18px;align-items:start;}
+  .jg-sec-basic{grid-area:basic;}
+  .jg-sec-sheriff{grid-area:sheriff;}
+  .jg-sec-start{grid-area:start;}
+  .jg-sec-board{grid-area:board;}
+}
 .rcol-hd{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;background:var(--bg2);-webkit-user-select:none;user-select:none;}
 .rcol-icon{font-size:22px;flex-shrink:0;}
 .rcol-name{flex:1;font-size:15px;font-weight:700;}
@@ -399,8 +415,8 @@ button.report{background:rgba(154,124,40,0.1);color:var(--gold);border-color:rgb
 .rpick{border:2px solid var(--border2);border-radius:var(--r-sm);padding:10px 6px 8px;text-align:center;cursor:pointer;background:var(--bg3);transition:border-color 0.15s,background 0.15s;-webkit-user-select:none;user-select:none;position:relative;}
 .rpick:active{opacity:0.7;}
 .rpick.sel{border-color:var(--accent);background:rgba(184,56,40,0.07);}
-.rpick .rp-ico{font-size:22px;}
-.rpick .rp-nm{font-size:11px;font-weight:700;margin-top:4px;color:var(--text);}
+.rpick .rp-ico{font-size:24px;}
+.rpick .rp-nm{font-size:13px;font-weight:700;margin-top:4px;color:var(--text);line-height:1.3;}
 .rpick .rp-cnt{position:absolute;top:4px;right:6px;font-size:12px;font-weight:800;color:var(--accent);}
 .rpick.locked{cursor:default;border-color:var(--gold);background:rgba(154,124,40,0.08);}
 .rpick.locked:active{opacity:1;}

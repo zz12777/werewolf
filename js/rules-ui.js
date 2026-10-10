@@ -383,7 +383,7 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   </div>`;
 
   // Wolf roles
-  html+='<div style="font-size:11px;font-weight:700;color:var(--wolf);margin:6px 0 4px;letter-spacing:0.5px;">狼人陣營</div>';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--wolf);margin:6px 0 4px;letter-spacing:0.5px;">狼人陣營</div>';
   html+='<div class="rpick-grid">';
   wolves.forEach(id=>{
     const r=ALL_ROLES[id]; const cnt=pickState[id]||0;
@@ -396,7 +396,7 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   html+='</div>';
 
   // Villager
-  html+='<div style="font-size:11px;font-weight:700;color:var(--vil);margin:8px 0 4px;letter-spacing:0.5px;">平民</div>';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--vil);margin:8px 0 4px;letter-spacing:0.5px;">平民</div>';
   html+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
   html+=`<button onclick="rpickAdj('${containerId}','villager',-1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">−</button>`;
   html+=`<div style="font-size:22px;font-weight:800;min-width:30px;text-align:center;">${vilCount}</div>`;
@@ -409,7 +409,7 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
     const hy=ALL_ROLES.hybrid;
     const cp=ALL_ROLES.cupid;
     const tf=ALL_ROLES.thief;
-    html+='<div style="font-size:11px;font-weight:700;color:var(--cupid);margin:6px 0 4px;letter-spacing:0.5px;">特殊身分</div>';
+    html+='<div style="font-size:13px;font-weight:800;color:var(--cupid);margin:6px 0 4px;letter-spacing:0.5px;">特殊身分</div>';
     html+='<div class="rpick-grid">';
     html+=`<div class="rpick${hybridCount>0?' sel':''}" onclick="rpickTap('${containerId}','hybrid')">
       <span class="rp-ico">${hy.icon}</span>
@@ -445,7 +445,7 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   // 身分」，只要板子上有大/小機械狼，預言家就不會出現（避免跟通靈師的查驗定位重疊）。
   const seerCnt=pickState.seer||0, mediumCnt=pickState.medium||0, pwCnt=pickState.purewhitemaiden||0;
   const hasMechWolf2=(pickState.bigmechwolf||0)>0||(pickState.smallmechwolf||0)>0;
-  html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職</div>';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職</div>';
   html+='<div class="rpick-grid">';
   gods.forEach(id=>{
     if(id==='seer'&&(mediumCnt>0||pwCnt>0||hasMechWolf2)) return;
@@ -609,14 +609,14 @@ function renderPresetPicker(){
   // 原本用「排除法」判斷神職（不是狼、不是平民、不是殭屍就算神職），漏掉了邱比特、混血兒
   // 這類本來就不算神職的特殊角色——板子固定包含邱比特時（例如「邱比特」板），會被錯誤歸進
   // 「神職」區塊顯示。改成「白名單」：只有真的在 GOD_ROLES 裡的才算神職，其餘（邱比特、
-  // 混血兒、殭屍……）都交給下面的「特殊角色」區塊處理。
+  // 混血兒、殭屍……）都交給「特殊身分」區塊處理。
   const fixedGodKeys=fixedKeys.filter(k=>GOD_ROLES.includes(k));
   const wolfCount=state.wolf||0;
   const vilCount=state.villager||0;
 
   let html='';
 
-  html+='<div style="font-size:11px;font-weight:700;color:var(--wolf);margin:6px 0 4px;letter-spacing:0.5px;">狼人陣營</div>';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--wolf);margin:6px 0 4px;letter-spacing:0.5px;">狼人陣營</div>';
   const showWolfKingChoice=!fixedKeys.includes('wolfking')&&!fixedKeys.includes('whitewolf');
   let wolfKingTiles='';
   if(showWolfKingChoice){
@@ -635,20 +635,39 @@ function renderPresetPicker(){
   }
   if(showWolfKingChoice) html+='<div style="font-size:11px;color:var(--text3);margin:-2px 0 6px;">黑狼王／白狼王二選一，可自由切換或都不選</div>';
   html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
-    +'<button onclick="jgPresetAdjWolf(-1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">−</button>'
-    +'<div style="font-size:18px;font-weight:800;min-width:24px;text-align:center;">'+wolfCount+'</div>'
-    +'<button onclick="jgPresetAdjWolf(1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">＋</button>'
+    +'<button onclick="jgPresetAdjWolf(-1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">−</button>'
+    +'<div style="font-size:22px;font-weight:800;min-width:30px;text-align:center;">'+wolfCount+'</div>'
+    +'<button onclick="jgPresetAdjWolf(1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">＋</button>'
     +'<span style="font-size:13px;color:var(--text2);">狼人</span></div>';
 
   const vilLabel=preset.villagerLabel||'平民';
-  html+='<div style="font-size:11px;font-weight:700;color:var(--vil);margin:6px 0 4px;letter-spacing:0.5px;">'+vilLabel+'</div>';
+  html+='<div style="font-size:13px;font-weight:800;color:var(--vil);margin:6px 0 4px;letter-spacing:0.5px;">'+vilLabel+'</div>';
   html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
-    +'<button onclick="jgPresetAdjVillager(-1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">−</button>'
-    +'<div style="font-size:18px;font-weight:800;min-width:24px;text-align:center;">'+vilCount+'</div>'
-    +'<button onclick="jgPresetAdjVillager(1)" style="width:32px;height:32px;padding:0;margin:0;font-size:18px;border-radius:50%;">＋</button>'
+    +'<button onclick="jgPresetAdjVillager(-1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">−</button>'
+    +'<div style="font-size:22px;font-weight:800;min-width:30px;text-align:center;">'+vilCount+'</div>'
+    +'<button onclick="jgPresetAdjVillager(1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">＋</button>'
     +'<span style="font-size:13px;color:var(--text2);">'+vilLabel+'</span></div>';
 
-  html+='<div style="font-size:11px;font-weight:700;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職</div>';
+  // 混血兒、邱比特、盜賊、殭屍這些不算「神職」的特殊角色（各自陣營歸屬跟一般玩法不同）：
+  // 本板固定包含的（例如「邱比特」板固定邱比特、「殭屍」板固定殭屍）一律用鎖定格子顯示在
+  // 這裡（跟自訂角色一樣排在平民之後、神職之前，標題也統一叫「特殊身分」），不會混進
+  // 「神職」區塊；混血兒、盜賊、殭屍即使本板沒有固定包含，也開放任何
+  // 板子自由加選（殭屍要排在魔術師之前睜眼的順序已經處理過，見 js/night.js，搭配魔術師板
+  // 使用也不會有問題）。
+  const fixedSpecialKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&!GOD_ROLES.includes(k)&&k!=='villager');
+  const specialTiles=fixedSpecialKeys.map(jgPresetLockedTileHtml).join('')
+    + ['hybrid','thief','zombie'].filter(id=>!fixedKeys.includes(id)).map(id=>{
+      const r=ALL_ROLES[id]; const cnt=state[id]||0;
+      return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
+        +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
+        +(cnt>0?'<span class="rp-cnt">'+jgIcon('check')+'</span>':'')+'</div>';
+    }).join('');
+  if(specialTiles){
+    html+='<div style="font-size:13px;font-weight:800;color:var(--cupid);margin:6px 0 4px;letter-spacing:0.5px;">特殊身分</div>'
+      +'<div class="rpick-grid">'+specialTiles+'</div>';
+  }
+
+  html+='<div style="font-size:13px;font-weight:800;color:var(--seer);margin:6px 0 4px;letter-spacing:0.5px;">神職</div>';
   html+='<div class="rpick-grid">';
   fixedGodKeys.forEach(id=>{ html+=jgPresetLockedTileHtml(id); });
   // 通靈師（medium）與預言家（seer）查驗效果重疊，本板固定通靈師時就不再顯示預言家可選
@@ -664,24 +683,6 @@ function renderPresetPicker(){
   });
   html+='</div>';
   if(excludeSeer) html+='<div style="font-size:11px;color:var(--text3);margin:4px 0 0;">本板固定為通靈師，不會重複出現預言家</div>';
-
-  // 混血兒、邱比特、盜賊、殭屍這些不算「神職」的特殊角色（各自陣營歸屬跟一般玩法不同）：
-  // 本板固定包含的（例如「邱比特」板固定邱比特、「殭屍」板固定殭屍）一律用鎖定格子顯示在
-  // 這裡，不會混進上面的「神職」區塊；混血兒、盜賊、殭屍即使本板沒有固定包含，也開放任何
-  // 板子自由加選（殭屍要排在魔術師之前睜眼的順序已經處理過，見 js/night.js，搭配魔術師板
-  // 使用也不會有問題）。
-  const fixedSpecialKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&!GOD_ROLES.includes(k)&&k!=='villager');
-  const specialTiles=fixedSpecialKeys.map(jgPresetLockedTileHtml).join('')
-    + ['hybrid','thief','zombie'].filter(id=>!fixedKeys.includes(id)).map(id=>{
-      const r=ALL_ROLES[id]; const cnt=state[id]||0;
-      return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
-        +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
-        +(cnt>0?'<span class="rp-cnt">'+jgIcon('check')+'</span>':'')+'</div>';
-    }).join('');
-  if(specialTiles){
-    html+='<div style="font-size:11px;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:0.5px;">特殊角色</div>'
-      +'<div class="rpick-grid">'+specialTiles+'</div>';
-  }
 
   el.innerHTML=html;
 }
