@@ -1800,7 +1800,7 @@ function jgRenderStep(step){
     let swappedNums=[];
     // 動物夢境：白貓被殺會翻牌免死（jgApplyDeath 回傳 false），要跟雙身分「換牌」分開處理。
     let whitecatFlipNums=[];
-    deads.forEach(d=>{ const p=jgFind(d); if(p){ const wasCat=p.role==='whitecat'; const trulyDied=jgApplyDeath(p); if(trulyDied){ p._diedThisDawn=true; trulyDiedNums.push(p.num); } else if(wasCat){ if(p._whitecatJustFlipped){ whitecatFlipNums.push(p.num); delete p._whitecatJustFlipped; } } else { swappedNums.push(p.num); } } });
+    deads.forEach(d=>{ const p=jgFind(d); if(p){ const wasCat=jgIsWhitecatLike(p)||jgIsFlippedCat(p); const trulyDied=jgApplyDeath(p); if(trulyDied){ p._diedThisDawn=true; trulyDiedNums.push(p.num); } else if(wasCat){ if(p._whitecatJustFlipped){ whitecatFlipNums.push(p.num); delete p._whitecatJustFlipped; } } else { swappedNums.push(p.num); } } });
     // 動物夢境：河豚吃刀出局，白天翻牌，當天白天狼美人的魅惑技能失效。
     let pufferRevealNum=null;
     { const pf=jgPlayers.find(p=>p.role==='pufferfish');
@@ -2205,8 +2205,9 @@ function jgRenderStep(step){
     // 動物夢境：白貓翻牌、河豚吃刀翻牌、熊的咆哮，都在天亮公布死訊之後宣布。
     let animalDawnHtml='';
     whitecatFlipNums.forEach(n=>{
-      animalDawnHtml+='<div class="speech">「<em>'+n+'號 是白貓，翻牌免疫本次死亡，下一次放逐階段結束後才會死亡。</em>」</div>';
-      jgPushDayLog('白貓'+n+'翻牌免死');
+      const cl=jgCatLabel(jgFind(n));
+      animalDawnHtml+='<div class="speech">「<em>'+n+'號 是'+cl+'，翻牌免疫本次死亡，下一次放逐階段結束後才會死亡。</em>」</div>';
+      jgPushDayLog(cl+n+'翻牌免死');
     });
     if(pufferRevealNum){
       const _hasWb=jgPlayers.some(p=>p.role==='wolfbeauty');
@@ -2373,9 +2374,12 @@ function jgRenderStep(step){
       <!-- 快速輸入投票已停用，改用下方「N號投給」逐一點選 -->
       <div id="jg-vote-tally"></div>
       <div id="jg-vote-tally-summary" style="margin-top:6px;"></div>
-      ${(()=>{ const pf=jgPlayers.find(p=>p.role==='pufferfish'); return (pf&&pf.alive&&!pf.pufferUsed)
-        ?'<button class="ghost" id="jg-puffer-btn" onclick="jgPufferfishFlipBtn()" style="margin-top:10px;">河豚翻牌</button><div class="info" style="font-size:12px;margin-top:4px;">先點好票再按；不能翻牌的時候會提示「現在不能翻牌」。</div>'
-        :''; })()}
+      ${(()=>{ const pfs=jgPufferLikePlayers().filter(pf=>pf.alive&&!pf.pufferUsed);
+        if(!pfs.length) return '';
+        return pfs.map(pf=>pf.role==='pufferfish'
+          ?'<button class="ghost" id="jg-puffer-btn" onclick="jgPufferfishFlipBtn()" style="margin-top:10px;">河豚翻牌</button>'
+          :'<button class="ghost" id="jg-puffer-btn-'+pf.num+'" onclick="jgPufferfishFlipBtn('+pf.num+')" style="margin-top:10px;">'+pf.num+'號 機械狼（學到河豚）翻牌</button>').join('')
+          +'<div class="info" style="font-size:12px;margin-top:4px;">先點好票再按；不能翻牌的時候會提示「現在不能翻牌」。</div>'; })()}
       <div id="jg-puffer-status"></div>
       <button class="danger" onclick="jgSaveVote()" style="margin-top:10px;">確認投票結果 →</button>
     `,'🗳 投票');
@@ -2595,10 +2599,11 @@ function jgRenderStep(step){
   else if(step==='next-night'){
     if(jgRecord._exileVoteHeld){
       jgPlayers.forEach(p=>{
-        if(p.role==='whitecat'&&p.alive&&p.whitecatFlipped&&p.whitecatDeathDay!=null&&p.whitecatDeathDay<=jgNight){
+        if(jgIsFlippedCat(p)&&p.alive&&p.whitecatDeathDay!=null&&p.whitecatDeathDay<=jgNight){
+          const cl=jgCatLabel(p);
           p.alive=false;
-          jgPushDayLog('白貓'+p.num+'放逐階段結束後死亡');
-          alert(p.num+'號 白貓：翻牌後的放逐階段已經結束，現在死亡。\n\n法官口白：「'+p.num+'號 白貓死亡。」');
+          jgPushDayLog(cl+p.num+'放逐階段結束後死亡');
+          alert(p.num+'號 '+cl+'：翻牌後的放逐階段已經結束，現在死亡。\n\n法官口白：「'+p.num+'號 '+cl+'死亡。」');
         }
       });
       jgRenderRoster();

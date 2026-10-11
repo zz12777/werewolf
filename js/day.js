@@ -700,7 +700,7 @@ function jgSaveVoteInner(){
   const soleOut=top.length===1?top[0]:null;
 
   // 這一輪投票是不是放逐階段的最後結果（不是第一次平票要進 PK）——白貓翻牌後要等這個結束才死。
-  if(!(top.length>1&&!jgVotePkRound)){ jgRecord._exileVoteHeld=true; jgRecord._pufferRound1Voters=null; }
+  if(!(top.length>1&&!jgVotePkRound)){ jgRecord._exileVoteHeld=true; jgRecord._pufferRound1Voters=null; jgRecord._pufferRound1VotersByNum=null; }
 
   const prefix=jgVotePkRound?'PK票':'票';
   const withVotes=counts.filter(c=>c.voters.length>0).sort((a,b)=>b.weight-a.weight||a.target-b.target);
@@ -739,7 +739,10 @@ function jgSaveVoteInner(){
     // 動物夢境：記下第一輪投給河豚的人——河豚如果進了 PK，PK 時翻牌可以連這一輪的人一起炸。
     { const pf=jgPlayers.find(p=>p.role==='pufferfish');
       const pc=pf?counts.find(c=>Number(c.target)===pf.num):null;
-      jgRecord._pufferRound1Voters=pc?pc.voters.slice():[]; }
+      jgRecord._pufferRound1Voters=pc?pc.voters.slice():[];
+      // 風聲諜影：學到河豚的機械狼也一樣記下第一輪投給他的人（依號碼分開記）。
+      jgRecord._pufferRound1VotersByNum={};
+      jgPufferLikePlayers().forEach(x=>{ const c2=counts.find(c=>Number(c.target)===x.num); jgRecord._pufferRound1VotersByNum[x.num]=c2?c2.voters.slice():[]; }); }
     jgVotePkRound=true;
     jgVotePkCandidates=top.filter(n=>{ const p=jgFind(n); return p&&p.alive; });
     jgVoteTally={};
@@ -793,18 +796,21 @@ function jgSaveVoteInner(){
 // 這幾種情況，都要走同一份收尾邏輯（開槍連鎖、血月封印、勝負判定……），不用維護兩份
 // 幾乎一樣的程式碼、以後改一邊忘記改另一邊。
 function jgFinishVoteOut(found, eliminatedRole){
-    const wasFlippedCat=found.role==='whitecat'&&found.whitecatFlipped;
+    const wasFlippedCat=jgIsFlippedCat(found);
+    const wasCatLike=wasFlippedCat||jgIsWhitecatLike(found);
+    const catLabel=jgCatLabel(found);
     const trulyDied=jgApplyDeath(found);
     jgRecord._voteOutTrulyDied=trulyDied;
-    if(found.role==='whitecat'&&!trulyDied){
+    if(wasCatLike&&!trulyDied){
       // 動物夢境：白貓被投出局會翻牌免死（已經翻過牌的白貓則根本不能被投票出局）。
+      // 風聲諜影：學到白貓的機械狼一樣。
       if(wasFlippedCat){
-        alert(found.num+'號 白貓已經翻過牌，無法被投票出局，這次放逐無人出局。');
-        jgPushDayLog('白貓'+found.num+'已翻牌，無法被放逐');
+        alert(found.num+'號 '+catLabel+'已經翻過牌，無法被投票出局，這次放逐無人出局。');
+        jgPushDayLog(catLabel+found.num+'已翻牌，無法被放逐');
       } else {
         delete found._whitecatJustFlipped;
-        alert(found.num+'號 是白貓，翻牌免疫這次出局，要等下一次放逐階段結束後才會死亡。\n\n法官口白：「'+found.num+'號 是白貓，翻牌。」');
-        jgPushDayLog('白貓'+found.num+'被放逐翻牌免死');
+        alert(found.num+'號 是'+catLabel+'，翻牌免疫這次出局，要等下一次放逐階段結束後才會死亡。\n\n法官口白：「'+found.num+'號 是'+catLabel+'，翻牌。」');
+        jgPushDayLog(catLabel+found.num+'被放逐翻牌免死');
       }
       jgRenderRoster();
       jgGoStep('next-night');
@@ -1000,11 +1006,13 @@ function jgSaveKnightDuel(){
 // 不能翻牌＝沒有人投給河豚，或唯一投給河豚的玩家是最高票出局的人，或是已經翻牌的白貓。
 // 可以翻牌就炸死這次投票所有投給河豚的玩家；河豚在平票 PK 中，連第一輪投他的人一起炸。
 // 炸完之後法官照常按「確認投票結果」，計票沿用炸之前的名單（不會因為有人死掉而改變結果）。
-window.jgPufferfishFlipBtn=function(){
+window.jgPufferfishFlipBtn=function(num){
   const statusEl=document.getElementById('jg-puffer-status');
   const say=msg=>{ if(statusEl) statusEl.innerHTML='<div class="info-warn" style="font-size:13px;margin-top:6px;">'+msg+'</div>'; alert(msg); };
-  const pf=jgPlayers.find(p=>p.role==='pufferfish');
+  // 不帶號碼時是真河豚；風聲諜影學到河豚的機械狼會帶自己的號碼。
+  const pf=num?jgPufferLikePlayers().find(p=>p.num===Number(num)):jgPlayers.find(p=>p.role==='pufferfish');
   if(!pf||!pf.alive||pf.pufferUsed){ say('現在不能翻牌（河豚已出局或已經用過技能）。'); return; }
+  const pfLabel=jgPufferLabel(pf);
   const targets=jgVoteTargets();
   const voters=jgVoteVoters();
   const counts=targets.map(t=>{
@@ -1016,11 +1024,12 @@ window.jgPufferfishFlipBtn=function(){
   const top=counts.filter(c=>c.weight===maxWeight&&maxWeight>0).map(c=>Number(c.target));
   const soleOut=top.length===1?top[0]:null;
   let pool=((counts.find(c=>Number(c.target)===pf.num)||{}).voters||[]).slice();
-  if(jgVotePkRound&&jgVotePkCandidates.map(Number).includes(pf.num)&&jgRecord._pufferRound1Voters){
-    pool=pool.concat(jgRecord._pufferRound1Voters);
+  if(jgVotePkRound&&jgVotePkCandidates.map(Number).includes(pf.num)){
+    const r1=(jgRecord._pufferRound1VotersByNum&&jgRecord._pufferRound1VotersByNum[pf.num])||(pf.role==='pufferfish'?jgRecord._pufferRound1Voters:null);
+    if(r1) pool=pool.concat(r1);
   }
   pool=[...new Set(pool.map(Number))].sort((a,b)=>a-b);
-  const isFlippedCat=n=>{ const p=jgFind(n); return !!(p&&p.role==='whitecat'&&p.whitecatFlipped); };
+  const isFlippedCat=n=>jgIsFlippedCat(jgFind(n));
   if(pool.length===0){ say('現在不能翻牌：沒有玩家投票給河豚。'); return; }
   if(pool.length===1&&pool[0]===soleOut){ say('現在不能翻牌：唯一投票給河豚的 '+pool[0]+'號 是最高票出局的人。'); return; }
   if(pool.length===1&&isFlippedCat(pool[0])){ say('現在不能翻牌：唯一投票給河豚的 '+pool[0]+'號 是已經翻牌的白貓。'); return; }
@@ -1032,20 +1041,20 @@ window.jgPufferfishFlipBtn=function(){
     const p=jgFind(n);
     if(!p||!p.alive) return;
     if(isFlippedCat(n)){ immune.push(n); return; }
-    const wasCat=p.role==='whitecat';
+    const wasCat=jgIsWhitecatLike(p);
     if(jgApplyDeath(p)) died.push(p.num);
     else if(wasCat){ catFlipped.push(p.num); delete p._whitecatJustFlipped; }
   });
-  const line='河豚'+pf.num+'翻牌炸'+pool.join(',')+(catFlipped.length?'（白貓'+catFlipped.join(',')+'翻牌免死）':'')+(immune.length?'（已翻牌白貓'+immune.join(',')+'免疫）':'');
+  const line=pfLabel+pf.num+'翻牌炸'+pool.join(',')+(catFlipped.length?'（白貓'+catFlipped.join(',')+'翻牌免死）':'')+(immune.length?'（已翻牌白貓'+immune.join(',')+'免疫）':'');
   jgRecord._voteFrozen.pufferLog=line;
   // 法官口白：「11號 河豚翻牌，1號 2號 淘汰。」（被炸死的號碼逐一唸出來）
-  const speech=pf.num+'號 河豚翻牌，'+(died.length?died.map(n=>n+'號').join(' ')+' 淘汰。':'無人淘汰。');
+  const speech=pf.num+'號 '+pfLabel+'翻牌，'+(died.length?died.map(n=>n+'號').join(' ')+' 淘汰。':'無人淘汰。');
   const catSpeech=catFlipped.length?catFlipped.map(n=>n+'號').join(' ')+' 是白貓，翻牌免死。':'';
   alert('法官口白：「'+speech+'」'+(catSpeech?'\n「'+catSpeech+'」（下一次放逐階段結束後才會死亡）':'')+'\n\n接著照常按「確認投票結果」。');
   if(statusEl) statusEl.innerHTML='<div class="speech" style="font-size:16px;margin-top:8px;">「<em>'+speech+'</em>」</div>'
     +(catSpeech?'<div class="speech" style="margin-top:6px;">「<em>'+catSpeech+'</em>」</div><div class="info" style="font-size:12px;">白貓要等下一次放逐階段結束後才會死亡。</div>':'')
     +'<div class="info" style="font-size:12px;margin-top:4px;">接著照常按「確認投票結果」。</div>';
-  const btn=document.getElementById('jg-puffer-btn'); if(btn) btn.style.display='none';
+  const btn=document.getElementById('jg-puffer-btn'+(num?'-'+num:'')); if(btn) btn.style.display='none';
   jgRenderRoster();
   const win=jgCheckWin();
   if(win){ jgRecord._voteFrozen=null; jgShowWin(win); return; }

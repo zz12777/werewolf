@@ -366,12 +366,31 @@ function jgCopyExportText(){
 // mechanical wolf's own role never changes to 'hunter' — it stays 'mechanicalwolf' with
 // jgMechWolfLearned==='hunter' — so anywhere the real hunter's shot-on-death is handled,
 // this needs to be checked as an alternate trigger.
+// 風聲諜影：機械狼學到的技能從學習的下一晚起生效（白天也算，例如學到白貓、河豚）。
+function jgMechSkillActive(role){
+  return jgIsWindspy()&&jgMechWolfLearned===role&&jgMechWolfLearnedNight!==null&&jgNight>jgMechWolfLearnedNight;
+}
+// 會「翻牌免死」的玩家：白貓，或學到白貓的機械狼（風聲諜影）。
+function jgIsWhitecatLike(p){
+  return !!p&&(p.role==='whitecat'||(p.role==='mechanicalwolf'&&jgMechSkillActive('whitecat')));
+}
+// 已經翻過牌、還沒死的白貓（含學到白貓的機械狼）。
+function jgIsFlippedCat(p){
+  return !!p&&(p.role==='whitecat'||p.role==='mechanicalwolf')&&!!p.whitecatFlipped;
+}
+// 法官口白用的稱呼：真白貓叫「白貓」，機械狼翻牌時照實說是機械狼。
+function jgCatLabel(p){ return p&&p.role==='mechanicalwolf'?'機械狼（學到白貓）':'白貓'; }
+// 可以在投票畫面翻牌炸人的玩家：河豚，或學到河豚的機械狼（風聲諜影）。
+function jgPufferLikePlayers(){
+  return jgPlayers.filter(p=>p.role==='pufferfish'||(p.role==='mechanicalwolf'&&jgMechSkillActive('pufferfish')));
+}
+function jgPufferLabel(p){ return p&&p.role==='mechanicalwolf'?'機械狼（學到河豚）':'河豚'; }
 function jgApplyDeath(p){
   if(!p) return false;
   // 動物夢境：白貓任何原因死亡都能翻牌、免疫這一次死亡，要等到「下一次放逐階段結束」才真的死
   // （見 steps.js 的 next-night）。翻牌之後到真正死亡之前，任何死法都對她無效。
   // 夜裡（天亮結算）翻牌：當天白天的放逐階段結束就死；白天翻牌：要等隔天的放逐階段結束。
-  if(p.role==='whitecat'&&p.alive){
+  if(p.alive&&(jgIsWhitecatLike(p)||jgIsFlippedCat(p))){
     if(!p.whitecatFlipped){
       p.whitecatFlipped=true;
       p.whitecatDeathDay=(typeof jgCurrentStep!=='undefined'&&jgCurrentStep==='dawn')?jgNight:jgNight+1;
@@ -406,7 +425,7 @@ function jgCascadeWolfBeautyDeath(wasRole, trulyDied){
   if(trulyDied&&wasRole==='wolfbeauty'&&jgRecord.wolfbeautyCharm){
     const ct=jgFind(jgRecord.wolfbeautyCharm);
     if(ct&&ct.alive){
-      const wasCat=ct.role==='whitecat';
+      const wasCat=jgIsWhitecatLike(ct)||jgIsFlippedCat(ct);
       const died=jgApplyDeath(ct);
       return (died||!wasCat)?ct.num:null; // 白貓翻牌免死，不算殉情
     }

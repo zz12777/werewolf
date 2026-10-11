@@ -1704,6 +1704,14 @@ function jgMechWolfSkillUseHtml(){
       +jgNumSelectHtml('jg-mechwolf-dream', jgRecord.mechDreamTarget||'', null, null, mw?[mw.num]:[], '機械狼不能攝夢自己')
       +'<div class="info" style="font-size:12px;margin-top:4px;">玩家只要連續兩晚被任意攝夢人夢遊就會出局；兩個攝夢人同一晚攝夢同一人則不會夢遊出局。攝夢人和機械狼都不知道技能有沒有讓人出局。</div>';
   }
+  if(learned==='whitecat'&&jgIsWindspy()){
+    const mw=jgPlayers.find(p=>p.role==='mechanicalwolf');
+    return '<div class="info" style="font-size:12px;">學到白貓：任何原因死亡都能翻牌免疫一次，下一次放逐階段結束後才會死亡（系統會自動處理）。'+(mw&&mw.whitecatFlipped?'已經翻過牌。':'')+'</div>';
+  }
+  if(learned==='pufferfish'&&jgIsWindspy()){
+    const mw=jgPlayers.find(p=>p.role==='mechanicalwolf');
+    return '<div class="info" style="font-size:12px;">學到河豚：放逐投票畫面會多一顆「機械狼（學到河豚）翻牌」按鈕，整局限一次。'+(mw&&mw.pufferUsed?'已經用過了。':'')+'</div>';
+  }
   if(learned==='hybrid'){
     return '<div class="info" style="font-size:12px;">（法官搖頭）學到混血兒：被通靈師驗到會顯示混血兒，但無法選擇要混的對象。</div>';
   }
@@ -2690,9 +2698,9 @@ function jgSaveBloodMoonLastNight(){
 // 不能沿用一般的 jgCheckWin()（它的「狼隊全滅→好人勝利」規則會搶在屠邊判定之前生效）。
 function jgSaveWolfBeautyCharmKill(){
   const target=jgRecord._wolfbeautyKillCharm?jgFind(jgRecord._wolfbeautyKillCharm):null;
-  if(target&&target.alive&&target.role==='whitecat'){
+  if(target&&target.alive&&(jgIsWhitecatLike(target)||jgIsFlippedCat(target))){
     jgApplyDeath(target);
-    alert(target.num+'號 是白貓，翻牌免疫這次死亡（下一次放逐階段結束後才會死亡）。');
+    alert(target.num+'號 是'+jgCatLabel(target)+'，翻牌免疫這次死亡（下一次放逐階段結束後才會死亡）。');
   } else if(target&&target.alive){target.alive=false;}
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}
