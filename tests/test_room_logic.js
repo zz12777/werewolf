@@ -75,6 +75,7 @@ function loadRoomLogicForGodView() {
     + 'jgRoomCheckBloodmoonLastStand,jgRoomComputeWinCheck,jgRoomDemonhunterHunt,'
     + 'jgRoomMaybeApplyBadgeSwallow,jgRoomWolfSelfBlowConfirm,jgRoomReallyAdvanceToDayPhase,'
     + 'jgRoomHunterPending,jgRoomHunterStatusAck,jgRoomAdvanceToDayPhase,'
+    + 'jgRoomResolveDayVote,jgRoomCheckShootEligible,jgRoomPuppetCandidateSeats,jgRoomCheckAndSetPendingBadge,'
     + '__setComp,__setPlayers,__setRoomDoc,__setRoomCode,__setRoomTotal,__setMyRole,__getSuppressFlag};';
   const wrapped = prelude + src + exportsFooter;
   const tmpPath = path.join(require('os').tmpdir(), 'jg_room_logic_gv_' + Date.now() + '.js');
@@ -332,7 +333,153 @@ async function runAsync() {
   await runBadgeSwallowTest();
   await runSameNightDeathStillActsTest();
   await runHunterStatusGestureTest();
+  await runBatch1RolesTest();
 })();
+
+// ── 連線房間第一批新增：混血兒、狼美人、惡靈騎士、騎士、唯鄰是從傀儡、邱比特勝負 ──
+async function runBatch1RolesTest(){
+  const { mod } = loadRoomLogicForGodView();
+  const results=[];
+  const check=(name, actual, expected)=>{ results.push({name, ok:JSON.stringify(actual)===JSON.stringify(expected), actual, expected}); };
+  const C='B1';
+  const setup=(roles, roomDoc)=>{
+    mod.__setRoomCode(C);
+    const comp={}; roles.forEach(r=>{ comp[r]=(comp[r]||0)+1; });
+    mod.__setComp(comp);
+    mod.__setRoomTotal(roles.length);
+    const players=roles.map((r,i)=>({ uid:'u'+(i+1), seatNum:i+1, name:'P'+(i+1), alive:true }));
+    mod.__setPlayers(players);
+    global.__mockCollections={ ['rooms/'+C+'/secrets']: roles.map((r,i)=>({ id:'u'+(i+1), data:()=>({role:r}) })) };
+    global.__mockDocs={ ['rooms/'+C]: Object.assign({ night:1, phase:'night' }, roomDoc||{}) };
+    roles.forEach((r,i)=>{ global.__mockDocs['rooms/'+C+'/secrets/u'+(i+1)]={role:r}; global.__mockDocs['rooms/'+C+'/players/u'+(i+1)]={alive:true}; });
+    mod.__setRoomDoc(global.__mockDocs['rooms/'+C]);
+  };
+  const room=()=>global.__mockDocs['rooms/'+C];
+  const alive=n=>global.__mockDocs['rooms/'+C+'/players/u'+n].alive!==false;
+
+  // 夜晚順序：混血兒只有第一夜
+  mod.__setComp({ hybrid:1, wolf:2 });
+  check('混血兒板第一夜：混血兒在狼人之前', [mod.jgRoomStepPresent('hybrid',1), mod.jgRoomNextNightStep(null,1)], [true,'hybrid']);
+  check('混血兒板第二夜：沒有混血兒步驟', mod.jgRoomStepPresent('hybrid',2), false);
+
+  // 惡靈騎士被女巫毒：免疫，女巫天亮死亡（反傷限一次）
+  setup(['evilknight','wolf','witch','guard','villager','seer']);
+  Object.assign(room(), { witchPoisonUid:'u1', witchPoisonNight:1 });
+  await mod.jgRoomResolveNightDeaths();
+  check('惡靈騎士免疫女巫毒', alive(1), true);
+  check('毒惡靈騎士的女巫天亮死亡', alive(3), false);
+  check('反傷用掉了', room().evilknightRevengeUsed, true);
+  await mod.jgRoomCaptureDeathLine(1);
+  check('死訊有女巫', (global.__mockDocs['rooms/'+C+'/dayLog/1']||{}).deathLine, '3號死亡');
+
+  // 惡靈騎士被預言家查驗：預言家天亮死亡
+  setup(['evilknight','wolf','witch','guard','villager','seer']);
+  mod.__setMyRole('seer'); global.window.jgFirebaseUid='u6';
+  global.window.jgRoomShowBigCard=()=>{};
+  await mod.jgRoomSeerCheck('u1', 1, 1);
+  check('查到惡靈騎士顯示狼人', global.__mockDocs['rooms/'+C+'/seerChecks/u6'].team, 'wolf');
+  check('記下預言家反傷', room().evilknightRevengeSeerUid, 'u6');
+  check('天亮前預言家死亡', alive(6), false);
+
+  // 惡靈騎士免疫狼刀
+  setup(['evilknight','wolf','witch','guard','villager','seer']);
+  Object.assign(room(), { wolfKillTargetUid:'u1', wolfKillTargetSeatNum:1, wolfKillNight:1 });
+  await mod.jgRoomResolveNightDeaths();
+  check('惡靈騎士免疫狼刀', alive(1), true);
+
+  // 狼美人被毒死：魅惑對象殉情
+  setup(['wolfbeauty','wolf','witch','knight','villager','seer']);
+  Object.assign(room(), { witchPoisonUid:'u1', witchPoisonNight:1, wolfbeautyCharmUid:'u5', wolfbeautyCharmSeatNum:5, wolfbeautyCharmNight:1 });
+  await mod.jgRoomResolveNightDeaths();
+  check('狼美人被毒死', alive(1), false);
+  check('魅惑對象殉情', alive(5), false);
+  await mod.jgRoomCaptureDeathLine(1);
+  check('死訊有狼美人與殉情者', (global.__mockDocs['rooms/'+C+'/dayLog/1']||{}).deathLine, '1號死亡、5號死亡');
+
+  // 狼美人被票出局：昨晚魅惑的對象殉情
+  setup(['wolfbeauty','wolf','witch','knight','villager','seer'], { phase:'day-open', night:2, wolfbeautyCharmUid:'u4', wolfbeautyCharmSeatNum:4, wolfbeautyCharmNight:2 });
+  await mod.jgRoomResolveDayVote([{seat:1,targetUid:'u1'}], [{seat:1,targetUid:'u1'}]);
+  check('狼美人被票出局，魅惑的騎士殉情', [alive(1), alive(4)], [false,false]);
+  check('白天紀錄有殉情', (global.__mockDocs['rooms/'+C+'/dayLog/2']||{}).extraNotes, ['1號 狼美人出局，被魅惑的 4號 殉情']);
+
+  // 騎士決鬥到狼：狼淘汰、直接天黑
+  setup(['wolfbeauty','wolf','witch','knight','villager','seer'], { phase:'day-open', night:2 });
+  mod.__setMyRole('knight'); global.window.jgFirebaseUid='u4';
+  const realGet=global.document.getElementById;
+  global.document.getElementById=(id)=>id==='jg-room-knight-pick'?{value:'2'}:realGet(id);
+  await global.jgRoomKnightDuelConfirm();
+  check('決鬥到狼人：狼人淘汰', alive(2), false);
+  check('決鬥到狼人：直接進入下一夜', [room().phase, room().night], ['night', 3]);
+  check('騎士技能用掉', global.__mockDocs['rooms/'+C+'/players/u4'].knightDuelUsed, true);
+  // 決鬥到好人：騎士以死謝罪，白天繼續
+  setup(['wolfbeauty','wolf','witch','knight','villager','seer'], { phase:'day-open', night:2 });
+  global.document.getElementById=(id)=>id==='jg-room-knight-pick'?{value:'5'}:realGet(id);
+  await global.jgRoomKnightDuelConfirm();
+  check('決鬥到好人：騎士死亡、對方沒事', [alive(4), alive(5)], [false,true]);
+  check('決鬥到好人：白天繼續', room().phase, 'day-open');
+  global.document.getElementById=realGet;
+
+  // 唯鄰是從：傀儡候選、傀儡守衛失效、傀儡被查驗為狼、傀儡預言家查驗相反、傀儡獵人不能開槍
+  setup(['wolf','wolf','guard','villager','seer','hunter'], { boardPreset:'neighbor_puppet' });
+  check('傀儡候選（狼人 1、2 號，6 人局）', mod.jgRoomPuppetCandidateSeats([1,2]), [3,6]);
+  Object.assign(room(), { puppetUid:'u3', wolfKillTargetUid:'u4', wolfKillTargetSeatNum:4, wolfKillNight:1, guardProtectedUid:'u4', guardTargetNight:1 });
+  await mod.jgRoomResolveNightDeaths();
+  check('傀儡守衛的守護不生效', alive(4), false);
+  mod.__setMyRole('seer'); global.window.jgFirebaseUid='u5';
+  mod.__setRoomDoc(room());
+  await mod.jgRoomSeerCheck('u3', 3, 1);
+  check('傀儡被預言家查驗為狼', global.__mockDocs['rooms/'+C+'/seerChecks/u5'].team, 'wolf');
+  setup(['wolf','wolf','guard','villager','seer','hunter'], { boardPreset:'neighbor_puppet', puppetUid:'u5' });
+  mod.__setMyRole('seer'); global.window.jgFirebaseUid='u5';
+  await mod.jgRoomSeerCheck('u1', 1, 1);
+  check('預言家是傀儡：查狼變好人', global.__mockDocs['rooms/'+C+'/seerChecks/u5'].team, 'good');
+  setup(['wolf','wolf','guard','villager','seer','hunter'], { boardPreset:'neighbor_puppet', puppetUid:'u6' });
+  check('傀儡獵人不能開槍', await mod.jgRoomCheckShootEligible('u6', 1), false);
+  setup(['wolf','wolf','guard','villager','seer','hunter'], { boardPreset:'neighbor_puppet', puppetUid:'u3' });
+  check('不是傀儡的獵人照常可以開槍', await mod.jgRoomCheckShootEligible('u6', 1), true);
+
+  // 畫面：狼美人魅惑、混血兒選人、唯鄰是從第一夜先選傀儡
+  const html=()=>global.document.getElementById('jg-room-content').innerHTML;
+  setup(['wolfbeauty','wolf','witch','knight','villager','seer'], { currentStep:'wolfbeauty' });
+  mod.__setMyRole('wolfbeauty'); global.window.jgFirebaseUid='u1';
+  await mod.jgRoomRenderNightShell();
+  check('狼美人看到魅惑畫面', html().includes('請選擇今晚要魅惑的對象'), true);
+  setup(['hybrid','wolf','witch','wolfking','villager','seer'], { currentStep:'hybrid' });
+  mod.__setMyRole('hybrid'); global.window.jgFirebaseUid='u1';
+  await mod.jgRoomRenderNightShell();
+  check('混血兒看到選人畫面', html().includes('請選擇你要混的玩家'), true);
+  setup(['wolf','wolf','guard','villager','seer','hunter'], { boardPreset:'neighbor_puppet', currentStep:'wolf' });
+  mod.__setMyRole('wolf'); global.window.jgFirebaseUid='u1';
+  await mod.jgRoomRenderNightShell();
+  check('唯鄰是從第一夜狼人先看到選傀儡畫面', html().includes('請選擇傀儡'), true);
+  setup(['wolfbeauty','wolf','evilknight','villager','seer','hunter'], { currentStep:'wolf' });
+  mod.__setMyRole('wolf'); global.window.jgFirebaseUid='u2';
+  await mod.jgRoomRenderNightShell();
+  check('狼刀畫面：狼美人、惡靈騎士的號碼不能選（不能自刀）', [/data-num="1" disabled/.test(html()), /data-num="3" disabled/.test(html()), /data-num="4" disabled/.test(html())], [true,true,false]);
+
+  // 勝負：邱比特人狼鏈第三方、混血兒算平民、騎士還沒決鬥算翻盤機會
+  setup(['wolf','villager','cupid','seer','wolf','villager'], { cupidLoverAUid:'u1', cupidLoverBUid:'u2' });
+  ['u4','u5','u6'].forEach(u=>global.__mockDocs['rooms/'+C+'/players/'+u].alive=false);
+  const w1=await mod.jgRoomComputeWinCheck();
+  check('人狼鏈第三方三人存活、其餘全滅：第三方獲勝', w1&&w1.winner, 'third');
+  setup(['wolf','villager','cupid','seer','wolf','villager'], { cupidLoverAUid:'u1', cupidLoverBUid:'u2' });
+  check('人狼鏈第三方還在、其餘人數較多：不分勝負', await mod.jgRoomComputeWinCheck(), null);
+  setup(['wolf','wolf','hybrid','seer','villager','witch'], {});
+  global.__mockDocs['rooms/'+C+'/players/u5'].alive=false;
+  global.__mockDocs['rooms/'+C+'/players/u1'].alive=false;
+  check('平民死光但混血兒還活著：不算屠民', await mod.jgRoomComputeWinCheck(), null);
+  setup(['wolf','wolf','knight','villager','seer','witch'], {});
+  ['u5','u6'].forEach(u=>global.__mockDocs['rooms/'+C+'/players/'+u].alive=false);
+  check('2 狼 2 好人但騎士還沒決鬥：不算狼贏', await mod.jgRoomComputeWinCheck(), null);
+  global.__mockDocs['rooms/'+C+'/players/u3'].knightDuelUsed=true;
+  const w2=await mod.jgRoomComputeWinCheck();
+  check('騎士已經決鬥過：2 狼 2 好人算狼贏', w2&&w2.winner, 'wolf');
+
+  console.log(JSON.stringify(results, null, 2));
+  const anyFail=results.some(r=>!r.ok);
+  if(anyFail){ console.error('連線房間第一批角色測試有失敗！'); process.exit(1); }
+  console.log(`全部 ${results.length} 項連線房間第一批角色測試通過`);
+}
 
 async function runMechWolfNight1Test(){
   const { mod } = loadRoomLogicForGodView();

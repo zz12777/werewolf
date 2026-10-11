@@ -1674,7 +1674,8 @@ function jgRoomCreateFromSetup(){
   // jgSetupBadgeMode，連線房間是另一個進入點，不會走到那段賦值，直接讀 jgBadgeMode
   // 會讀到還沒同步、可能是上一場殘留的舊值。
   const sheriffEnabled=!!(document.getElementById('jg-sheriff-enabled')||{}).checked;
-  window.jgRoomPendingComp={comp:compCheck, total:n, sheriffEnabled:sheriffEnabled, badgeMode:jgSetupBadgeMode};
+  // boardPreset：有些板子規則不是靠角色組成判斷得出來的（例如唯鄰是從的傀儡），一併帶進房間。
+  window.jgRoomPendingComp={comp:compCheck, total:n, sheriffEnabled:sheriffEnabled, badgeMode:jgSetupBadgeMode, boardPreset:(typeof jgBoardPreset!=='undefined'?jgBoardPreset:null)};
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.getElementById('t-room').classList.add('on');
   document.querySelectorAll('.nav-btn').forEach((b,i)=>{
