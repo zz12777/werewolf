@@ -15,7 +15,9 @@ const ALL_ROLES = {
   evilknight:{icon:jgIcon('evilknight'),name:'惡靈騎士',team:'wolf',teamLabel:'狼人陣營', desc:'<strong>被動防禦：</strong>夜間免疫狼殺、女巫毒、以及夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）（但預言家查驗仍顯示狼人）。<br><strong>反傷：</strong>被預言家查驗→次日預言家死亡；被女巫毒殺→次日女巫死亡。但反傷效果整局限一次。<br><strong>限制：</strong>不可自刀自爆。'},
   bloodmoon: {icon:jgIcon('bloodmoon'), name:'血月使者', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>主動技：</strong>白天自己發言階段可自爆後直接進入黑夜，當晚所有神牌技能封印。<br><strong>被動技：</strong>若為最後一個被放逐的狼人，可暫時存活進入黑夜，夜晚再擊殺一名玩家，達屠邊則狼人勝利。<br><strong>自刀自爆：</strong>可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽），但一般自爆須在自己發言階段宣告，不能搶在別人發言時自爆。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 通常與獵魔人搭配出現</span>'},
     gargoyle: {icon:jgIcon('gargoyle'), name:'石像鬼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>查驗牌面：</strong>每晚查驗一名玩家的具體角色。<br><strong>限制：</strong>不與狼隊見面，隊友全滅前不能殺人；隊友全滅後可在查驗之外，額外選擇今晚的帶刀對象殺人。不可自爆，可自刀。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 通常與守墓人搭配出現</span>'},
-  mechanicalwolf:{icon:jgIcon('mechanicalwolf'),name:'機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊相認：</strong>與其他狼人互不相認，全程不可自爆。<br><strong>學習技能：</strong>任一晚可選擇一名玩家並「學習」其身份技能，次晚起可使用該技能：<br>‧ 學到狼人／黑狼王：接下來夜晚可選一晚多開一刀（整局限一次），這一刀不可被守衛（含機械狼學到的守衛）或女巫解藥阻擋；一般守衛每晚只能擋下一刀，若這一刀與狼隊當晚的正常狼刀同時命中同一人，守衛只能擋住其中一刀，該玩家仍會因為另一刀死亡，隔天公布死亡。學到黑狼王額外還多了「被狼刀或被票出局時可以開槍帶人（被毒則不行）」。<br>‧ 學到平民：沒有主動技能。<br>‧ 學到女巫：只有一瓶毒藥（沒有解藥），整局限一次。<br>‧ 學到通靈師：每晚可查驗一名玩家的具體身份。<br>‧ 學到獵人：出局（夜槍或白天槍）時可開槍帶人。<br>‧ 學到守衛：除一般守衛功能之外，還能抵擋女巫毒與夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）；但守護與真守衛一樣仍會跟女巫同守同救「奶穿」死亡，而且只要成功擋到任一種傷害（無論最終是否因奶穿而死），這個技能就視為用畢，之後不能再守。<br><strong>帶刀手勢：</strong>當其餘狼人同伴全部出局時，機械狼開始獨自帶刀殺人。<br><strong>自刀自爆：</strong>可以被隊友自刀；全程不可自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 通常與通靈師搭配出現</span>'},
+  awgargoyle:{icon:jgIcon('awgargoyle'), name:'覺醒石像鬼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>狼刀：</strong>每晚與狼隊一同睜眼討論戰術並選擇當晚的襲擊對象，可以選擇空刀或自刀。襲擊對象沒有受到任何技能保護的話，會在天亮時死亡。狼刀永遠優先於其他神職技能：狼刀後狼人已經達到勝利條件的話，即使神職使用技能淘汰最後一個狼人，仍然視為狼人勝利（狼刀在先）。<br><strong>轉化：</strong>第一晚轉化一位好人陣營的玩家變成狼人陣營，該玩家必須在狼隊隔壁。轉化者會在晚上最後知道自己被轉化，但是不知道狼隊有誰。<br><strong>轉化失敗：</strong>轉化到機械狼會失敗，機械狼不會知道自己被轉化；轉化到混血兒也會失敗，混血兒的勝利條件始終跟隨混的對象，但混血兒知道自己有被轉化。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 風聲諜影板專屬角色</span>'},
+  converted:{icon:jgIcon('converted'), name:'轉化者', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>由來：</strong>第一晚被覺醒石像鬼轉化的好人陣營玩家，改屬狼人陣營（原本的身分技能照常保留）。轉化者會在第一晚最後知道自己被轉化，但是不知道狼隊有誰。<br><strong>限制：</strong>不能自爆，且不入狼隊。<br><strong>入隊：</strong>當場上所有狼人（覺醒石像鬼）已經被淘汰，轉化者入狼隊並可以刀人；但狼隊必須只剩下最後一位（轉化者、機械狼合計）才能入狼隊刀人，否則會卡刀，沒人能刀人。<br><strong>查驗：</strong>被預言家查驗為狼人；被通靈師查驗為原本的身分。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 風聲諜影板專屬</span>'},
+  mechanicalwolf:{icon:jgIcon('mechanicalwolf'),name:'機械狼', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>不與狼隊相認：</strong>與其他狼人互不相認，全程不可自爆。<br><strong>學習技能：</strong>任一晚可選擇一名玩家並「學習」其身份技能，次晚起可使用該技能：<br>‧ 學到狼人／黑狼王：接下來夜晚可選一晚多開一刀（整局限一次），這一刀不可被守衛（含機械狼學到的守衛）或女巫解藥阻擋；一般守衛每晚只能擋下一刀，若這一刀與狼隊當晚的正常狼刀同時命中同一人，守衛只能擋住其中一刀，該玩家仍會因為另一刀死亡，隔天公布死亡。學到黑狼王額外還多了「被狼刀或被票出局時可以開槍帶人（被毒則不行）」。<br>‧ 學到平民：沒有主動技能。<br>‧ 學到女巫：只有一瓶毒藥（沒有解藥），整局限一次。<br>‧ 學到通靈師：每晚可查驗一名玩家的具體身份。<br>‧ 學到獵人：出局（夜槍或白天槍）時可開槍帶人。<br>‧ 學到守衛：除一般守衛功能之外，還能抵擋女巫毒與夜槍（獵人/黑狼王被狼刀淘汰後開槍帶人）；但守護與真守衛一樣仍會跟女巫同守同救「奶穿」死亡，而且只要成功擋到任一種傷害（無論最終是否因奶穿而死），這個技能就視為用畢，之後不能再守。<br><strong>帶刀手勢：</strong>當其餘狼人同伴全部出局時，機械狼開始獨自帶刀殺人。<br><strong>風聲諜影板：</strong>學到女巫只會有毒藥；學到熊視為場上有兩頭熊，只要一方達成咆哮條件，白天法官就會公布熊有咆哮；學到攝夢人能攝夢別人，玩家只要連續兩晚被任意攝夢人夢遊就會出局，兩個攝夢人同一晚攝夢同一人則不會夢遊出局；學到覺醒石像鬼（狼人）的刀要等小狼死完才能開（那晚雙刀），也無法轉化別人；學到混血兒，被通靈師驗到會顯示混血兒，但無法選擇要混的對象。可以學習已翻牌的河豚，但不能學習已翻牌的白貓。入隊條件跟轉化者一樣：狼人全滅、而且狼隊只剩最後一位時才能入隊刀人。<br><strong>自刀自爆：</strong>可以被隊友自刀；全程不可自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 通常與通靈師搭配出現</span>'},
   nightmare: {icon:jgIcon('nightmare'), name:'夢魘',   team:'wolf', teamLabel:'狼人陣營', desc:'<strong>恐懼：</strong>每晚在狼人行動前先發動技能，恐懼一名玩家，使其當晚無法發動夜間技能。若恐懼到狼隊友，狼人當晚不得殺人。<br><strong>限制：</strong>不能連續兩晚恐懼同一人，不可自爆、自刀。首夜與狼隊互不見面，可能誤恐懼到隊友。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 通常與攝夢人搭配出現</span>'},
   wolfbrother_e:{icon:jgIcon('wolfbrother_e'), name:'狼兄', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>首夜相認：</strong>與狼弟優先睜眼互相確認身份，隨後狼弟先閉眼，狼兄再與其餘狼人一同睜眼執行狼刀。<br><strong>陣亡效果：</strong>狼兄以任何方式（票出、毒殺、被殺等）陣亡後，下一晚狼弟將「覺醒」，必須殺一人復仇。<br><strong>自刀自爆：</strong>狼兄可以被隊友自刀，但不可以自己自爆（含警長競選期間自爆吞警徽）。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 常見板子搭配：黑市商人＋狼兄狼弟——狼弟覺醒前形同隱狼，黑市商人若誤與其交易會直接失敗身亡</span>'},
   wolfbrother_y:{icon:jgIcon('wolfbrother_y'), name:'狼弟', team:'wolf', teamLabel:'狼人陣營', desc:'<strong>平時不進狼窩：</strong>狼兄尚存活時，狼弟不參與狼人商討殺人，且被預言家查驗顯示為好人。<br><strong>覺醒復仇：</strong>狼兄陣亡後的第一個夜晚，狼弟單獨睜眼，必須擊殺一名玩家（不可空刀），此後預言家查驗才會顯示狼人。<br><strong>加入狼窩：</strong>覺醒夜之後的下一晚起，狼弟才與其餘狼人一同睜眼執行狼刀（覺醒當晚仍不入狼窩）。<br><strong>覺醒時機：</strong>狼兄白天被票出局，當晚天黑狼弟就能立刻覺醒復仇；但狼兄是晚上被女巫毒死的話，因為死亡要到隔天天亮才公布，狼弟要等到「下一晚」才能覺醒——女巫毒殺狼兄的當晚，就算預言家在女巫之後查驗狼弟，仍會顯示好人（金水），要到狼弟真正覺醒的那一晚起，查驗狼弟才會顯示狼人。<br><strong>帶刀手勢：</strong>狼弟每晚睜眼都要比兩個手勢——「技能使用狀況」（復仇刀，只有覺醒那一晚比讚，其餘每晚都是倒讚）跟「今晚的帶刀手勢」（只看狼弟以外的狼隊成員是否已經全滅，跟狼弟自己有沒有正式加入狼窩無關——就算是狼兄剛陣亡、狼弟正要覺醒的那一晚，只要其餘狼隊友也全滅了，帶刀手勢照樣比讚）。帶刀手勢比讚時，狼弟帶的就是原本「狼人睜眼」要選的那把正常狼刀（不是額外多一刀），可以當下直接選人，也可以留到「狼人睜眼」步驟再殺；覺醒當晚若同時符合帶刀條件，復仇刀跟正常狼刀是分開的兩刀，當晚可以兩刀都出。<br><strong>自刀自爆：</strong>狼弟可以被隊友自刀，也可以自己自爆（含警長競選期間自爆吞警徽）。'},
@@ -30,7 +32,7 @@ const ALL_ROLES = {
     +'<strong>'+jgIcon('tri-up')+' 要追刀（預設）：</strong>白天被投票出局時，可以翻牌自證身分，免於淘汰、留在場上繼續發言，但翻牌之後每一天都只能發言、不能再參與投票（不管一般投票還是 PK 投票）。狼隊若想達成「屠神」勝利條件，晚上必須額外對傻瓜補刀殺死他才算數——傻瓜這時候要算進神職人數裡。<br>'
     +'<strong>'+jgIcon('tri-down')+' 不需追刀：</strong>傻瓜被投票出局時直接淘汰、不能留在場上，沒有翻牌自證的機制；狼隊「屠神」不需要特地在夜裡殺死傻瓜。<br>'
     +'<strong>對夜晚攻擊沒有免疫：</strong>不論哪種規則，被狼刀或女巫毒死時都跟一般玩家一樣立即死亡；翻牌留場的效果只對「要追刀」規則下的「白天被投票出局」有效。'},
-  hybrid:   {icon:jgIcon('hybrid'), name:'混血兒', team:'good', teamLabel:'好人陣營', desc:'<strong>選擇支持對象：</strong>第一晚睜眼選擇一位玩家作為支持對象（不能選自己），此後不再有夜間動作。<br><strong>勝利條件：</strong>與支持對象的勝利陣營相同，但混血兒自己不會被告知對方是好人還是狼人，需自行從發言判斷。<br><strong>對外表現：</strong>被預言家查驗永遠顯示為好人（金水）；在人數統計與「屠民」判定上視為一般平民——狼隊若要屠民，仍必須刀死混血兒，就算他其實支持狼隊也一樣。'},
+  hybrid:   {icon:jgIcon('hybrid'), name:'混血兒', team:'good', teamLabel:'好人陣營', desc:'<strong>選擇支持對象：</strong>第一晚睜眼選擇一位玩家作為支持對象（不能選自己），此後不再有夜間動作。<br><strong>勝利條件：</strong>與支持對象的勝利陣營相同，但混血兒自己不會被告知對方是好人還是狼人，需自行從發言判斷。<br><strong>對外表現：</strong>被預言家查驗永遠顯示為好人（金水）；在人數統計與「屠民」判定上視為一般平民——狼隊若要屠民，仍必須刀死混血兒，就算他其實支持狼隊也一樣。<br><strong>風聲諜影板：</strong>被覺醒石像鬼轉化會失敗，勝利條件始終跟隨混的對象，但混血兒知道自己有被轉化；這個板子沒有平民，混血兒不算神職，狼隊屠神即獲勝。'},
   cupid:    {icon:jgIcon('cupid'), name:'邱比特', team:'good', teamLabel:'特殊', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>查驗：</strong>被預言家查驗永遠顯示為好人（金水）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同——但邱比特永遠不會帶狼刀、不參與狼人殺人決策，好人陣營要獲勝，除了原本的條件，也必須連邱比特一起淘汰。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營，邱比特本人也永遠是第三方一員。第三方需屠光除自己以外的所有玩家才算獲勝；若第三方存活人數「多於」場上其餘存活人數，直接判定第三方獲勝（例如第三方三人都在場，需要 3:2 才算獲勝；打平，例如 3:3，遊戲尚未結束）。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致則當晚強制變成平安夜（建議討論時間約20秒）。'},
   thief:    {icon:jgIcon('thief'), name:'盜賊', team:'good', teamLabel:'特殊', desc:'<strong>整局第一個睜眼：</strong>比邱比特、夢魘還早，是全場第一個行動的角色。遊戲開始前，會多準備兩張額外的身分牌（例如12人局準備14張牌），這兩張牌不發給任何玩家，只保留給盜賊在第一夜選擇。<br><strong>選擇身分：</strong>法官在盜賊睜眼時，把手上另外準備的兩張候選身分告訴系統，用「大字報」的方式攤開讓盜賊看到這兩個角色，盜賊選一個成為自己最終真正的身分（另一張則直接「埋」掉，整局都不會有人是這個身分）。<br><strong>強制選狼：</strong>兩張候選身分中如果有狼人陣營的角色，盜賊「一定要」選擇狼人遊玩——這也讓盜賊多了一個資訊：場上「沒有」出現另一張候選卡代表的那個身分。正常設置下不會出現「兩張候選都是狼人」的情況。<br><strong>選完之後：</strong>盜賊立刻變成所選的身分，從這一夜開始完全依照新身分的規則遊玩（若變成狼人，之後與狼隊一起睜眼殺人；若變成神職，之後在該神職的步驟行動），原本的「盜賊」身分只在選擇之前短暫存在。'},
   // Good - gods
@@ -43,7 +45,7 @@ const ALL_ROLES = {
   magician: {icon:jgIcon('magician'), name:'魔術師', team:'good', teamLabel:'神職', desc:'<strong>交換號碼：</strong>每晚睜眼後最早行動，交換兩個號碼牌（也可以不換）。已交換過的號碼不能再被交換，不能交換已死亡的號碼。<br><strong>換流效果：</strong>當晚所有以「號碼」為目標的夜間技能，實際作用對象都會被改成對方號碼——換 A、B 後，狼刀A會刀到B、女巫毒A會毒到B、預言家查A會查到B、守衛守A會守到B……以此類推。<br><strong>夜槍例外：</strong>獵人被狼刀（夜槍）帶走的目標仍屬於夜間作用、一樣會被換流影響；但若獵人是白天被投票出局（白天槍），此時已經是白天，換流只對夜間作用有效，不受影響。'},
   demonhunter:{icon:jgIcon('demonhunter'),name:'獵魔人',team:'good',teamLabel:'神職', desc:'<strong>狩獵：</strong>第二晚起狩獵一名玩家，對方是狼則狼死，對方是好人則自己死。<strong>免疫女巫毒藥。</strong>'},
   gravkeeper:{icon:jgIcon('gravkeeper'),name:'守墓人', team:'good', teamLabel:'神職', desc:'<strong>得知遺身：</strong>第二晚起得知前一個白天被投票處死的玩家是狼人還是好人（法官比讚＝好人／倒讚＝狼人）。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 通常與石像鬼搭配出現</span>'},
-  medium:   {icon:jgIcon('medium'), name:'通靈師', team:'good', teamLabel:'神職', desc:'<strong>查驗具體身份：</strong>每晚查驗一名玩家的具體角色（而非單純好人／狼人）。可以重複查驗已查過的號碼；不能查驗已死亡的號碼。<br><strong>查驗機械狼：</strong>若機械狼尚未學習技能，顯示為「機械狼」；若已學習，顯示其學到的具體身份。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 通常與機械狼搭配出現</span>'},
+  medium:   {icon:jgIcon('medium'), name:'通靈師', team:'good', teamLabel:'神職', desc:'<strong>查驗具體身份：</strong>每晚查驗一名玩家的具體角色（而非單純好人／狼人）。可以重複查驗已查過的號碼；不能查驗已死亡的號碼。<br><strong>查驗機械狼：</strong>若機械狼尚未學習技能，顯示為「機械狼」；若已學習，顯示其學到的具體身份。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 通常與機械狼搭配出現；一般不跟預言家同時出現，風聲諜影是目前唯一預言家和通靈師同時出現的板子</span>'},
   blackmarket:{icon:jgIcon('blackmarket'),name:'黑市商人',team:'good',teamLabel:'神職', desc:'<strong>黑市交易：</strong>整局限一次，任一晚選擇一名玩家進行交易，給予「預言家查驗」「女巫毒藥」「獵人獵槍」三選一的技能。<br><strong>交易成功：</strong>若對象是好人，成為「幸運兒」，從下一晚（查驗／毒藥）或下一個白天（獵槍）起可使用該技能。<br><strong>交易失敗：</strong>若對象是狼人，交易失敗，黑市商人於次日死亡，該狼人不會知道自己曾被選中。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 帶出「幸運兒」附加身分，常見板子搭配「狼兄狼弟」——覺醒前的狼弟形同隱狼，若黑市商人誤與其交易會直接失敗身亡</span>'},
   // Special
   sheriff:  {icon:jgIcon('sheriff'), name:'警長',   team:'special', teamLabel:'附加身分', desc:'<strong>投票 1.5 票。</strong>可決定發言順序，擁有歸票位。死亡時可傳警長牌或撕毀。'
@@ -63,14 +65,14 @@ const ALL_ROLES = {
   trickmage:{icon:jgIcon('trickmage'), name:'魔術師', team:'good', teamLabel:'神職', desc:'<strong>交換（換技能）：</strong>每晚優先行動（在詭術師之前），可以選擇交換兩個玩家的號碼牌（可以空換）——交換後，這兩個玩家「當晚」所有技能會互相對調，只對當晚有效，隔天就失效，其餘規則跟一般魔術師完全相同。<br><strong>每個號碼限用一次：</strong>整局遊戲中，每一個號碼牌最多只能被交換過一次，用過的號碼之後不能再被選進交換名單。<br><strong>唯一的差異：</strong>如果詭術師這一晚剛好也換了同一組號碼（不論順序），魔術師這次的交換效果就會失效、視為沒有交換（但「用過這個號碼」的紀錄仍然算數，不能重複使用）；詭術師自己的換票效果不受影響。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 詭術之境板專屬角色，是「詭術之境」板子裡的魔術師變體，通常與詭術師、定序王子搭配出現</span>'},
   sequenceprince:{icon:jgIcon('sequenceprince'), name:'定序王子', team:'good', teamLabel:'神職', desc:'<strong>翻牌重來：</strong>每天第一次放逐投票結束、公布結果後，可以選擇翻開身分牌發動技能——發動後時間倒轉回到這次投票前，所有人重新發言一次（王子自己享有額外一次發言機會），發言結束後重新進行一次放逐投票。<br><strong>整局限一次：</strong>這個技能整場遊戲只能發動一次，發動之後即使又遇到平票或其他放逐投票，也不能再次發動。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 詭術之境板專屬角色，通常與詭術師、魔術師搭配出現</span>'},
   // ── 動物夢境板專屬角色（圖示一律用線條 SVG，不用 emoji）──
-  bear:{icon:jgIcon('bear'), name:'熊', team:'good', teamLabel:'神職', desc:'<strong>咆哮：</strong>每次白天，法官會提示熊是否有咆哮，讓所有玩家得知熊身邊左右最近、而且白天依然存活的兩位玩家之中有沒有狼人。有狼人熊便會咆哮（例：狼 熊 好、狼 熊 狼）；沒有則不會咆哮（例：好 熊 好）。<br><strong>相鄰怎麼算：</strong>跳過已經死亡的玩家，往左右各找最近的存活玩家（例：1號是熊、2號晚上死了，熊的查驗對象是3號和12號）。<br><strong>第一天也會咆哮：</strong>這個板子第一夜無人可以使用技能，只有熊還是會咆哮。<br><span style="color:var(--seer);font-size:12px;">動物夢境板專屬角色</span>'},
+  bear:{icon:jgIcon('bear'), name:'熊', team:'good', teamLabel:'神職', desc:'<strong>咆哮：</strong>每次白天，法官會提示熊是否有咆哮，讓所有玩家得知熊身邊左右最近、而且白天依然存活的兩位玩家之中有沒有狼人。有狼人熊便會咆哮（例：狼 熊 好、狼 熊 狼）；沒有則不會咆哮（例：好 熊 好）。<br><strong>相鄰怎麼算：</strong>跳過已經死亡的玩家，往左右各找最近的存活玩家（例：1號是熊、2號晚上死了，熊的查驗對象是3號和12號）。<br><strong>動物夢境：</strong>這個板子第一夜無人可以使用技能，只有熊還是會咆哮。<br><strong>風聲諜影：</strong>轉化者、還沒學習或學到覺醒石像鬼的機械狼也算狼人；機械狼學到熊時視為場上有兩頭熊，只要一方達成咆哮條件就會公布熊有咆哮。<br><span style="color:var(--seer);font-size:12px;">動物夢境、風聲諜影板角色</span>'},
   foxcub:{icon:jgIcon('foxcub'), name:'子狐', team:'good', teamLabel:'神職', desc:'<strong>魅惑（整局限用一次）：</strong>第二夜起，可以選擇魅惑一名玩家。<br>魅惑到狼人陣營：當晚狼人不能殺人，狼人無法得知是哪一隻狼被魅惑；若魅惑到狼美人，當晚狼美人也無法魅惑人。<br>魅惑到好人：無事發生。<br><strong>睜眼順序：</strong>每晚第一個睜眼。<br><span style="color:var(--seer);font-size:12px;">動物夢境板專屬角色</span>'},
-  pufferfish:{icon:jgIcon('pufferfish'), name:'河豚', team:'good', teamLabel:'神職', desc:'<strong>翻牌炸人（整局限用一次）：</strong>放逐投票階段，只要有人投票給河豚，河豚就可以翻牌，炸死這次投票中所有投給河豚的玩家；若河豚進入平票 PK，可以炸死兩次投票中所有投給河豚的玩家。<br><strong>不能翻牌：</strong>沒有人投票給河豚；或唯一投給河豚的玩家是最高票出局的人，或是已經翻牌的白貓。<br><strong>吃刀出局：</strong>河豚被狼人殺死時，白天會翻牌，當天白天狼美人的魅惑技能失效。<br><span style="color:var(--seer);font-size:12px;">動物夢境板專屬角色</span>'},
-  whitecat:{icon:jgIcon('whitecat'), name:'白貓', team:'good', teamLabel:'神職', desc:'<strong>翻牌免死：</strong>任何原因死亡，白貓都能翻牌，免疫本次死亡；要等到下一次放逐階段結束後，白貓才會死亡。翻牌後的白貓無法被狼人殺、被狼美人帶走、被河豚炸死、被投票出局。<br><strong>勝負：</strong>白貓翻牌後到死亡之前仍算存活的神職；若狼人砍了場上最後一神白貓，好人在白天推了最後一狼，判定好人獲勝。<br><span style="color:var(--seer);font-size:12px;">動物夢境板專屬角色</span>'},
+  pufferfish:{icon:jgIcon('pufferfish'), name:'河豚', team:'good', teamLabel:'神職', desc:'<strong>翻牌炸人（整局限用一次）：</strong>放逐投票階段，只要有人投票給河豚，河豚就可以翻牌，炸死這次投票中所有投給河豚的玩家；若河豚進入平票 PK，可以炸死兩次投票中所有投給河豚的玩家。<br><strong>不能翻牌：</strong>沒有人投票給河豚；或唯一投給河豚的玩家是最高票出局的人，或是已經翻牌的白貓。<br><strong>吃刀出局：</strong>河豚被狼人殺死時，白天會翻牌，當天白天狼美人的魅惑技能失效。<br><span style="color:var(--seer);font-size:12px;">動物夢境、風聲諜影板角色</span>'},
+  whitecat:{icon:jgIcon('whitecat'), name:'白貓', team:'good', teamLabel:'神職', desc:'<strong>翻牌免死：</strong>任何原因死亡，白貓都能翻牌，免疫本次死亡；要等到下一次放逐階段結束後，白貓才會死亡。翻牌後的白貓無法被狼人殺、被狼美人帶走、被河豚炸死、被投票出局。<br><strong>勝負：</strong>白貓翻牌後到死亡之前仍算存活的神職；若狼人砍了場上最後一神白貓，好人在白天推了最後一狼，判定好人獲勝。<br><span style="color:var(--seer);font-size:12px;">動物夢境、風聲諜影板角色</span>'},
   zombie:{icon:jgIcon('zombie'), name:'殭屍', team:'third', teamLabel:'第三方陣營', desc:'<strong>感染：</strong>每晚可以選擇感染0～2名玩家（不能感染自己，已經感染過的人不用重複選）。感染是永久的，不會被治癒，只會因為被感染的玩家死亡而失去意義。<br><strong>感染者互相確認：</strong>被感染的玩家每晚會被拍肩叫醒，並在「感染者」共同睜眼的階段，看到目前所有感染者是誰。<br><strong>單獨獲勝：</strong>當場上除了殭屍自己以外，所有存活玩家都已經被感染，殭屍就單獨獲勝（好人、狼人都算輸）。<br><strong>免疫查驗：</strong>被預言家查驗一律顯示金水（好人），不會被驗成狼人。<br><span style="color:var(--seer);font-size:12px;">'+jgIcon('bolt')+' 通常搭配黑狼王、預言家、女巫、獵人出現，是獨立於好人／狼人之外的第三方陣營</span>'},
 };
 
-const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask','bigbadwolf','bigmechwolf','smallmechwolf','biggreywolf','trickster'];
+const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','awgargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask','bigbadwolf','bigmechwolf','smallmechwolf','biggreywolf','trickster'];
 const VIL_ROLES  = ['villager','hybrid'];
 const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer','littlegirl','diviner','trickmage','sequenceprince','bear','foxcub','pufferfish','whitecat'];
 const SPECIAL_ROLES = ['sheriff','luckyone','cupid','thief','zombie'];
@@ -102,6 +104,15 @@ const JG_BOARD_PRESETS = {
   neighbor_puppet:{label:'唯鄰是從', fixed:{}, defaultByN:{12:{wolf:3, villager:5, seer:1, witch:1, hunter:1, guard:1}}},
   // 動物夢境：羊駝＝平民（villagerLabel 只改畫面上的稱呼）；白貓不是固定角色，10 人局拿掉
   // 白貓跟一隻小狼，所以放在 extraGods 讓法官自己勾選。
+  // 風聲諜影：覺醒石像鬼第一晚轉化狼隊隔壁的好人變成轉化者，有專屬的夜晚睜眼順序（見
+  // js/night.js jgWindspySeq）。沒有平民，10 人局拿掉機械狼與混血兒；選角畫面只開放加選
+  // 機械狼、混血兒，不開放一般狼人、黑狼王、其他神職。
+  windspy:{label:'風聲諜影', fixed:{awgargoyle:2, seer:1, medium:1, bear:1, witch:1, hunter:1, pufferfish:1, dreamcatcher:1, whitecat:1},
+    noBaseWolf:true, noWolfKing:true, noWolfStepper:true, noVillagerStepper:true, godBase:[], extraWolves:['mechanicalwolf'], specialToggles:['hybrid'],
+    defaultByN:{
+      12:{awgargoyle:2, mechanicalwolf:1, seer:1, medium:1, bear:1, witch:1, hunter:1, pufferfish:1, dreamcatcher:1, whitecat:1, hybrid:1},
+      10:{awgargoyle:2, seer:1, medium:1, bear:1, witch:1, hunter:1, pufferfish:1, dreamcatcher:1, whitecat:1}
+    }},
   animal_dream:{label:'動物夢境', fixed:{wolfbeauty:1, bear:1, foxcub:1, pufferfish:1}, extraGods:['whitecat'], villagerLabel:'羊駝（平民）',
     defaultByN:{
       12:{wolf:3, wolfbeauty:1, villager:4, bear:1, foxcub:1, pufferfish:1, whitecat:1},
@@ -170,7 +181,8 @@ function renderRulesCards(){
   const vEl=document.getElementById('rules-vil-list');
   const gEl=document.getElementById('rules-god-list');
   const sEl=document.getElementById('rules-special-list');
-  if(wEl) wEl.innerHTML=WOLF_ROLES.map(makeCard).join('');
+  // 轉化者不是真正的角色牌（是被覺醒石像鬼轉化的好人），規則頁一樣放一張卡片說明。
+  if(wEl) wEl.innerHTML=WOLF_ROLES.concat(['converted']).map(makeCard).join('');
   if(vEl) vEl.innerHTML=VIL_ROLES.map(makeCard).join('');
   // trickmage（詭術之境變體魔術師）跟一般魔術師規則幾乎相同，不需要在規則頁多開一張重複卡片，
   // 這裡單純不渲染它——GOD_ROLES 陣列本身完全不動，法官助手其他邏輯（算神職人數等）都還是正常吃得到它。
@@ -364,7 +376,8 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   if(!el) return;
   const isDual=jgSetupDualMode;
   const unitLabel=isDual?'個角色':'人';
-  const wolves=isDual?WOLF_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):WOLF_ROLES;
+  // 覺醒石像鬼只在風聲諜影板才有轉化流程，自訂角色不開放選。
+  const wolves=isDual?WOLF_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):WOLF_ROLES.filter(r=>r!=='awgargoyle');
   const gods=isDual?GOD_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):GOD_ROLES;
   const wolfCount=Object.entries(pickState).filter(([k])=>wolves.includes(k)).reduce((s,[,v])=>s+v,0);
   const godCount=Object.entries(pickState).filter(([k])=>gods.includes(k)).reduce((s,[,v])=>s+v,0);
@@ -546,7 +559,7 @@ function jgApplyPresetDefaults(n){
   }
   const rp={};
   Object.entries(preset.fixed).forEach(([k,v])=>{ rp[k]=v; });
-  if(!rp.wolf) rp.wolf=1;
+  if(!rp.wolf&&!preset.noBaseWolf) rp.wolf=1;
   // 板子建議的黑狼王／白狼王預設值——只是「預先選好」方便法官，不是鎖定，法官可以自由改選
   // 另一種、或直接取消都可以（見 renderPresetPicker 的黑狼王／白狼王二選一格子）。
   if(preset.wolfkingDefault&&!rp.wolfking&&!rp.whitewolf) rp[preset.wolfkingDefault]=1;
@@ -566,7 +579,8 @@ function jgApplyPresetDefaults(n){
   if(wolfNeeded>0) rp.wolf=(rp.wolf||0)+wolfNeeded;
 
   const godPriority=['seer','witch','hunter','guard'];
-  const excludeSeer=godFixedKeys.includes('medium');
+  // 預言家與通靈師一般不同時出現；風聲諜影例外（兩個都固定在板子裡）。
+  const excludeSeer=godFixedKeys.includes('medium')&&!godFixedKeys.includes('seer');
   let godCount=godFixedCount;
   for(const g of godPriority){
     if(godCount>=targetGod) break;
@@ -590,8 +604,10 @@ function jgApplyPresetDefaults(n){
 function jgPresetLockedTileHtml(id){
   const r=ALL_ROLES[id];
   if(!r) return '';
+  const preset=JG_BOARD_PRESETS[jgBoardPreset];
+  const cnt=preset&&preset.fixed?(preset.fixed[id]||1):1;
   return '<div class="rpick sel locked" title="本板固定包含，無法取消">'
-    +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
+    +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm'+(r.name.length>=5?' rp-nm-long':'')+'">'+r.name+'</div>'+(cnt>1?'<div style="font-size:12px;font-weight:800;color:var(--text2);">×'+cnt+'</div>':'')
     +'<span class="rp-lock">'+jgIcon('lock')+'</span></div>';
 }
 
@@ -617,7 +633,7 @@ function renderPresetPicker(){
   let html='';
 
   html+='<div style="font-size:13px;font-weight:800;color:var(--wolf);margin:6px 0 4px;letter-spacing:0.5px;">狼人陣營</div>';
-  const showWolfKingChoice=!fixedKeys.includes('wolfking')&&!fixedKeys.includes('whitewolf');
+  const showWolfKingChoice=!preset.noWolfKing&&!fixedKeys.includes('wolfking')&&!fixedKeys.includes('whitewolf');
   let wolfKingTiles='';
   if(showWolfKingChoice){
     const wkOn=(state.wolfking||0)>0;
@@ -629,24 +645,35 @@ function renderPresetPicker(){
       +'<span class="rp-ico">'+jgIcon('whitewolf')+'</span><div class="rp-nm">白狼王</div>'
       +(wwOn?'<span class="rp-cnt">'+jgIcon('check')+'</span>':'')+'</div>';
   }
-  const wolfTiles=fixedWolfKeys.map(jgPresetLockedTileHtml).join('')+wolfKingTiles;
+  // extraWolves：只在特定板子出現的可加選狼隊角色（例如風聲諜影的機械狼）。
+  const extraWolfTiles=(preset.extraWolves||[]).filter(id=>!fixedKeys.includes(id)).map(id=>{
+    const r=ALL_ROLES[id]; const cnt=state[id]||0;
+    return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
+      +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
+      +(cnt>0?'<span class="rp-cnt">'+jgIcon('check')+'</span>':'')+'</div>';
+  }).join('');
+  const wolfTiles=fixedWolfKeys.map(jgPresetLockedTileHtml).join('')+wolfKingTiles+extraWolfTiles;
   if(wolfTiles){
     html+='<div class="rpick-grid" style="margin-bottom:6px;">'+wolfTiles+'</div>';
   }
   if(showWolfKingChoice) html+='<div style="font-size:11px;color:var(--text3);margin:-2px 0 6px;">黑狼王／白狼王二選一，可自由切換或都不選</div>';
-  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
-    +'<button onclick="jgPresetAdjWolf(-1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">−</button>'
-    +'<div style="font-size:22px;font-weight:800;min-width:30px;text-align:center;">'+wolfCount+'</div>'
-    +'<button onclick="jgPresetAdjWolf(1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">＋</button>'
-    +'<span style="font-size:13px;color:var(--text2);">狼人</span></div>';
+  if(!preset.noWolfStepper){
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+      +'<button onclick="jgPresetAdjWolf(-1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">−</button>'
+      +'<div style="font-size:22px;font-weight:800;min-width:30px;text-align:center;">'+wolfCount+'</div>'
+      +'<button onclick="jgPresetAdjWolf(1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">＋</button>'
+      +'<span style="font-size:13px;color:var(--text2);">狼人</span></div>';
+  }
 
   const vilLabel=preset.villagerLabel||'平民';
-  html+='<div style="font-size:13px;font-weight:800;color:var(--vil);margin:6px 0 4px;letter-spacing:0.5px;">'+vilLabel+'</div>';
-  html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+  if(!preset.noVillagerStepper){
+    html+='<div style="font-size:13px;font-weight:800;color:var(--vil);margin:6px 0 4px;letter-spacing:0.5px;">'+vilLabel+'</div>';
+    html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
     +'<button onclick="jgPresetAdjVillager(-1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">−</button>'
     +'<div style="font-size:22px;font-weight:800;min-width:30px;text-align:center;">'+vilCount+'</div>'
     +'<button onclick="jgPresetAdjVillager(1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">＋</button>'
     +'<span style="font-size:13px;color:var(--text2);">'+vilLabel+'</span></div>';
+  }
 
   // 混血兒、邱比特、盜賊、殭屍這些不算「神職」的特殊角色（各自陣營歸屬跟一般玩法不同）：
   // 本板固定包含的（例如「邱比特」板固定邱比特、「殭屍」板固定殭屍）一律用鎖定格子顯示在
@@ -656,7 +683,7 @@ function renderPresetPicker(){
   // 使用也不會有問題）。
   const fixedSpecialKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&!GOD_ROLES.includes(k)&&k!=='villager');
   const specialTiles=fixedSpecialKeys.map(jgPresetLockedTileHtml).join('')
-    + ['hybrid','thief','zombie'].filter(id=>!fixedKeys.includes(id)).map(id=>{
+    + (preset.specialToggles||['hybrid','thief','zombie']).filter(id=>!fixedKeys.includes(id)).map(id=>{
       const r=ALL_ROLES[id]; const cnt=state[id]||0;
       return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
         +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
@@ -671,9 +698,9 @@ function renderPresetPicker(){
   html+='<div class="rpick-grid">';
   fixedGodKeys.forEach(id=>{ html+=jgPresetLockedTileHtml(id); });
   // 通靈師（medium）與預言家（seer）查驗效果重疊，本板固定通靈師時就不再顯示預言家可選
-  const excludeSeer=fixedKeys.includes('medium');
+  const excludeSeer=fixedKeys.includes('medium')&&!fixedKeys.includes('seer');
   // extraGods：只在特定板子出現的可選神職（例如動物夢境的白貓），不放進所有板子共用的清單。
-  JG_PRESET_GOD_BASE.concat(preset.extraGods||[]).forEach(id=>{
+  (preset.godBase||JG_PRESET_GOD_BASE).concat(preset.extraGods||[]).forEach(id=>{
     if(fixedKeys.includes(id)) return; // 這個板子已經把這個角色當固定角色了，不重複顯示
     if(id==='seer'&&excludeSeer) return;
     const r=ALL_ROLES[id]; const cnt=state[id]||0;

@@ -6,9 +6,9 @@
 // ═══════════════════════════════════
 // SHARED DATA
 // ═══════════════════════════════════
-const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',biggreywolf:'大灰狼',trickster:'詭術師',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',trickmage:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',diviner:'占卜師',zombie:'殭屍',sequenceprince:'定序王子',bear:'熊',foxcub:'子狐',pufferfish:'河豚',whitecat:'白貓',sheriff:'警長',luckyone:'幸運兒'};
-const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',biggreywolf:'bw',trickster:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs',diviner:'bdiviner',zombie:'bcupid',trickmage:'bs',sequenceprince:'bg2',bear:'bg2',foxcub:'bs',pufferfish:'bs',whitecat:'bg2'};
-const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',biggreywolf:'av-wolf',trickster:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer',diviner:'av-diviner',zombie:'av-cupid',trickmage:'av-seer',sequenceprince:'av-guard',bear:'av-guard',foxcub:'av-seer',pufferfish:'av-seer',whitecat:'av-guard'};
+const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',awgargoyle:'覺醒石像鬼',converted:'轉化者',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',biggreywolf:'大灰狼',trickster:'詭術師',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',trickmage:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',diviner:'占卜師',zombie:'殭屍',sequenceprince:'定序王子',bear:'熊',foxcub:'子狐',pufferfish:'河豚',whitecat:'白貓',sheriff:'警長',luckyone:'幸運兒'};
+const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',awgargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',biggreywolf:'bw',trickster:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs',diviner:'bdiviner',zombie:'bcupid',trickmage:'bs',sequenceprince:'bg2',bear:'bg2',foxcub:'bs',pufferfish:'bs',whitecat:'bg2'};
+const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',awgargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',biggreywolf:'av-wolf',trickster:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer',diviner:'av-diviner',zombie:'av-cupid',trickmage:'av-seer',sequenceprince:'av-guard',bear:'av-guard',foxcub:'av-seer',pufferfish:'av-seer',whitecat:'av-guard'};
 
 function getComp(n){
   const t={
@@ -258,6 +258,7 @@ function jgAutoGameTitle(){
     // 不能用 jgPlayers 目前的角色（盜賊選完之後 role 已經變成別的身分，查不到了）。
     ['hybrid','thief','zombie'].forEach(id=>{
       if(preset.fixed[id]) return; // 已經算在板子固定組合，標題本來就會提到，不用重複加
+      if(preset.specialToggles&&preset.specialToggles.includes(id)) return; // 板子本身的標準配置（例如風聲諜影 12 人局的混血兒）
       if(jgComp&&jgComp[id]>0) title+='+'+jgFullRoleName(id);
     });
     // 魔術師板子的黑狼王／白狼王是完全自由選配，不是這個板子固定搭配的角色，標題預設不寫；
@@ -452,6 +453,12 @@ function jgMaskCanKill(mkP){
 // 原本的判斷，不要在那些地方誤用這個函式。
 function jgIsWolfForWin(p){
   if(jgIsWolfPackMember(p)) return true;
+  // 風聲諜影：轉化者改屬狼人陣營；混血兒跟隨混的對象（對象被轉化就跟著算狼）。
+  if(p&&p.converted) return true;
+  if(jgIsWindspy()&&p&&p.role==='hybrid'&&jgHybridChosen&&jgHybridTarget){
+    const t=jgFind(jgHybridTarget);
+    if(t&&t.num!==p.num&&(jgIsWolfPackMember(t)||t.converted)) return true;
+  }
   return !!(p&&p.role==='cupid'&&jgLoverPairType()==='wolf');
 }
 
@@ -557,7 +564,7 @@ function jgFormatNightLog(){
   const mwP=jgPlayers.find(p=>p.role==='mechanicalwolf');
   const seerP=jgPlayers.find(p=>p.role==='seer');
   const witchP=jgPlayers.find(p=>p.role==='witch');
-  const hasWolf=jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.alive);
+  const hasWolf=jgPlayers.some(p=>(WOLF_ROLES.includes(p.role)||p.converted)&&p.alive);
   // 預言家只會知道好人/狼人，通靈師（含機械狼學到通靈師）會知道具體身分
   const seerCheckResult=(val)=>{
     if(!val) return '';
@@ -644,6 +651,14 @@ function jgFormatNightLog(){
   }
   if(jgPuppetMode&&jgNight===1&&jgPuppetPlayer()) lines.push('傀儡 '+jgPuppetPlayer().num);
   if(hasWolf&&!_animalNight1) lines.push('刀 '+jgSwapDisplay(jgRecord.wolfKillRaw, jgRecord.wolfKill)+(jgRecord._mechwolf2InvincibleKnifeNight?'（無敵刀，可破守衛盾）':''));
+  if(jgIsWindspy()&&jgNight===1){
+    jgWindspyGargoyles().forEach((g,i)=>{
+      const L=i===0?'A':'B';
+      const t=g.windspyConvertTarget?jgFind(g.windspyConvertTarget):null;
+      if(t) lines.push('轉化'+L+' '+t.num+(t.converted?'':'(失敗)'));
+    });
+  }
+  if(jgIsWindspy()&&jgRecord.mechDreamTarget) lines.push('機夢 '+jgRecord.mechDreamTarget+(jgRecord.mechDreamKillTarget?'(連續兩晚致死)':''));
   const wbP3=jgPlayers.find(p=>p.role==='wolfbeauty');
   if(wbP3&&wbP3.alive&&!_animalNight1) lines.push('魅 '+(jgRecord.wolfbeautyCharm||'x'));
   const bmP2=jgPlayers.find(p=>p.role==='blackmarket');
@@ -871,6 +886,32 @@ let jgDualIdentityMode=false;
 // ── 唯鄰是從板：狼人第一夜在開刀前選一位跟狼人相鄰的玩家當傀儡（玩家物件上的 p.puppet 旗標，
 // 會跟著 jgPlayers 一起進「上一步」的快照）。jgPuppetMode 只在開局當下依選的板子決定，整局不變。
 let jgPuppetMode=false;
+// ── 風聲諜影板：覺醒石像鬼第一晚把狼隊隔壁的好人轉化成狼人陣營（p.converted='A'/'B'），
+// 轉化失敗（轉到機械狼、混血兒）記在 p.convertFailedBy。整局固定，開局時依選的板子決定。
+let jgWindspyMode=false;
+function jgIsWindspy(){ return !!jgWindspyMode; }
+// 轉化者 A／B（轉化成功的玩家）；轉化失敗時回傳 null。
+function jgWindspyConvert(letter){ return jgPlayers.find(p=>p.converted===letter)||null; }
+// 覺醒石像鬼依座號排序，第一位是 A、第二位是 B。
+function jgWindspyGargoyles(){ return jgPlayers.filter(p=>p.role==='awgargoyle').sort((a,b)=>a.num-b.num); }
+// 轉化候選：任一覺醒石像鬼左右相鄰（圓桌頭尾相連）、本身不是覺醒石像鬼的座位。
+function jgWindspyConvertCandidateNums(excludeNums){
+  const gNums=jgWindspyGargoyles().map(p=>p.num);
+  const out=new Set();
+  gNums.forEach(g=>[g-1,g+1].forEach(n=>{
+    const seat=((n-1+jgTotal)%jgTotal)+1;
+    if(!gNums.includes(seat)) out.add(seat);
+  }));
+  (excludeNums||[]).forEach(n=>out.delete(parseInt(n)));
+  return [...out].sort((a,b)=>a-b);
+}
+// 狼人（覺醒石像鬼）全滅後，轉化者與機械狼之中「只剩最後一位存活」的那位可以入狼隊刀人；
+// 兩位以上還活著就卡刀，誰都不能刀。回傳可以入隊的玩家，沒有則回傳 null。
+function jgWindspyJoiner(){
+  if(jgPlayers.some(p=>p.role==='awgargoyle'&&p.alive)) return null;
+  const rest=jgPlayers.filter(p=>p.alive&&(p.converted||p.role==='mechanicalwolf'));
+  return rest.length===1?rest[0]:null;
+}
 function jgPuppetPlayer(){ return jgPlayers.find(p=>p.puppet)||null; }
 function jgIsPuppetNum(num){
   const p=num!=null?jgFind(num):null;
@@ -1525,6 +1566,7 @@ function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal, thiefCand1, thief
   jgComp=dealtComp||getPickComp(jgRolePick); jgRoleCounts={...jgComp};
   jgDualIdentityMode=false; jgDualAssign={}; jgDualAssignDone=false;
   jgPuppetMode=typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='neighbor_puppet';
+  jgWindspyMode=typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='windspy';
   jgPlayers=[]; jgNight=1;
   jgWitchSaveUsed=false; jgWitchPoisonUsed=false;
   jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,hunterNightShot:null,witchStepDone:false};
@@ -1645,6 +1687,7 @@ function jgStart(){
   jgTotal=n; jgComp=compCheck; jgRoleCounts={...jgComp};
   jgDualIdentityMode=isDualStart;
   jgPuppetMode=!isDualStart&&typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='neighbor_puppet';
+  jgWindspyMode=!isDualStart&&typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='windspy';
   jgDualAssign={};
   jgDualAssignDone=false;
   jgPlayers=[]; jgNight=1;
@@ -1867,6 +1910,8 @@ function jgRoleDisplayName(p){
 }
 // 動物夢境板：板子上有熊／子狐／河豚／白貓任一個就算（這幾個角色只在這個板子出現）。
 function jgIsAnimalDream(){
+  // 風聲諜影也有熊／河豚／白貓，但不是動物夢境（第一夜照常使用技能）。
+  if(jgIsWindspy()||(jgComp&&jgComp.awgargoyle>0)) return false;
   return !!(jgComp&&((jgComp.bear||0)+(jgComp.foxcub||0)+(jgComp.pufferfish||0)+(jgComp.whitecat||0))>0);
 }
 
@@ -1930,7 +1975,10 @@ function jgRenderRoster(){
         ?(()=>{ const tp=jgFind(jgHybridTarget); if(!tp) return ''; const isWolf=jgIsWolfPackMember(tp);
             return '<span class="rp-tag-lover" style="color:'+(isWolf?'var(--wolf,#b91c1c)':'var(--good,#2e7d32)')+';" title="混血兒支持 '+tp.num+'號（'+(isWolf?'狼人陣營':'好人陣營')+'），僅供法官自己參考：混血兒本人查驗/屠民判定一律仍算好人／平民">'+(isWolf?'狼人混':'好人混')+'</span>'; })()
         :'';
-      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}${princeUsedTag}${hybridSideTag}${infectedTag}${puppetTag}</div>`;
+      // 風聲諜影：轉化者（改屬狼人陣營）、轉化失敗（機械狼、混血兒）都加註給法官看。
+      const convertTag=p.converted?'<span class="rp-tag-lover" style="color:var(--wolf);" title="被覺醒石像鬼轉化，改屬狼人陣營">轉化者'+p.converted+'</span>'
+        :(p.convertFailedBy?'<span class="rp-tag-lover" style="color:var(--text3);" title="覺醒石像鬼轉化失敗">轉化失敗</span>':'');
+      bodyHtml=`<div class="rp-role">${rname}${luckyTag}${loverTag}${thiefOriginTag}${foolRevealedTag}${princeUsedTag}${hybridSideTag}${infectedTag}${puppetTag}${convertTag}</div>`;
     }
     return `<div class="rp rp-${role} ${p.alive?'':'rp-dead'}">
       <button type="button" class="rp-toggle-btn" title="手動修改死亡狀態（安全網，避免忘記勾選/漏改）" onclick="jgManualToggleAlive(${p.num})">⇄</button>
@@ -2158,6 +2206,9 @@ function jgGoStep(step){
     jgSheriffTransferNextStep=step;
     step='sheriff-transfer';
   }
+  // 風聲諜影板有自己固定的睜眼順序：夜晚各步驟存檔後原本會依一般板子的順序決定下一步，
+  // 這裡統一改成照風聲諜影的順序表走（見 js/night.js jgWindspyRedirect）。
+  if(jgIsWindspy()) step=jgWindspyRedirect(step);
   jgStateHistory.push(jgCaptureState());
   jgStepHistory.push(step);
   jgCurrentStep=step;
@@ -2237,7 +2288,7 @@ function jgProceedToNight(){
     jgGoStep('dual-assign');
     return;
   }
-  if(jgNight===1 && (jgComp.mechanicalwolf>0||jgComp.gargoyle>0||jgComp.purewhitemaiden>0||jgComp.bigmechwolf>0||jgComp.smallmechwolf>0) && !jgMechAssignDone){
+  if(jgNight===1 && (jgComp.mechanicalwolf>0||jgComp.gargoyle>0||jgComp.awgargoyle>0||jgComp.purewhitemaiden>0||jgComp.bigmechwolf>0||jgComp.smallmechwolf>0) && !jgMechAssignDone){
     jgGoStep('mech-assign');
     return;
   }
@@ -2536,7 +2587,7 @@ function jgShowBigCard(mainText, subText, hideClose){
 function jgBigCardFor(val){
   const found=jgFind(val);
   if(!found){ jgShowBigCard('找不到玩家'); return; }
-  jgShowBigCard(found.num+'號', jgFullRoleName(jgCheckDisplayRole(found.role||'villager')));
+  jgShowBigCard(found.num+'號', jgFullRoleName(jgCheckDisplayRole(found.role||'villager'))+(found.converted?'（轉化者）':''));
 }
 // 雙機械狼板專用：第二晚起法官要告知機械狼「跟誰學的、學到什麼」——直接沿用
 // jgMechWolf2ShowBigCardRaw（跟學習選人當下的即時大字報是同一套顯示邏輯，機械狼目標
@@ -2723,6 +2774,13 @@ function jgCheckWinNormal(){
   const aw=a.filter(p=>jgIsWolfForWin(p)); // all wolf-team alive (incl. hidden 黑狼王 second-card in dual mode; 狼狼鏈時邱比特也算入)
   const ag=a.filter(p=>!jgIsWolfForWin(p)); // all good-team alive
   if(aw.length===0) return{winner:'good',msg:'所有狼人已被淘汰',icon:'🎉'};
+  // 風聲諜影：狼隊（覺醒石像鬼、轉化者、機械狼）彼此不相認，不看人數；沒有平民，好人陣營的
+  // 神職全部出局（屠神）狼人才獲勝。
+  if(jgIsWindspy()){
+    const allGods0=jgAllGodsForWin();
+    if(!ag.some(p=>allGods0.includes(p.role))) return{winner:'wolf',msg:'所有神職已被淘汰',icon:'🐺'};
+    return null;
+  }
   // 機械狼板：機械狼與其餘狼人互不相認、不碰面，狼隊無法憑人數優勢確認勝利，
   // 就算「狼人+機械狼」人數已達多數，仍必須屠民或屠神才算獲勝。
   const hasMechWolfBoard=(jgComp&&jgComp.mechanicalwolf>0);

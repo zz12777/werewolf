@@ -12,7 +12,21 @@ function jgMechWolfWolfkingActive(){
 }
 // 學到「狼人」或「黑狼王」都給予同一種「額外一刀」能力（次晚起限一次）
 function jgMechWolfHasBonusKill(){
-  return jgMechWolfLearned==='wolf'||jgMechWolfLearned==='wolfking';
+  return jgMechWolfLearned==='wolf'||jgMechWolfLearned==='wolfking'||jgMechWolfLearned==='awgargoyle';
+}
+// 風聲諜影：機械狼學到覺醒石像鬼（狼人）的刀，要等覺醒石像鬼全部出局才能開。
+function jgMechWolfBonusKillLocked(){
+  return jgIsWindspy()&&jgMechWolfLearned==='awgargoyle'&&jgPlayers.some(p=>p.role==='awgargoyle'&&p.alive);
+}
+// 機械狼現在還不能自己帶刀（入隊）：一般板子是其餘狼隊友還有人活著；風聲諜影則要覺醒石像鬼
+// 全滅、而且轉化者與機械狼合計只剩機械狼最後一位才能入隊。
+function jgMechOtherWolvesAlive(){
+  if(jgIsWindspy()){
+    const mw=jgPlayers.find(p=>p.role==='mechanicalwolf');
+    const j=jgWindspyJoiner();
+    return !(mw&&j&&j.num===mw.num);
+  }
+  return jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='mechanicalwolf'&&p.alive);
 }
 // Whether a specific player currently holds hunter-style shoot-on-death ability:
 // the real hunter, the mechanical wolf (if it learned 獵人 and that's active), or the
@@ -1604,7 +1618,16 @@ function jgSaveMechanicalWolf(){
       jgRecord.mechWolfGuardTarget=gv||null;
     } else if(jgMechWolfLearned==='medium'){
       jgRecord.mechWolfMediumCheck=(document.getElementById('jg-mechwolf-medium-check')||{}).value?.trim()||null;
-    } else if(jgMechWolfHasBonusKill()&&!jgMechWolfBonusKillUsed){
+    } else if(jgMechWolfLearned==='seer'){
+      jgRecord.mechWolfSeerCheck=(document.getElementById('jg-mechwolf-seer-check')||{}).value?.trim()||null;
+    } else if(jgMechWolfLearned==='dreamcatcher'&&jgIsWindspy()){
+      const dv=(document.getElementById('jg-mechwolf-dream')||{}).value?.trim()||'';
+      if(mwPfinal&&mwPfinal.alive){
+        if(!dv){ alert('機械狼學到攝夢人，每晚必須攝夢一人，請選擇號碼！'); return; }
+        if(dv===mwPfinal.num.toString()){ alert('機械狼不能攝夢自己，請重新選擇！'); return; }
+      }
+      jgRecord.mechDreamTarget=dv||null;
+    } else if(jgMechWolfHasBonusKill()&&!jgMechWolfBonusKillUsed&&!jgMechWolfBonusKillLocked()){
       const bv=(document.getElementById('jg-mechwolf-bonuskill')||{}).value?.trim()||'';
       jgRecord.mechWolfBonusKillTarget=bv||null;
       if(bv) jgMechWolfBonusKillUsed=true;
@@ -1612,7 +1635,7 @@ function jgSaveMechanicalWolf(){
   }
   // Kill gesture (night 2+, only when the rest of the wolf pack is already dead)
   if(jgNight>=2){
-    const otherWolvesAlive=jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='mechanicalwolf'&&p.alive);
+    const otherWolvesAlive=jgMechOtherWolvesAlive();
     if(!otherWolvesAlive){
       const kv=(document.getElementById('jg-mechwolf-kill')||{}).value?.trim()||'';
       jgRecord.mechWolfKillTarget=kv||null;
@@ -1628,7 +1651,7 @@ function jgSaveMechanicalWolf(){
 // night), the now-empty 狼人睜眼 step is skipped entirely and we jump to whatever comes
 // after the wolf pack normally (狼美人／預言家...); otherwise proceed to 狼人睜眼 as usual.
 function jgAfterMechWolfStep(){
-  const otherWolvesAlive=jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='mechanicalwolf'&&p.alive);
+  const otherWolvesAlive=jgMechOtherWolvesAlive();
   if(jgNight>=2&&!otherWolvesAlive){
     return jgNextWolfStep();
   }
@@ -1648,6 +1671,12 @@ function jgMechWolfLearnCheck(){
   if(!found){box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
   const label=jgFullRoleName(found.role||'villager');
   const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+  if(jgIsWindspy()&&jgNight===1){
+    // 風聲諜影第一晚：機械狼要等整晚最後再睜眼一次，才告知學到的技能，這裡只給法官看。
+    box.innerHTML='<div class="info-success" style="font-size:16px;font-weight:800;text-align:center;padding:10px;">'+found.num+'號 → '+label+'</div>'
+      +'<div class="info" style="font-size:12px;margin-top:4px;">先不用告訴機械狼，第一晚最後機械狼會再睜眼一次，到時再告知學到的技能。</div>';
+    return;
+  }
   box.innerHTML='<div class="info-success" style="font-size:16px;font-weight:800;text-align:center;padding:10px;">'+found.num+'號 → '+label+'</div>'
     +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給機械狼看</button>';
 }
@@ -1662,6 +1691,21 @@ function jgMechWolfSkillUseHtml(){
     return '<label>查驗對象號碼</label>'
       +jgNumSelectHtml('jg-mechwolf-medium-check', cv, 'jgMechWolfMediumCheckLive')
       +'<div id="jg-mechwolf-medium-result"></div>';
+  }
+  if(learned==='seer'){
+    const cv=jgRecord.mechWolfSeerCheck||'';
+    return '<label>查驗對象號碼</label>'
+      +jgNumSelectHtml('jg-mechwolf-seer-check', cv, 'jgMechWolfSeerCheckLive')
+      +'<div id="jg-mechwolf-seer-result"></div>';
+  }
+  if(learned==='dreamcatcher'&&jgIsWindspy()){
+    const mw=jgPlayers.find(p=>p.role==='mechanicalwolf');
+    return '<label>今晚要攝夢的對象（每晚必須選一人，不能選自己）</label>'
+      +jgNumSelectHtml('jg-mechwolf-dream', jgRecord.mechDreamTarget||'', null, null, mw?[mw.num]:[], '機械狼不能攝夢自己')
+      +'<div class="info" style="font-size:12px;margin-top:4px;">玩家只要連續兩晚被任意攝夢人夢遊就會出局；兩個攝夢人同一晚攝夢同一人則不會夢遊出局。攝夢人和機械狼都不知道技能有沒有讓人出局。</div>';
+  }
+  if(learned==='hybrid'){
+    return '<div class="info" style="font-size:12px;">（法官搖頭）學到混血兒：被通靈師驗到會顯示混血兒，但無法選擇要混的對象。</div>';
   }
   if(learned==='witch'){
     if(jgMechWolfPoisonUsed){
@@ -1679,9 +1723,12 @@ function jgMechWolfSkillUseHtml(){
     return '<label>今晚要守護的對象（留空=空守）</label>'
       +jgNumSelectHtml('jg-mechwolf-guard', gv, 'jgMechWolfGuardCheckRepeat')+'<div id="jg-mechwolf-guard-repeat-warn"></div>';
   }
-  if(learned==='wolf'||learned==='wolfking'){
+  if(learned==='wolf'||learned==='wolfking'||learned==='awgargoyle'){
     if(jgMechWolfBonusKillUsed){
       return '<div class="info" style="font-size:12px;">（法官搖頭）技能已使用完畢。</div>';
+    }
+    if(jgMechWolfBonusKillLocked()){
+      return '<div class="info" style="font-size:12px;">（法官搖頭）狼人還沒全部出局，學到的刀還不能開。</div>';
     }
     const kv=jgRecord.mechWolfBonusKillTarget||'';
     return '<label>今晚要殺的對象號碼（僅可使用一次，留空=本晚不使用）</label>'
@@ -1695,6 +1742,16 @@ function jgMechWolfSkillUseHtml(){
   return '<div class="info" style="font-size:12px;">已學得「'+jgFullRoleName(learned)+'」，此技能請法官依角色規則自行主持（若無主動夜間技能可略過）</div>';
 }
 
+// 機械狼學到預言家：查驗陣營（跟真預言家一樣看陣營，不受唯鄰是從傀儡預言家的反轉影響）。
+function jgMechWolfSeerCheckLive(id, val){
+  const box=document.getElementById('jg-mechwolf-seer-result');
+  if(!box) return;
+  if(!val){box.innerHTML='';return;}
+  const found=jgFind(val);
+  if(!found){box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
+  const isWolf=jgSeerAppearsWolf(found);
+  box.innerHTML='<div class="'+(isWolf?'info-danger':'info-success')+'" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+(isWolf?'狼人':'好人')+'</div>';
+}
 // Live-check display for the mechanical wolf's learned 通靈師 (medium) skill — purely
 // informational for the judge, same style as the real medium's check.
 function jgMechWolf2MediumCheckLive(id, val){
@@ -1787,7 +1844,8 @@ function jgMediumCheck(){
   const found=jgFind(val);
   if(!found){box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
   const r=found.role||'villager';
-  const label=jgFullRoleName(jgCheckDisplayRole(r));
+  // 風聲諜影：轉化者的真實身分是原本的角色，另外加註「轉化者」。
+  const label=jgFullRoleName(jgCheckDisplayRole(r))+(found.converted?'（轉化者）':'');
   const safeVal=val.replace(/'/g,"\\'").replace(/"/g,'&quot;');
   box.innerHTML='<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+found.num+'號 → '+label+'</div>'
     +'<button onclick="jgBigCardFor(\''+safeVal+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給通靈師看</button>';
@@ -1853,6 +1911,8 @@ function jgSeerAppearsWolf(p){
   if(!p) return false;
   // 唯鄰是從：傀儡不管底牌是什麼，被查驗一律是查殺。
   if(p.puppet) return true;
+  // 風聲諜影：轉化者改屬狼人陣營，被預言家查驗為狼人。
+  if(p.converted) return true;
   if(p.role==='wolfbrother_y'&&!jgWolfBrotherAwakened) return false;
   return WOLF_ROLES.includes(p.role);
 }
@@ -1901,7 +1961,7 @@ function jgSaveWolf(){
       const whoEl=document.getElementById('jg-wolf-who-'+i0);
       if(!whoEl) break;
       const roleId0=whoEl.getAttribute('data-role')||'wolf';
-      const RNAME_CHK={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者',wolfshaman:'狼巫'};
+      const RNAME_CHK={awgargoyle:'覺醒石像鬼',wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者',wolfshaman:'狼巫'};
       if(!jgRequireFirstId('jg-wolf-who-'+i0, RNAME_CHK[roleId0]||'狼人')) return;
       i0++;
     }
@@ -2046,7 +2106,103 @@ function jgThiefBuriedActiveTonight(roleId){
   return true;
 }
 
+// ── 風聲諜影板：專屬夜間睜眼順序 ──
+// 第一晚：混血兒 → 機械狼 → 攝夢人 → 狼人（覺醒石像鬼）→ 覺醒石像鬼 A（轉化）→ 覺醒石像鬼 B（轉化）
+//        → 女巫 → 預言家 → 獵人 → 熊 → 河豚 → 白貓 → 通靈師 → 機械狼（告知學到的技能）
+//        →（法官走若干圈告知轉化者 A、B）
+// 第二晚之後：攝夢人 → 機械狼 → 轉化者 A → 轉化者 B → 狼人 → 女巫 → 預言家 → 通靈師 → 獵人
+function jgWindspySeq(){
+  const c=jgComp||{};
+  if(jgNight===1){
+    return [
+      c.hybrid>0?'hybrid-wake':null,
+      c.mechanicalwolf>0?'mechanicalwolf-wake':null,
+      'dreamcatcher-wake','wolf-wake','awgargoyle-convert-a','awgargoyle-convert-b',
+      'witch-wake','seer-wake','hunter-wake','bear-wake','pufferfish-wake','whitecat-wake','medium-wake',
+      c.mechanicalwolf>0?'windspy-mech-tell':null,
+      'windspy-convert-notify'
+    ].filter(Boolean);
+  }
+  return [
+    'dreamcatcher-wake',
+    c.mechanicalwolf>0?'mechanicalwolf-wake':null,
+    'convert-a-wake','convert-b-wake','wolf-wake','witch-wake','seer-wake','medium-wake','hunter-wake'
+  ].filter(Boolean);
+}
+function jgWindspyNextStep(cur){
+  const seq=jgWindspySeq();
+  const i=seq.indexOf(cur);
+  if(i<0) return seq[0]||'dawn';
+  return seq[i+1]||'dawn';
+}
+// 從一個夜晚步驟要前往「下一個夜晚步驟」（或天亮）時，改成照風聲諜影的順序表走；
+// 其餘情況（例如同一步驟裡的子畫面、白天流程）原樣放行。
+function jgWindspyRedirect(step){
+  const seq=jgWindspySeq();
+  if(!seq.includes(jgCurrentStep)||step===jgCurrentStep) return step;
+  const isNightChainStep=step==='dawn'||/-wake$/.test(step)||step==='wolfshaman-check'
+    ||step.indexOf('awgargoyle-convert')===0||step.indexOf('windspy-')===0;
+  if(!isNightChainStep) return step;
+  return jgWindspyNextStep(jgCurrentStep);
+}
+
+// 風聲諜影：機械狼學到攝夢人時，玩家只要連續兩晚被「任意」攝夢人夢遊就會出局；兩個攝夢人
+// 同一晚攝夢同一人則不會夢遊出局。上一晚兩個攝夢人的夢遊對象記在真攝夢人的玩家物件上
+// （windspyPrevDreams），會跟著「上一步」快照一起還原。天亮結算一開始呼叫。
+function jgWindspyResolveDreams(){
+  const holder=jgPlayers.find(p=>p.role==='dreamcatcher');
+  if(!holder) return;
+  const real=jgRecord.dreamcatcherTarget?String(jgRecord.dreamcatcherTarget):null;
+  const mech=jgRecord.mechDreamTarget?String(jgRecord.mechDreamTarget):null;
+  if(jgMechWolfLearned==='dreamcatcher'){
+    const prev=(holder.windspyPrevDreams||[]).map(String);
+    jgRecord.dreamcatcherKillTarget=(real&&prev.includes(real)&&real!==mech)?real:null;
+    jgRecord.mechDreamKillTarget=(mech&&prev.includes(mech)&&mech!==real)?mech:null;
+    if(mech&&!jgDreamcatcherEverTargeted[mech]){ jgRecord.mechDreamImmune=mech; jgDreamcatcherEverTargeted[mech]=true; }
+    else jgRecord.mechDreamImmune=null;
+  }
+  holder.windspyPrevDreams=[real,mech].filter(Boolean);
+}
+
+// 風聲諜影：覺醒石像鬼 A／B 存檔轉化對象。轉化到機械狼、混血兒會失敗（記在 convertFailedBy）。
+function jgSaveAwgConvert(L){
+  const gs=jgWindspyGargoyles();
+  const g=gs[L==='A'?0:1], other=gs[L==='A'?1:0];
+  if(!g){ jgGoStep('dawn'); return; }
+  const v=(document.getElementById('jg-awg-convert')||{}).value?.trim()||'';
+  if(!v){ alert('覺醒石像鬼第一晚必須轉化一位玩家，請選擇號碼！'); return; }
+  const cands=jgWindspyConvertCandidateNums(other&&other.windspyConvertTarget?[other.windspyConvertTarget]:[]);
+  if(!cands.includes(parseInt(v))){ alert(v+'號 不能轉化：只能選狼隊隔壁、而且還沒被轉化的玩家。'); return; }
+  if(g.windspyConvertTarget){
+    const old=jgFind(g.windspyConvertTarget);
+    if(old){ if(old.converted===L) delete old.converted; if(old.convertFailedBy===L){ delete old.convertFailedBy; delete old.hybridConvertKnown; } }
+  }
+  g.windspyConvertTarget=parseInt(v);
+  const t=jgFind(v);
+  if(t){
+    if(t.role==='mechanicalwolf') t.convertFailedBy=L;
+    else if(t.role==='hybrid'){ t.convertFailedBy=L; t.hybridConvertKnown=true; }
+    else t.converted=L;
+  }
+  jgRenderRoster();
+  jgGoStep('dawn');
+}
+// 風聲諜影：轉化者 A／B 每晚的入隊手勢；能入隊（狼人全滅、狼隊只剩他一位）時在這裡選刀口。
+function jgSaveConvertWake(L){
+  const p=jgWindspyConvert(L);
+  const joiner=jgWindspyJoiner();
+  if(p&&p.alive&&joiner&&joiner.num===p.num){
+    const v=(document.getElementById('jg-convert-kill')||{}).value?.trim()||'';
+    jgRecord.wolfKill=v||null;
+    jgRecord.wolfKillRaw=v||null;
+  }
+  jgRenderRoster();
+  if(jgTryEarlyEnd()) return;
+  jgGoStep('dawn');
+}
+
 function jgNightStartNext(){
+  if(jgIsWindspy()) return jgWindspySeq()[0];
   // 盜賊候選轉盤：整局最開頭、只有法官看得到的一步。系統從板子角色池裡秘密抽出兩張候選
   // 身分牌（不會抽到盜賊自己、也不會兩張都是狼人），法官照抽到的結果去實際牌堆裡把這兩張
   // 牌拿起來，其餘的牌正常發給大家；確認後才進入「盜賊睜眼」，直接把這兩個抽到的候選秀給
@@ -2638,20 +2794,42 @@ function jgSaveAnimalGodId(roleId){
   jgGoStep(jgNextGodStep(roleId+'-wake'));
 }
 // 熊的咆哮：往左右各找最近、目前還活著的玩家（跳過死人，圓桌頭尾相連），有狼就咆哮。
-function jgBearGrowlInfo(){
-  const bear=jgPlayers.find(p=>p.role==='bear');
-  if(!bear) return null;
-  if(!bear.alive) return {bear, dead:true};
+// 熊咆哮時算不算「狼人」：一般板子看狼人陣營；風聲諜影另外算轉化者，機械狼則是還沒學習、
+// 或學到覺醒石像鬼才算（學到其他技能就不算）。
+function jgBearCountsAsWolf(p){
+  if(!p) return false;
+  if(jgIsWindspy()){
+    if(p.converted) return true;
+    if(p.role==='mechanicalwolf') return !jgMechWolfLearned||jgMechWolfLearned==='awgargoyle';
+  }
+  return jgIsWolfPackMember(p);
+}
+function jgBearNeighbors(bearP){
   const n=jgTotal;
   const find=dir=>{
     for(let k=1;k<n;k++){
-      const seat=((bear.num-1+dir*k)%n+n)%n+1;
+      const seat=((bearP.num-1+dir*k)%n+n)%n+1;
       const p=jgByNum(seat);
       if(p&&p.alive) return p;
     }
     return null;
   };
   const left=find(-1), right=find(1);
-  const growl=[left,right].some(p=>p&&jgIsWolfPackMember(p));
-  return {bear, dead:false, left, right, growl};
+  return {left, right, growl:[left,right].some(p=>p&&jgBearCountsAsWolf(p))};
+}
+// 風聲諜影：機械狼學到熊（次晚起生效）視為場上有兩頭熊，任一頭達成咆哮條件就公布熊有咆哮。
+function jgMechBearActive(){
+  return jgIsWindspy()&&jgMechWolfLearned==='bear'&&jgMechWolfLearnedNight!==null&&jgNight>jgMechWolfLearnedNight;
+}
+function jgBearGrowlInfo(){
+  const bear=jgPlayers.find(p=>p.role==='bear');
+  const mw=jgMechBearActive()?jgPlayers.find(p=>p.role==='mechanicalwolf'&&p.alive):null;
+  if(!bear&&!mw) return null;
+  const mech=mw?Object.assign({bear:mw}, jgBearNeighbors(mw)):null;
+  if(!bear||!bear.alive){
+    if(mech) return {bear:mw, dead:false, left:mech.left, right:mech.right, growl:mech.growl, mech};
+    return {bear, dead:true};
+  }
+  const own=jgBearNeighbors(bear);
+  return {bear, dead:false, left:own.left, right:own.right, growl:own.growl||!!(mech&&mech.growl), mech};
 }
