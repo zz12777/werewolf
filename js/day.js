@@ -837,8 +837,8 @@ function jgFinishVoteOut(found, eliminatedRole){
     jgRecord._voteOutNum=found.num;
     jgLastVoteOutPlayer=found.num; // for gravkeeper（獨立變數，不會被夜晚重置的 jgRecord 清掉）
     if(eliminatedRole==='hunter'&&found.puppet){
-      // 唯鄰是從：獵人是傀儡，技能錯亂失效，被投出局也不能開槍。
-      alert(found.num+'號 獵人是傀儡，技能失效，無法開槍。\n\n（法官示意無法開槍，不用說明原因）');
+      // 唯鄰是從：獵人是傀儡，技能錯亂失效，被投出局也不能開槍——不跳任何提示，
+      // 跟一般玩家一樣直接宣布淘汰、進入遺言。
     } else if(eliminatedRole==='hunter'){
       jgRecord._hunterDoubleGun=!!(jgLuckyOne&&jgLuckyOne.gift==='hunter'&&!jgLuckyOne.used&&jgNight>=jgLuckyOne.startNight&&jgLuckyOne.num===found.num);
       jgGoStep('hunter-shot');return;

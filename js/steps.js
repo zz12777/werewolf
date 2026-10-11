@@ -758,13 +758,10 @@ function jgRenderStep(step){
     // 唯鄰是從：第一晚狼人在開刀前必須先選一位跟狼人相鄰的玩家當傀儡。
     let puppetSectionHtml='';
     if(jgPuppetMode&&isFirst){
-      const knownWolfNums=jgPlayers.filter(p=>jgIsWolfPackMember(p)).map(p=>p.num);
       const curPuppet=jgPuppetPlayer();
-      const candHint=knownWolfNums.length?'<div class="info" style="font-size:12px;margin-top:4px;">可選（狼人左右相鄰、且不是狼人）：'+jgPuppetCandidateNums(knownWolfNums).join('、')+'號</div>':'<div class="info" style="font-size:12px;margin-top:4px;">只能選狼人左右相鄰、且本身不是狼人的玩家（1號與最後一號也算相鄰），按下一步時會自動檢查。</div>';
       puppetSectionHtml='<div class="speech">「<em>請選擇一位與狼人相鄰的玩家作為傀儡。</em>」</div>'
         +'<label>傀儡號碼（必選）</label>'
-        +jgNumSelectHtml('jg-puppet-pick', curPuppet?curPuppet.num:'')
-        +candHint
+        +'<div id="jg-puppet-pick-wrap">'+jgPuppetPickHtml(curPuppet?String(curPuppet.num):'')+'</div>'
         +'<div class="divider" style="margin:12px 0 8px;"></div>';
     }
     jgShowPg(`
@@ -784,6 +781,8 @@ function jgRenderStep(step){
       <div class="speech" style="margin-top:12px;">「<em>狼人請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveWolf()">已紀錄，下一步 →</button>
     `,'🐺 狼人');
+    // 傀儡按鈕要等狼人號碼欄位真的出現在畫面上，才能依目前選的狼人號碼決定哪些變灰。
+    if(jgPuppetMode&&isFirst) jgRefreshPuppetPick();
   }
   // ── 機械狼睜眼 ──
   else if(step==='mechanicalwolf-wake'){
@@ -982,7 +981,7 @@ function jgRenderStep(step){
     const seerAlive=seerP&&seerP.alive;
     const hasSeerRole=(jgNight===1&&jgComp.seer>0)||seerP;
     if(!hasSeerRole){ jgGoStep(jgNextGodStep(null)); return; }
-    const idHtml=jgIdFieldHtml('預言家', seerP, 'jg-seer-who', 'jg-seer-name');
+    const idHtml=jgIdFieldHtml('預言家', seerP, 'jg-seer-who', 'jg-seer-name', 'jgSeerWhoOnChange');
     const targetVal=jgRecord.seerChecked||'';
     if(!seerAlive&&seerP){
       // Dead seer: just run the script, no input
@@ -1174,8 +1173,8 @@ function jgRenderStep(step){
     const hunterExists=(jgNight===1&&jgComp.hunter>0)||hunterP;
     if(!hunterExists){ jgGoStep(jgAfterHunterStep()); return; }
     const idHtml=jgIdFieldHtml('獵人', hunterP, 'jg-hunter-who', 'jg-hunter-name', 'jgHunterIdCheck');
-    const statusHtml=(hunterP&&hunterP.puppet?'<div class="info" style="font-size:12px;">（給法官的註記：這位獵人是傀儡，死亡時技能會失效無法開槍；手勢照常比，不要讓他發現自己被傀）</div>':'')
-      +(hunterP?jgBuildHunterStatusHtml(hunterP):'');
+    // 唯鄰是從：獵人是傀儡也照常比手勢，畫面上不另外顯示註記。
+    const statusHtml=hunterP?jgBuildHunterStatusHtml(hunterP):'';
     jgShowPg(`
       <h2>獵人睜眼</h2>
       <div class="speech">「<em>獵人請睜眼。</em>」</div>
@@ -2466,9 +2465,8 @@ function jgRenderStep(step){
     jgShowPg(`
       <h2>遺言</h2>
       ${jgRecord._voteOutNum?jgSpeakTimerWidgetHtml([parseInt(jgRecord._voteOutNum)], true):''}
-      <div class="info" style="display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 14px;">
-        <span style="font-size:18px;">💬</span><span>${name} 發表遺言</span>
-      </div>
+      <div class="speech">「<em>${p?p.num+'號淘汰，發表遺言。':'被放逐玩家發表遺言。'}</em>」</div>
+      ${p&&name!==p.num+'號'?`<div class="info" style="font-size:12px;">${name}</div>`:''}
       ${p&&p.role==='fool'?`<label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border-radius:var(--r-sm);margin-bottom:10px;cursor:pointer;">
         <input type="checkbox" ${foolChecked?'checked':''} onchange="jgToggleFoolReveal(this.checked)" style="width:18px;height:18px;">
         <span>已翻牌是傻瓜，可留在場上發言（依桌上實際情況勾選；不勾＝正常死亡）</span>
