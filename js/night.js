@@ -61,9 +61,8 @@ function jgBuildHunterStatusHtml(p){
   } else if(byPoison){
     return '<div class="speech">「<em>你的技能使用狀況是 👎</em>」</div>';
   } else if(byWolf){
-    // Wolf-killed: skill intact (not poisoned), activates at dawn — show 👍
-    return '<div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>'
-      +'<div class="info-warn" style="font-size:13px;padding:10px 14px;">天亮將啟動角色技能</div>';
+    // 被狼刀：技能沒被封印，照常比讚就好，不另外提示何時啟動。
+    return '<div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
   }
   return '<div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
 }
@@ -239,6 +238,46 @@ function jgWolfIdOnChange(changedId, changedVal){
 
   jgWolfIdFearCheck();
   jgWolfWakeRefreshSelfCut();
+  jgRefreshPuppetPick();
+}
+
+// 唯鄰是從第一夜：目前畫面上已知的狼人號碼（這個畫面上選的狼人號碼，加上石像鬼、假面這些在
+// 自己獨立步驟記錄過身分的狼隊成員）。
+function jgPuppetCurrentWolfNums(){
+  const nums=new Set();
+  const slotRoles=new Set();
+  let i=0;
+  while(true){
+    const el=document.getElementById('jg-wolf-who-'+i);
+    if(!el) break;
+    slotRoles.add(el.getAttribute('data-role')||'wolf');
+    if(el.value) nums.add(parseInt(el.value));
+    i++;
+  }
+  const gg=document.getElementById('jg-gargoyle-who-wolf');
+  if(gg){ slotRoles.add('gargoyle'); if(gg.value) nums.add(parseInt(gg.value)); }
+  jgPlayers.forEach(p=>{ if(jgIsWolfPackMember(p)&&!slotRoles.has(p.role)) nums.add(p.num); });
+  return [...nums].filter(n=>n>0);
+}
+// 傀儡號碼的選擇按鈕：只有狼人左右相鄰、本身不是狼人的號碼可以點，其餘一律變灰；狼人號碼
+// 改選時跟著重畫，原本選的傀儡如果已經不能選，就自動清掉。
+function jgPuppetPickHtml(curVal){
+  const wolfNums=jgPuppetCurrentWolfNums();
+  const cands=wolfNums.length?jgPuppetCandidateNums(wolfNums):[];
+  const excl=[];
+  for(let n=1;n<=jgTotal;n++) if(!cands.includes(n)) excl.push(n);
+  const keep=cands.includes(parseInt(curVal))?curVal:'';
+  const hint=wolfNums.length
+    ?'灰色號碼不能選：只能選狼人左右相鄰、且本身不是狼人的玩家（1號與最後一號也算相鄰）。'
+    :'請先選好上面的狼人號碼，才能選傀儡。';
+  return jgNumSelectHtml('jg-puppet-pick', keep, null, null, excl, wolfNums.length?'不是狼人的鄰座，不能當傀儡':'請先選好狼人號碼')
+    +'<div class="info" style="font-size:12px;margin-top:4px;">'+hint+'</div>';
+}
+function jgRefreshPuppetPick(){
+  const wrap=document.getElementById('jg-puppet-pick-wrap');
+  if(!wrap) return;
+  const cur=(document.getElementById('jg-puppet-pick')||{}).value||'';
+  wrap.innerHTML=jgPuppetPickHtml(cur);
 }
 
 function jgWolfIdFearCheck(){
@@ -1821,8 +1860,20 @@ function jgSeerAppearsWolf(p){
 // 只套用在真正的預言家身上（幸運兒拿到的查驗技能不受影響）。
 function jgSeerResultIsWolf(target){
   const base=jgSeerAppearsWolf(target);
-  const seerP=jgPlayers.find(p=>p.role==='seer');
+  const seerP=jgCurrentSeerPlayer();
   return (seerP&&seerP.puppet)?!base:base;
+}
+// 目前的預言家：第一夜在預言家畫面上剛點選號碼、還沒按下一步時，身分還沒寫進 jgPlayers，
+// 這時要以畫面上選的號碼為準，不然預言家是傀儡時，查驗結果會沒有反過來。
+function jgCurrentSeerPlayer(){
+  const whoEl=document.getElementById('jg-seer-who');
+  if(whoEl&&whoEl.value) return jgFind(whoEl.value)||null;
+  return jgPlayers.find(p=>p.role==='seer')||null;
+}
+// 第一夜預言家號碼改選時，順便重算畫面上的查驗結果（預言家是不是傀儡可能跟著變）。
+function jgSeerWhoOnChange(whoId, val){
+  jgSoloIdFearCheck(whoId, val);
+  jgUpdateSeerResult();
 }
 function jgSeerCheckLabel(target){
   if(!target) return '';
@@ -1927,12 +1978,11 @@ function jgUpdateSeerResult(){
   const actualVal=jgMagicSwapNum(val);
   const found=jgFind(actualVal);
   if(!found){if(box)box.innerHTML='<div class="info-warn">找不到此號碼</div>';return;}
+  // 預言家是傀儡時結果已經反過來，法官直接照顯示的結果比手勢即可，不另外加註記。
   const isWolf=jgSeerResultIsWolf(found);
-  const _seerSelf=jgPlayers.find(p=>p.role==='seer');
-  const puppetNote=(_seerSelf&&_seerSelf.puppet)?'<div style="font-size:11px;color:var(--text2);margin-top:4px;">（預言家是傀儡，查驗結果已經反過來，請直接照上面顯示的結果比手勢）</div>':'';
   const dn=found.name&&found.name!==found.num+'號'?found.name:'';
   const swapNote=actualVal!==val?'<div style="font-size:11px;color:var(--text2);margin-top:4px;">（魔術師換牌，實際查驗 '+found.num+'號，法官心裡有數即可，不用告知玩家原因）</div>':'';
-  if(box) box.innerHTML='<div class="'+(isWolf?'info-danger':'info-success')+'" style="font-size:20px;font-weight:800;text-align:center;padding:18px;">'+found.num+'號'+(dn?' '+dn:'')+' → '+(isWolf?'狼人 👎':'好人 👍')+'</div>'+swapNote+puppetNote;
+  if(box) box.innerHTML='<div class="'+(isWolf?'info-danger':'info-success')+'" style="font-size:20px;font-weight:800;text-align:center;padding:18px;">'+found.num+'號'+(dn?' '+dn:'')+' → '+(isWolf?'狼人 👎':'好人 👍')+'</div>'+swapNote;
 }
 
 function jgSaveSeer(){

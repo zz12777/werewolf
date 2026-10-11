@@ -49,6 +49,10 @@ async function run(){
   window.eval('jgSaveWolf()');
   check('選不相鄰的 6 號會跳出警告', alerts.length>0 && alerts[0].includes('不能當傀儡'), true);
   check('選錯時不會標記傀儡', window.eval('!!jgPuppetPlayer()'), false);
+  const pupBtn = n=>window.document.querySelector('#jg-puppet-pick-grid button[data-num="'+n+'"]');
+  check('不相鄰的 6 號按鈕變灰不能點', pupBtn(6).disabled, true);
+  check('狼人 1 號按鈕變灰不能點', pupBtn(1).disabled, true);
+  check('相鄰的 4 號、12 號可以點', !pupBtn(4).disabled && !pupBtn(12).disabled, true);
 
   // ── 情境 2：守衛 12 號當傀儡，守護失效 ──
   setVal(window, 'jg-puppet-pick', 12);
@@ -86,6 +90,38 @@ async function run(){
   check('傀儡女巫的解藥不生效', window.eval('jgRecord.witchSave'), null);
   check('傀儡女巫的解藥仍算用掉', window.eval('jgWitchSaveUsed'), true);
   check('文字紀錄註記傀儡失效', window.eval('jgFormatNightLog().some(l=>l.includes("救 5(傀儡失效)"))'), true);
+
+  // ── 情境 5：第一夜狼人號碼還沒記錄時，傀儡按鈕全灰，選完狼人號碼才開放相鄰的人 ──
+  await newGame(window, seats);
+  window.eval("jgMechAssignDone=false; [1,2,3,9].forEach(n=>{ jgFind(n).role=null; });");
+  window.eval("jgGoStep('wolf-wake')");
+  check('還沒選狼人號碼時，傀儡按鈕全部不能點', [...window.document.querySelectorAll('#jg-puppet-pick-grid button')].every(b=>b.disabled), true);
+  window.eval("jgNumGridPick('jg-wolf-who-0',5,'jgWolfIdOnChange'); jgNumGridPick('jg-wolf-who-1',6,'jgWolfIdOnChange'); jgNumGridPick('jg-wolf-who-2',7,'jgWolfIdOnChange');");
+  const pupOn = [...window.document.querySelectorAll('#jg-puppet-pick-grid button')].filter(b=>!b.disabled).map(b=>b.getAttribute('data-num')).join(',');
+  check('選了狼人 5、6、7 號後只開放 4、8 號', pupOn, '4,8');
+  window.eval("jgNumGridPick('jg-puppet-pick',8)");
+  window.eval("jgNumGridPick('jg-wolf-who-2',10,'jgWolfIdOnChange')");
+  check('狼人改號後原本選的傀儡已經不能選，自動清掉', window.document.getElementById('jg-puppet-pick').value, '');
+
+  // ── 情境 6：第一夜預言家剛點選號碼（身分還沒存進去）就是傀儡，查驗結果也要相反 ──
+  await newGame(window, seats);
+  window.eval("jgMechAssignDone=false; jgFind(9).role=null; jgFind(9).puppet=true;");
+  window.eval("jgGoStep('seer-wake')");
+  window.eval("jgNumGridPick('jg-seer-who',9,'jgSeerWhoOnChange'); jgNumGridPick('jg-seer-target-input',1,'jgUpdateSeerResult');");
+  check('第一夜傀儡預言家查狼人顯示好人', window.document.getElementById('jg-seer-result-box').textContent.includes('好人'), true);
+  window.eval("jgNumGridPick('jg-seer-target-input',5,'jgUpdateSeerResult');");
+  check('第一夜傀儡預言家查好人顯示狼人', window.document.getElementById('jg-seer-result-box').textContent.includes('狼人'), true);
+  check('查驗結果下方不再出現給法官的註記', window.document.getElementById('jg-seer-result-box').textContent.includes('傀儡'), false);
+
+  // ── 情境 7：傀儡獵人被投票出局，不跳視窗，直接宣布淘汰進遺言 ──
+  await newGame(window, seats);
+  window.eval('jgFind(11).puppet=true;');
+  window.eval("jgGoStep('hunter-wake')");
+  check('獵人睜眼畫面不顯示給法官的註記', window.document.getElementById('jg-content').textContent.includes('給法官的註記'), false);
+  alerts.length = 0;
+  window.eval('var __h=jgFind(11); jgFinishVoteOut(__h, "hunter");');
+  check('傀儡獵人出局不跳視窗', alerts.length, 0);
+  check('直接進入遺言並宣布淘汰', window.document.getElementById('jg-content').textContent.includes('11號淘汰，發表遺言。'), true);
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail = results.some(r=>!r.ok);
