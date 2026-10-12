@@ -982,6 +982,7 @@ function jgSaveKnightDuel(){
   const knP=jgPlayers.find(p=>p.role==='knight');
   if(!target||!target.alive){ alert('⚠️ 找不到這個號碼，或對方已經出局！'); return; }
   const isWolf=WOLF_ROLES.includes(target.role);
+  if(knP) knP.knightDuelUsed=true; // 決鬥整局一次；勝負判定裡「騎士還能翻盤」只算還沒決鬥過的
   if(isWolf){
     jgApplyDeath(target);
     jgPushDayLog('決鬥'+(knP?knP.num:'x')+'→'+target.num+'（狼）'+target.num+'出局');

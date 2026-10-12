@@ -126,6 +126,9 @@ async function jgRoomStartNextNight(overrideStep, extraFields){
   const roomSnap=await getDoc(doc(db,'rooms',jgRoomCode));
   const rd=roomSnap.data()||{};
   const nextNight=(rd.night||1)+1;
+  // 一般進入黑夜（不是自爆、血月最後一刀這種指定步驟）：不管狼人刀哪一位好人都會贏的話，
+  // 直接判定狼人獲勝，不用再走一次夜晚。
+  if(!overrideStep&&await jgRoomMaybeDeclareWin({ guaranteedNight:true })) return null;
   const firstStep=overrideStep||jgRoomNextNightStep(null, nextNight);
   await setDoc(doc(db,'rooms',jgRoomCode),Object.assign({
     phase:'night', night:nextNight, currentStep:firstStep,

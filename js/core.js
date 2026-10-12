@@ -477,14 +477,33 @@ function jgMaskCanKill(mkP){
 // 預言家查驗結果——邱比特永遠查出金水——等）完全不受影響，一律照 jgIsWolfPackMember
 // 原本的判斷，不要在那些地方誤用這個函式。
 function jgIsWolfForWin(p){
-  if(jgIsWolfPackMember(p)) return true;
-  // 風聲諜影：轉化者改屬狼人陣營；混血兒跟隨混的對象（對象被轉化就跟著算狼）。
-  if(p&&p.converted) return true;
-  if(jgIsWindspy()&&p&&p.role==='hybrid'&&jgHybridChosen&&jgHybridTarget){
-    const t=jgFind(jgHybridTarget);
-    if(t&&t.num!==p.num&&(jgIsWolfPackMember(t)||t.converted)) return true;
-  }
-  return !!(p&&p.role==='cupid'&&jgLoverPairType()==='wolf');
+  if(!p) return false;
+  const st=jgRulesState();
+  return JG_RULES.isWolfForWin(st, st.players.find(x=>x.id===String(p.num))||jgRulesPlayer(p));
+}
+// 把法官助手目前的局面整理成 js/game-rules.js 吃的格式（勝負規則跟連線房間共用那一份）。
+// 每次呼叫都重新整理，所以模擬時直接改 p.alive 再呼叫 jgCheckWin() 也會反映出來。
+function jgRulesPlayer(p){
+  const lucky=jgLuckyOne&&jgLuckyOne.gift==='witch'&&!jgLuckyOne.used&&jgLuckyOne.num===p.num;
+  return { id:String(p.num), role:p.role, alive:!!p.alive, wolfPack:jgIsWolfPackMember(p),
+    converted:!!p.converted, infected:!!p.infected, puppet:!!p.puppet,
+    knifeImmune:jgIsWhitecatLike(p)||jgIsFlippedCat(p),
+    witchSaveUsed:!!jgWitchSaveUsed, witchPoisonUsed:!!jgWitchPoisonUsed,
+    knightDuelUsed:!!p.knightDuelUsed, foxcubUsed:!!p.foxcubUsed, luckyWitchUnused:!!lucky };
+}
+function jgRulesState(){
+  const windspy=jgIsWindspy();
+  return {
+    players: jgPlayers.map(jgRulesPlayer),
+    comp: jgComp||{},
+    lovers: (jgLovers&&jgLovers.length===2)?jgLovers.map(String):null,
+    windspy,
+    hybridTarget: (windspy&&jgHybridChosen&&jgHybridTarget)?String(jgHybridTarget):null,
+    foolChase: jgFoolChaseMode==='chase',
+    dualMode: !!jgDualIdentityMode,
+    divinerMarkUsed: !!jgDivinerMarkUsed,
+    windspyKnifeReady: !windspy||jgPlayers.some(p=>p.role==='awgargoyle'&&p.alive)||!!jgWindspyJoiner()
+  };
 }
 
 function jgIsHunterCapable(p){
@@ -2242,31 +2261,10 @@ function jgGoStep(step){
 }
 // 警長是否剛剛真正陣亡（不論死因：投票放逐／夜晚被殺／開槍帶走／決鬥……），
 // 由 jgRenderRoster() 統一在每次死亡結算後呼叫檢查，不用逐一修改每個死亡路徑。
-function jgLoverPairType(){
-  if(!jgLovers||jgLovers.length!==2) return null;
-  const p1=jgFind(jgLovers[0]), p2=jgFind(jgLovers[1]);
-  if(!p1||!p2) return null;
-  const w1=jgIsWolfPackMember(p1), w2=jgIsWolfPackMember(p2);
-  if(w1&&w2) return 'wolf';
-  if(!w1&&!w2) return 'good';
-  return 'third';
-}
+function jgLoverPairType(){ return JG_RULES.loverPairType(jgRulesState()); }
 
-// 人狼鏈成立時，第三方陣營的完整成員名單（string[] 號碼）：兩位情侶＋邱比特本人
-// （若邱比特剛好鏈自己，會自動去重，變成只有 2 人）。
-// 只要「人狼鏈」配對成立，邱比特本人就永遠是第三方的一員——好人／狼人陣營要獲勝，
-// 除了原本各自的勝利條件，也必須連邱比特一起淘汰，不是只淘汰兩位情侶就算數。
-// 這個名單本身不看存活狀態（回傳固定的三人／兩人清單），存活與否交給呼叫端
-// （jgCheckWin／jgCheckWinThirdParty）用 jgAlive() 去判斷；只有第三方全滅
-// （情侶兩人 + 邱比特都已出局）之後，才會改用一般好人 vs 狼人規則判定。
-// 其餘情形（人人鏈／狼狼鏈／尚未配對）回傳空陣列，代表沒有獨立第三方。
-function jgLoverThirdPartyMembers(){
-  if(jgLoverPairType()!=='third') return [];
-  const set=new Set(jgLovers.map(n=>n.toString()));
-  const cp=jgPlayers.find(p=>p.role==='cupid');
-  if(cp) set.add(cp.num.toString());
-  return [...set];
-}
+// 情侶配對種類（狼狼鏈／人人鏈／人狼鏈）與人狼鏈的第三方成員（兩位情侶＋邱比特），規則見 js/game-rules.js。
+function jgLoverThirdPartyMembers(){ return JG_RULES.thirdPartyMembers(jgRulesState()); }
 
 // 情侶殉情：其中一人以任何方式死亡（trulyDied=true，不是雙身分換牌）時，另一人立刻跟著
 // 殉情死亡。殉情死亡不會觸發任何技能（就算殉情者原本是獵人／黑狼王等具開槍資格的身分，
@@ -2735,183 +2733,17 @@ function jgTryEarlyEnd(){
   return false;
 }
 
-// 有邱比特時的勝負判定入口：若情侶配成「人狼鏈」，邱比特＋這對情侶會獨立成第三方陣營，
-// 只要第三方（情侶兩人＋邱比特）還有人存活，就先走 jgCheckWinThirdParty 判定
-// （邱比特本人也算第三方一員，好人／狼人要獲勝必須連他一起淘汰，不是只淘汰兩位情侶）；
-// 一旦第三方全滅，才會改用一般好人 vs 狼人規則（jgCheckWinNormal）判定剩下的人。
-// 其餘情形（人人鏈／狼狼鏈／沒有邱比特）本來就不會有非空的第三方名單，直接走一般規則。
-function jgCheckWin(){
-  const zombieResult=jgCheckWinZombie();
-  if(zombieResult) return zombieResult;
-  const tp=jgLoverThirdPartyMembers();
-  if(tp.length>0){
-    const tpAlive=tp.filter(n=>{ const p=jgFind(n); return p&&p.alive; });
-    if(tpAlive.length>0) return jgCheckWinThirdParty(tp, tpAlive);
-  }
-  return jgCheckWinNormal();
-}
-// 殭屍陣營勝負判定：場上「除了殭屍自己以外」的存活玩家全部被感染，殭屍就單獨獲勝——
-// 殭屍死亡的話，這個第三方陣營已經出局，不用再檢查（回傳 null，交給一般規則判定好人/狼人勝負）。
-function jgCheckWinZombie(){
-  const zb=jgPlayers.find(p=>p.role==='zombie');
-  if(!zb||!zb.alive) return null;
-  const others=jgAlive().filter(p=>p.num!==zb.num);
-  if(others.length===0) return null;
-  if(others.every(p=>p.infected)) return {winner:'third', msg:'場上存活玩家已全數被殭屍感染，殭屍單獨獲勝', icon:'🧟'};
-  return null;
-}
-
-// 人狼鏈成立時的專用勝負判定：tp＝third-party 完整名單（情侶兩人＋邱比特），
-// tpAlive＝目前還存活的第三方成員號碼。這個函式只會在第三方仍有人存活時被呼叫。
-// (1) 第三方屠光其餘所有玩家（others 清空）→ 第三方獲勝。
-// (2) 第三方存活人數「大於」場上其餘（非第三方）存活人數時，直接判定第三方獲勝——
-//     但這條「要不要嚴格大於」的門檻，會依第三方目前還剩幾個人而不同：
-//     · 第三方全員（3人）都還存活時，要嚴格大於才算贏（3:2 算贏，3:3 打平還不算）。
-//       全員存活代表最極端的「其餘玩家仍有一定人數優勢」情況，這時候還打平，代表對方
-//       還沒被壓制到絕對劣勢，遊戲要繼續。
-//     · 第三方只剩 2 人或 1 人時，打平（人數相等）也算贏（例如 2:2、1:1 都算第三方獲勝）——
-//       因為第三方人數已經少到這個地步，只要沒被人數優勢的一方壓過去，僵局就是對第三方
-//       有利的均勢，直接判定獲勝。
-// 其餘情況遊戲繼續（回傳 null）——不管狼人或好人是否已經死絕，只要第三方還在場，
-// 就不能提前判定狼人或好人獲勝；必須等第三方（含邱比特）全滅後，才會改用一般規則。
-function jgCheckWinThirdParty(tp, tpAlive){
-  const a=jgAlive();
-  const others=a.filter(p=>!tp.includes(p.num.toString()));
-  if(others.length===0){
-    return{winner:'third',msg:'邱比特與情侶（第三方陣營）已將其餘玩家屠光',icon:'💘'};
-  }
-  if(tpAlive.length===3){
-    if(tpAlive.length>others.length){
-      return{winner:'third',msg:'第三方陣營（邱比特／情侶）存活人數多於其餘玩家，直接判定第三方獲勝',icon:'💘'};
-    }
-  } else if(tpAlive.length===1||tpAlive.length===2){
-    if(tpAlive.length>=others.length){
-      return{winner:'third',msg:'第三方陣營（邱比特／情侶）存活人數與其餘玩家打平或更多，直接判定第三方獲勝',icon:'💘'};
-    }
-  }
-  return null;
-}
-
-function jgCheckWinNormal(){
-  // 殭屍是獨立的第三方陣營，自己的勝負判定在 jgCheckWinZombie() 另外處理——這裡刻意把
-  // 殭屍從好人／狼人的人數統計裡排除掉，避免殭屍還活著、局面還沒分出勝負時，被誤算進
-  // 「好人」那一邊，導致好人陣營的人數優勢判斷提早、錯誤地觸發。
-  const a=jgAlive().filter(p=>p.role!=='zombie');
-  const aw=a.filter(p=>jgIsWolfForWin(p)); // all wolf-team alive (incl. hidden 黑狼王 second-card in dual mode; 狼狼鏈時邱比特也算入)
-  const ag=a.filter(p=>!jgIsWolfForWin(p)); // all good-team alive
-  if(aw.length===0) return{winner:'good',msg:'所有狼人已被淘汰',icon:'🎉'};
-  // 風聲諜影：狼隊（覺醒石像鬼、轉化者、機械狼）彼此不相認，不看人數；沒有平民，好人陣營的
-  // 神職全部出局（屠神）狼人才獲勝。
-  if(jgIsWindspy()){
-    const allGods0=jgAllGodsForWin();
-    if(!ag.some(p=>allGods0.includes(p.role))) return{winner:'wolf',msg:'所有神職已被淘汰',icon:'🐺'};
-    return null;
-  }
-  // 機械狼板：機械狼與其餘狼人互不相認、不碰面，狼隊無法憑人數優勢確認勝利，
-  // 就算「狼人+機械狼」人數已達多數，仍必須屠民或屠神才算獲勝。
-  const hasMechWolfBoard=(jgComp&&jgComp.mechanicalwolf>0);
-  // 假面舞會板：假面跟機械狼一樣不與狼隊見面、不知道隊友是誰，狼隊同樣無法憑人數優勢確認
-  // 勝利——就算「狼人+假面」人數已達多數，仍必須屠民或屠神才算獲勝。
-  const hasMaskBoard=(jgComp&&jgComp.mask>0);
-  // 魔術師板：魔術師交換號碼牌可能讓狼人誤殺自己人，狼人也可能因為害怕被交換而自刀，
-  // 使得單純看人數打平（狼=好）時情勢其實還不明朗；只有狼隊人數「嚴格多於」好人才算篤定，
-  // 打平時要再等一輪，讓刀擊/交換結果沉澱後局勢明確（例：狼3好3不算，狼3好2才算）。
-  const hasMagicianBoard=(jgComp&&jgComp.magician>0);
-  // 人數打平時，好人陣營是否還有「主動翻盤」的活棋——女巫毒藥或解藥其中一個還沒用完
-  // （解藥能延一晚、爭取多一輪等毒藥機會；毒藥能直接毒死一隻狼）、獵魔人還活著（第二晚起
-  // 每晚都能主動獵殺）、騎士還活著（白天發言隨時能翻牌決鬥，連投票都不用等）、攝夢人還活著
-  // （連續兩晚鎖同一人就能把狼夢死）。這幾個都是好人可以主動發動、狼閃不掉的攻擊手段，
-  // 只要還在場，人數打平時就還不能篤定狼贏，得再等一輪確認。
-  // 守衛則刻意不算進來：守衛一晚只能守一人、也不能連續兩晚守同一人，只能「拖」，拖不出真正
-  // 殺死狼的手段；人數打平時投票也永遠湊不出多數把狼投出去，所以守衛在場不影響「均勢＝狼贏」。
-  // 獵人也不算：他是被動角色，只有「狼自己選擇殺他」才會觸發反擊，狼可以直接避開不殺他，
-  // 不像女巫/獵魔人/騎士/攝夢人是好人主動、狼躲不掉的變數。
-  const hasComebackThreat=ag.some(p=>{
-    if(p.role==='witch') return !jgWitchPoisonUsed||!jgWitchSaveUsed;
-    if(p.role==='demonhunter') return true;
-    if(p.role==='knight') return true;
-    if(p.role==='dreamcatcher') return true;
-    return false;
-  });
-  if(!hasMechWolfBoard&&!hasMaskBoard){
-    if(hasMagicianBoard||hasComebackThreat){
-      if(aw.length>ag.length) return{winner:'wolf',msg:'狼人人數已達多數',icon:'🐺'};
-    } else if(aw.length>=ag.length) return{winner:'wolf',msg:'狼人人數已達多數',icon:'🐺'};
-  }
-  // Wolf wins if all villagers dead or all gods dead
-  const allGods=jgAllGodsForWin();
-  const aGod=ag.filter(p=>allGods.includes(p.role));
-  const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid'); // 混血兒視為平民，狼隊屠民也必須刀死他
-  if(aVil.length===0&&aGod.length>0) return{winner:'wolf',msg:'所有平民已被淘汰',icon:'🐺'};
-  if(aGod.length===0&&aVil.length>0) return{winner:'wolf',msg:'所有神職已被淘汰',icon:'🐺'};
-  return null;
-}
-
-// 白天結束、準備進入黑夜時：如果今晚沒有任何能影響「誰會死」的好人技能（守衛、魔術師、
-// 攝夢人、還有藥的女巫、獵魔人…），而且不管狼人刀剩下的哪一位好人，天亮都一定會達成狼人
-// 勝利條件，就不用再走一次夜晚，直接判定狼人獲勝。
-// 例：剩一狼、一獵人、一民進入黑夜——刀獵人屠神、刀平民屠民，狼人怎麼刀都贏。
-// 狼人不知道誰是誰，所以要「每一個可以刀的好人」都會讓狼人獲勝才算數；白貓這種被刀也不會死
-// 的人只要還在，就不能提前判定。第三方陣營、殭屍、雙身分、假面、雙機械狼這些比較複雜的情況
-// 一律不提前判定，照原本流程走。
-// 目前場上是不是「屠邊」（神職全滅或平民全滅，而且狼還活著）。勝負判定的訊息在人數也達標時
-// 會先寫「人數已達多數」，但屠邊不會被同一晚狼刀之後的好人技能（女巫毒、獵魔人）翻盤，
-// 所以狼刀在先的判斷要另外確認是不是屠邊。風聲諜影沒有平民，只看神職。
-function jgIsSlaughterNow(){
-  const a=jgAlive().filter(p=>p.role!=='zombie');
-  const aw=a.filter(p=>jgIsWolfForWin(p)), ag=a.filter(p=>!jgIsWolfForWin(p));
-  if(!aw.length) return false;
-  const allGods=jgAllGodsForWin();
-  const aGod=ag.filter(p=>allGods.includes(p.role));
-  if(jgIsWindspy()) return aGod.length===0;
-  const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
-  return aGod.length===0||aVil.length===0;
-}
-function jgWolfGuaranteedNightWin(){
-  if(jgDualIdentityMode) return null;
-  if(jgComp&&((jgComp.mask||0)+(jgComp.bigmechwolf||0)+(jgComp.smallmechwolf||0))>0) return null;
-  const zb=jgPlayers.find(p=>p.role==='zombie'&&p.alive); if(zb) return null;
-  const tp=jgLoverThirdPartyMembers(); if(tp.some(n=>{ const p=jgFind(n); return p&&p.alive; })) return null;
-  const alive=jgAlive();
-  const aw=alive.filter(p=>jgIsWolfForWin(p));
-  const ag=alive.filter(p=>!jgIsWolfForWin(p));
-  if(!aw.length||!ag.length) return null;
-  // 今晚狼隊一定刀得出去：風聲諜影要有覺醒石像鬼活著，或狼隊只剩最後一位可以入隊（否則卡刀）。
-  if(jgIsWindspy()&&!jgPlayers.some(p=>p.role==='awgargoyle'&&p.alive)&&!jgWindspyJoiner()) return null;
-  const isPuppet=p=>!!(p&&p.puppet);
-  // 會在狼刀之前（或同時）改變誰會死的好人技能：只要還在就不能提前判定。女巫只看解藥——
-  // 毒藥是狼刀之後才用，狼刀在先，狼刀已經達成屠邊的話毒死最後一隻狼也沒用。
-  const blocker=ag.find(p=>{
-    if(isPuppet(p)&&(p.role==='guard'||p.role==='witch')) return false; // 傀儡的守衛、女巫技能不生效
-    switch(p.role){
-      case 'guard': case 'magician': case 'trickmage': case 'dreamcatcher': case 'dancer': return true;
-      case 'witch': return !jgWitchSaveUsed;
-      case 'foxcub': return !p.foxcubUsed;
-      case 'diviner': return !jgDivinerMarkUsed;
-    }
-    return false;
-  });
-  if(blocker) return null;
-  // 狼刀之後才會殺到狼的好人技能（女巫毒、獵魔人、純白之女、幸運兒的毒）：只會影響「人數
-  // 已達多數」這種判定（見天亮結算的狼刀在先說明），屠邊不受影響。
-  const lateKiller=ag.some(p=>!isPuppet(p)&&((p.role==='witch'&&!jgWitchPoisonUsed)||p.role==='demonhunter'||p.role==='purewhitemaiden'))
-    ||!!(jgLuckyOne&&jgLuckyOne.gift==='witch'&&!jgLuckyOne.used&&jgFind(jgLuckyOne.num)&&jgFind(jgLuckyOne.num).alive);
-  for(const t of ag){
-    if(jgIsWhitecatLike(t)||jgIsFlippedCat(t)) return null; // 白貓被刀會翻牌，不會死
-    const changed=[t];
-    t.alive=false;
-    if(jgLovers&&jgLovers.length===2&&jgLovers.map(String).includes(String(t.num))){
-      const partner=jgFind(jgLovers.map(String).find(n=>n!==String(t.num)));
-      if(partner&&partner.alive){ partner.alive=false; changed.push(partner); }
-    }
-    const res=jgCheckWin();
-    const slaughter=jgIsSlaughterNow();
-    changed.forEach(p=>{ p.alive=true; });
-    if(!res||res.winner!=='wolf') return null;
-    if(lateKiller&&!slaughter) return null;
-  }
-  return {winner:'wolf', msg:'進入黑夜前就已確定：剩下的好人不管被狼人刀哪一位，狼人都會達成勝利條件', icon:'🐺'};
-}
+// ── 勝負判定：規則本身寫在 js/game-rules.js（跟連線房間共用同一份），這裡只是把法官助手
+//    目前的局面（jgRulesState）丟進去。各條規則的細節說明也都在那個檔案裡。──
+// 完整判定：殭屍 → 邱比特人狼鏈第三方（還有人活著時）→ 好人 vs 狼人。
+function jgCheckWin(){ return JG_RULES.checkWin(jgRulesState()); }
+function jgCheckWinZombie(){ return JG_RULES.checkWinZombie(jgRulesState()); }
+function jgCheckWinThirdParty(tp, tpAlive){ return JG_RULES.checkWinThirdParty(jgRulesState(), tp.map(String), tpAlive.map(String)); }
+function jgCheckWinNormal(){ return JG_RULES.checkWinNormal(jgRulesState()); }
+// 目前是不是「屠邊」（神職全滅或平民全滅），天亮「狼刀在先」要用。
+function jgIsSlaughterNow(){ return JG_RULES.isSlaughter(jgRulesState()); }
+// 進入黑夜前：不管狼刀哪一位好人狼人都贏，就直接判狼人獲勝。
+function jgWolfGuaranteedNightWin(){ return JG_RULES.guaranteedNightWin(jgRulesState()); }
 
 let jgLastWinResult=null;
 let jgMvpNum=null; // 遊戲結束時法官選定的 MVP 號碼，會寫進匯出的文字紀錄

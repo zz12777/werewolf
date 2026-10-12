@@ -259,13 +259,4 @@ window.jgRoomKnightDuelConfirm=async function(){
   await jgRoomRefreshAndRenderCurrent();
 };
 
-// ── 邱比特板勝負：人狼鏈時邱比特＋情侶是第三方，規則比照本機 jgCheckWinThirdParty；
-//    狼狼鏈時邱比特算狼人陣營。回傳 null 代表交給一般規則判斷。──
-function jgRoomLoverPairType(roleByUid, rd){
-  const a=rd.cupidLoverAUid, b=rd.cupidLoverBUid;
-  if(!a||!b) return null;
-  const w=u=>typeof WOLF_ROLES!=='undefined'&&WOLF_ROLES.includes(roleByUid[u]);
-  if(w(a)&&w(b)) return 'wolf';
-  if(!w(a)&&!w(b)) return 'good';
-  return 'third';
-}
+// 邱比特板勝負（人狼鏈第三方、狼狼鏈邱比特算狼）已經併進共用規則 js/game-rules.js。

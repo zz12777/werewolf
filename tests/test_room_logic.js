@@ -14,7 +14,12 @@ function readRoomSource() {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const files = [...html.matchAll(/<script defer src="(js\/room\/[^"]+)"><\/script>/g)].map(m => m[1]);
   if (!files.length) throw new Error('index.html 裡找不到 js/room/ 的 script');
-  return files.map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
+  // 勝負規則跟法官助手共用 js/game-rules.js（index.html 裡排在 core.js 前面的一般 script），
+  // 一起接在最前面；它會用到 rules-ui.js 的 GOD_ROLES，這裡從 rules-ui.js 抓同一行過來。
+  const rulesUi = fs.readFileSync(path.join(__dirname, '..', 'js', 'rules-ui.js'), 'utf8');
+  const godLine = rulesUi.match(/^const GOD_ROLES\s*=.*$/m)[0];
+  const shared = fs.readFileSync(path.join(__dirname, '..', 'js', 'game-rules.js'), 'utf8');
+  return [godLine, shared].concat(files.map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8'))).join('\n');
 }
 
 function loadRoomLogic() {
@@ -81,7 +86,7 @@ function loadRoomLogicForGodView() {
     + 'jgRoomGuardActFromGrid,jgRoomSubmitCheckFromGrid,jgRoomGuardAct,jgRoomRenderNightShell,'
     + 'jgRoomAdvanceToDayPhase,jgRoomJoinSheriff,jgRoomLockSheriffJoin,jgRoomRenderSheriffCampaign,jgRoomWolfConfirm,'
     + 'jgRoomAssignRoles,jgRoomThiefChoose,jgRoomThiefViewHtml,jgRoomNextNightStep,jgRoomStepPresent,jgRoomCupidPickFirst,jgRoomCupidConfirmPair,jgRoomDealAssignRoles,'
-    + 'jgRoomCheckBloodmoonLastStand,jgRoomComputeWinCheck,jgRoomDemonhunterHunt,'
+    + 'jgRoomCheckBloodmoonLastStand,jgRoomComputeWinCheck,jgRoomMaybeDeclareWin,jgRoomStartNextNight,jgRoomDemonhunterHunt,'
     + 'jgRoomMaybeApplyBadgeSwallow,jgRoomWolfSelfBlowConfirm,jgRoomReallyAdvanceToDayPhase,'
     + 'jgRoomHunterPending,jgRoomHunterStatusAck,jgRoomAdvanceToDayPhase,'
     + 'jgRoomResolveDayVote,jgRoomCheckShootEligible,jgRoomPuppetCandidateSeats,jgRoomCheckAndSetPendingBadge,'
@@ -485,6 +490,44 @@ async function runBatch1RolesTest(){
   global.__mockDocs['rooms/'+C+'/players/u3'].knightDuelUsed=true;
   const w2=await mod.jgRoomComputeWinCheck();
   check('騎士已經決鬥過：2 狼 2 好人算狼贏', w2&&w2.winner, 'wolf');
+
+  // ── 跟法官助手共用的勝負規則（js/game-rules.js）──
+  const dead=(...ns)=>ns.forEach(n=>{ global.__mockDocs['rooms/'+C+'/players/u'+n].alive=false; });
+  const winnerOf=r=>r&&r.winner||null;
+  // 狼刀在先：狼刀已經屠民，同一晚女巫毒死最後一狼，仍然狼人獲勝
+  setup(['wolf','witch','villager'], { night:2, phase:'night', witchPoisonUid:'u1', witchPoisonNight:2 });
+  dead(1,3);
+  check('狼刀在先：狼刀屠民＋女巫毒死最後一狼 → 狼人獲勝', winnerOf(await mod.jgRoomComputeWinCheck()), 'wolf');
+  // 狼刀只讓人數達標（沒有屠邊），同一晚毒死一隻狼 → 照正常判定，遊戲繼續
+  setup(['wolf','wolf','witch','villager','hunter'], { night:2, phase:'night', witchPoisonUid:'u1', witchPoisonNight:2 });
+  Object.assign(global.__mockDocs['rooms/'+C+'/players/u3'], { witchSaveUsed:true, witchPoisonUsed:true });
+  dead(1,5);
+  check('狼刀只讓人數達標、同晚毒死一狼 → 遊戲繼續', await mod.jgRoomComputeWinCheck(), null);
+  // 獵魔人今晚還沒行動：狼人只是人數多於好人、沒屠邊 → 先不判，等獵魔人狩獵完
+  setup(['wolf','wolf','wolf','demonhunter','villager','seer','villager'], { night:2, phase:'night', currentStep:'seer' });
+  dead(6,7);
+  check('獵魔人還沒行動、狼只是人數達標 → 先不判', await mod.jgRoomComputeWinCheck(), null);
+  global.__mockDocs['rooms/'+C].currentStep='demonhunter';
+  check('獵魔人行動完（沒獵到狼）→ 狼人人數達標獲勝', winnerOf(await mod.jgRoomComputeWinCheck()), 'wolf');
+  // 魔術師板：人數打平不算（跟法官助手一致，以前連線房間漏了這條）
+  setup(['wolf','wolf','magician','villager','seer','villager'], { night:2, phase:'day-open' });
+  dead(5,6);
+  check('魔術師板 2 狼 2 好人：不算狼贏', await mod.jgRoomComputeWinCheck(), null);
+  // 進入黑夜前：剩一狼一獵人一民，狼人怎麼刀都贏 → 直接判狼人獲勝，不進夜晚
+  setup(['wolf','hunter','villager','villager'], { night:2, phase:'day-vote' });
+  dead(4);
+  check('進入黑夜前狼人怎麼刀都贏：不進夜晚', await mod.jgRoomStartNextNight(), null);
+  check('進入黑夜前狼人怎麼刀都贏：判定狼人獲勝', room().gameOverWinner, 'wolf');
+  // 女巫還有解藥：可能救人，不能提前判
+  setup(['wolf','witch','villager','villager'], { night:2, phase:'day-vote' });
+  dead(4);
+  check('女巫還有解藥：照常進入黑夜', await mod.jgRoomStartNextNight(), 3);
+  check('女巫還有解藥：沒有判定勝負', room().gameOverWinner||null, null);
+  // 女巫只剩毒藥：狼刀在先，刀完就屠邊 → 直接判狼人獲勝
+  setup(['wolf','witch','villager','villager'], { night:2, phase:'day-vote' });
+  dead(4);
+  global.__mockDocs['rooms/'+C+'/players/u2'].witchSaveUsed=true;
+  check('女巫只剩毒藥、剩一狼一女巫一民：直接判狼人獲勝', [await mod.jgRoomStartNextNight(), room().gameOverWinner], [null,'wolf']);
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail=results.some(r=>!r.ok);
