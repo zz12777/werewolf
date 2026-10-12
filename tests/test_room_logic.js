@@ -343,7 +343,9 @@ async function runAsync() {
   await runSameNightDeathStillActsTest();
   await runHunterStatusGestureTest();
   await runBatch1RolesTest();
-})();
+  // 房間程式裡有計時器（讀秒、自動推進）會讓 node 一直等到計時器跑完才結束，測完就直接收工。
+  process.exit(0);
+})().catch(e=>{ console.error('FATAL', e); process.exit(1); });
 
 // ── 連線房間第一批新增：混血兒、狼美人、惡靈騎士、騎士、唯鄰是從傀儡、邱比特勝負 ──
 async function runBatch1RolesTest(){

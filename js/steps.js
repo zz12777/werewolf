@@ -1796,6 +1796,20 @@ function jgRenderStep(step){
     // Then check if wolf already won BEFORE applying good-side deaths (evilknight revenge etc.)
     // jgApplyDeath handles 雙身分模式 transparently: if this is a swap (not a true elimination),
     // the player keeps playing under their second card and must NOT be announced as dead.
+    // 狼刀在先：先只套用「狼隊造成的死亡」模擬一次，如果這時狼人已經達成勝利條件，就算女巫
+    // 毒、獵魔人這些同一晚的好人技能淘汰了最後一隻狼，仍然判定狼人獲勝。只有「人數已達多數」
+    // 這種統計上的判定例外：當晚好人技能真的殺到狼（女巫毒到狼、獵魔人獵到狼）時不提前定案，
+    // 跟原本獵魔人的處理方式一致。雙身分模式死亡會換牌，不做這個模擬。
+    let _wolfFirstSim=null;
+    const _wolfSideDeads=[wolfKillDies?jgRecord.wolfKill:null, jgRecord.mechWolfBonusKillTarget, jgRecord.wolfBrotherAwakenKill]
+      .concat(jgRecord._mechwolf2KillVictims||[]).filter(Boolean);
+    if(!jgDualIdentityMode&&_wolfSideDeads.length){
+      const changed=[];
+      _wolfSideDeads.forEach(n=>{ const p=jgFind(n); if(p&&p.alive&&p.role!=='evilknight'&&!jgIsWhitecatLike(p)&&!jgIsFlippedCat(p)&&deads.map(String).includes(String(p.num))){ p.alive=false; changed.push(p); } });
+      if(changed.length){ _wolfFirstSim=jgCheckWin(); if(_wolfFirstSim) _wolfFirstSim._slaughter=jgIsSlaughterNow(); }
+      changed.forEach(p=>{ p.alive=true; });
+    }
+    const _poisonKillsWolf=!!(jgRecord.witchPoison&&deads.map(String).includes(String(jgRecord.witchPoison))&&jgIsWolfForWin(jgFind(jgRecord.witchPoison)||{}));
     let trulyDiedNums=[];
     let swappedNums=[];
     // 動物夢境：白貓被殺會翻牌免死（jgApplyDeath 回傳 false），要跟雙身分「換牌」分開處理。
@@ -1823,6 +1837,8 @@ function jgRenderStep(step){
     // Check wolf win BEFORE revenge deaths — wolves attacked first
     // （若這只是「人數已達多數」而獵魔人這一擊剛好砍在僅存的狼身上，先不要定案；
     // 除此之外，狼刀本身已經決定的勝負不再等被刀死的獵人/黑狼王開槍反擊）
+    if(_wolfFirstSim&&_wolfFirstSim.winner==='wolf'&&
+      (_wolfFirstSim._slaughter||!(_pendingDemonhunterWolfKill||_poisonKillsWolf))){ delete _wolfFirstSim._slaughter; jgRenderRoster(); jgShowWin(_wolfFirstSim); return; }
     const wolfFirstWin=jgCheckWin();
     if(wolfFirstWin&&wolfFirstWin.winner==='wolf'&&
       !(_isMajorityReason(wolfFirstWin)&&_pendingDemonhunterWolfKill)){ jgRenderRoster(); jgShowWin(wolfFirstWin); return; }

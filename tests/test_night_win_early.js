@@ -62,6 +62,26 @@ async function run(){
   const w3=ev('jgWolfGuaranteedNightWin()');
   check('剩狼、沒藥的女巫、一民：怎麼刀都贏', w3&&w3.winner, 'wolf');
 
+  // 女巫只剩毒藥：狼刀在先，一狼一女巫一民進入黑夜，怎麼刀都贏
+  newGame(wb);
+  kill([2,4,6,7,8]);
+  ev('jgWitchSaveUsed=true; jgWitchPoisonUsed=false;');
+  const w5=ev('jgWolfGuaranteedNightWin()');
+  check('一狼、只剩毒藥的女巫、一民：狼刀在先，直接判定狼人獲勝', w5&&w5.winner, 'wolf');
+  ev('jgWitchSaveUsed=false;');
+  check('女巫還有解藥：不能提前判定', ev('jgWolfGuaranteedNightWin()'), null);
+
+  // 天亮結算的狼刀在先：狼刀屠民，同一晚女巫毒死最後一隻狼，仍然判定狼人獲勝
+  newGame(wb);
+  kill([2,4,6,7,8]);
+  ev("jgSheriffEnabled=false; jgNight=3; jgCurrentStep='night-start'; jgRecord={wolfKill:'5',wolfKillRaw:'5',guardTarget:null,witchSave:null,witchPoison:'1',witchPoisonRaw:'1',seerChecked:null}; jgLastWinResult=null; jgGoStep('dawn');");
+  check('狼刀屠民＋女巫毒死最後一狼：狼刀在先，狼人獲勝', ev('jgLastWinResult&&jgLastWinResult.winner'), 'wolf');
+  // 對照：狼刀沒有達成勝利條件時，女巫毒死最後一隻狼就是好人獲勝
+  newGame(wb);
+  kill([2,4,6,7]);
+  ev("jgSheriffEnabled=false; jgNight=3; jgCurrentStep='night-start'; jgRecord={wolfKill:'5',wolfKillRaw:'5',guardTarget:null,witchSave:null,witchPoison:'1',witchPoisonRaw:'1',seerChecked:null}; jgLastWinResult=null; jgGoStep('dawn');");
+  check('狼刀沒達成勝利條件、女巫毒死最後一狼：好人獲勝', ev('jgLastWinResult&&jgLastWinResult.winner'), 'good');
+
   // 白貓還活著（被刀會翻牌不會死）：不能提前判定
   const cat = {1:'wolf',2:'wolf',3:'wolfbeauty',4:'whitecat',5:'villager',6:'villager',7:'bear',8:'villager'};
   newGame(cat, 'animal_dream');

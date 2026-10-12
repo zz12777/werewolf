@@ -200,4 +200,4 @@ async function runDawnNightShotTest(){
   console.log(`全部 ${results.length} 項夜晚死亡陪葬規則對照組測試通過`);
 }
 
-Promise.resolve().then(run).then(runIntegrationTest).then(runHunterIntegrationTest).then(runDawnNightShotTest).catch(e=>{ console.error('FATAL', e); process.exit(1); });
+Promise.resolve().then(run).then(runIntegrationTest).then(runHunterIntegrationTest).then(runDawnNightShotTest).then(()=>process.exit(0)).catch(e=>{ console.error('FATAL', e); process.exit(1); });

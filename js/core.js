@@ -2854,6 +2854,19 @@ function jgCheckWinNormal(){
 // 狼人不知道誰是誰，所以要「每一個可以刀的好人」都會讓狼人獲勝才算數；白貓這種被刀也不會死
 // 的人只要還在，就不能提前判定。第三方陣營、殭屍、雙身分、假面、雙機械狼這些比較複雜的情況
 // 一律不提前判定，照原本流程走。
+// 目前場上是不是「屠邊」（神職全滅或平民全滅，而且狼還活著）。勝負判定的訊息在人數也達標時
+// 會先寫「人數已達多數」，但屠邊不會被同一晚狼刀之後的好人技能（女巫毒、獵魔人）翻盤，
+// 所以狼刀在先的判斷要另外確認是不是屠邊。風聲諜影沒有平民，只看神職。
+function jgIsSlaughterNow(){
+  const a=jgAlive().filter(p=>p.role!=='zombie');
+  const aw=a.filter(p=>jgIsWolfForWin(p)), ag=a.filter(p=>!jgIsWolfForWin(p));
+  if(!aw.length) return false;
+  const allGods=jgAllGodsForWin();
+  const aGod=ag.filter(p=>allGods.includes(p.role));
+  if(jgIsWindspy()) return aGod.length===0;
+  const aVil=ag.filter(p=>p.role==='villager'||p.role==='hybrid'||p.role==='cupid');
+  return aGod.length===0||aVil.length===0;
+}
 function jgWolfGuaranteedNightWin(){
   if(jgDualIdentityMode) return null;
   if(jgComp&&((jgComp.mask||0)+(jgComp.bigmechwolf||0)+(jgComp.smallmechwolf||0))>0) return null;
@@ -2866,20 +2879,23 @@ function jgWolfGuaranteedNightWin(){
   // 今晚狼隊一定刀得出去：風聲諜影要有覺醒石像鬼活著，或狼隊只剩最後一位可以入隊（否則卡刀）。
   if(jgIsWindspy()&&!jgPlayers.some(p=>p.role==='awgargoyle'&&p.alive)&&!jgWindspyJoiner()) return null;
   const isPuppet=p=>!!(p&&p.puppet);
+  // 會在狼刀之前（或同時）改變誰會死的好人技能：只要還在就不能提前判定。女巫只看解藥——
+  // 毒藥是狼刀之後才用，狼刀在先，狼刀已經達成屠邊的話毒死最後一隻狼也沒用。
   const blocker=ag.find(p=>{
     if(isPuppet(p)&&(p.role==='guard'||p.role==='witch')) return false; // 傀儡的守衛、女巫技能不生效
     switch(p.role){
-      case 'guard': case 'magician': case 'trickmage': case 'dreamcatcher': case 'demonhunter':
-      case 'purewhitemaiden': case 'dancer': return true;
-      case 'witch': return !jgWitchSaveUsed||!jgWitchPoisonUsed;
+      case 'guard': case 'magician': case 'trickmage': case 'dreamcatcher': case 'dancer': return true;
+      case 'witch': return !jgWitchSaveUsed;
       case 'foxcub': return !p.foxcubUsed;
       case 'diviner': return !jgDivinerMarkUsed;
-      case 'blackmarket': return !jgBlackMarketUsed;
     }
     return false;
   });
   if(blocker) return null;
-  if(jgLuckyOne&&jgLuckyOne.gift==='witch'&&!jgLuckyOne.used){ const lp=jgFind(jgLuckyOne.num); if(lp&&lp.alive) return null; }
+  // 狼刀之後才會殺到狼的好人技能（女巫毒、獵魔人、純白之女、幸運兒的毒）：只會影響「人數
+  // 已達多數」這種判定（見天亮結算的狼刀在先說明），屠邊不受影響。
+  const lateKiller=ag.some(p=>!isPuppet(p)&&((p.role==='witch'&&!jgWitchPoisonUsed)||p.role==='demonhunter'||p.role==='purewhitemaiden'))
+    ||!!(jgLuckyOne&&jgLuckyOne.gift==='witch'&&!jgLuckyOne.used&&jgFind(jgLuckyOne.num)&&jgFind(jgLuckyOne.num).alive);
   for(const t of ag){
     if(jgIsWhitecatLike(t)||jgIsFlippedCat(t)) return null; // 白貓被刀會翻牌，不會死
     const changed=[t];
@@ -2889,8 +2905,10 @@ function jgWolfGuaranteedNightWin(){
       if(partner&&partner.alive){ partner.alive=false; changed.push(partner); }
     }
     const res=jgCheckWin();
+    const slaughter=jgIsSlaughterNow();
     changed.forEach(p=>{ p.alive=true; });
     if(!res||res.winner!=='wolf') return null;
+    if(lateKiller&&!slaughter) return null;
   }
   return {winner:'wolf', msg:'進入黑夜前就已確定：剩下的好人不管被狼人刀哪一位，狼人都會達成勝利條件', icon:'🐺'};
 }
