@@ -1,0 +1,96 @@
+// Firestore 安全規則（連線房間用）。
+// 這份檔案只是放在 repo 裡留存、方便對照，網站不會自動套用：改完要到 Firebase 主控台
+// → Firestore Database → 規則（Rules）分頁，整份貼上、按「發布」才會生效。
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rooms/{roomCode} {
+      // 是不是這個房間的成員：players 子集合底下有沒有一份文件的 id 剛好是我的 uid。
+      function isMember() {
+        return request.auth != null &&
+          exists(/databases/$(database)/documents/rooms/$(roomCode)/players/$(request.auth.uid));
+      }
+      // 這個房間是不是已經可以清掉了：房間文件已經不在（剩下沒刪乾淨的子集合），或是
+      // 建立時間（createdAt）超過一天。網頁會定期把超過一天的房間連同子集合整個刪掉
+      // （見 js/room/cleanup.js），清的人不一定是那個房間的成員，所以另外開放這個條件。
+      function roomExpired() {
+        let roomPath = /databases/$(database)/documents/rooms/$(roomCode);
+        return request.auth != null && (
+          !exists(roomPath) ||
+          get(roomPath).data.get('createdAt', request.time) < request.time - duration.value(1, 'd')
+        );
+      }
+
+      // 建立新房間：任何登入的人都可以開房——這時候房間裡還沒有任何 players 文件，
+      // isMember() 一定判斷不出來，所以「建立房間」本身不能卡在 isMember()。
+      allow create: if request.auth != null;
+      // 讀取房間基本資料（狀態／板子／人數）：加入房間前（players/{uid} 還沒寫入）
+      // 就需要讀這份資料來檢查房號、板子、是不是已經額滿，所以維持「登入就能讀」；
+      // 但「更新」房間狀態（phase／currentStep／投票結果……）必須已經是成員才行。
+      allow read: if request.auth != null;
+      allow update: if isMember();
+      // 刪除房間：成員可以刪（法官助手的手機連線配置用完就刪），超過一天的房間任何登入的
+      // 人都可以刪（自動清理）。
+      allow delete: if isMember() || roomExpired();
+
+      match /players/{uid} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && request.auth.uid == uid;
+        allow update: if isMember();
+        allow delete: if isMember() || roomExpired();
+      }
+
+      // 以下都是「加入房間之後」才會用到的子集合，一律要求已經是這個房間的成員才能
+      // 讀，關掉「陌生人掃房號就能看到所有人身分」這個洞。
+      match /secrets/{uid} {
+        allow read: if isMember();
+        // 寫入發生在「隨機分配身分」那一刻，是房主一次寫入全部座位的身分（不是各自
+        // 寫自己那份），所以用 isMember() 而不是 auth.uid==uid，跟這個 app 其餘
+        // 「房間成員互相信任、只防外人」的既有設計一致。
+        allow write: if isMember();
+      }
+      match /seerChecks/{uid} {
+        allow read: if isMember();
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+      match /mediumChecks/{uid} {
+        allow read: if isMember();
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+      match /witchActs/{uid} {
+        allow read: if isMember();
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+      match /demonhunterActs/{uid} {
+        allow read: if isMember();
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+      match /nightLog/{night} {
+        allow read, write: if isMember();
+      }
+      match /chat/{msgId} {
+        allow read, write: if isMember();
+      }
+      match /dayLog/{day} {
+        allow read, write: if isMember();
+      }
+      match /votes/{voteDoc} {
+        allow read: if isMember();
+        // 票的文件 id 格式是「{自己的uid}_{round}」（見 js/room/day.js），只准
+        // 寫開頭是自己 uid 的那份，不能竄改別人投的票。
+        allow write: if request.auth != null && voteDoc.matches(request.auth.uid + '_.*');
+      }
+      match /mechwolfChecks/{checkDoc} {
+        allow read: if isMember();
+        // 文件 id 格式是「{自己的uid}_{night}」（見 js/room/roles-special.js 機械狼查驗）。
+        allow write: if request.auth != null && checkDoc.matches(request.auth.uid + '_.*');
+      }
+
+      // 自動清理：超過一天的房間，所有子集合（不管上面有沒有列到）都可以列出來、刪掉。
+      // 遊戲早就結束了，這時候讀得到身分也沒關係。
+      match /{subCollection}/{docId} {
+        allow read, delete: if roomExpired();
+      }
+    }
+  }
+}

@@ -88,7 +88,7 @@ function jgRenderStep(step){
     const p0=jgPlayers.find(p=>p.role===roleId);
     const note={
       bear:'之後每天白天由法官宣布熊有沒有咆哮（系統會在天亮畫面自動算好）。',
-      pufferfish:'之後在放逐投票有人投給河豚時，系統會詢問河豚要不要翻牌。',
+      pufferfish:'之後在放逐投票畫面，有人投給河豚時按「河豚翻牌」按鈕處理。',
       whitecat:'之後白貓任何原因死亡都會自動翻牌免死，直到下一次放逐階段結束才死亡。'
     }[roleId];
     jgShowPg(`
@@ -99,6 +99,92 @@ function jgRenderStep(step){
       <div class="speech" style="margin-top:10px;">「<em>${rn}請閉眼。</em>」</div>
       <button class="primary" onclick="jgSaveAnimalGodId('${roleId}')">已紀錄，下一步 →</button>
     `,rn);
+  }
+  // ── 風聲諜影：覺醒石像鬼 A／B 第一晚轉化狼隊隔壁的玩家 ──
+  else if(step==='awgargoyle-convert-a'||step==='awgargoyle-convert-b'){
+    const L=step.slice(-1).toUpperCase();
+    const gs=jgWindspyGargoyles();
+    const g=gs[L==='A'?0:1], other=gs[L==='A'?1:0];
+    if(!g){ jgGoStep('dawn'); return; }
+    const cands=jgWindspyConvertCandidateNums(other&&other.windspyConvertTarget?[other.windspyConvertTarget]:[]);
+    const excl=[]; for(let n=1;n<=jgTotal;n++) if(!cands.includes(n)) excl.push(n);
+    const cur=g.windspyConvertTarget?String(g.windspyConvertTarget):'';
+    jgShowPg(`
+      <h2>覺醒石像鬼 ${L} 睜眼</h2>
+      <div class="speech">「<em>覺醒石像鬼 ${L} 請睜眼。</em>」</div>
+      <div class="info" style="font-size:12px;">覺醒石像鬼 ${L} 是 ${g.num}號${g.alive?'':'（已出局，仍需走完流程）'}</div>
+      <div class="speech">「<em>請選擇轉化的玩家。</em>」</div>
+      <label>轉化對象（必選，只能選狼隊隔壁的玩家，灰色號碼不能選）</label>
+      ${jgNumSelectHtml('jg-awg-convert', cur, null, null, excl, '不在狼隊隔壁，不能轉化')}
+      <div class="info" style="font-size:12px;margin-top:4px;">轉化到機械狼會失敗（機械狼不會知道）；轉化到混血兒也會失敗，但混血兒知道自己有被轉化。轉化成功的玩家改屬狼人陣營，第一晚最後才會知道自己被轉化。</div>
+      <div class="speech" style="margin-top:10px;">「<em>覺醒石像鬼 ${L} 請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveAwgConvert('${L}')">已紀錄，下一步 →</button>
+    `,'覺醒石像鬼');
+  }
+  // ── 風聲諜影：轉化者 A／B（第二晚起，只比入隊手勢；能入隊時在這裡選刀口）──
+  else if(step==='convert-a-wake'||step==='convert-b-wake'){
+    const L=step.charAt(8).toUpperCase();
+    const p=jgWindspyConvert(L);
+    const failed=jgPlayers.find(x=>x.convertFailedBy===L);
+    const joiner=jgWindspyJoiner();
+    const canJoin=!!(p&&p.alive&&joiner&&joiner.num===p.num);
+    const who=p?('轉化者 '+L+' 是 '+p.num+'號（'+jgFullRoleName(p.role)+'）')
+      :(failed?('覺醒石像鬼 '+L+' 當初轉化的 '+failed.num+'號（'+jgFullRoleName(failed.role)+'）轉化失敗，照常喊這一步維持節奏'):'沒有轉化者 '+L+'，照常喊這一步維持節奏');
+    let reason='';
+    if(!p||!p.alive) reason='';
+    else if(canJoin) reason='（狼人已全滅、狼隊只剩這位轉化者，可以入隊刀人）';
+    else if(jgPlayers.some(x=>x.role==='awgargoyle'&&x.alive)) reason='（狼人還有人活著，不能入隊）';
+    else reason='（狼隊還有不只一位，卡刀，不能入隊）';
+    const killHtml=canJoin
+      ?'<label>今晚要殺的對象（可以空刀或自刀，留空＝空刀）</label>'+jgNumSelectHtml('jg-convert-kill', jgRecord.wolfKill||'')
+      :'';
+    jgShowPg(`
+      <h2>轉化者 ${L} 睜眼</h2>
+      <div class="speech">「<em>轉化者 ${L} 請睜眼。</em>」</div>
+      <div class="info" style="font-size:12px;">${who}</div>
+      ${p&&!p.alive?'<div class="info-warn">轉化者 '+L+' 已出局，仍需走完流程</div>':''}
+      <div class="speech">「<em>今晚的入隊手勢為 ${canJoin?'👍':'👎'}</em>」${reason}</div>
+      ${killHtml}
+      <div class="speech" style="margin-top:10px;">「<em>轉化者 ${L} 請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveConvertWake('${L}')">已紀錄，下一步 →</button>
+    `,'轉化者');
+  }
+  // ── 風聲諜影：第一晚最後，機械狼再睜眼一次，告知學到的技能 ──
+  else if(step==='windspy-mech-tell'){
+    const mw=jgPlayers.find(p=>p.role==='mechanicalwolf');
+    const tgt=jgRecord.mechwolfLearnTarget?jgFind(jgRecord.mechwolfLearnTarget):null;
+    const learnedTonight=!!(jgMechWolfLearned&&jgMechWolfLearnedNight===jgNight&&tgt);
+    const body=learnedTonight
+      ?'<div class="speech">「<em>你學習到的技能為……</em>」</div>'
+        +'<div class="info-success" style="font-size:18px;font-weight:800;text-align:center;padding:14px;">'+tgt.num+'號 → '+jgFullRoleName(jgMechWolfLearned)+'</div>'
+        +'<button onclick="jgBigCardFor(\''+tgt.num+'\')" style="margin-top:6px;width:100%;">'+jgIcon('clip')+' 大字報顯示給機械狼看</button>'
+      :'<div class="info" style="font-size:13px;">機械狼今晚沒有學習技能，照常喊這一步維持節奏。</div>';
+    jgShowPg(`
+      <h2>機械狼睜眼</h2>
+      <div class="speech">「<em>機械狼請睜眼。</em>」</div>
+      ${mw?'':'<div class="info-warn">找不到機械狼</div>'}
+      ${body}
+      <div class="speech" style="margin-top:10px;">「<em>機械狼請閉眼。</em>」</div>
+      <button class="primary" onclick="jgGoStep('dawn')">已告知，下一步 →</button>
+    `,'機械狼');
+  }
+  // ── 風聲諜影：第一晚結束前，法官走若干圈告知轉化者 A、B ──
+  else if(step==='windspy-convert-notify'){
+    const lines=jgWindspyGargoyles().map((g,i)=>{
+      const L=i===0?'A':'B';
+      const t=g.windspyConvertTarget?jgFind(g.windspyConvertTarget):null;
+      if(!t) return '<div class="info" style="font-size:13px;">覺醒石像鬼 '+L+' 沒有轉化任何人。</div>';
+      if(t.converted) return '<div class="info-danger" style="font-size:14px;font-weight:700;">轉化者 '+L+'：'+t.num+'號（'+jgFullRoleName(t.role)+'）拍肩告知他被轉化了</div>';
+      if(t.role==='hybrid') return '<div class="info" style="font-size:13px;">覺醒石像鬼 '+L+' 轉化 '+t.num+'號 混血兒：轉化失敗，但混血兒知道自己有被轉化，一樣拍肩告知。</div>';
+      return '<div class="info" style="font-size:13px;">覺醒石像鬼 '+L+' 轉化 '+t.num+'號 '+jgFullRoleName(t.role)+'：轉化失敗，機械狼不會知道自己被轉化，不用告知。</div>';
+    }).join('');
+    jgShowPg(`
+      <h2>告知轉化者</h2>
+      <div class="speech">「<em>（法官走若干圈，告知轉化者 A 和轉化者 B 是誰）</em>」</div>
+      ${lines}
+      <div class="info" style="font-size:12px;margin-top:6px;">轉化者不知道狼隊有誰；不能自爆，也不入狼隊。之後每晚轉化者 A、B 會各自睜眼比入隊手勢。</div>
+      <button class="primary" style="margin-top:12px;" onclick="jgGoStep('dawn')">已告知，天亮 →</button>
+    `,'告知轉化者');
   }
   else if(step==='dual-assign'){
     jgRenderDualAssign();
@@ -670,7 +756,7 @@ function jgRenderStep(step){
       const excludeMaskNum=maskP?[maskP.num]:[];
       let wiIdx=0;
       wolfRoles.forEach(([roleId,cnt])=>{
-        const RNAME_L={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者',wolfshaman:'狼巫',biggreywolf:'大灰狼'};
+        const RNAME_L={awgargoyle:'覺醒石像鬼',wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',bloodmoon:'血月使者',wolfshaman:'狼巫',biggreywolf:'大灰狼'};
         const assignedCount=jgPlayers.filter(p=>p.role===roleId).length;
         if(assignedCount<cnt) allWolfIdsAssigned=false;
         for(let i=0;i<cnt;i++){
@@ -792,8 +878,11 @@ function jgRenderStep(step){
     const idHtml=needId?`<div style="margin-bottom:8px;"><label style="margin-top:0;"><strong>機械狼</strong>號碼</label>${jgNumSelectHtml('jg-mechwolf-who','','jgSoloIdFearCheck')}</div><div class="divider"></div>`:'';
     const dead=mwP&&!mwP.alive;
     const feared=jgFeared(mwP);
-    const otherWolvesAlive=jgPlayers.some(p=>WOLF_ROLES.includes(p.role)&&p.role!=='mechanicalwolf'&&p.alive);
+    const otherWolvesAlive=jgMechOtherWolvesAlive();
     const canUseSkill=!!jgMechWolfLearned&&jgMechWolfLearnedNight!==null&&jgNight>jgMechWolfLearnedNight;
+    // 風聲諜影：手勢叫「入隊手勢」；不能學習已經翻牌的白貓。
+    const _ws=jgIsWindspy();
+    const _gestureLabel=_ws?'今晚的入隊手勢為':'今晚的帶刀手勢是？';
 
     // Part 1: learn (if not learned yet) or use skill (if learned & usable tonight)
     let learnHtml='';
@@ -804,7 +893,7 @@ function jgRenderStep(step){
         learnHtml='';
       } else {
         const lv=jgRecord.mechwolfLearnTarget||'';
-        const mwSelfNums=mwP?[mwP.num]:[];
+        const mwSelfNums=(mwP?[mwP.num]:[]).concat(_ws?jgPlayers.filter(p=>p.role==='whitecat'&&p.whitecatFlipped).map(p=>p.num):[]);
         learnHtml='<div class="speech">「<em>今晚要學習的對象是？</em>」</div>'
           +'<label>學習對象號碼（整局限一次，留空=本晚不學習，不能學自己）</label>'
           +jgNumSelectHtml('jg-mechwolf-learn', lv, 'jgMechWolfLearnCheck', null, mwSelfNums, '機械狼不能學習自己')
@@ -831,17 +920,17 @@ function jgRenderStep(step){
     if(jgNight>=2&&!feared){
       if(dead){
         killGestureHtml='<div class="divider"></div>'
-          +'<div class="speech">「<em>今晚的帶刀手勢是？（👎 倒讚）</em>」</div>';
+          +'<div class="speech">「<em>'+_gestureLabel+'（👎 倒讚）</em>」</div>';
       } else if(!otherWolvesAlive){
         const kv=jgRecord.mechWolfKillTarget||jgRecord.wolfKill||'';
         killGestureHtml='<div class="divider"></div>'
-          +'<div class="speech">「<em>今晚的帶刀手勢是？（👍 讚）</em>」（其他狼隊友已全滅，機械狼可以殺人）</div>'
+          +'<div class="speech">「<em>'+_gestureLabel+'（👍 讚）</em>」（'+(_ws?'狼人已全滅、狼隊只剩機械狼，可以入隊刀人':'其他狼隊友已全滅，機械狼可以殺人')+'）</div>'
           +'<label>機械狼今晚要殺的對象</label>'
           +jgNoSelfCutNoticeHtml()
           +jgNumSelectHtml('jg-mechwolf-kill', kv, null, null, jgNoSelfCutNums());
       } else {
         killGestureHtml='<div class="divider"></div>'
-          +'<div class="speech">「<em>今晚的帶刀手勢是？（👎 倒讚）</em>」（狼隊友尚存活，不能殺人）</div>';
+          +'<div class="speech">「<em>'+_gestureLabel+'（👎 倒讚）</em>」（'+(_ws?'狼人還有人活著，或轉化者還有人活著（卡刀），不能入隊':'狼隊友尚存活，不能殺人')+'）</div>';
       }
     }
 
@@ -1546,6 +1635,8 @@ function jgRenderStep(step){
       jgRecord.wolfKill=null;
     }
     jgRecord.wolfIdentifyGuess=null;
+    // 風聲諜影：機械狼學到攝夢人時，兩個攝夢人的夢遊一起算連續兩晚（見 jgWindspyResolveDreams）。
+    if(jgIsWindspy()) jgWindspyResolveDreams();
 
     const guardSaved=jgRecord.guardTarget&&jgRecord.wolfKill&&
       (jgRecord.guardTarget.toString()===jgRecord.wolfKill.toString());
@@ -1572,8 +1663,10 @@ function jgRenderStep(step){
     const _wolfKillIsEK=_ekNum&&jgRecord.wolfKill&&(jgRecord.wolfKill.toString()===_ekNum.toString());
     // Dreamcatcher's first-time dream target is immune to all night damage tonight
     const _dcImmune=jgRecord.dreamcatcherImmune;
-    const _wolfKillIsDCImmune=_dcImmune&&jgRecord.wolfKill&&(jgRecord.wolfKill.toString()===_dcImmune.toString());
-    const _poisonIsDCImmune=_dcImmune&&jgRecord.witchPoison&&(jgRecord.witchPoison.toString()===_dcImmune.toString());
+    const _mdImmune=jgRecord.mechDreamImmune; // 風聲諜影：機械狼學到攝夢人，第一次被它夢遊的人一樣免疫夜間傷害
+    const _isDreamImmune=v=>!!(v&&((_dcImmune&&v.toString()===_dcImmune.toString())||(_mdImmune&&v.toString()===_mdImmune.toString())));
+    const _wolfKillIsDCImmune=_isDreamImmune(jgRecord.wolfKill);
+    const _poisonIsDCImmune=_isDreamImmune(jgRecord.witchPoison);
     // 假面舞會板：舞者若選自己進舞池，當晚舞池中所有玩家免疫狼刀（不影響舞池本身的陣營死亡判定，
     // 那是另一個獨立的死法，見下方 dancerPool 陣營結算）
     const _dancerImmunePool=(jgRecord.dancerSelfIn&&jgRecord.dancerPool)?jgRecord.dancerPool.map(String):[];
@@ -1703,11 +1796,25 @@ function jgRenderStep(step){
     // Then check if wolf already won BEFORE applying good-side deaths (evilknight revenge etc.)
     // jgApplyDeath handles 雙身分模式 transparently: if this is a swap (not a true elimination),
     // the player keeps playing under their second card and must NOT be announced as dead.
+    // 狼刀在先：先只套用「狼隊造成的死亡」模擬一次，如果這時狼人已經達成勝利條件，就算女巫
+    // 毒、獵魔人這些同一晚的好人技能淘汰了最後一隻狼，仍然判定狼人獲勝。只有「人數已達多數」
+    // 這種統計上的判定例外：當晚好人技能真的殺到狼（女巫毒到狼、獵魔人獵到狼）時不提前定案，
+    // 跟原本獵魔人的處理方式一致。雙身分模式死亡會換牌，不做這個模擬。
+    let _wolfFirstSim=null;
+    const _wolfSideDeads=[wolfKillDies?jgRecord.wolfKill:null, jgRecord.mechWolfBonusKillTarget, jgRecord.wolfBrotherAwakenKill]
+      .concat(jgRecord._mechwolf2KillVictims||[]).filter(Boolean);
+    if(!jgDualIdentityMode&&_wolfSideDeads.length){
+      const changed=[];
+      _wolfSideDeads.forEach(n=>{ const p=jgFind(n); if(p&&p.alive&&p.role!=='evilknight'&&!jgIsWhitecatLike(p)&&!jgIsFlippedCat(p)&&deads.map(String).includes(String(p.num))){ p.alive=false; changed.push(p); } });
+      if(changed.length){ _wolfFirstSim=jgCheckWin(); if(_wolfFirstSim) _wolfFirstSim._slaughter=jgIsSlaughterNow(); }
+      changed.forEach(p=>{ p.alive=true; });
+    }
+    const _poisonKillsWolf=!!(jgRecord.witchPoison&&deads.map(String).includes(String(jgRecord.witchPoison))&&jgIsWolfForWin(jgFind(jgRecord.witchPoison)||{}));
     let trulyDiedNums=[];
     let swappedNums=[];
     // 動物夢境：白貓被殺會翻牌免死（jgApplyDeath 回傳 false），要跟雙身分「換牌」分開處理。
     let whitecatFlipNums=[];
-    deads.forEach(d=>{ const p=jgFind(d); if(p){ const wasCat=p.role==='whitecat'; const trulyDied=jgApplyDeath(p); if(trulyDied){ p._diedThisDawn=true; trulyDiedNums.push(p.num); } else if(wasCat){ if(p._whitecatJustFlipped){ whitecatFlipNums.push(p.num); delete p._whitecatJustFlipped; } } else { swappedNums.push(p.num); } } });
+    deads.forEach(d=>{ const p=jgFind(d); if(p){ const wasCat=jgIsWhitecatLike(p)||jgIsFlippedCat(p); const trulyDied=jgApplyDeath(p); if(trulyDied){ p._diedThisDawn=true; trulyDiedNums.push(p.num); } else if(wasCat){ if(p._whitecatJustFlipped){ whitecatFlipNums.push(p.num); delete p._whitecatJustFlipped; } } else { swappedNums.push(p.num); } } });
     // 動物夢境：河豚吃刀出局，白天翻牌，當天白天狼美人的魅惑技能失效。
     let pufferRevealNum=null;
     { const pf=jgPlayers.find(p=>p.role==='pufferfish');
@@ -1730,6 +1837,8 @@ function jgRenderStep(step){
     // Check wolf win BEFORE revenge deaths — wolves attacked first
     // （若這只是「人數已達多數」而獵魔人這一擊剛好砍在僅存的狼身上，先不要定案；
     // 除此之外，狼刀本身已經決定的勝負不再等被刀死的獵人/黑狼王開槍反擊）
+    if(_wolfFirstSim&&_wolfFirstSim.winner==='wolf'&&
+      (_wolfFirstSim._slaughter||!(_pendingDemonhunterWolfKill||_poisonKillsWolf))){ delete _wolfFirstSim._slaughter; jgRenderRoster(); jgShowWin(_wolfFirstSim); return; }
     const wolfFirstWin=jgCheckWin();
     if(wolfFirstWin&&wolfFirstWin.winner==='wolf'&&
       !(_isMajorityReason(wolfFirstWin)&&_pendingDemonhunterWolfKill)){ jgRenderRoster(); jgShowWin(wolfFirstWin); return; }
@@ -1801,6 +1910,19 @@ function jgRenderStep(step){
         if(!deads.includes(dct.num))deads.push(dct.num);
       }
       jgRecord.dreamcatcherKillTarget=null;
+    }
+    // 風聲諜影：被機械狼（學到攝夢人）連續兩晚夢遊致死，或機械狼夜裡出局時它的夢遊者一併出局。
+    if(jgRecord.mechDreamKillTarget){
+      const mdt=jgFind(jgRecord.mechDreamKillTarget);
+      if(mdt){ mdt._skillSealed=true; if(mdt.alive) mdt.alive=false; if(!deads.includes(mdt.num)) deads.push(mdt.num); }
+      jgRecord.mechDreamKillTarget=null;
+    }
+    if(jgRecord.mechDreamTarget){
+      const mwD=jgPlayers.find(p=>p.role==='mechanicalwolf');
+      if(mwD&&!mwD.alive&&deads.map(String).includes(String(mwD.num))){
+        const mdt2=jgFind(jgRecord.mechDreamTarget);
+        if(mdt2){ mdt2._skillSealed=true; if(mdt2.alive) mdt2.alive=false; if(!deads.includes(mdt2.num)) deads.push(mdt2.num); }
+      }
     }
     // Dreamcatcher: if dreamcatcher dies this dawn, their target also dies（同樣不能漏標 _skillSealed）
     if(jgRecord.dreamcatcherTarget){
@@ -2099,18 +2221,29 @@ function jgRenderStep(step){
     // 動物夢境：白貓翻牌、河豚吃刀翻牌、熊的咆哮，都在天亮公布死訊之後宣布。
     let animalDawnHtml='';
     whitecatFlipNums.forEach(n=>{
-      animalDawnHtml+='<div class="speech">「<em>'+n+'號 是白貓，翻牌免疫本次死亡，下一次放逐階段結束後才會死亡。</em>」</div>';
-      jgPushDayLog('白貓'+n+'翻牌免死');
+      const cp=jgFind(n), cl=jgCatLabel(cp), cn=jgCatJudgeNote(cp);
+      animalDawnHtml+='<div class="speech">「<em>'+n+'號 是'+cl+'，翻牌免疫本次死亡，下一次放逐階段結束後才會死亡。</em>」</div>'
+        +(cn?'<div class="info" style="font-size:12px;">'+cn+'</div>':'');
+      jgPushDayLog(jgCatLogLabel(cp)+n+'翻牌免死');
     });
     if(pufferRevealNum){
-      animalDawnHtml+='<div class="speech">「<em>'+pufferRevealNum+'號 是河豚，吃刀出局翻牌。今天白天狼美人的魅惑技能失效。</em>」</div>';
-      jgPushDayLog('河豚'+pufferRevealNum+'吃刀翻牌，狼美人今天魅惑失效');
+      const _hasWb=jgPlayers.some(p=>p.role==='wolfbeauty');
+      animalDawnHtml+='<div class="speech">「<em>'+pufferRevealNum+'號 是河豚，吃刀出局翻牌。'+(_hasWb?'今天白天狼美人的魅惑技能失效。':'')+'</em>」</div>';
+      jgPushDayLog('河豚'+pufferRevealNum+'吃刀翻牌'+(_hasWb?'，狼美人今天魅惑失效':''));
     }
-    if(jgComp.bear>0){
+    let _bearGrowledThisDawn=false;
+    if(jgComp.bear>0||jgMechBearActive()){
       const gi=jgBearGrowlInfo();
       if(gi&&!gi.dead){
+        _bearGrowledThisDawn=gi.growl;
+        const _nb=(b,l,r)=>b.num+'號，左右最近的存活玩家是 '+(l?l.num:'-')+'號、'+(r?r.num:'-')+'號';
+        const _realBear=jgPlayers.find(p=>p.role==='bear'&&p.alive);
+        let _bearNote='（給法官：'+(_realBear?'熊是 '+_nb(_realBear,gi.left,gi.right):'熊已出局');
+        if(gi.mech) _bearNote+='；機械狼學到熊，是 '+_nb(gi.mech.bear,gi.mech.left,gi.mech.right)+(gi.mech.growl?'，達成咆哮條件':'');
+        _bearNote+='）';
         animalDawnHtml+='<div class="speech" style="font-size:16px;">「<em>'+(gi.growl?'熊咆哮了！':'熊沒有咆哮。')+'</em>」</div>'
-          +'<div class="info" style="font-size:12px;">（給法官：熊是 '+gi.bear.num+'號，左右最近的存活玩家是 '+(gi.left?gi.left.num:'-')+'號、'+(gi.right?gi.right.num:'-')+'號）</div>';
+          +(gi.growl?'<button type="button" style="width:auto;padding:8px 14px;font-size:13px;margin:4px 0 8px;" onclick="jgBearAudioPlay()">'+jgIcon('play')+' 播放熊叫聲</button>':'')
+          +'<div class="info" style="font-size:12px;">'+_bearNote+'</div>';
         jgPushDayLog(gi.growl?'熊咆哮':'熊未咆哮');
       } else if(gi&&gi.dead){
         animalDawnHtml+='<div class="info" style="font-size:12px;">熊已出局，不再咆哮。</div>';
@@ -2128,6 +2261,8 @@ function jgRenderStep(step){
       ${sheriffDirHtml}
       ${dawnShoot?'':'<span id="jg-dawn-discuss-placeholder"></span>'}
     `,'☀️ 天亮');
+    // 熊咆哮：天亮畫面一出現就自動播一次熊叫聲（法官也可以按上面的按鈕重播）。
+    if(_bearGrowledThisDawn) jgBearAudioPlay();
     if(!dawnHunterShoot){
       const ph=document.getElementById('jg-dawn-discuss-placeholder');
       if(ph){
@@ -2256,9 +2391,12 @@ function jgRenderStep(step){
       <!-- 快速輸入投票已停用，改用下方「N號投給」逐一點選 -->
       <div id="jg-vote-tally"></div>
       <div id="jg-vote-tally-summary" style="margin-top:6px;"></div>
-      ${(()=>{ const pf=jgPlayers.find(p=>p.role==='pufferfish'); return (pf&&pf.alive&&!pf.pufferUsed)
-        ?'<button class="ghost" id="jg-puffer-btn" onclick="jgPufferfishFlipBtn()" style="margin-top:10px;">河豚翻牌</button><div class="info" style="font-size:12px;margin-top:4px;">先點好票再按；不能翻牌的時候會提示「現在不能翻牌」。</div>'
-        :''; })()}
+      ${(()=>{ const pfs=jgPufferLikePlayers().filter(pf=>pf.alive&&!pf.pufferUsed);
+        if(!pfs.length) return '';
+        return pfs.map(pf=>pf.role==='pufferfish'
+          ?'<button class="ghost" id="jg-puffer-btn" onclick="jgPufferfishFlipBtn()" style="margin-top:10px;">河豚翻牌</button>'
+          :'<button class="ghost" id="jg-puffer-btn-'+pf.num+'" onclick="jgPufferfishFlipBtn('+pf.num+')" style="margin-top:10px;">'+pf.num+'號 機械狼（學到河豚）翻牌</button>').join('')
+          +'<div class="info" style="font-size:12px;margin-top:4px;">先點好票再按；不能翻牌的時候會提示「現在不能翻牌」。</div>'; })()}
       <div id="jg-puffer-status"></div>
       <button class="danger" onclick="jgSaveVote()" style="margin-top:10px;">確認投票結果 →</button>
     `,'🗳 投票');
@@ -2478,16 +2616,20 @@ function jgRenderStep(step){
   else if(step==='next-night'){
     if(jgRecord._exileVoteHeld){
       jgPlayers.forEach(p=>{
-        if(p.role==='whitecat'&&p.alive&&p.whitecatFlipped&&p.whitecatDeathDay!=null&&p.whitecatDeathDay<=jgNight){
+        if(jgIsFlippedCat(p)&&p.alive&&p.whitecatDeathDay!=null&&p.whitecatDeathDay<=jgNight){
+          const cl=jgCatLabel(p);
           p.alive=false;
-          jgPushDayLog('白貓'+p.num+'放逐階段結束後死亡');
-          alert(p.num+'號 白貓：翻牌後的放逐階段已經結束，現在死亡。\n\n法官口白：「'+p.num+'號 白貓死亡。」');
+          jgPushDayLog(jgCatLogLabel(p)+p.num+'放逐階段結束後死亡');
+          alert(p.num+'號 '+cl+'：翻牌後的放逐階段已經結束，現在死亡。\n\n法官口白：「'+p.num+'號 '+cl+'死亡。」');
         }
       });
       jgRenderRoster();
     }
     const res=jgCheckWin();
     if(res){jgShowWin(res);return;}
+    // 狼人今晚不管刀誰都會贏：不用再走一次夜晚，直接判定（見 jgWolfGuaranteedNightWin）。
+    const sure=jgWolfGuaranteedNightWin();
+    if(sure){jgShowWin(sure);return;}
     jgNight++;
     // 注意：這裡不能重置 jgRecord！'night-start' 那一步會自己重置，並且需要讀取「重置前」的
     // jgRecord.bloodmoonSealNight 才能正確把血月封印狀態帶到下一夜。如果在這裡先重置一次，

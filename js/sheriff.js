@@ -17,6 +17,18 @@ function jgSheriffAudioReplay(){
   jgSheriffAudioEl.play();
 }
 
+// 熊咆哮音效（bear.mp3，放在網站根目錄）：天亮畫面公布熊咆哮時自動播一次，法官也可以按
+// 按鈕重播。瀏覽器擋自動播放、或檔案還沒上傳時都只是安靜地不出聲，不影響流程。
+let jgBearAudioEl=null;
+function jgBearAudioPlay(){
+  try{
+    if(!jgBearAudioEl) jgBearAudioEl=new Audio('bear.mp3');
+    jgBearAudioEl.currentTime=0;
+    const pr=jgBearAudioEl.play();
+    if(pr&&pr.catch) pr.catch(()=>{});
+  }catch(e){}
+}
+
 // ── 即時票型紀錄（公開同步到 Google 試算表，讓玩家在遊戲進行中就能看到票型） ──
 // 部署好 Google Apps Script 網頁應用程式後，把拿到的網址貼在這裡（結尾通常是 /exec）。
 // 留空的話，同步功能整個不會執行（不會出現任何錯誤，只是安靜地跳過），公開票型區塊也
