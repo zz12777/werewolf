@@ -7,10 +7,10 @@
 // 部署後記得把下面 JG_VOICE_API_BASE 換成你自己的 Vercel 專案網址（例如
 // 'https://werewolf-voice.vercel.app/api'）——這個網址本身不是秘密，可以放心 commit。
 //
-// 這個檔案是獨立的 <script type="module">，跟 js/room.js 是不同的模組作用域，互相看不到
-// 對方宣告的變數；房間狀態（房號／是不是房主／玩家名單／我的座位）改成呼叫 room.js 掛在
+// 這個檔案是獨立的 <script type="module">，跟 js/room/ 底下的連線房間程式是不同的作用域，互相看不到
+// 對方宣告的變數；房間狀態（房號／是不是房主／玩家名單／我的座位）改成呼叫連線房間掛在
 // window 上的幾個小函式（jgRoomGetCode／jgRoomGetIsHost／jgRoomGetPlayers／
-// jgRoomGetMySeatNum）即時讀取，不用自己再維護一份、也不會跟 room.js 的狀態兜不起來。
+// jgRoomGetMySeatNum）即時讀取，不用自己再維護一份、也不會跟連線房間的狀態兜不起來。
 // ═══════════════════════════════════════════
 import { Room, RoomEvent } from 'https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.esm.mjs';
 
@@ -230,10 +230,10 @@ async function jgVoiceApplyWolfAudioFilter(){
     el.muted=!shouldHear;
   });
 }
-// 由 js/room.js 在房間文件（含 currentStep）每次更新時呼叫，重新判斷現在是不是狼隊
+// 由連線房間（js/room/）在房間文件（含 currentStep）每次更新時呼叫，重新判斷現在是不是狼隊
 // 出刀商議時間——見 jgRoomEnterLobby 裡房間文件監聽器的說明。
 window.jgVoiceOnRoomStepChange=function(){ jgVoiceApplyWolfAudioFilter(); };
-// 進房間、離開房間時由 js/room.js 呼叫（見 jgRoomEnterLobby／jgRoomLeave）。
+// 進房間、離開房間時由連線房間（js/room/）呼叫（見 jgRoomEnterLobby／jgRoomLeave）。
 window.jgVoiceOnRoomEnter=function(){ jgVoiceRenderPanel(); };
 window.jgVoiceOnRoomLeave=function(){
   if(jgVoiceRoom){ jgVoiceRoom.disconnect(); jgVoiceRoom=null; }

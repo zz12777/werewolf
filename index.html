@@ -688,7 +688,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-12-b</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-12-c</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="js/icons.js"></script>
@@ -705,7 +705,18 @@
 <script src="js/playdata-core.js"></script>
 <script src="js/main.js"></script>
 <script type="module" src="js/firebase-init.js"></script>
-<script type="module" src="js/room.js"></script>
+<!-- 連線房間：拆成 js/room/ 底下好幾個檔案，defer 載入，順序不能亂（見 js/room/core.js 開頭） -->
+<script defer src="js/room/core.js"></script>
+<script defer src="js/room/night-flow.js"></script>
+<script defer src="js/room/win.js"></script>
+<script defer src="js/room/widgets.js"></script>
+<script defer src="js/room/night-basic.js"></script>
+<script defer src="js/room/day.js"></script>
+<script defer src="js/room/record.js"></script>
+<script defer src="js/room/night-shell.js"></script>
+<script defer src="js/room/roles-special.js"></script>
+<script defer src="js/room/roles-batch1.js"></script>
+<script defer src="js/room/entry.js"></script>
 <script type="module" src="js/voice.js"></script>
 </body>
 </html>

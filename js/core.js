@@ -53,7 +53,7 @@ function switchTab(id){
   if(window.jgRoomSetChatWidgetVisible) window.jgRoomSetChatWidgetVisible(id==='t-room');
   if(id==='t-room'&&window.jgRoomShown!==true){
     window.jgRoomShown=true;
-    // js/room.js 是用 <script type="module"> 載入的，執行時機比一般 script 稍晚，
+    // js/room/ 底下的檔案是 defer 載入的，執行時機比一般 script 稍晚，
     // 這裡加一個小重試，避免使用者手速太快、模組還沒載完就點到這個分頁時畫面空白。
     const tryRender=(n)=>{
       if(window.jgRoomRenderEntry){ window.jgRoomRenderEntry(); }
@@ -1688,7 +1688,7 @@ function jgRoomCreateFromSetup(){
     b.classList.toggle('active',['t-rules','t-guide','t-judge','t-data','t-room'][i]==='t-room');
   });
   window.jgRoomShown=true;
-  // js/room.js 是用 <script type="module"> 載入的，執行時機比較晚，這裡一樣用重試避免
+  // js/room/ 底下的檔案是 defer 載入的，執行時機比較晚，這裡一樣用重試避免
   // 手速太快、模組還沒載完時畫面空白（理由同 switchTab 那邊的處理）。
   const tryRoomRender=(retries)=>{
     if(window.jgRoomRenderCreateWithComp){ window.jgRoomRenderCreateWithComp(compCheck, n, sheriffEnabled, jgSetupBadgeMode); }
@@ -2325,8 +2325,8 @@ function jgProceedToNight(){
 let jgMechAssign={};   // num -> roleId, chosen by judge on the assignment page
 let jgMechAssignDone=false;
 // 手機輸入連線狀態：法官如果改用手機點選（方便拿著手機一個個看牌），這裡記錄目前連線中
-// 的房號；js/room.js（連線房間那套 Firestore 邏輯）透過 window.jgRoomStartMechAssignLink
-// 等函式幫忙建立/監聽/清掉那份臨時房間文件，詳見 js/room.js 對應註解。
+// 的房號；js/room/（連線房間那套 Firestore 邏輯）透過 window.jgRoomStartMechAssignLink
+// 等函式幫忙建立/監聽/清掉那份臨時房間文件，詳見 js/room/core.js 對應註解。
 let jgMechAssignPhoneLinkCode=null;
 
 function jgRenderMechAssign(){

@@ -1,5 +1,5 @@
-// 連線房間（js/room.js）的夜晚步驟順序、魔術師換流、夢魘恐懼判斷、幸運兒技能判斷——
-// 這些都是純邏輯（不需要真的連 Firestore）。room.js 本身是 ES module，這個沙盒環境的
+// 連線房間（js/room/ 底下的檔案）的夜晚步驟順序、魔術師換流、夢魘恐懼判斷、幸運兒技能判斷——
+// 這些都是純邏輯（不需要真的連 Firestore）。以前 room.js 是 ES module，這個沙盒環境的
 // jsdom 完全不會執行它，沒辦法像其他檔案那樣直接用 jsdom 載入整頁測試，所以這裡改用
 // 「把檔案讀進來、動態拿掉 import/動態 import、補幾個 stub 全域變數」的方式，在一般的
 // Node CommonJS context 裡單獨測試這些純邏輯函式。Firestore 讀寫（setDoc/getDoc/...）
@@ -8,8 +8,17 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 
+// 連線房間的程式拆成 js/room/ 底下好幾個檔案（共用同一個全域範圍），這裡照 index.html
+// 裡 <script defer src="js/room/..."> 的順序把它們接成一份原始碼，再用下面的方式載入測試。
+function readRoomSource() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const files = [...html.matchAll(/<script defer src="(js\/room\/[^"]+)"><\/script>/g)].map(m => m[1]);
+  if (!files.length) throw new Error('index.html 裡找不到 js/room/ 的 script');
+  return files.map(f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8')).join('\n');
+}
+
 function loadRoomLogic() {
-  let src = fs.readFileSync(path.join(__dirname, '..', 'js', 'room.js'), 'utf8');
+  let src = readRoomSource();
   src = src.replace(/import\s*{[\s\S]*?}\s*from\s*"https:\/\/www\.gstatic\.com\/firebasejs\/10\.13\.0\/firebase-firestore\.js";/, '');
   src = src.replace(/await import\("https:\/\/www\.gstatic\.com\/firebasejs\/10\.13\.0\/firebase-firestore\.js"\)/g, '({getDocs: async()=>({docs:[]})})');
   const prelude = 'const WOLF_ROLES=["wolf","wolfking","whitewolf","wolfbeauty","evilknight","gargoyle","bloodmoon","mechanicalwolf","nightmare","wolfbrother_e","wolfbrother_y","wolfshaman","mask","bigbadwolf","bigmechwolf","smallmechwolf","biggreywolf","trickster"];\n'
@@ -45,7 +54,7 @@ function loadRoomLogic() {
 // global.__mockCollections 裡對應的假資料（secrets／votes／nightLog／dayLog），這樣才能
 // 端對端測試 jgRoomRenderGodView 組出來的文字到底對不對，而不是只測個別的小工具函式。
 function loadRoomLogicForGodView() {
-  let src = fs.readFileSync(path.join(__dirname, '..', 'js', 'room.js'), 'utf8');
+  let src = readRoomSource();
   src = src.replace(/import\s*{[\s\S]*?}\s*from\s*"https:\/\/www\.gstatic\.com\/firebasejs\/10\.13\.0\/firebase-firestore\.js";/, '');
   src = src.replace(/await import\("https:\/\/www\.gstatic\.com\/firebasejs\/10\.13\.0\/firebase-firestore\.js"\)/g, '({getDocs: __mockGetDocs})');
   const prelude = 'const WOLF_ROLES=["wolf","wolfking","whitewolf","wolfbeauty","evilknight","gargoyle","bloodmoon","mechanicalwolf","nightmare","wolfbrother_e","wolfbrother_y","wolfshaman","mask","bigbadwolf","bigmechwolf","smallmechwolf","biggreywolf","trickster"];\n'
@@ -786,7 +795,7 @@ function runWolfProposeSourceCodeCheck(){
     const ok=JSON.stringify(actual)===JSON.stringify(expected);
     results.push({name, ok, actual, expected});
   };
-  const src=fs.readFileSync(path.join(__dirname, '..', 'js', 'room.js'), 'utf8');
+  const src=readRoomSource();
   const fnMatch=src.match(/window\.jgRoomWolfPropose=async function[\s\S]*?\n};/);
   const fnSrc=fnMatch?fnMatch[0]:'';
   check('jgRoomWolfPropose 有找到（沒被誤刪或改名）', fnSrc.length>0, true);
