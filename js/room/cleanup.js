@@ -23,7 +23,7 @@ const JG_ROOM_SUBCOLLECTIONS=['players','secrets','votes','nightLog','dayLog','c
   'seerChecks','mediumChecks','witchActs','demonhunterActs','mechwolfChecks'];
 const JG_ROOM_EXPIRE_MS=24*60*60*1000;      // 房間保留一天
 const JG_ROOM_CLEANUP_EVERY_MS=6*60*60*1000; // 同一支手機／電腦最多每 6 小時清一次，避免每次開網頁都去查
-const JG_ROOM_CLEANUP_MAX_ROOMS=20;          // 一次最多清幾間，剩下的留給下一次
+const JG_ROOM_CLEANUP_MAX_ROOMS=100;         // 一次最多清幾間（分批查，每批 20 間），剩下的留給下一次
 
 // 刪掉一個房間（子集合 → 房間文件）。players 留到最後才刪：規則裡「是不是成員」靠的是
 // players 文件，先刪掉別的子集合比較不會卡到權限。
@@ -36,8 +36,9 @@ async function jgRoomDeleteRoomDeep(db, code){
   await deleteDoc(doc(db,'rooms',code));
 }
 
-// force:true 時不管上次什麼時候清過（給測試、或之後想做「手動清理」按鈕用）。
-// 回傳這次清掉幾間房間。
+// force:true 時不管上次什麼時候清過（也可以在瀏覽器主控台手動執行 jgRoomCleanupExpired(true)）。
+// 回傳這次清掉幾間房間。「上次清理時間」只在順利清完之後才記錄：如果這次被擋下來（例如
+// Firebase 主控台的規則還沒發布），下次打開網頁會再試，不會被 6 小時的間隔卡住。
 window.jgRoomCleanupExpired=async function(force){
   const db=window.jgFirebaseDb;
   if(!db||typeof where!=='function') return 0;
@@ -46,25 +47,29 @@ window.jgRoomCleanupExpired=async function(force){
     try{
       const last=Number(localStorage.getItem('jgRoomCleanupAt')||0);
       if(now-last<JG_ROOM_CLEANUP_EVERY_MS) return 0;
-      localStorage.setItem('jgRoomCleanupAt', String(now));
     }catch(e){}
   }
   await jgRoomWaitAuth();
-  let snap;
-  try{
-    snap=await getDocs(query(collection(db,'rooms'), where('createdAt','<',new Date(now-JG_ROOM_EXPIRE_MS)), limit(JG_ROOM_CLEANUP_MAX_ROOMS)));
-  }catch(e){ console.warn('查詢過期房間失敗', e); return 0; }
   let n=0;
-  for(const d of snap.docs){
-    if(d.id===jgRoomCode) continue; // 自己正在用的房間不動（理論上不會超過一天，保險起見）
-    try{ await jgRoomDeleteRoomDeep(db, d.id); n++; }
-    catch(e){
-      // 多半是 Firebase 主控台的安全規則還沒更新（沒有開放刪除），後面的房間一定也一樣，直接停。
-      console.warn('清除過期房間失敗（請確認 Firebase 規則已更新為 repo 裡的 firestore.rules）', d.id, e);
-      break;
+  while(n<JG_ROOM_CLEANUP_MAX_ROOMS){
+    let snap;
+    try{
+      snap=await getDocs(query(collection(db,'rooms'), where('createdAt','<',new Date(now-JG_ROOM_EXPIRE_MS)), limit(20)));
+    }catch(e){ console.warn('查詢過期房間失敗', e); return n; }
+    const targets=snap.docs.filter(d=>d.id!==jgRoomCode); // 自己正在用的房間不動（理論上不會超過一天，保險起見）
+    if(!targets.length) break;
+    for(const d of targets){
+      try{ await jgRoomDeleteRoomDeep(db, d.id); n++; }
+      catch(e){
+        // 多半是 Firebase 主控台的安全規則還沒更新（沒有開放刪除），後面的房間一定也一樣，直接停。
+        console.warn('清除過期房間失敗（請確認 Firebase 規則已更新為 repo 裡的 firestore.rules）', d.id, e);
+        return n;
+      }
     }
+    if(snap.docs.length<20) break;
   }
-  if(n) console.log('已清除 '+n+' 間超過一天的連線房間');
+  try{ localStorage.setItem('jgRoomCleanupAt', String(now)); }catch(e){}
+  console.log('已清除 '+n+' 間超過一天的連線房間');
   return n;
 };
 

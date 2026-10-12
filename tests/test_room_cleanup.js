@@ -80,12 +80,19 @@ async function run() {
   // 規則還沒更新（刪除被拒絕）：安靜放棄、不丟錯誤
   store['rooms/OLD3'] = { createdAt: new Date(now - 3 * DAY) };
   store['rooms/OLD3/players/u1'] = {};
+  env.localStorage.setItem('jgRoomCleanupAt', String(Date.now() - 7 * 60 * 60 * 1000));
   denyDelete = true;
   let threw = false, r;
-  try { r = await cleanup(true); } catch (e) { threw = true; }
+  try { r = await cleanup(false); } catch (e) { threw = true; }
   check('刪除被拒絕時不丟錯誤', threw, false);
   check('刪除被拒絕時回傳 0', r, 0);
   denyDelete = false;
+  check('刪除被拒絕時不記錄清理時間（下次打開網頁會再試）', Number(env.localStorage.getItem('jgRoomCleanupAt')) < Date.now() - 6 * 60 * 60 * 1000, true);
+  check('規則更新後再打開網頁就會清掉', await cleanup(false), 1);
+
+  // 超過 20 間：一次分批清完
+  for (let i = 0; i < 45; i++) store['rooms/M' + i] = { createdAt: new Date(now - 2 * DAY) };
+  check('超過 20 間時分批一次清完', await cleanup(true), 45);
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail = results.some(r => !r.ok);
