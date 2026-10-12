@@ -2847,6 +2847,54 @@ function jgCheckWinNormal(){
   return null;
 }
 
+// 白天結束、準備進入黑夜時：如果今晚沒有任何能影響「誰會死」的好人技能（守衛、魔術師、
+// 攝夢人、還有藥的女巫、獵魔人…），而且不管狼人刀剩下的哪一位好人，天亮都一定會達成狼人
+// 勝利條件，就不用再走一次夜晚，直接判定狼人獲勝。
+// 例：剩一狼、一獵人、一民進入黑夜——刀獵人屠神、刀平民屠民，狼人怎麼刀都贏。
+// 狼人不知道誰是誰，所以要「每一個可以刀的好人」都會讓狼人獲勝才算數；白貓這種被刀也不會死
+// 的人只要還在，就不能提前判定。第三方陣營、殭屍、雙身分、假面、雙機械狼這些比較複雜的情況
+// 一律不提前判定，照原本流程走。
+function jgWolfGuaranteedNightWin(){
+  if(jgDualIdentityMode) return null;
+  if(jgComp&&((jgComp.mask||0)+(jgComp.bigmechwolf||0)+(jgComp.smallmechwolf||0))>0) return null;
+  const zb=jgPlayers.find(p=>p.role==='zombie'&&p.alive); if(zb) return null;
+  const tp=jgLoverThirdPartyMembers(); if(tp.some(n=>{ const p=jgFind(n); return p&&p.alive; })) return null;
+  const alive=jgAlive();
+  const aw=alive.filter(p=>jgIsWolfForWin(p));
+  const ag=alive.filter(p=>!jgIsWolfForWin(p));
+  if(!aw.length||!ag.length) return null;
+  // 今晚狼隊一定刀得出去：風聲諜影要有覺醒石像鬼活著，或狼隊只剩最後一位可以入隊（否則卡刀）。
+  if(jgIsWindspy()&&!jgPlayers.some(p=>p.role==='awgargoyle'&&p.alive)&&!jgWindspyJoiner()) return null;
+  const isPuppet=p=>!!(p&&p.puppet);
+  const blocker=ag.find(p=>{
+    if(isPuppet(p)&&(p.role==='guard'||p.role==='witch')) return false; // 傀儡的守衛、女巫技能不生效
+    switch(p.role){
+      case 'guard': case 'magician': case 'trickmage': case 'dreamcatcher': case 'demonhunter':
+      case 'purewhitemaiden': case 'dancer': return true;
+      case 'witch': return !jgWitchSaveUsed||!jgWitchPoisonUsed;
+      case 'foxcub': return !p.foxcubUsed;
+      case 'diviner': return !jgDivinerMarkUsed;
+      case 'blackmarket': return !jgBlackMarketUsed;
+    }
+    return false;
+  });
+  if(blocker) return null;
+  if(jgLuckyOne&&jgLuckyOne.gift==='witch'&&!jgLuckyOne.used){ const lp=jgFind(jgLuckyOne.num); if(lp&&lp.alive) return null; }
+  for(const t of ag){
+    if(jgIsWhitecatLike(t)||jgIsFlippedCat(t)) return null; // 白貓被刀會翻牌，不會死
+    const changed=[t];
+    t.alive=false;
+    if(jgLovers&&jgLovers.length===2&&jgLovers.map(String).includes(String(t.num))){
+      const partner=jgFind(jgLovers.map(String).find(n=>n!==String(t.num)));
+      if(partner&&partner.alive){ partner.alive=false; changed.push(partner); }
+    }
+    const res=jgCheckWin();
+    changed.forEach(p=>{ p.alive=true; });
+    if(!res||res.winner!=='wolf') return null;
+  }
+  return {winner:'wolf', msg:'進入黑夜前就已確定：剩下的好人不管被狼人刀哪一位，狼人都會達成勝利條件', icon:'🐺'};
+}
+
 let jgLastWinResult=null;
 let jgMvpNum=null; // 遊戲結束時法官選定的 MVP 號碼，會寫進匯出的文字紀錄
 // 血月殘局一鍵宣布：場上只剩「血月＋1神（非騎士）＋1民」時，血月已經穩贏、流程走完也是一樣的

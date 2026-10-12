@@ -2611,6 +2611,9 @@ function jgRenderStep(step){
     }
     const res=jgCheckWin();
     if(res){jgShowWin(res);return;}
+    // 狼人今晚不管刀誰都會贏：不用再走一次夜晚，直接判定（見 jgWolfGuaranteedNightWin）。
+    const sure=jgWolfGuaranteedNightWin();
+    if(sure){jgShowWin(sure);return;}
     jgNight++;
     // 注意：這裡不能重置 jgRecord！'night-start' 那一步會自己重置，並且需要讀取「重置前」的
     // jgRecord.bloodmoonSealNight 才能正確把血月封印狀態帶到下一夜。如果在這裡先重置一次，
