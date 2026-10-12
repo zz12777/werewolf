@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getFirestore, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion, arrayRemove, runTransaction
+  getFirestore, doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, where, orderBy, limit, arrayUnion, arrayRemove, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
@@ -31,7 +31,7 @@ window.jgFirebaseAuth = auth;
 // 連線房間（js/room/ 底下的一般 script 檔）直接用這些 Firestore 函式的名字呼叫，
 // 這裡統一掛到 window 上提供；那些檔案在 index.html 裡排在這個檔案之後（defer），
 // 載入時這裡已經跑完了。
-Object.assign(window, { doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, orderBy, limit, arrayUnion, arrayRemove, runTransaction });
+Object.assign(window, { doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collection, onSnapshot, serverTimestamp, query, where, orderBy, limit, arrayUnion, arrayRemove, runTransaction });
 
 // 每支手機第一次進來就自動用「匿名登入」拿一個帳號——不用真的註冊，Firestore 安全規則會用
 // 這個匿名帳號的 uid 來判斷「這支手機是房間裡的哪一位玩家」，藉此做到身分保密。

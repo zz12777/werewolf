@@ -190,6 +190,7 @@ async function jgRoomRenderGameOverPhase(){
       <button style="flex:1;" onclick="jgRoomShowExportModal()">匯出文字紀錄</button>
       <button style="flex:1;" onclick="jgRoomSubmitToPlaydata()">送出到遊玩數據</button>
     </div>
+    <div class="info" style="font-size:12px;margin-top:8px;">房間資料會在開房滿一天後自動清除，要留存請先匯出文字紀錄、送出遊玩數據。</div>
     <div class="section-title" style="margin-top:16px;">玩家身分</div>
     <div class="pgrid">${pgridHtml}</div>
     <div class="section-title" style="margin-top:16px;">文字紀錄</div>

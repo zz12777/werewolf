@@ -21,6 +21,7 @@
 //   night-shell.js   夜晚畫面總機（依 currentStep 分派）、房主強制推進、預言家、通靈師、獵魔人
 //   roles-special.js 夢魘、魔術師、攝夢人、機械狼、邱比特、盜賊、狼兄狼弟、黑市商人、幸運兒、夜槍
 //   roles-batch1.js  第一批新增：狼美人、惡靈騎士、騎士、混血兒、唯鄰是從傀儡、邱比特勝負
+//   cleanup.js       自動清掉超過一天的舊房間（連同子集合整個刪掉）
 //   entry.js         離開房間、從法官助手帶板子建房、連線房間分頁入口、自動重連、邀請連結
 //
 // 新增角色時：該角色的畫面與動作放進對應批次的 roles-*.js，再到 night-shell.js 的總機、
@@ -149,10 +150,9 @@ function jgRoomGenCode(){
 // 整個子集合、取最新更新時間的那份當作目前的正確答案（反正同一時間只會有一邊在操作，不用
 // 處理真的同時輸入衝突的情況）。
 //
-// 流程結束（法官按下「確認配置」）會嘗試刪掉房間文件本身，但規則並沒有開放刪除權限，這個
-// 刪除請求實際上會被拒絕、靜默失敗（已包在 try/catch 裡，不會跳錯誤給使用者）——這份臨時
-// 文件會一直留著，跟房主解散房間（jgRoomDissolve）也只能標記不能真刪是同樣的限制，不影響
-// 功能，房號不會再被使用，純粹留著不礙事。
+// 流程結束（法官按下「確認配置」）只停止監聽，不在這裡刪資料：手機那邊也寫了自己的 players
+// 文件，這裡先刪房間文件的話，那份就變成找不到的孤兒資料。整個臨時房間（含所有 players）
+// 滿一天後由 js/room/cleanup.js 一起清掉。
 // ══════════════════════════════════════════
 let jgMechAssignLinkCode=null;
 let jgMechAssignLinkUid=null;
@@ -206,12 +206,9 @@ window.jgRoomPushMechAssign=async function(num, role){
 window.jgRoomStopMechAssignLink=async function(){
   if(jgMechAssignLinkUnsub){ jgMechAssignLinkUnsub(); jgMechAssignLinkUnsub=null; }
   if(jgMechAssignLinkCode){
-    const db=window.jgFirebaseDb;
-    const code=jgMechAssignLinkCode;
     jgMechAssignLinkCode=null;
     jgMechAssignLinkUid=null;
     jgMechAssignLinkLocalMap={};
-    try{ await deleteDoc(doc(db,'rooms',code)); }catch(e){}
   }
 };
 // 複製邀請連結：網址帶 ?room=房號，別人點開會自動跳到連線房間分頁、房號也先幫他填好，
@@ -229,8 +226,8 @@ window.jgRoomCopyInviteLink=async function(){
 };
 // 房主解散房間：跟「離開房間」不一樣——離開房間只是這支手機自己退出，房間本身還在，
 // 其他人不會受影響；解散房間是房主專屬操作，會讓所有人（含還沒操作的玩家）都被踢出去，
-// 整個房間結束。只標記 dissolved:true，不真的刪除 Firestore 文件（子集合沒辦法從前端
-// 一次砍乾淨，留著也無妨，反正房號不會再被使用）。
+// 整個房間結束。這裡只標記 dissolved:true（讓其他人的畫面收到通知、自己退出），資料
+// 本身由 js/room/cleanup.js 在房間建立滿一天後連同子集合整個刪掉。
 window.jgRoomDissolve=async function(){
   if(!jgRoomIsHost){ alert('只有房主可以解散房間'); return; }
   if(!confirm('確定要解散這個房間嗎？所有人都會被踢出去，這個動作無法復原。')) return;
@@ -919,6 +916,13 @@ async function jgRoomEnterLobby(code){
   if(jgRoomUnsubRoom) jgRoomUnsubRoom();
   jgRoomUnsubRoom=onSnapshot(doc(db,'rooms',code),(snap)=>{
     jgRoomLatestRoomDoc=snap.exists()?snap.data():null;
+    // 房間文件被刪掉了（超過一天被自動清理）：跟解散一樣提醒一下、退回建立/加入畫面。
+    // 只看伺服器回來的結果（fromCache 的「不存在」可能只是本機快取還沒拿到資料）。
+    if(!snap.exists()&&!snap.metadata.fromCache&&jgRoomCode){
+      alert('這個房間已經結束並清除了。');
+      jgRoomLeave();
+      return;
+    }
     // 房主解散房間：所有人（含房主自己，如果房主是先按解散再看到這次快照）的監聽都會收到
     // dissolved:true，偵測到就提醒一下、把自己踢回建立/加入畫面——用 jgRoomCode 是否還在
     // 判斷「我是不是已經離開了」，避免房主自己觸發解散後，這裡又重複跳一次提醒。
