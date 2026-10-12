@@ -798,19 +798,19 @@ function jgSaveVoteInner(){
 function jgFinishVoteOut(found, eliminatedRole){
     const wasFlippedCat=jgIsFlippedCat(found);
     const wasCatLike=wasFlippedCat||jgIsWhitecatLike(found);
-    const catLabel=jgCatLabel(found);
+    const catLabel=jgCatLabel(found), catLog=jgCatLogLabel(found), catNote=jgCatJudgeNote(found);
     const trulyDied=jgApplyDeath(found);
     jgRecord._voteOutTrulyDied=trulyDied;
     if(wasCatLike&&!trulyDied){
       // 動物夢境：白貓被投出局會翻牌免死（已經翻過牌的白貓則根本不能被投票出局）。
       // 風聲諜影：學到白貓的機械狼一樣。
       if(wasFlippedCat){
-        alert(found.num+'號 '+catLabel+'已經翻過牌，無法被投票出局，這次放逐無人出局。');
-        jgPushDayLog(catLabel+found.num+'已翻牌，無法被放逐');
+        alert(found.num+'號 '+catLabel+'已經翻過牌，無法被投票出局，這次放逐無人出局。'+(catNote?'\n\n'+catNote:''));
+        jgPushDayLog(catLog+found.num+'已翻牌，無法被放逐');
       } else {
         delete found._whitecatJustFlipped;
-        alert(found.num+'號 是'+catLabel+'，翻牌免疫這次出局，要等下一次放逐階段結束後才會死亡。\n\n法官口白：「'+found.num+'號 是'+catLabel+'，翻牌。」');
-        jgPushDayLog(catLabel+found.num+'被放逐翻牌免死');
+        alert(found.num+'號 是'+catLabel+'，翻牌免疫這次出局，要等下一次放逐階段結束後才會死亡。\n\n法官口白：「'+found.num+'號 是'+catLabel+'，翻牌。」'+(catNote?'\n\n'+catNote:''));
+        jgPushDayLog(catLog+found.num+'被放逐翻牌免死');
       }
       jgRenderRoster();
       jgGoStep('next-night');
@@ -1045,7 +1045,7 @@ window.jgPufferfishFlipBtn=function(num){
     if(jgApplyDeath(p)) died.push(p.num);
     else if(wasCat){ catFlipped.push(p.num); delete p._whitecatJustFlipped; }
   });
-  const line=pfLabel+pf.num+'翻牌炸'+pool.join(',')+(catFlipped.length?'（白貓'+catFlipped.join(',')+'翻牌免死）':'')+(immune.length?'（已翻牌白貓'+immune.join(',')+'免疫）':'');
+  const line=jgPufferLogLabel(pf)+pf.num+'翻牌炸'+pool.join(',')+(catFlipped.length?'（白貓'+catFlipped.join(',')+'翻牌免死）':'')+(immune.length?'（已翻牌白貓'+immune.join(',')+'免疫）':'');
   jgRecord._voteFrozen.pufferLog=line;
   // 法官口白：「11號 河豚翻牌，1號 2號 淘汰。」（被炸死的號碼逐一唸出來）
   const speech=pf.num+'號 '+pfLabel+'翻牌，'+(died.length?died.map(n=>n+'號').join(' ')+' 淘汰。':'無人淘汰。');

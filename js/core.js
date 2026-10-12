@@ -378,13 +378,19 @@ function jgIsWhitecatLike(p){
 function jgIsFlippedCat(p){
   return !!p&&(p.role==='whitecat'||p.role==='mechanicalwolf')&&!!p.whitecatFlipped;
 }
-// 法官口白用的稱呼：真白貓叫「白貓」，機械狼翻牌時照實說是機械狼。
-function jgCatLabel(p){ return p&&p.role==='mechanicalwolf'?'機械狼（學到白貓）':'白貓'; }
+// 法官口白一律說「白貓」：學到白貓的機械狼翻牌時也不能說出他是機械狼（他就是有白貓功能的
+// 狼人陣營，翻牌後到死亡前仍然活著，該他帶刀時照樣可以帶刀）。文字紀錄、法官自己看的提示
+// 才寫出真實身分（jgCatLogLabel／jgCatJudgeNote）。
+function jgCatLabel(p){ return '白貓'; }
+function jgCatLogLabel(p){ return p&&p.role==='mechanicalwolf'?'機械狼（學到白貓）':'白貓'; }
+function jgCatJudgeNote(p){ return p&&p.role==='mechanicalwolf'?'（法官注意：這位其實是學到白貓的機械狼，口白照樣說白貓，不要說出是機械狼）':''; }
 // 可以在投票畫面翻牌炸人的玩家：河豚，或學到河豚的機械狼（風聲諜影）。
 function jgPufferLikePlayers(){
   return jgPlayers.filter(p=>p.role==='pufferfish'||(p.role==='mechanicalwolf'&&jgMechSkillActive('pufferfish')));
 }
-function jgPufferLabel(p){ return p&&p.role==='mechanicalwolf'?'機械狼（學到河豚）':'河豚'; }
+// 河豚同理：口白一律說「河豚」，文字紀錄才寫出真實身分。
+function jgPufferLabel(p){ return '河豚'; }
+function jgPufferLogLabel(p){ return p&&p.role==='mechanicalwolf'?'機械狼（學到河豚）':'河豚'; }
 function jgApplyDeath(p){
   if(!p) return false;
   // 動物夢境：白貓任何原因死亡都能翻牌、免疫這一次死亡，要等到「下一次放逐階段結束」才真的死

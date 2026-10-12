@@ -1706,11 +1706,11 @@ function jgMechWolfSkillUseHtml(){
   }
   if(learned==='whitecat'&&jgIsWindspy()){
     const mw=jgPlayers.find(p=>p.role==='mechanicalwolf');
-    return '<div class="info" style="font-size:12px;">學到白貓：任何原因死亡都能翻牌免疫一次，下一次放逐階段結束後才會死亡（系統會自動處理）。'+(mw&&mw.whitecatFlipped?'已經翻過牌。':'')+'</div>';
+    return '<div class="info" style="font-size:12px;">學到白貓：任何原因死亡都能翻牌免疫一次，下一次放逐階段結束後才會死亡（系統會自動處理，口白一律說白貓，不說出是機械狼）。翻牌後到死亡前仍然活著，該他帶刀時照樣可以帶刀。'+(mw&&mw.whitecatFlipped?'已經翻過牌。':'')+'</div>';
   }
   if(learned==='pufferfish'&&jgIsWindspy()){
     const mw=jgPlayers.find(p=>p.role==='mechanicalwolf');
-    return '<div class="info" style="font-size:12px;">學到河豚：放逐投票畫面會多一顆「機械狼（學到河豚）翻牌」按鈕，整局限一次。'+(mw&&mw.pufferUsed?'已經用過了。':'')+'</div>';
+    return '<div class="info" style="font-size:12px;">學到河豚：放逐投票畫面會多一顆「機械狼（學到河豚）翻牌」按鈕（只有法官看得到），整局限一次；口白一律說河豚，不說出是機械狼。'+(mw&&mw.pufferUsed?'已經用過了。':'')+'</div>';
   }
   if(learned==='hybrid'){
     return '<div class="info" style="font-size:12px;">（法官搖頭）學到混血兒：被通靈師驗到會顯示混血兒，但無法選擇要混的對象。</div>';
@@ -2700,7 +2700,7 @@ function jgSaveWolfBeautyCharmKill(){
   const target=jgRecord._wolfbeautyKillCharm?jgFind(jgRecord._wolfbeautyKillCharm):null;
   if(target&&target.alive&&(jgIsWhitecatLike(target)||jgIsFlippedCat(target))){
     jgApplyDeath(target);
-    alert(target.num+'號 是'+jgCatLabel(target)+'，翻牌免疫這次死亡（下一次放逐階段結束後才會死亡）。');
+    alert(target.num+'號 是'+jgCatLabel(target)+'，翻牌免疫這次死亡（下一次放逐階段結束後才會死亡）。'+(jgCatJudgeNote(target)?'\n\n'+jgCatJudgeNote(target):''));
   } else if(target&&target.alive){target.alive=false;}
   jgRenderRoster();
   const win=jgCheckWin(); if(win){jgShowWin(win);return;}

@@ -239,8 +239,11 @@ async function run(){
   check('學到白貓當天還沒生效', ev('jgIsWhitecatLike(jgFind(11))'), false);
   ev("jgNight=2; jgCurrentStep='dawn';");
   check('第二晚起被殺翻牌免死', [ev('jgApplyDeath(jgFind(11))'), ev('jgFind(11).alive'), ev('jgFind(11).whitecatFlipped')], [false, true, true]);
+  ev("jgFind(1).alive=false; jgFind(7).alive=false; jgCurrentStep='night-start'; jgGoStep('mechanicalwolf-wake');");
+  check('翻牌後的機械狼還活著，狼人全滅時照樣入隊帶刀', [content().includes('今晚的入隊手勢為（👍 讚）'), !!window.document.getElementById('jg-mechwolf-kill')], [true, true]);
+  ev("jgFind(1).alive=true; jgFind(7).alive=true;");
   ev("jgRecord._exileVoteHeld=true; jgGoStep('next-night');");
-  check('機械狼（學到白貓）放逐階段結束後死亡', [ev('jgFind(11).alive'), alerts.some(a=>a.includes('機械狼（學到白貓）'))], [false, true]);
+  check('機械狼（學到白貓）放逐階段結束後死亡，口白只說白貓', [ev('jgFind(11).alive'), alerts.some(a=>a.includes('11號 白貓死亡')), alerts.some(a=>a.includes('「11號 機械狼'))], [false, true, false]);
 
   // ── 機械狼學到河豚：投票畫面多一顆翻牌按鈕 ──
   newGame();
@@ -251,7 +254,8 @@ async function run(){
   check('投票畫面有真河豚和機械狼兩顆翻牌按鈕', [!!window.document.getElementById('jg-puffer-btn'), !!window.document.getElementById('jg-puffer-btn-11')], [true, true]);
   ev('jgPufferfishFlipBtn(11)');
   check('機械狼翻牌炸死投他的 2、3 號', [ev('jgFind(2).alive'), ev('jgFind(3).alive')], [false, false]);
-  check('口白說是機械狼學到河豚', window.document.getElementById('jg-puffer-status').textContent.includes('11號 機械狼（學到河豚）翻牌，2號 3號 淘汰。'), true);
+  check('口白只說河豚，不說出機械狼', window.document.getElementById('jg-puffer-status').textContent.includes('11號 河豚翻牌，2號 3號 淘汰。'), true);
+  check('文字紀錄寫出真實身分', ev('(jgDayLog[2]||[]).concat(jgRecord._voteFrozen&&jgRecord._voteFrozen.pufferLog?[jgRecord._voteFrozen.pufferLog]:[]).some(l=>l.includes("機械狼（學到河豚）11翻牌炸"))'), true);
   check('機械狼的河豚技能用掉，真河豚沒用掉', [ev('jgFind(11).pufferUsed'), ev('!!jgFind(8).pufferUsed')], [true, false]);
 
   // ── 熊叫音效 ──

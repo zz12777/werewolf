@@ -2205,9 +2205,10 @@ function jgRenderStep(step){
     // 動物夢境：白貓翻牌、河豚吃刀翻牌、熊的咆哮，都在天亮公布死訊之後宣布。
     let animalDawnHtml='';
     whitecatFlipNums.forEach(n=>{
-      const cl=jgCatLabel(jgFind(n));
-      animalDawnHtml+='<div class="speech">「<em>'+n+'號 是'+cl+'，翻牌免疫本次死亡，下一次放逐階段結束後才會死亡。</em>」</div>';
-      jgPushDayLog(cl+n+'翻牌免死');
+      const cp=jgFind(n), cl=jgCatLabel(cp), cn=jgCatJudgeNote(cp);
+      animalDawnHtml+='<div class="speech">「<em>'+n+'號 是'+cl+'，翻牌免疫本次死亡，下一次放逐階段結束後才會死亡。</em>」</div>'
+        +(cn?'<div class="info" style="font-size:12px;">'+cn+'</div>':'');
+      jgPushDayLog(jgCatLogLabel(cp)+n+'翻牌免死');
     });
     if(pufferRevealNum){
       const _hasWb=jgPlayers.some(p=>p.role==='wolfbeauty');
@@ -2602,7 +2603,7 @@ function jgRenderStep(step){
         if(jgIsFlippedCat(p)&&p.alive&&p.whitecatDeathDay!=null&&p.whitecatDeathDay<=jgNight){
           const cl=jgCatLabel(p);
           p.alive=false;
-          jgPushDayLog(cl+p.num+'放逐階段結束後死亡');
+          jgPushDayLog(jgCatLogLabel(p)+p.num+'放逐階段結束後死亡');
           alert(p.num+'號 '+cl+'：翻牌後的放逐階段已經結束，現在死亡。\n\n法官口白：「'+p.num+'號 '+cl+'死亡。」');
         }
       });
