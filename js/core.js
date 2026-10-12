@@ -1682,6 +1682,7 @@ function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal, thiefCand1, thief
   jgRenderRoster();
   jgProceedToNight();
   switchTab('t-judge');
+  if(typeof jgDealSync==='function') jgDealSync(); // 發牌房：名單同步到玩家手機
 }
 function jgRoomCreateFromSetup(){
   if(jgSetupDualMode){ alert('⚠️ 連線房間目前還不支援雙身分模式，請切換成一般模式再建立房間。'); return; }
@@ -1720,6 +1721,7 @@ function jgRoomCreateFromSetup(){
   tryRoomRender(20);
 }
 function jgStart(){
+  window.jgDealLinkedCode=null; // 本機開局：不是發牌房，不同步到任何手機
   const isDualStart=jgSetupDualMode;
   const minStart=isDualStart?4:6, maxStart=isDualStart?7:14;
   const n=Math.min(maxStart,Math.max(minStart,parseInt(document.getElementById('jg-count').value)||minStart));
@@ -2224,6 +2226,7 @@ function jgBack(){
   jgCurrentStep=targetStep;
   jgRenderRoster();
   jgRenderStep(targetStep);
+  if(typeof jgDealSync==='function') jgDealSync();
 }
 
 // Alive players list (plain text, for speech boxes)
@@ -2262,6 +2265,7 @@ function jgGoStep(step){
   jgStepHistory.push(step);
   jgCurrentStep=step;
   jgRenderStep(step);
+  if(typeof jgDealSync==='function') jgDealSync(); // 發牌房：公開資訊同步到玩家手機
 }
 // 警長是否剛剛真正陣亡（不論死因：投票放逐／夜晚被殺／開槍帶走／決鬥……），
 // 由 jgRenderRoster() 統一在每次死亡結算後呼叫檢查，不用逐一修改每個死亡路徑。

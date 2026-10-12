@@ -23,6 +23,7 @@ window.jgRoomLeave=function(){
   if(jgRoomUnsubVotes){ jgRoomUnsubVotes(); jgRoomUnsubVotes=null; }
   if(jgRoomUnsubChat){ jgRoomUnsubChat(); jgRoomUnsubChat=null; }
   if(jgRoomUnsubDealMyRole){ jgRoomUnsubDealMyRole(); jgRoomUnsubDealMyRole=null; }
+  jgRoomDealSecretSubCode=null; jgRoomDealMySecret=null; jgRoomDealWithdrawPending=false;
   jgRoomCode=null; jgRoomComp=null; jgRoomTotal=null; jgRoomIsHost=false;
   jgMyRole=null; jgMySeatNum=null; jgRoomLatestPlayers=[]; jgRoomLatestRoomDoc=null;
   jgRoomLatestVotes=[]; jgRoomGodViewOn=false; jgRoomLatestChatMsgs=[]; jgRoomChatExpanded=false;
@@ -118,7 +119,9 @@ window.jgRoomRenderEntry=async function(){
       </div>
     </div>
     <div class="info" style="font-size:12px;margin-top:10px;">
-      <div>目前進度：手機發牌全部板子都可用（只負責把身分發到手機上，之後交給法官用本機工具主持）；連線房間全自動功能僅部分板子可用，勝負尚無法自動判定。</div>
+      <div><b>目前進度</b></div>
+      <div style="margin-top:4px;"><b>手機發牌：</b>所有板子都可以用。身分發到各自手機，之後由法官用「法官の助手」主持；玩家手機會即時看到號碼姓名名單、上警號碼、警上發言順序，上警的人可以直接在手機按退水。黑市商人板的幸運兒、邱比特板的情侶，會在自己手機上收到只有自己看得到的提醒。</div>
+      <div style="margin-top:4px;"><b>連線房間全自動：</b>預女獵守、機械狼＋通靈師、攝夢人＋夢魘、黑市商人＋狼兄狼弟、魔術師、血月使者＋獵魔人、狼美人＋騎士、惡靈騎士＋守衛、混血兒＋黑／白狼王＋血月、邱比特、唯鄰是從。這些板子的勝負會自動判定（規則跟法官助手同一份）；其他板子還在做，請先用手機發牌。</div>
       <div style="margin-top:4px;">以上功能都還沒經過完整實機測試，可能會有 bug，歡迎回報問題。</div>
     </div>
   `;

@@ -67,6 +67,19 @@ async function run(){
   check('傀儡守衛的守護不生效', window.eval('jgRecord.guardTarget'), null);
   check('傀儡守衛選的人有記下來', window.eval('jgRecord._puppetGuardVoid'), '5');
 
+  // ── 情境 2b：照實際順序，守衛先睜眼守 5 號，狼人之後才選守衛當傀儡、刀 5 號 → 守護作廢，5 號死 ──
+  await newGame(window, seats);
+  window.eval("jgGoStep('guard-wake')");
+  setVal(window, 'jg-guard-rec', 5);
+  window.eval('jgSaveGuard()');
+  check('守衛先睜眼時還不是傀儡：守護先記下', String(window.eval('jgRecord.guardTarget')), '5');
+  window.eval("jgGoStep('wolf-wake')");
+  setVal(window, 'jg-puppet-pick', 12);
+  setVal(window, 'jg-wolf-rec', 5);
+  window.eval('jgSaveWolf()');
+  check('狼人選守衛當傀儡後：今晚的守護作廢', window.eval('jgRecord.guardTarget'), null);
+  check('作廢的守護有記下來（文字紀錄用）', window.eval('jgRecord._puppetGuardVoid'), '5');
+
   // ── 情境 3：預言家當傀儡，查驗結果相反；獵人當傀儡不能開槍 ──
   await newGame(window, {1:'villager',2:'seer',3:'wolf',4:'wolf',5:'hunter',6:'wolf',7:'villager',8:'villager',9:'villager',10:'villager',11:'witch',12:'guard'});
   window.eval("jgGoStep('wolf-wake')");

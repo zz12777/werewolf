@@ -78,6 +78,7 @@ function loadRoomLogicForGodView() {
     + 'function __setRoomTotal(t){ jgRoomTotal=t; }\n'
     + 'function __setMyRole(r){ jgMyRole=r; }\n'
     + 'function __getSuppressFlag(){ return jgRoomSuppressAutoRender; }\n'
+    + 'function __setIsHost(v){ jgRoomIsHost=v; }\n'
     + 'function buildPool(c){const p=[];for(const[r,n] of Object.entries(c))for(let i=0;i<n;i++)p.push(r);return p;}\n'
     + 'function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}\n'
     + 'module.exports={jgRoomRenderGodView,jgRoomMechWolfViewHtml,jgRoomMechWolfKillEligible,jgRoomMechWolfLearn,'
@@ -87,6 +88,7 @@ function loadRoomLogicForGodView() {
     + 'jgRoomAdvanceToDayPhase,jgRoomJoinSheriff,jgRoomLockSheriffJoin,jgRoomRenderSheriffCampaign,jgRoomWolfConfirm,'
     + 'jgRoomAssignRoles,jgRoomThiefChoose,jgRoomThiefViewHtml,jgRoomNextNightStep,jgRoomStepPresent,jgRoomCupidPickFirst,jgRoomCupidConfirmPair,jgRoomDealAssignRoles,'
     + 'jgRoomCheckBloodmoonLastStand,jgRoomComputeWinCheck,jgRoomMaybeDeclareWin,jgRoomStartNextNight,jgRoomDemonhunterHunt,'
+    + 'jgRoomDealHostHandleRequests,jgRoomSheriffInfoHtml,jgRoomNameGridHtml,__setIsHost,'
     + 'jgRoomMaybeApplyBadgeSwallow,jgRoomWolfSelfBlowConfirm,jgRoomReallyAdvanceToDayPhase,'
     + 'jgRoomHunterPending,jgRoomHunterStatusAck,jgRoomAdvanceToDayPhase,'
     + 'jgRoomResolveDayVote,jgRoomCheckShootEligible,jgRoomPuppetCandidateSeats,jgRoomCheckAndSetPendingBadge,'
@@ -528,6 +530,26 @@ async function runBatch1RolesTest(){
   dead(4);
   global.__mockDocs['rooms/'+C+'/players/u2'].witchSaveUsed=true;
   check('女巫只剩毒藥、剩一狼一女巫一民：直接判狼人獲勝', [await mod.jgRoomStartNextNight(), room().gameOverWinner], [null,'wolf']);
+
+  // ── 發牌房（js/room/deal.js、js/room/public-info.js）──
+  {
+    mod.__setRoomCode('DL'); mod.__setIsHost(true);
+    global.__mockDocs={ 'rooms/DL': { mode:'deal', dealWithdrawReqs:[5,8] } };
+    const got=[]; global.window.jgDealRemoteWithdraw=n=>{ got.push(n); return true; };
+    await mod.jgRoomDealHostHandleRequests(global.__mockDocs['rooms/DL']);
+    check('發牌房：房主把手機退水交給法官助手', got, [5,8]);
+    check('發牌房：處理完清掉退水請求', global.__mockDocs['rooms/DL'].dealWithdrawReqs, []);
+    mod.__setIsHost(false); got.length=0;
+    await mod.jgRoomDealHostHandleRequests({ mode:'deal', dealWithdrawReqs:[3] });
+    check('發牌房：不是房主不處理', got, []);
+    const sh={ candidates:[3,5], withdrawn:[8], confirmed:true, order:[5,8,3], start:5, dir:'順', canWithdraw:true };
+    const h3=mod.jgRoomSheriffInfoHtml(sh, 3, 'jgRoomDealWithdraw()', false);
+    check('警長資訊：候選人看到退水按鈕', h3.includes('>退水</button>'), true);
+    check('警長資訊：退水的人畫刪除線', h3.includes('<s>8</s>'), true);
+    check('警長資訊：非候選人沒有退水按鈕', mod.jgRoomSheriffInfoHtml(sh, 7, 'jgRoomDealWithdraw()', false).includes('</button>'), false);
+    check('警長資訊：PK 中不能退水', mod.jgRoomSheriffInfoHtml(Object.assign({}, sh, {pk:true}), 3, 'x()', false).includes('</button>'), false);
+    check('名單：一格一人', (mod.jgRoomNameGridHtml([{num:1,name:'A'},{num:2,name:'B'},{num:3,name:'C'}], 2).match(/pi-cell/g)||[]).length, 3);
+  }
 
   console.log(JSON.stringify(results, null, 2));
   const anyFail=results.some(r=>!r.ok);

@@ -776,3 +776,19 @@ select{
 /* 個人遊玩紀錄（.hist-item）：跟其餘卡片同一套白底陰影處理。 */
 .apple-ui-preview .hist-item{border:none;box-shadow:var(--au-shadow-sm);background:var(--bg2);}
 
+
+/* 發牌房認領座位：手機一列一位，電腦一列三位（跟「角色與規則」的卡片排法一樣）。 */
+.deal-seat-grid{display:grid;grid-template-columns:1fr;gap:8px;margin-top:14px;}
+.deal-seat-grid .deal-seat{margin:0;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm,10px);background:var(--bg2);}
+@media (min-width:720px){ .deal-seat-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
+
+/* 發牌房／連線房間的玩家名單：一列三人。 */
+.pi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px;}
+.pi-cell{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm,10px);background:var(--bg2);min-width:0;}
+.pi-cell.pi-me{border-color:var(--accent);}
+.pi-cell.pi-dead{opacity:0.5;}
+.pi-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:var(--bg);border:1px solid var(--border);}
+.pi-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pi-tag{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--bg);border:1px solid var(--border);}
+.pi-sheriff{margin-top:14px;line-height:1.9;font-size:14px;}
+.pi-muted{font-size:12px;color:var(--text2);margin-left:4px;}

@@ -531,6 +531,11 @@ window.jgRoomAckLuckyOneReveal=async function(){
   await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ luckyOneRevealSeen:true },{ merge:true });
   jgRoomRenderCurrentPhase();
 };
+window.jgRoomAckLoverReveal=async function(){
+  const db=window.jgFirebaseDb;
+  await setDoc(doc(db,'rooms',jgRoomCode,'players',window.jgFirebaseUid),{ loverRevealSeen:true },{ merge:true });
+  jgRoomRenderCurrentPhase();
+};
 
 // ── 白天：第一夜結束後先讓警長決定發言方向（若有警長），接著是發言＋投票放逐——發言階段
 //    這一版不追蹤每個人是誰在發言，只給一個「大家都發言完了」的按鈕讓房主按下去開始投票
@@ -550,19 +555,20 @@ async function jgRoomRenderDayOpen(){
   if(meForLucky&&meForLucky.luckyOneSkill&&meForLucky.luckyOneGrantedNight!=null&&!meForLucky.luckyOneRevealSeen){
     // 黑市商人交易成功那晚不會立刻告訴他自己中獎，比照本機法官助手「不管交易成功與否，
     // 晚上都走同一套掩護動作」的精神——連線房間改成「白天自己手機上私下顯示」，只有這
-    // 支手機自己看得到，其他人畫面完全看不出差異。放在這個 render 函式最前面（優先度比
-    // 開槍/警徽/遺言都高），但只是一次性的「知道了」按鈕，按完會照常往下渲染真正該顯示
-    // 的畫面，不會真的卡住任何共享流程。
+    // 支手機自己看得到。用跟發牌房共用的放大版私人提醒（js/room/public-info.js），蓋在
+    // 這一輪原本的畫面上面，按「知道了」才收起來，不會卡住任何共享流程。
     const skillLabel={seer:'預言家查驗',witch:'女巫毒藥',hunter:'獵人獵槍'}[meForLucky.luckyOneSkill]||meForLucky.luckyOneSkill;
     const passiveNote=meForLucky.luckyOneSkill==='hunter'
       ?'這是被動能力：之後如果被淘汰（夜裡被刀死或白天被投票出局），會自動跳出開槍畫面讓你選要不要帶人。'
       :'技能會在之後的女巫／預言家步驟自動開放給你操作。';
-    bodyHtml='<div class="nbanner" style="margin-top:20px;"><h1>你是幸運兒</h1></div>'
-      +'<p class="sub" style="text-align:center;margin-top:8px;">你獲得的技能：'+skillLabel+'</p>'
-      +'<div class="info-warn" style="margin-top:10px;text-align:center;">請小心不要讓別人看到這個畫面</div>'
-      +'<div class="info" style="font-size:12px;margin-top:10px;text-align:center;">'+passiveNote+'</div>'
-      +'<div style="text-align:center;"><button class="primary" style="margin-top:14px;" onclick="jgRoomAckLuckyOneReveal()">知道了 →</button></div>';
-  } else if(pendingShoot.length&&rd.pendingShootContext==='day'){
+    jgRoomShowPrivateNotice({key:'luckyone', title:'你是幸運兒', main:'你獲得的是'+skillLabel, note:passiveNote}, 'jgRoomAckLuckyOneReveal()', true);
+  }
+  // 情侶：白天再提醒一次「誰和誰是情侶」（跟發牌房同一種私人提醒），只有兩位情侶自己看得到。
+  if(meForLucky&&(rd.cupidLoverAUid===window.jgFirebaseUid||rd.cupidLoverBUid===window.jgFirebaseUid)&&!meForLucky.loverRevealSeen){
+    jgRoomShowPrivateNotice({key:'lovers', title:'你是情侶', main:rd.cupidLoverASeatNum+'號、'+rd.cupidLoverBSeatNum+'號是情侶',
+      note:'情侶其中一人死亡，另一人會跟著殉情。'}, 'jgRoomAckLoverReveal()', true);
+  }
+  if(pendingShoot.length&&rd.pendingShootContext==='day'){
     if(pendingShoot.includes(window.jgFirebaseUid)){
       const night=rd.night||1;
       const r=await jgRoomShootViewHtml(night);

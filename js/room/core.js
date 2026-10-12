@@ -21,6 +21,8 @@
 //   night-shell.js   夜晚畫面總機（依 currentStep 分派）、房主強制推進、預言家、通靈師、獵魔人
 //   roles-special.js 夢魘、魔術師、攝夢人、機械狼、邱比特、盜賊、狼兄狼弟、黑市商人、幸運兒、夜槍
 //   roles-batch1.js  第一批新增：狼美人、惡靈騎士、騎士、混血兒、唯鄰是從傀儡、邱比特勝負
+//   public-info.js   發牌房、連線房間共用的畫面元件：號碼姓名名單、警長競選資訊、私人提醒、全場短提示
+//   deal.js          發牌房分配身分後的玩家畫面（身分、名單、上警／退水）與房主同步
 //   cleanup.js       自動清掉超過一天的舊房間（連同子集合整個刪掉）
 //   entry.js         離開房間、從法官助手帶板子建房、連線房間分頁入口、自動重連、邀請連結
 //
@@ -396,6 +398,10 @@ window.jgRoomDealAssignRoles=async function(){
   // 房主自己的裝置：直接把這份結果套進本機法官助手，跳回去繼續主持，不用再看發牌房畫面。
   // 有盜賊的話，把已經抽好的 2 張候選一起帶過去，本機才不會又重新抽一次（見
   // jgApplyDealtRoles 裡的說明）。
+  // 玩家在發牌房自己打的全名一起帶回法官助手，名單、文字紀錄才會是真的名字。
+  if(typeof jgPlayerNames!=='undefined') players.forEach(p=>{ if(p.name) jgPlayerNames[p.seatNum]=p.name; });
+  // 記住「法官助手現在主持的是這個發牌房」，之後的公開資訊、私人提醒才會同步過來（js/deal-sync.js）。
+  window.jgDealLinkedCode=jgRoomCode;
   if(window.jgApplyDealtRoles) window.jgApplyDealtRoles(seatRoleMap, jgRoomComp, jgRoomTotal, thiefCand1, thiefCand2);
 };
 function jgRoomRenderDealPhase(){
@@ -426,17 +432,17 @@ function jgRoomRenderDealLobby(){
     const taken=claimedBySeat[s.num];
     const isMine=taken&&taken.uid===myUid;
     if(taken){
-      return '<div class="row"><div class="av av-vil">'+s.num+'</div><div class="nm">'+taken.name+'</div>'
+      return '<div class="row deal-seat"><div class="av av-vil">'+s.num+'</div><div class="nm">'+taken.name+'</div>'
         +'<span class="badge '+(isMine?'bv':'bw')+'">'+(isMine?'你':'已認領')+'</span></div>';
     }
     if(hasRealNames){
-      return '<div class="row" style="cursor:pointer;" onclick="jgRoomDealClaimSeat('+s.num+',\''+s.name+'\')"><div class="av av-vil">'+s.num+'</div><div class="nm">'+s.name+'</div>'
+      return '<div class="row deal-seat" style="cursor:pointer;" onclick="jgRoomDealClaimSeat('+s.num+',\''+s.name+'\')"><div class="av av-vil">'+s.num+'</div><div class="nm">'+s.name+'</div>'
         +'<span class="badge">點我認領</span></div>';
     }
     // 沒有真名：每個座位旁邊直接放一個輸入框，打完全名按「認領」——這個座位號碼還是要選
     // （發牌房本來就是「洗好牌之後把身分綁在座位上」，座位跟身分是綁定的），只是名字改成
     // 自己打，不用被迫套用「X號」這種看不出是誰的預設名稱。
-    return '<div class="row" style="flex-wrap:wrap;gap:6px;"><div class="av av-vil">'+s.num+'</div>'
+    return '<div class="row deal-seat" style="flex-wrap:wrap;gap:6px;"><div class="av av-vil">'+s.num+'</div>'
       +'<input type="text" id="jg-deal-name-'+s.num+'" placeholder="輸入你的全名" style="flex:1;min-width:120px;">'
       +'<button style="width:auto;padding:8px 14px;" onclick="jgRoomDealClaimSeat('+s.num+', document.getElementById(\'jg-deal-name-'+s.num+'\').value)">認領</button></div>';
   }).join('');
@@ -446,37 +452,13 @@ function jgRoomRenderDealLobby(){
   root.innerHTML=`
     <div class="nbanner"><h1>房間 ${jgRoomCode}（發牌）</h1></div>
     <button onclick="jgRoomCopyInviteLink()" style="margin-top:8px;">複製邀請連結</button>
-    <div class="card" style="margin-top:14px;">${rows}</div>
+    <div class="deal-seat-grid">${rows}</div>
     ${hostBtn}
     ${jgRoomIsHost?'<button class="ghost" style="margin-top:14px;color:var(--danger,#b91c1c);" onclick="jgRoomDissolve()">解散房間</button>':''}
   `;
 }
-// 分配完身分後，加入的玩家（不含房主，房主已經跳回法官助手了）只會看到這個畫面：
-// 純粹顯示自己的身分，沒有任何操作按鈕——這個房間接下來的遊戲流程完全交給房主用
-// 法官助手主持，跟這支手機無關了。
+// 分配完身分後玩家手機上的畫面（自己的身分、名單、警長競選資訊、私人提醒）在 js/room/deal.js。
 let jgRoomUnsubDealMyRole=null; // 發牌房「我的身分」即時監聽（避免用輪詢，減少延遲）
-// 原本這裡是「查一次、沒有的話等1秒再查一次」的輪詢寫法，在網路比較慢的裝置上，等於是
-// 額外多等最多1秒才會看到身分——改成真正的即時監聽（onSnapshot），身分一旦寫進資料庫，
-// 幾乎是立刻就會反映到畫面上，不用等輪詢的下一輪。
-function jgRoomRenderDealMyRole(){
-  const root=document.getElementById('jg-room-content');
-  if(!root) return;
-  root.innerHTML='<div class="info" style="text-align:center;margin-top:40px;">身分分配中，請稍候...</div>';
-  const db=window.jgFirebaseDb;
-  if(jgRoomUnsubDealMyRole) jgRoomUnsubDealMyRole();
-  jgRoomUnsubDealMyRole=onSnapshot(doc(db,'rooms',jgRoomCode,'secrets',window.jgFirebaseUid),(snap)=>{
-    if(!snap.exists()) return; // 還沒分配到，保持「請稍候」畫面，等下一次快照推送
-    const role=snap.data().role;
-    const roleName=(typeof RNAME!=='undefined'&&RNAME[role])||role;
-    const icon=jgRoomRoleIconGuess(role);
-    root.innerHTML=`
-      <div style="text-align:center;padding:60px 20px;">
-        <div style="font-size:88px;">${icon}</div>
-        <div style="font-size:34px;font-weight:800;margin-top:20px;">你的身分是：${roleName}</div>
-      </div>
-    `;
-  });
-}
 // 粗略猜一個角色對應的 emoji（沒有的話用預設 🎴）——之後如果角色介紹資料裡本來就有
 // icon 欄位可以直接抓來用，這裡先用簡單對照表，涵蓋目前先做的板子＋常見角色。
 // 2026/09 補上殭屍板、詭術之境板、大灰狼占卜師板新增的角色，讓發牌功能可以正確顯示 icon。
@@ -880,7 +862,9 @@ window.jgRoomShowMyIdentity=function(){
   if(!jgMySeatNum){ alert('還沒有座位資料（可能還在大廳，尚未分配身分）'); return; }
   const me=jgRoomLatestPlayers.find(p=>p.uid===window.jgFirebaseUid);
   const roleName=jgMyRole?jgRoomDisplayRoleName(jgMyRole, me&&me.mechWolfLearnedRole):'（尚未分配身分）';
-  jgRoomShowBigCard(jgMySeatNum+'號', roleName);
+  // 發牌房：幸運兒、情侶的私人提醒也一起列出來（忘記的時候可以重看）。
+  const notes=(typeof jgRoomDealMyNotices==='function'&&(jgRoomLatestRoomDoc||{}).mode==='deal')?jgRoomDealMyNotices():[];
+  jgRoomShowBigCard(jgMySeatNum+'號', roleName+notes.map(n=>'<div style="font-size:5vw;margin-top:12px;color:#fff;">'+jgRoomEsc(n.title+'：'+n.main)+'</div>').join(''));
 };
 
 async function jgRoomEnterLobby(code){
@@ -916,6 +900,8 @@ async function jgRoomEnterLobby(code){
   if(jgRoomUnsubRoom) jgRoomUnsubRoom();
   jgRoomUnsubRoom=onSnapshot(doc(db,'rooms',code),(snap)=>{
     jgRoomLatestRoomDoc=snap.exists()?snap.data():null;
+    // 發牌房：房主處理玩家從手機送出的退水（見 js/room/deal.js）。
+    if(jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.mode==='deal') jgRoomDealHostHandleRequests(jgRoomLatestRoomDoc);
     // 房間文件被刪掉了（超過一天被自動清理）：跟解散一樣提醒一下、退回建立/加入畫面。
     // 只看伺服器回來的結果（fromCache 的「不存在」可能只是本機快取還沒拿到資料）。
     if(!snap.exists()&&!snap.metadata.fromCache&&jgRoomCode){
