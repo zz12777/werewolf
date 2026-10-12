@@ -930,6 +930,9 @@ let jgDualIdentityMode=false;
 // ── 唯鄰是從板：狼人第一夜在開刀前選一位跟狼人相鄰的玩家當傀儡（玩家物件上的 p.puppet 旗標，
 // 會跟著 jgPlayers 一起進「上一步」的快照）。jgPuppetMode 只在開局當下依選的板子決定，整局不變。
 let jgPuppetMode=false;
+// 動物夢境：只有選「動物夢境」板子才算（第一晚狼人不殺人、平民叫羊駝）；自訂角色選了熊、子狐等
+// 動物角色，還是照一般規則走。跟 jgPuppetMode 一樣只在開局當下依選的板子決定。
+let jgAnimalDreamMode=false;
 // ── 風聲諜影板：覺醒石像鬼第一晚把狼隊隔壁的好人轉化成狼人陣營（p.converted='A'/'B'），
 // 轉化失敗（轉到機械狼、混血兒）記在 p.convertFailedBy。整局固定，開局時依選的板子決定。
 let jgWindspyMode=false;
@@ -1611,6 +1614,7 @@ function jgApplyDealtRoles(seatRoleMap, dealtComp, dealtTotal, thiefCand1, thief
   jgDualIdentityMode=false; jgDualAssign={}; jgDualAssignDone=false;
   jgPuppetMode=typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='neighbor_puppet';
   jgWindspyMode=typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='windspy';
+  jgAnimalDreamMode=typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='animal_dream';
   jgPlayers=[]; jgNight=1;
   jgWitchSaveUsed=false; jgWitchPoisonUsed=false;
   jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,hunterNightShot:null,witchStepDone:false};
@@ -1733,6 +1737,7 @@ function jgStart(){
   jgDualIdentityMode=isDualStart;
   jgPuppetMode=!isDualStart&&typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='neighbor_puppet';
   jgWindspyMode=!isDualStart&&typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='windspy';
+  jgAnimalDreamMode=!isDualStart&&typeof jgBoardPreset!=='undefined'&&jgBoardPreset==='animal_dream';
   jgDualAssign={};
   jgDualAssignDone=false;
   jgPlayers=[]; jgNight=1;
@@ -1955,9 +1960,8 @@ function jgRoleDisplayName(p){
 }
 // 動物夢境板：板子上有熊／子狐／河豚／白貓任一個就算（這幾個角色只在這個板子出現）。
 function jgIsAnimalDream(){
-  // 風聲諜影也有熊／河豚／白貓，但不是動物夢境（第一夜照常使用技能）。
-  if(jgIsWindspy()||(jgComp&&jgComp.awgargoyle>0)) return false;
-  return !!(jgComp&&((jgComp.bear||0)+(jgComp.foxcub||0)+(jgComp.pufferfish||0)+(jgComp.whitecat||0))>0);
+  // 只看開局選的板子：自訂角色或風聲諜影就算有熊／河豚／白貓，也不是動物夢境。
+  return !!jgAnimalDreamMode;
 }
 
 // Feature: on the first day's discussion, verify that every number's assigned role
