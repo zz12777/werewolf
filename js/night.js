@@ -1201,6 +1201,7 @@ function jgSaveCupid(){
   }
   jgLovers=[v1,v2];
   jgCupidChosen=true;
+  if(typeof jgDealNotifyLovers==='function') jgDealNotifyLovers(v1, v2); // 發牌房：只有情侶手機看得到
   jgGoStep('lovers-wake');
 }
 
@@ -1887,6 +1888,7 @@ function jgSaveBlackMarket(){
         // 幸運兒會因為 startNight 還沒到而無法開槍。查驗／毒藥則維持原本「下一晚才能用」的設計。
         jgLuckyOne={num:t.num, gift:skill, startNight:(skill==='hunter'?jgNight:jgNight+1), used:false};
         jgRecord.blackmarketSuccess=true;
+        if(typeof jgDealNotifyLuckyOne==='function') jgDealNotifyLuckyOne(t.num, skill); // 發牌房：只有幸運兒手機看得到
       }
     }
   }
@@ -2010,6 +2012,11 @@ function jgSaveWolf(){
     jgPlayers.forEach(p=>{ delete p.puppet; });
     const pp=jgFind(pv);
     if(pp) pp.puppet=true;
+    // 守衛比狼人早睜眼：傀儡選到守衛時，他今晚已經守過的人要一起作廢（守不住狼刀）。
+    if(pp&&pp.role==='guard'&&jgRecord.guardTarget){
+      jgRecord._puppetGuardVoid=jgRecord.guardTargetRaw||String(jgRecord.guardTarget);
+      jgRecord.guardTarget=null;
+    }
     jgRenderRoster();
   }
   { const wolfRecEl=document.getElementById('jg-wolf-rec');

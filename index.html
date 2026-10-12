@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>狼吞虎嚥</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/favicon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
@@ -688,7 +692,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-12-f</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-12-i</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="js/icons.js"></script>
@@ -705,6 +709,7 @@
 <script src="js/awards.js"></script>
 <script src="js/playdata-core.js"></script>
 <script src="js/main.js"></script>
+<script src="js/deal-sync.js"></script>
 <script type="module" src="js/firebase-init.js"></script>
 <!-- 連線房間：拆成 js/room/ 底下好幾個檔案，defer 載入，順序不能亂（見 js/room/core.js 開頭） -->
 <script defer src="js/room/core.js"></script>
@@ -717,6 +722,8 @@
 <script defer src="js/room/night-shell.js"></script>
 <script defer src="js/room/roles-special.js"></script>
 <script defer src="js/room/roles-batch1.js"></script>
+<script defer src="js/room/public-info.js"></script>
+<script defer src="js/room/deal.js"></script>
 <script defer src="js/room/cleanup.js"></script>
 <script defer src="js/room/entry.js"></script>
 <script type="module" src="js/voice.js"></script>

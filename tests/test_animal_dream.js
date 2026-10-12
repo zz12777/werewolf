@@ -140,6 +140,21 @@ async function run(){
   check('屠神清單包含新神職與占卜師／定序王子／詭術之境魔術師',
     ['bear','foxcub','pufferfish','whitecat','diviner','sequenceprince','trickmage'].every(r=>ev('jgAllGodsForWin()').includes(r)), true);
 
+  // ── 自訂角色選了熊：不是動物夢境，第一晚照常殺人、平民還是平民 ──
+  {
+    const cs={1:'wolf',2:'wolf',3:'seer',4:'witch',5:'bear',6:'villager',7:'villager',8:'villager'};
+    const cc={}; Object.values(cs).forEach(r=>{ cc[r]=(cc[r]||0)+1; });
+    window.__s=cs; window.__c=cc;
+    ev("jgBoardPreset='custom'; jgApplyDealtRoles(window.__s, window.__c, 8);");
+    check('自訂角色有熊：不算動物夢境', ev('jgIsAnimalDream()'), false);
+    check('自訂角色有熊：平民還是叫平民', ev('jgRoleDisplayName(jgFind(6))'), '平民');
+    ev("jgGoStep('wolf-wake')");
+    check('自訂角色有熊：第一夜狼人畫面有刀人欄位', !!window.document.getElementById('jg-wolf-rec'), true);
+    setVal('jg-wolf-rec', 6);
+    ev('jgSaveWolf()');
+    check('自訂角色有熊：第一夜照常殺人', String(ev('jgRecord.wolfKill')), '6');
+  }
+
   console.log(JSON.stringify(results, null, 2));
   const anyFail = results.some(r=>!r.ok);
   if(anyFail){ console.error('動物夢境測試有失敗！'); process.exit(1); }

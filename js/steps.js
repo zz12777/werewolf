@@ -327,6 +327,7 @@ function jgRenderStep(step){
       <div class="speech">「<em>被拍到的兩位為情侶，先不要睜眼。</em>」</div>
       <div class="info-warn" style="font-size:13px;">📋 法官需走一圈拍情侶（輕拍 ${n1}號、${n2}號 兩人示意），確認兩人都被拍到後再繼續</div>
       <div class="speech" style="margin-top:10px;">「<em>情侶請睜眼，互相確認彼此的身份，不能溝通，情侶請閉眼。</em>」</div>
+      ${(typeof jgDealLinked==='function'&&jgDealLinked())?'<div class="speech" style="margin-top:10px;">「<em>待會白天請各位玩家確認自己的畫面，確認自己是否為情侶之一，以及你的 Partner 是誰。</em>」</div><div class="info" style="font-size:12px;">發牌房：兩位情侶的手機已經收到「誰和誰是情侶」的提醒，只有他們自己看得到。</div>':''}
       <button class="primary" onclick="jgSaveLoversWake()">兩人已閉眼，下一步 →</button>
     `,'💘 情侶');
   }
@@ -1595,6 +1596,17 @@ function jgRenderStep(step){
     const success=!!jgRecord.blackmarketSuccess;
     const ly=success?jgLuckyOne:null;
     const giftLabel=ly?({seer:'預言家查驗',witch:'女巫毒藥',hunter:'獵人獵槍'}[ly.gift]||''):'';
+    // 發牌房：不用走一圈拍肩膀，幸運兒自己的手機會收到提醒；口白改成請大家白天看自己的畫面
+    // （交易成不成功都唸同一句，不洩漏結果）。
+    if(typeof jgDealLinked==='function'&&jgDealLinked()){
+      jgShowPg(`
+        <h2>幸運兒</h2>
+        <div class="speech" style="margin-top:10px;">「<em>待會白天請各位玩家確認自己的畫面，確認自己是否為幸運兒，以及獲得的技能是什麼。</em>」</div>
+        <div class="info" style="font-size:12px;">${success?'發牌房：'+ly.num+' 號的手機已經收到「你是幸運兒，你獲得的是'+giftLabel+'」，只有他自己看得到。':'發牌房：這次交易沒有產生幸運兒，照樣唸上面這句掩護。'}</div>
+        <button class="primary" onclick="jgGoStep('witch-wake')">下一步 →</button>
+      `,'幸運兒');
+      return;
+    }
     jgShowPg(`
       <h2>幸運兒</h2>
       <div class="speech" style="margin-top:10px;">「<em>被拍到肩膀的人，等一下聽到『幸運兒請睜眼』時要睜眼。</em>」</div>
@@ -2254,6 +2266,7 @@ function jgRenderStep(step){
       ${sheriffJustResolved?sheriffBannerHtml:'<div class="speech" style="font-size:16px;">「<em>天亮請睜眼。</em>」</div>'}
       ${sdMsg?'<div class="speech" style="font-size:16px;">「<em>'+sdMsg+'</em>」</div>':''}
       <div class="speech" style="font-size:16px;">「<em>${dawnMsg}</em>」</div>
+      ${typeof jgDealDayReminderHtml==='function'?jgDealDayReminderHtml('dawn'):''}
       ${animalDawnHtml}
       ${bloodmoonEndgameHtml}
       ${hunterShotHtml}
