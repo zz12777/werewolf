@@ -191,7 +191,6 @@ function jgRenderSheriffCandidates(){
       <button type="button" onclick="jgSheriffAudioPause()" title="暫停" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">${jgIcon('pause')}</button>
       <button type="button" onclick="jgSheriffAudioReplay()" title="重播" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">${jgIcon('replay')}</button>
     </span></div>
-    ${typeof jgDealDayReminderHtml==='function'?jgDealDayReminderHtml('sheriff'):''}
     <div class="info" style="font-size:12px;">（等候約 5 秒，讓想上警的玩家站起來，再點選以下號碼記錄候選人）</div>
     ${badgeBanner}
     <label>候選人（點選起立的號碼，可複選）</label>
@@ -517,7 +516,6 @@ function jgRenderSheriffDay2Resume(){
   jgShowPg(`
     <h2>警長競選・續選</h2>
     <div class="speech" style="font-size:16px;">「<em>天亮請睜眼。</em>」</div>
-    ${typeof jgDealDayReminderHtml==='function'?jgDealDayReminderHtml('sheriff'):''}
     <div class="info-warn" style="font-size:12px;margin-top:8px;">💥 雙爆吞警徽：昨天 ${jgSheriffFirstBlowNum} 號已先自爆（警徽保留），今天重新競選；過程中若再有狼人自爆，警徽才會真正流失。</div>
     <div class="speech" style="margin-top:8px;">「<em>要退水的玩家請坐下。</em>」</div>
     <div class="info" style="font-size:12px;">政見昨天已經發表過，今天不再重複發言，想退出競選的候選人直接坐下即可；昨晚的死訊要等這輪續選結束才會公布。</div>

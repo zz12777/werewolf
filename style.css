@@ -782,8 +782,9 @@ select{
 .deal-seat-grid .deal-seat{margin:0;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r-sm,10px);background:var(--bg2);}
 @media (min-width:720px){ .deal-seat-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
 
-/* 發牌房／連線房間的玩家名單：一列三人。 */
-.pi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px;}
+/* 發牌房／連線房間的玩家名單：手機一欄依序排下來，電腦一列三人。 */
+.pi-grid{display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px;}
+@media (min-width:720px){ .pi-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
 .pi-cell{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r-sm,10px);background:var(--bg2);min-width:0;}
 .pi-cell.pi-me{border-color:var(--accent);}
 .pi-cell.pi-dead{opacity:0.5;}
