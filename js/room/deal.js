@@ -3,8 +3,9 @@
 // js/room/deal.js
 // 發牌房：分配身分之後，玩家手機上的「遊戲資訊」畫面，以及房主（法官）端的同步。
 //   ・玩家：一開始先看一次自己的身分（按「記住了」收起來），之後畫面只顯示號碼與姓名名單、
-//     警長競選資訊（上警、退水、警上發言順序、警長）；自己的身分改成按右上角「確認自己身分」
-//     才看得到。上警的人有「退水」按鈕，按了法官那邊會自動退水。
+//     警長競選資訊（上警、發言順序、退水、票型、當選警長）、每天白天的投票票型；自己的身分改成
+//     按右上角「確認自己身分」才看得到。上警的人有「退水」按鈕，按了法官那邊會自動退水。
+//   ・遊戲結束：每個人的手機都切到全體身分。
 //   ・幸運兒、情侶：法官在法官助手按下確認後，只有本人的手機會跳出放大版提醒。
 //   ・房主：法官助手（js/deal-sync.js）把目前的公開資訊整理好，呼叫這裡的
 //     jgRoomDealPublish 寫進房間文件 publicInfo；私人提醒用 jgRoomDealSendPrivate 寫進
@@ -57,32 +58,39 @@ function jgRoomRenderDealMyRole(){
     root.innerHTML='<div class="info" style="text-align:center;margin-top:40px;">身分分配中，請稍候...</div>';
     return;
   }
+  const info=rd.publicInfo||null;
+  // 遊戲結束：每個人的手機都切到全體身分（跟法官結束畫面同一份）。
+  if(info&&info.gameOver){
+    root.innerHTML='<div class="nbanner"><h1>遊戲結束</h1></div>'+jgRoomFinalRosterHtml(info.gameOver.roster);
+    return;
+  }
   // 第一次：大字顯示自己的身分，按「記住了」之後收起來，之後只能從右上角按鈕看。
   if(mySeat!=null&&!jgRoomDealRoleSeen()){
     const role=jgRoomDealMySecret.role;
     const roleName=(typeof RNAME!=='undefined'&&RNAME[role])||role;
     root.innerHTML=`
       <div style="text-align:center;padding:50px 20px;">
-        <div style="font-size:72px;">${jgRoomRoleIconGuess(role)}</div>
+        <div style="font-size:72px;line-height:1;">${jgRoomRoleIconGuess(role)}</div>
         <div style="font-size:30px;font-weight:800;margin-top:16px;">${mySeat}號，你的身分是：${roleName}</div>
-        <div class="info" style="font-size:13px;margin-top:16px;">記住之後按下面的按鈕，畫面就不會再顯示你的身分；之後要看，請按右上角「確認自己身分」。</div>
         <button class="primary" style="margin-top:18px;" onclick="jgRoomDealMarkRoleSeen()">記住了，進入遊戲畫面</button>
       </div>`;
     return;
   }
-  const info=rd.publicInfo||null;
   const players=(info&&info.players&&info.players.length)?info.players
     :jgRoomDealSeatedPlayers().map(p=>({num:p.seatNum, name:p.name}));
   const sh=info&&info.sheriff;
   // 法官處理完（我已經不在候選人裡，或已經記成退水）就不再顯示「等待中」。
   if(jgRoomDealWithdrawPending&&(!sh||!sh.canWithdraw||!(sh.candidates||[]).map(Number).includes(mySeat))) jgRoomDealWithdrawPending=false;
   jgRoomAnnounceNewWithdrawals('deal_'+jgRoomCode, sh&&sh.withdrawn);
+  // 名單上的警長標籤跟著目前拿警徽的人走（警徽移交過就換人）。
+  const sheriffNow=sh?(sh.holder!=null?Number(sh.holder):(sh.elected!=null&&!sh.none?Number(sh.elected):null)):null;
   root.innerHTML=`
     <div class="nbanner"><h1>房間 ${jgRoomCode}</h1>
-      <p class="sub" style="text-align:center;margin-top:6px;">${mySeat!=null?'你是 '+mySeat+' 號。身分請按右上角「確認自己身分」':'你是房主，請在「法官の助手」分頁主持'}</p></div>
+      ${mySeat!=null?'':'<p class="sub" style="text-align:center;margin-top:6px;">你是房主，請在「法官の助手」分頁主持</p>'}</div>
     <div class="section-title" style="margin-top:14px;">玩家名單</div>
-    ${jgRoomNameGridHtml(players.map(p=>Object.assign({}, p, {sheriff:sh&&sh.elected&&Number(sh.elected)===Number(p.num)})), mySeat)}
+    ${jgRoomNameGridHtml(players.map(p=>Object.assign({}, p, {sheriff:sheriffNow!=null&&sheriffNow===Number(p.num)})), mySeat)}
     ${jgRoomSheriffInfoHtml(sh, mySeat, 'jgRoomDealWithdraw()', jgRoomDealWithdrawPending)}
+    ${jgRoomDayVotesHtml(info&&info.dayVotes)}
   `;
   // 私人提醒：沒看過的自動跳出來（一次一則，按「知道了」之後再看下一則）。
   const unseen=jgRoomDealMyNotices().find(n=>!jgRoomNoticeSeen(n.key, n.main));
@@ -92,7 +100,6 @@ function jgRoomRenderDealMyRole(){
 // 候選人按「退水」：寫進房間文件的請求清單，房主那邊的法官助手收到後自動退水。
 window.jgRoomDealWithdraw=async function(){
   if(jgMySeatNum==null) return;
-  if(!confirm(jgMySeatNum+'號 確定要退水嗎？')) return;
   jgRoomDealWithdrawPending=true;
   jgRoomRenderDealMyRole();
   try{

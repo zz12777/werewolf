@@ -796,5 +796,7 @@ select{
 .pi-num{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:var(--bg);border:1px solid var(--border);}
 .pi-name{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pi-tag{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:var(--bg);border:1px solid var(--border);}
+.pi-tag-sheriff{background:#f6c445;border-color:#e0aa1f;color:#4a3500;}
+.pi-votes{font-size:13.5px;line-height:1.8;padding:2px 0 6px 2px;}
 .pi-sheriff{margin-top:14px;line-height:1.9;font-size:14px;}
 .pi-muted{font-size:12px;color:var(--text2);margin-left:4px;}

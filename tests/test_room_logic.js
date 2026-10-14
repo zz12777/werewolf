@@ -88,7 +88,7 @@ function loadRoomLogicForGodView() {
     + 'jgRoomAdvanceToDayPhase,jgRoomJoinSheriff,jgRoomLockSheriffJoin,jgRoomRenderSheriffCampaign,jgRoomWolfConfirm,'
     + 'jgRoomAssignRoles,jgRoomThiefChoose,jgRoomThiefViewHtml,jgRoomNextNightStep,jgRoomStepPresent,jgRoomCupidPickFirst,jgRoomCupidConfirmPair,jgRoomDealAssignRoles,'
     + 'jgRoomCheckBloodmoonLastStand,jgRoomComputeWinCheck,jgRoomMaybeDeclareWin,jgRoomStartNextNight,jgRoomDemonhunterHunt,'
-    + 'jgRoomDealHostHandleRequests,jgRoomSheriffInfoHtml,jgRoomNameGridHtml,__setIsHost,'
+    + 'jgRoomDealHostHandleRequests,jgRoomSheriffInfoHtml,jgRoomNameGridHtml,jgRoomFinalRosterHtml,__setIsHost,'
     + 'jgRoomMaybeApplyBadgeSwallow,jgRoomWolfSelfBlowConfirm,jgRoomReallyAdvanceToDayPhase,'
     + 'jgRoomHunterPending,jgRoomHunterStatusAck,jgRoomAdvanceToDayPhase,'
     + 'jgRoomResolveDayVote,jgRoomCheckShootEligible,jgRoomPuppetCandidateSeats,jgRoomCheckAndSetPendingBadge,'
@@ -545,9 +545,14 @@ async function runBatch1RolesTest(){
     const sh={ candidates:[3,5], withdrawn:[8], confirmed:true, order:[5,8,3], start:5, dir:'順', canWithdraw:true };
     const h3=mod.jgRoomSheriffInfoHtml(sh, 3, 'jgRoomDealWithdraw()', false);
     check('警長資訊：候選人看到退水按鈕', h3.includes('>退水</button>'), true);
-    check('警長資訊：退水的人畫刪除線', h3.includes('<s>8</s>'), true);
+    check('警長資訊：退水的人不畫刪除線', h3.includes('<s>'), false);
+    check('警長資訊：退水排在發言順序之後', h3.indexOf('退水：')>h3.indexOf('警上發言順序'), true);
+    const hv=mod.jgRoomSheriffInfoHtml(Object.assign({}, sh, {votes:['警長票3：1、2'], elected:3}), 7, null, false);
+    check('警長資訊：有票型與當選警長', hv.includes('警長票3：1、2')&&hv.includes('當選警長：</b>3號'), true);
+    check('名單：警長用黃色標籤', mod.jgRoomNameGridHtml([{num:1,name:'A',sheriff:true}], null).includes('pi-tag-sheriff'), true);
     check('警長資訊：非候選人沒有退水按鈕', mod.jgRoomSheriffInfoHtml(sh, 7, 'jgRoomDealWithdraw()', false).includes('</button>'), false);
     check('警長資訊：PK 中不能退水', mod.jgRoomSheriffInfoHtml(Object.assign({}, sh, {pk:true}), 3, 'x()', false).includes('</button>'), false);
+    check('全體身分：死亡的人名字劃掉、顯示身分', (h=>h.includes('dead-nm')&&h.includes('狼人'))(mod.jgRoomFinalRosterHtml([{num:1,name:'A',alive:false,role:'狼人',badge:'bw'}])), true);
     check('名單：一格一人', (mod.jgRoomNameGridHtml([{num:1,name:'A'},{num:2,name:'B'},{num:3,name:'C'}], 2).match(/pi-cell/g)||[]).length, 3);
   }
 

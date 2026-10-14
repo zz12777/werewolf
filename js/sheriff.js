@@ -460,7 +460,6 @@ function jgRenderSheriffSpeech(){
 }
 function jgSheriffWithdraw(n){
   if(jgSheriffPkRound) return; // PK 回合中不可退水
-  if(!confirm(n+'號 確定要退水嗎？'))  return;
   jgSheriffCandidates=jgSheriffCandidates.filter(x=>x!==n);
   jgSheriffWithdrawn.push(n);
   jgSheriffLogLines.push('退水：'+n+'號');
@@ -525,7 +524,6 @@ function jgRenderSheriffDay2Resume(){
   `,'🎖️ 警長競選');
 }
 function jgSheriffDay2Withdraw(n){
-  if(!confirm(n+'號 確定要退水嗎？')) return;
   jgSheriffCandidates=jgSheriffCandidates.filter(x=>x!==n);
   jgSheriffWithdrawn.push(n);
   jgSheriffLogLines.push('退水：'+n+'號');
