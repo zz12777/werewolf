@@ -52,6 +52,10 @@ async function run(){
   check('警長競選畫面不唸提醒', window.document.getElementById('t-judge').textContent.includes('確認自己是否為情侶之一'), false);
   check('公布昨晚結果時唸提醒（情侶）', ev("jgDealDayReminderHtml()").includes('情侶之一'), true);
 
+  // 法官助手按退水不再跳確認視窗
+  ev("window.confirm=()=>false; jgSheriffWithdraw(3); window.confirm=()=>true;");
+  check('法官助手按退水不用確認就退', ev('jgSheriffWithdrawn.includes(3)'), true);
+  ev("jgSheriffCandidates.push(3); jgSheriffWithdrawn=jgSheriffWithdrawn.filter(x=>x!==3); jgSheriffLogLines=jgSheriffLogLines.filter(l=>l!=='退水：3號'); jgRenderSheriffSpeech(); jgDealSync();");
   // 8 號從手機退水
   check('手機退水被接受', ev('jgDealRemoteWithdraw(8)'), true);
   check('法官端候選人少了 8 號', ev('jgSheriffCandidates.slice().sort()'), [3,5]);
@@ -62,6 +66,21 @@ async function run(){
   // 進投票之後不能退水
   ev("jgGoStep('sheriff-vote')");
   check('投票階段不能退水', [pub().sheriff.canWithdraw, ev('jgDealRemoteWithdraw(3)')], [false, false]);
+
+  // 投票：票型與當選警長
+  ev("jgSheriffVoteTally={3:{1:true,2:true,4:true},5:{6:true}}; jgSaveSheriffVoteInner();");
+  check('警長票型同步（照文字紀錄寫法）', pub().sheriff.votes.slice(0,2), ['警長票3：1、2、4','警長票5：6']);
+  check('當選警長同步', pub().sheriff.elected, 3);
+  check('發牌房開局不送即時票型', ev('(function(){ let sent=false; const f=window.fetch; window.fetch=()=>{ sent=true; return Promise.resolve({}); }; jgLiveSyncPush(); window.fetch=f; return sent; })()'), false);
+  // 白天投票票型
+  ev("jgDayLog[1]=['票4：1,2,3','票7：5'];");
+  ev('jgDealSync()');
+  check('白天票型同步', pub().dayVotes, [{day:1, lines:['票4：1、2、3','票7：5']}]);
+  // 遊戲結束：全體身分
+  ev("jgFind(4).alive=false; jgShowWin({winner:'good',msg:'x',icon:''});");
+  check('遊戲結束同步全體身分', pub().gameOver&&pub().gameOver.roster.map(r=>[r.num,r.role,r.alive]).slice(0,4), [[1,'狼人',true],[2,'預言家',true],[3,'女巫',true],[4,'狼人',false]]);
+  ev("jgGoStep('discuss')");
+  check('回到遊戲流程就收回全體身分', pub().gameOver, null);
 
   // 本機開局：不再同步
   ev('window.__published=null; jgStart();');

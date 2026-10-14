@@ -348,7 +348,7 @@ window.jgRoomDealAssignRoles=async function(){
   const seated=jgRoomDealSeatedPlayers();
   const claimedSeats=seated.length;
   if(claimedSeats!==totalSeats){
-    alert('⚠️ 還有座位沒有人認領（'+claimedSeats+' / '+totalSeats+'），請等所有人都加入再分配身分。');
+    alert('還有座位沒有人認領（'+claimedSeats+' / '+totalSeats+'），請等所有人都加入再分配身分。');
     return;
   }
   if(!jgRoomComp){ alert('這個房間沒有記錄板子配置，無法分配身分（可能是用舊版連結建立的房間）。'); return; }
@@ -459,18 +459,9 @@ function jgRoomRenderDealLobby(){
 }
 // 分配完身分後玩家手機上的畫面（自己的身分、名單、警長競選資訊、私人提醒）在 js/room/deal.js。
 let jgRoomUnsubDealMyRole=null; // 發牌房「我的身分」即時監聽（避免用輪詢，減少延遲）
-// 粗略猜一個角色對應的 emoji（沒有的話用預設 🎴）——之後如果角色介紹資料裡本來就有
-// icon 欄位可以直接抓來用，這裡先用簡單對照表，涵蓋目前先做的板子＋常見角色。
-// 2026/09 補上殭屍板、詭術之境板、大灰狼占卜師板新增的角色，讓發牌功能可以正確顯示 icon。
+// 角色圖示：跟「角色與規則」頁同一套線條 SVG 圖示（js/icons.js），不用 emoji。
 function jgRoomRoleIconGuess(role){
-  const map={wolf:'🐺',wolfking:'👑',whitewolf:'🤍',wolfbeauty:'💋',evilknight:'🖤',gargoyle:'🗿',
-    bloodmoon:'🌑',mechanicalwolf:'🤖',bigmechwolf:'🤖',smallmechwolf:'🤖',nightmare:'😱',
-    wolfbrother_e:'👬',wolfbrother_y:'👬',wolfshaman:'🔮',mask:'🎭',bigbadwolf:'🐺',
-    villager:'🧑‍🌾',seer:'🔮',witch:'🧪',hunter:'🏹',guard:'🛡️',dreamcatcher:'😴',
-    knight:'⚔️',magician:'🪄',demonhunter:'🗡️',gravkeeper:'⚰️',medium:'👁️',blackmarket:'🕴️',
-    purewhitemaiden:'🕊️',dancer:'💃',littlegirl:'👧',hybrid:'🧬',cupid:'💘',fool:'🃏',
-    biggreywolf:'🐺',diviner:'🧿',zombie:'🧟',trickster:'🃏',trickmage:'🎩',sequenceprince:'🔢'};
-  return map[role]||'🎴';
+  return (typeof jgIcon==='function'&&(jgIcon(role)||jgIcon('people')))||'';
 }
 window.jgRoomRenderCreateDeal=function(comp, total, presetNames){
   const root=document.getElementById('jg-room-content');
@@ -604,7 +595,7 @@ window.jgRoomJoin=async function(codeRaw, name){
       });
     }
   }catch(e){
-    if(e&&e.message==='ROOM_FULL'){ alert('⚠️ 這個房間是 '+jgRoomTotal+' 人局，已經到齊了，無法加入。'); return; }
+    if(e&&e.message==='ROOM_FULL'){ alert('這個房間是 '+jgRoomTotal+' 人局，已經到齊了，無法加入。'); return; }
     alert('加入房間失敗，請檢查網路連線後再試一次。\n（錯誤訊息：'+(e&&e.message||e)+'）');
     return;
   }
@@ -913,7 +904,7 @@ async function jgRoomEnterLobby(code){
     // dissolved:true，偵測到就提醒一下、把自己踢回建立/加入畫面——用 jgRoomCode 是否還在
     // 判斷「我是不是已經離開了」，避免房主自己觸發解散後，這裡又重複跳一次提醒。
     if(jgRoomLatestRoomDoc&&jgRoomLatestRoomDoc.dissolved&&jgRoomCode){
-      alert('🗑️ 房主已經解散這個房間。');
+      alert('房主已經解散這個房間。');
       jgRoomLeave();
       return;
     }

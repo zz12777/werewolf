@@ -117,6 +117,8 @@ function jgBuildLiveVoteText(){
 // 同步失敗也不影響法官原本的操作，所以刻意不彈任何錯誤視窗打斷法官。
 function jgLiveSyncPush(){
   if(!JG_LIVE_SYNC_URL) return;
+  // 用手機發牌開局時，票型直接顯示在每個人的手機上（js/deal-sync.js），不再送到即時票型。
+  if(typeof jgDealLinked==='function'&&jgDealLinked()) return;
   if(!jgLiveSessionId) jgLiveSessionId=jgLiveMakeSessionId();
   const text=jgPublicRedact(jgBuildLiveVoteText());
   fetch(JG_LIVE_SYNC_URL,{
@@ -2279,6 +2281,7 @@ function jgBack(){
     }
     return;
   }
+  if(typeof jgDealClearGameOver==='function') jgDealClearGameOver();
   // Drop the step/state we're currently viewing.
   jgStepHistory.pop();
   jgStateHistory.pop();
@@ -2330,6 +2333,7 @@ function jgGoStep(step){
     jgSheriffTransferNextStep=step;
     step='sheriff-transfer';
   }
+  if(typeof jgDealClearGameOver==='function') jgDealClearGameOver(); // 還在繼續走流程，不是遊戲結束畫面
   // 風聲諜影板有自己固定的睜眼順序：夜晚各步驟存檔後原本會依一般板子的順序決定下一步，
   // 這裡統一改成照風聲諜影的順序表走（見 js/night.js jgWindspyRedirect）。
   if(jgIsWindspy()) step=jgWindspyRedirect(step);
@@ -2858,6 +2862,7 @@ function jgSetMvp(num){
 }
 function jgShowWin(res){
   jgLastWinResult=res;
+  if(typeof jgDealMarkGameOver==='function') jgDealMarkGameOver(); // 發牌房：玩家手機切到全體身分
   const isGood=res.winner==='good';
   const isThird=res.winner==='third';
   const winTitle=isThird?'第三方勝利！':(isGood?'好人勝利！':'狼人勝利！');

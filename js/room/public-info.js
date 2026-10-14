@@ -23,19 +23,20 @@ function jgRoomNameGridHtml(players, mySeat){
     const nm=p.name&&p.name!==(p.num+'號')?p.name:'';
     return '<div class="pi-cell'+(mine?' pi-me':'')+(p.dead?' pi-dead':'')+'">'
       +'<span class="pi-num">'+p.num+'</span>'
-      +'<span class="pi-name">'+jgRoomEsc(nm)+(p.sheriff?' <span class="pi-tag">警長</span>':'')+'</span>'
+      +'<span class="pi-name">'+jgRoomEsc(nm)+(p.sheriff?' <span class="pi-tag pi-tag-sheriff">警長</span>':'')+'</span>'
       +'</div>';
   }).join('');
   return '<div class="pi-grid">'+cells+'</div>';
 }
 
-// 警長競選資訊。sh 的欄位：
+// 警長競選資訊（依序：上警、警上發言順序、退水、票型、當選警長）。sh 的欄位：
 //   candidates   目前還在競選的號碼；withdrawn 已退水的號碼
 //   confirmed    法官已經按「候選人已確定」（還沒按之前顯示「法官登記中」）
-//   order        警上發言順序（號碼陣列，含已退水的人，退水的會畫刪除線）；start／dir 起點與方向
-//   pk           平票 PK 中（不能退水）；elected 警長號碼；none 本局無警長的說明
+//   order        警上發言順序（號碼陣列，含已退水的人）；start／dir 起點與方向
+//   pk           平票 PK 中（不能退水）；votes 票型（照文字紀錄的寫法，一行一筆）
+//   elected      當選警長；holder 目前拿著警徽的人（警徽移交過才會跟 elected 不同）；none 沒有警長的說明
 //   canWithdraw  現在可以退水（法官正在發言／退水階段）
-// withdrawJs：候選人按「退水」時要執行的 onclick 字串（帶入號碼）；pendingWithdraw：已送出、等法官處理。
+// withdrawJs：候選人按「退水」時要執行的 onclick 字串；pendingWithdraw：已送出、等法官處理。
 function jgRoomSheriffInfoHtml(sh, mySeat, withdrawJs, pendingWithdraw){
   if(!sh) return '';
   const cands=(sh.candidates||[]).map(Number), wd=(sh.withdrawn||[]).map(Number);
@@ -43,18 +44,19 @@ function jgRoomSheriffInfoHtml(sh, mySeat, withdrawJs, pendingWithdraw){
   const lines=[];
   if(cands.length||wd.length){
     const all=cands.concat(wd).sort((a,b)=>a-b);
-    lines.push('<div><b>上警：</b>'+all.map(n=>wd.includes(n)?'<s>'+n+'</s>':n).join('、')+'號'
+    lines.push('<div><b>上警：</b>'+all.join('、')+'號'
       +(sh.confirmed?'':'<span class="pi-muted">（法官登記中）</span>')+'</div>');
   }
-  if(wd.length) lines.push('<div><b>退水：</b>'+wd.join('、')+'號</div>');
   if(sh.order&&sh.order.length){
-    const ord=sh.order.map(Number).map(n=>wd.includes(n)?'<s>'+n+'</s>':String(n)).join(' → ');
     const dirLabel=sh.dir==='逆'?'逆時針':(sh.dir==='順'?'順時針':'');
-    lines.push('<div><b>'+(sh.pk?'PK 發言順序':'警上發言順序')+'：</b>'+ord
+    lines.push('<div><b>'+(sh.pk?'PK 發言順序':'警上發言順序')+'：</b>'+sh.order.map(Number).join(' → ')
       +(sh.start&&!sh.pk?'<span class="pi-muted">（從 '+sh.start+' 號開始'+(dirLabel?'，'+dirLabel:'')+'）</span>':'')+'</div>');
   }
-  if(sh.elected) lines.push('<div><b>警長：</b>'+sh.elected+'號</div>');
-  else if(sh.none) lines.push('<div><b>警長：</b>'+jgRoomEsc(sh.none)+'</div>');
+  if(wd.length) lines.push('<div><b>退水：</b>'+wd.join('、')+'號</div>');
+  if(sh.votes&&sh.votes.length) lines.push('<div><b>票型</b></div><div class="pi-votes">'+sh.votes.map(l=>'<div>'+jgRoomEsc(l)+'</div>').join('')+'</div>');
+  if(sh.elected) lines.push('<div><b>當選警長：</b>'+sh.elected+'號</div>');
+  if(sh.holder&&sh.elected&&Number(sh.holder)!==Number(sh.elected)) lines.push('<div><b>警徽移交：</b>'+sh.holder+'號</div>');
+  if(sh.none) lines.push('<div><b>警長：</b>'+jgRoomEsc(sh.none)+'</div>');
   let btn='';
   const me=mySeat!=null?Number(mySeat):null;
   if(me!=null&&cands.includes(me)&&withdrawJs){
@@ -62,6 +64,18 @@ function jgRoomSheriffInfoHtml(sh, mySeat, withdrawJs, pendingWithdraw){
     else if(sh.canWithdraw&&!sh.pk) btn='<button class="danger" style="margin-top:10px;" onclick="'+withdrawJs.replace(/"/g,'&quot;')+'">退水</button>';
   }
   return '<div class="card pi-sheriff"><div class="section-title" style="margin-top:0;">警長競選</div>'+lines.join('')+btn+'</div>';
+}
+// 每天白天的放逐投票票型：dayVotes = [{day, lines:[...]}]，依天數排下來。
+function jgRoomDayVotesHtml(dayVotes){
+  return (dayVotes||[]).map(d=>'<div class="card pi-sheriff"><div class="section-title" style="margin-top:0;">第 '+d.day+' 天白天投票</div>'
+    +'<div class="pi-votes">'+(d.lines||[]).map(l=>'<div>'+jgRoomEsc(l)+'</div>').join('')+'</div></div>').join('');
+}
+// 遊戲結束的全體身分（跟法官結束畫面同一種排法）：roster = [{num, name, alive, role, badge}]
+function jgRoomFinalRosterHtml(roster){
+  const rows=(roster||[]).map(p=>'<div class="row"><div class="av '+(p.alive?'av-vil':'av-dead')+'">'+p.num+'</div>'
+    +'<div class="nm'+(p.alive?'':' dead-nm')+'">'+jgRoomEsc(p.name)+'</div>'
+    +'<span class="badge '+jgRoomEsc(p.badge||'')+'">'+jgRoomEsc(p.role)+'</span></div>').join('');
+  return '<div class="section-title">全體身分</div><div class="card">'+rows+'</div>';
 }
 
 // ── 私人提醒：只在本人手機上跳出的放大版提醒。key 用來記住「這則已經看過了」（同一則內容

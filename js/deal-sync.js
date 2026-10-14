@@ -36,13 +36,46 @@ function jgDealSheriffInfo(){
     else if(jgSheriffCampaignHappened||jgSheriffSelfDestruct) none='本局無警長';
     else none='沒有人上警，本局無警長';
   }
+  // 票型：照文字紀錄的寫法（警長票X：投給X的人），PK 前面加一行分隔。
+  const votes=[];
+  let pkMarked=false;
+  jgSheriffLogLines.forEach(l=>{
+    let m;
+    if((m=l.match(/^(PK)?警長票(\d+)：(.+)$/))){
+      if(m[1]&&!pkMarked){ votes.push('－ PK －'); pkMarked=true; }
+      votes.push('警長票'+m[2]+'：'+m[3].replace(/,/g,'、'));
+    } else if((m=l.match(/^(PK)?棄票：(.+)$/))) votes.push('棄票：'+m[2].replace(/,/g,'、'));
+    else if(/^平票：/.test(l)) votes.push(l.replace(/（PK 發言順序：.*）$/,''));
+    else if(/^PK 後再度平票|^全數 0 票/.test(l)) votes.push(l);
+  });
+  const elected=jgSheriffElectedNum?Number(jgSheriffElectedNum):null;
+  const holder=jgSheriffElectionDone&&jgSheriff?Number(jgSheriff):null;
   return { candidates:cands, withdrawn, confirmed:!!confirmed, order, start:jgSheriffSpeakStart, dir:jgSheriffSpeakDir,
-    pk:!!jgSheriffPkRound, elected:jgSheriffElectionDone&&jgSheriff?Number(jgSheriff):null, none, canWithdraw:jgDealCanWithdrawNow() };
+    pk:!!jgSheriffPkRound, votes, elected, holder, none, canWithdraw:jgDealCanWithdrawNow() };
 }
+// 每天白天的放逐投票票型（公開版，跟即時票型同一份過濾規則）。
+function jgDealDayVotes(){
+  return Object.keys(jgDayLog).map(Number).sort((a,b)=>a-b).map(n=>{
+    const text=jgPublicRedact(jgFormatDayVoteBlock(n));
+    return text?{day:n, lines:text.split('\n').filter(Boolean).map(l=>l.replace(/,/g,'、'))}:null;
+  }).filter(Boolean);
+}
+// 遊戲結束時給玩家手機看的「全體身分」（跟法官結束畫面同一份：號碼、名字、身分、死亡）。
+let jgDealGameOver=null;
+function jgDealMarkGameOver(){
+  jgDealGameOver={ roster: jgPlayers.map(p=>{
+    const role=p.role||'villager';
+    return { num:p.num, name:p.name, alive:!!p.alive, role:jgRoleDisplayName(p), badge:(typeof BADGE!=='undefined'&&BADGE[role])||'' };
+  }) };
+  jgDealSync();
+}
+function jgDealClearGameOver(){ jgDealGameOver=null; }
 function jgDealBuildPublicInfo(){
   return {
     players: jgPlayers.map(p=>({num:p.num, name:p.name})),
-    sheriff: jgDealSheriffInfo()
+    sheriff: jgDealSheriffInfo(),
+    dayVotes: jgDealDayVotes(),
+    gameOver: jgDealGameOver
   };
 }
 // 把目前的公開資訊同步到發牌房（內容沒變就不會真的寫入，見 jgRoomDealPublish）。
