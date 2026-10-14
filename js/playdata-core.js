@@ -404,6 +404,15 @@ function pdPlayerTrendSectionHtml(name){
 // STATS + RENDER（可重複呼叫：第一次用內建歷史資料render，
 // 抓到雲端新場次之後會再呼叫一次重新render）
 // ═══════════════════════════════════════════
+// 排行榜排名門檻：遊玩場數要達到全站總場次的 1/10。法官助手選名單也用同一個門檻
+// （jgRosterNameGroups），兩邊「常客」的定義才會一致。
+function pdRankThresholdGames(){ return GAMES.length/10; }
+// 每位玩家的遊玩場數（依全部場次，含雲端抓下來的場次）。
+function pdPlayerGameCounts(){
+  const counts={};
+  GAMES.forEach(g=>(g.players||[]).forEach(pl=>{ if(pl&&pl.name) counts[pl.name]=(counts[pl.name]||0)+1; }));
+  return counts;
+}
 function pdRebuildAndRender(){
   GAMES.sort((a,b)=> a.date===b.date? 0 : (a.date<b.date?-1:1));
 
@@ -510,7 +519,7 @@ function pdRebuildAndRender(){
   });
   // 場次太少（少於全站總場次的十分之一）的玩家，勝率參考價值不高（一兩場全勝/全輸就能把
   // 排名衝到很前面），所以還是照樣顯示勝率跟對局紀錄，但不排進正式名次，統一放到排行榜最下面。
-  const pdRankThreshold=GAMES.length/10;
+  const pdRankThreshold=pdRankThresholdGames();
   const pdRankedList=playerList.filter(p=>p.totalGames>=pdRankThreshold);
   const pdUnrankedList=playerList.filter(p=>p.totalGames<pdRankThreshold);
 
