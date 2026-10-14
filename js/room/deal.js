@@ -100,6 +100,8 @@ function jgRoomRenderDealMyRole(){
 // 候選人按「退水」：寫進房間文件的請求清單，房主那邊的法官助手收到後自動退水。
 window.jgRoomDealWithdraw=async function(){
   if(jgMySeatNum==null) return;
+  // 玩家自己按退水要再確認一次（避免誤觸）；法官助手那邊幫人按退水則不用確認。
+  if(!confirm(jgMySeatNum+'號 確定要退水嗎？')) return;
   jgRoomDealWithdrawPending=true;
   jgRoomRenderDealMyRole();
   try{
