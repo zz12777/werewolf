@@ -78,10 +78,43 @@ function jgDealBuildPublicInfo(){
     gameOver: jgDealGameOver
   };
 }
+// 只有特定玩家看得到的名單標籤：
+//   情侶：邱比特板是兩位情侶跟邱比特本人；愛神板是當晚的兩位情侶跟愛神本人。
+//   感染者：被感染的玩家跟殭屍本人，看得到所有被感染的人。
+function jgDealPrivateTagsMap(){
+  const map={};
+  jgPlayers.forEach(p=>{ map[p.num]={lovers:[], infected:[]}; });
+  if(jgLovers&&jgLovers.length===2&&jgComp&&(jgComp.cupid>0||jgComp.eros>0)){
+    const lovers=jgLovers.map(Number);
+    const viewers=lovers.slice();
+    jgPlayers.filter(p=>p.role==='cupid'||p.role==='eros').forEach(p=>viewers.push(p.num));
+    viewers.forEach(n=>{ if(map[n]) map[n].lovers=lovers; });
+  }
+  const infected=jgPlayers.filter(p=>p.infected).map(p=>p.num);
+  if(infected.length){
+    const viewers=infected.concat(jgPlayers.filter(p=>p.role==='zombie').map(p=>p.num));
+    viewers.forEach(n=>{ if(map[n]) map[n].infected=infected; });
+  }
+  return map;
+}
+let jgDealPrivateTagsSent={};
+function jgDealSyncPrivateTags(){
+  if(typeof window.jgRoomDealSetPrivateTags!=='function') return;
+  const map=jgDealPrivateTagsMap();
+  Object.keys(map).forEach(n=>{
+    const json=JSON.stringify(map[n]);
+    const key=window.jgDealLinkedCode+'_'+n;
+    if(jgDealPrivateTagsSent[key]===json) return; // 沒變就不寫
+    if(jgDealPrivateTagsSent[key]===undefined&&json===JSON.stringify({lovers:[], infected:[]})){ jgDealPrivateTagsSent[key]=json; return; }
+    jgDealPrivateTagsSent[key]=json;
+    window.jgRoomDealSetPrivateTags(Number(n), map[n]);
+  });
+}
 // 把目前的公開資訊同步到發牌房（內容沒變就不會真的寫入，見 jgRoomDealPublish）。
 function jgDealSync(){
   if(!jgDealLinked()) return;
   try{ window.jgRoomDealPublish(jgDealBuildPublicInfo()); }catch(e){ console.warn(e); }
+  try{ jgDealSyncPrivateTags(); }catch(e){ console.warn(e); }
 }
 // 私人提醒：只有那個座位的玩家手機會跳出來。
 function jgDealSendPrivate(num, notice){

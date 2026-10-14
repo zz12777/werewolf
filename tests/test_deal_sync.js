@@ -23,7 +23,8 @@ async function run(){
   ev(`window.__published=null; window.__private=[];
     window.jgRoomDealLinkActive=function(code){ return code==='ROOM1'; };
     window.jgRoomDealPublish=function(info){ window.__published=JSON.parse(JSON.stringify(info)); };
-    window.jgRoomDealSendPrivate=function(num, notice){ window.__private.push({num:Number(num), key:notice.key, main:notice.main}); };`);
+    window.jgRoomDealSendPrivate=function(num, notice){ window.__private.push({num:Number(num), key:notice.key, main:notice.main}); };
+    window.__tags={}; window.jgRoomDealSetPrivateTags=function(num, tags){ window.__tags[num]=JSON.parse(JSON.stringify(tags)); };`);
   const pub = ()=>ev('window.__published');
 
   // 8 人：狼 1、4；預言家 2；女巫 3；獵人 5；邱比特 6；平民 7、8
@@ -40,6 +41,8 @@ async function run(){
   ev('jgSaveCupid()');
   check('情侶私人提醒只送給 2、7 號', ev('window.__private.filter(x=>x.key==="lovers").map(x=>x.num).sort()'), [2,7]);
   check('情侶提醒內容', ev('window.__private.find(x=>x.key==="lovers").main'), '2號、7號是情侶');
+  check('情侶標籤：兩位情侶跟邱比特看得到', [2,6,7].map(n=>ev('window.__tags['+n+']&&window.__tags['+n+'].lovers')), [[2,7],[2,7],[2,7]]);
+  check('情侶標籤：其他人看不到', ev('window.__tags[3]||null'), null);
   check('情侶睜眼口白多一句看畫面', window.document.getElementById('t-judge').textContent.includes('確認自己是否為情侶之一'), true);
 
   // 天亮：警長競選
@@ -81,6 +84,11 @@ async function run(){
   check('遊戲結束同步全體身分', pub().gameOver&&pub().gameOver.roster.map(r=>[r.num,r.role,r.alive]).slice(0,4), [[1,'狼人',true],[2,'預言家',true],[3,'女巫',true],[4,'狼人',false]]);
   ev("jgGoStep('discuss')");
   check('回到遊戲流程就收回全體身分', pub().gameOver, null);
+
+  // 殭屍板：被感染的人跟殭屍看得到感染者標籤
+  ev("window.__tags={}; jgPlayers.find(p=>p.num===8).role='zombie'; jgFind(2).infected=true; jgFind(5).infected=true; jgDealSync();");
+  check('感染者標籤：被感染的人與殭屍看得到', [2,5,8].map(n=>ev('window.__tags['+n+']&&window.__tags['+n+'].infected')), [[2,5],[2,5],[2,5]]);
+  check('感染者標籤：其他人看不到', ev('window.__tags[1]||null'), null);
 
   // 本機開局：不再同步
   ev('window.__published=null; jgStart();');

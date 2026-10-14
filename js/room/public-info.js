@@ -16,20 +16,45 @@ function jgRoomEsc(s){
   return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// players: [{num, name, dead?, sheriff?}]；mySeat：自己的號碼（標成「你」）。
+// 名單上的標籤：固定順序、每種一欄，同一種標籤上下對齊；只有名單裡有人用到的欄位才會出現。
+const JG_ROOM_TAG_TYPES=[
+  {key:'sheriff', label:'警長'},
+  {key:'candidate', label:'上警'},
+  {key:'withdrawn', label:'退水'},
+  {key:'lover', label:'情侶'},
+  {key:'infected', label:'感染者'}
+];
+// players: [{num, name, dead?, tags:{sheriff, candidate, withdrawn, lover, infected}}]；mySeat：自己的號碼（外框標色）。
 function jgRoomNameGridHtml(players, mySeat){
-  const cells=(players||[]).slice().sort((a,b)=>a.num-b.num).map(p=>{
+  const list=(players||[]).slice().sort((a,b)=>a.num-b.num);
+  const used=JG_ROOM_TAG_TYPES.filter(t=>list.some(p=>p.tags&&p.tags[t.key]));
+  const cells=list.map(p=>{
     const mine=mySeat!=null&&Number(p.num)===Number(mySeat);
     const nm=p.name&&p.name!==(p.num+'號')?p.name:'';
+    const slots=used.map(t=>'<span class="pi-slot pi-slot-'+t.key+'">'
+      +((p.tags&&p.tags[t.key])?'<span class="pi-tag pi-tag-'+t.key+'">'+(t.key==='sheriff'&&typeof jgIcon==='function'?jgIcon('sheriff'):'')+t.label+'</span>':'')
+      +'</span>').join('');
     return '<div class="pi-cell'+(mine?' pi-me':'')+(p.dead?' pi-dead':'')+'">'
       +'<span class="pi-num">'+p.num+'</span>'
-      +'<span class="pi-name">'+jgRoomEsc(nm)+(p.sheriff?' <span class="pi-tag pi-tag-sheriff">警長</span>':'')+'</span>'
+      +'<span class="pi-name">'+jgRoomEsc(nm)+'</span>'+slots
       +'</div>';
   }).join('');
   return '<div class="pi-grid">'+cells+'</div>';
 }
+// 把警長資訊、私人標籤（情侶、感染者）合成名單要用的 tags。
+function jgRoomNameTags(num, sh, priv){
+  const n=Number(num), has=(arr)=>(arr||[]).map(Number).includes(n);
+  const holder=sh?(sh.holder!=null?Number(sh.holder):(sh.elected!=null&&!sh.none?Number(sh.elected):null)):null;
+  return {
+    sheriff: holder===n,
+    candidate: !!sh&&(has(sh.candidates)||has(sh.withdrawn)),
+    withdrawn: !!sh&&has(sh.withdrawn),
+    lover: !!priv&&has(priv.lovers),
+    infected: !!priv&&has(priv.infected)
+  };
+}
 
-// 警長競選資訊（依序：上警、警上發言順序、退水、票型、當選警長）。sh 的欄位：
+// 警長競選資訊（依序：警上發言順序、票型、當選警長；上警、退水改標在玩家名單上）。sh 的欄位：
 //   candidates   目前還在競選的號碼；withdrawn 已退水的號碼
 //   confirmed    法官已經按「候選人已確定」（還沒按之前顯示「法官登記中」）
 //   order        警上發言順序（號碼陣列，含已退水的人）；start／dir 起點與方向
@@ -42,17 +67,13 @@ function jgRoomSheriffInfoHtml(sh, mySeat, withdrawJs, pendingWithdraw){
   const cands=(sh.candidates||[]).map(Number), wd=(sh.withdrawn||[]).map(Number);
   if(!cands.length&&!wd.length&&!sh.elected&&!sh.none) return '';
   const lines=[];
-  if(cands.length||wd.length){
-    const all=cands.concat(wd).sort((a,b)=>a-b);
-    lines.push('<div><b>上警：</b>'+all.join('、')+'號'
-      +(sh.confirmed?'':'<span class="pi-muted">（法官登記中）</span>')+'</div>');
-  }
+  // 誰上警、誰退水改成直接標在玩家名單上（見 jgRoomNameTags），這裡只提示還在登記中。
+  if((cands.length||wd.length)&&!sh.confirmed) lines.push('<div class="pi-muted" style="margin-left:0;">法官登記上警中…</div>');
   if(sh.order&&sh.order.length){
     const dirLabel=sh.dir==='逆'?'逆時針':(sh.dir==='順'?'順時針':'');
     lines.push('<div><b>'+(sh.pk?'PK 發言順序':'警上發言順序')+'：</b>'+sh.order.map(Number).join(' → ')
       +(sh.start&&!sh.pk?'<span class="pi-muted">（從 '+sh.start+' 號開始'+(dirLabel?'，'+dirLabel:'')+'）</span>':'')+'</div>');
   }
-  if(wd.length) lines.push('<div><b>退水：</b>'+wd.join('、')+'號</div>');
   if(sh.votes&&sh.votes.length) lines.push('<div><b>票型</b></div><div class="pi-votes">'+sh.votes.map(l=>'<div>'+jgRoomEsc(l)+'</div>').join('')+'</div>');
   if(sh.elected) lines.push('<div><b>當選警長：</b>'+sh.elected+'號</div>');
   if(sh.holder&&sh.elected&&Number(sh.holder)!==Number(sh.elected)) lines.push('<div><b>警徽移交：</b>'+sh.holder+'號</div>');
@@ -63,6 +84,7 @@ function jgRoomSheriffInfoHtml(sh, mySeat, withdrawJs, pendingWithdraw){
     if(pendingWithdraw) btn='<div class="info" style="font-size:12px;margin-top:8px;">已送出退水，等法官處理…</div>';
     else if(sh.canWithdraw&&!sh.pk) btn='<button class="danger" style="margin-top:10px;" onclick="'+withdrawJs.replace(/"/g,'&quot;')+'">退水</button>';
   }
+  if(!lines.length&&!btn) return '';
   return '<div class="card pi-sheriff"><div class="section-title" style="margin-top:0;">警長競選</div>'+lines.join('')+btn+'</div>';
 }
 // 每天白天的放逐投票票型：dayVotes = [{day, lines:[...]}]，依天數排下來。

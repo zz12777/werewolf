@@ -82,13 +82,13 @@ function jgRoomRenderDealMyRole(){
   // 法官處理完（我已經不在候選人裡，或已經記成退水）就不再顯示「等待中」。
   if(jgRoomDealWithdrawPending&&(!sh||!sh.canWithdraw||!(sh.candidates||[]).map(Number).includes(mySeat))) jgRoomDealWithdrawPending=false;
   jgRoomAnnounceNewWithdrawals('deal_'+jgRoomCode, sh&&sh.withdrawn);
-  // 名單上的警長標籤跟著目前拿警徽的人走（警徽移交過就換人）。
-  const sheriffNow=sh?(sh.holder!=null?Number(sh.holder):(sh.elected!=null&&!sh.none?Number(sh.elected):null)):null;
+  // 只有自己看得到的標籤（情侶、感染者），由法官助手寫在自己的 secrets 文件裡。
+  const priv=(jgRoomDealMySecret&&jgRoomDealMySecret.privateTags)||null;
   root.innerHTML=`
     <div class="nbanner"><h1>房間 ${jgRoomCode}</h1>
       ${mySeat!=null?'':'<p class="sub" style="text-align:center;margin-top:6px;">你是房主，請在「法官の助手」分頁主持</p>'}</div>
     <div class="section-title" style="margin-top:14px;">玩家名單</div>
-    ${jgRoomNameGridHtml(players.map(p=>Object.assign({}, p, {sheriff:sheriffNow!=null&&sheriffNow===Number(p.num)})), mySeat)}
+    ${jgRoomNameGridHtml(players.map(p=>Object.assign({}, p, {tags:jgRoomNameTags(p.num, sh, priv)})), mySeat)}
     ${jgRoomSheriffInfoHtml(sh, mySeat, 'jgRoomDealWithdraw()', jgRoomDealWithdrawPending)}
     ${jgRoomDayVotesHtml(info&&info.dayVotes)}
   `;
@@ -140,6 +140,14 @@ window.jgRoomDealSendPrivate=async function(seatNum, notice){
   try{
     await setDoc(doc(window.jgFirebaseDb,'rooms',jgRoomCode,'secrets',p.uid),{ privateNotices:entry },{ merge:true });
   }catch(e){ console.warn('私人提醒送出失敗', e); }
+};
+// 只有特定玩家看得到的名單標籤（情侶、感染者）：tags = {lovers:[號碼], infected:[號碼]}。
+window.jgRoomDealSetPrivateTags=async function(seatNum, tags){
+  const p=jgRoomLatestPlayers.find(x=>Number(x.seatNum)===Number(seatNum));
+  if(!p) return;
+  try{
+    await setDoc(doc(window.jgFirebaseDb,'rooms',jgRoomCode,'secrets',p.uid),{ privateTags:{ lovers:tags.lovers||[], infected:tags.infected||[] } },{ merge:true });
+  }catch(e){ console.warn('私人標籤同步失敗', e); }
 };
 // 房間文件有新的退水請求：交給法官助手處理（js/deal-sync.js 的 jgDealRemoteWithdraw），
 // 處理完把請求清掉。只有房主做這件事。
