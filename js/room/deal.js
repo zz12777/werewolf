@@ -5,7 +5,6 @@
 //   ・玩家：一開始先看一次自己的身分（按「記住了」收起來），之後畫面只顯示號碼與姓名名單、
 //     警長競選資訊（上警、發言順序、退水、票型、當選警長）、每天白天的投票票型；自己的身分改成
 //     按右上角「確認自己身分」才看得到。上警的人有「退水」按鈕，按了法官那邊會自動退水。
-//   ・遊戲結束：每個人的手機都切到全體身分。
 //   ・幸運兒、情侶：法官在法官助手按下確認後，只有本人的手機會跳出放大版提醒。
 //   ・房主：法官助手（js/deal-sync.js）把目前的公開資訊整理好，呼叫這裡的
 //     jgRoomDealPublish 寫進房間文件 publicInfo；私人提醒用 jgRoomDealSendPrivate 寫進
@@ -59,11 +58,6 @@ function jgRoomRenderDealMyRole(){
     return;
   }
   const info=rd.publicInfo||null;
-  // 遊戲結束：每個人的手機都切到全體身分（跟法官結束畫面同一份）。
-  if(info&&info.gameOver){
-    root.innerHTML='<div class="nbanner"><h1>遊戲結束</h1></div>'+jgRoomFinalRosterHtml(info.gameOver.roster);
-    return;
-  }
   // 第一次：大字顯示自己的身分，按「記住了」之後收起來，之後只能從右上角按鈕看。
   if(mySeat!=null&&!jgRoomDealRoleSeen()){
     const role=jgRoomDealMySecret.role;

@@ -79,11 +79,10 @@ async function run(){
   ev("jgDayLog[1]=['票4：1,2,3','票7：5'];");
   ev('jgDealSync()');
   check('白天票型同步', pub().dayVotes, [{day:1, lines:['票4：1、2、3','票7：5']}]);
-  // 遊戲結束：全體身分
-  ev("jgFind(4).alive=false; jgShowWin({winner:'good',msg:'x',icon:''});");
-  check('遊戲結束同步全體身分', pub().gameOver&&pub().gameOver.roster.map(r=>[r.num,r.role,r.alive]).slice(0,4), [[1,'狼人',true],[2,'預言家',true],[3,'女巫',true],[4,'狼人',false]]);
+  // 遊戲結束：不把全體身分送到玩家手機（法官還可能按上一步繼續主持）
+  ev("jgShowWin({winner:'good',msg:'x',icon:''});");
+  check('遊戲結束不送全體身分', pub().gameOver===undefined, true);
   ev("jgGoStep('discuss')");
-  check('回到遊戲流程就收回全體身分', pub().gameOver, null);
 
   // 殭屍板：被感染的人跟殭屍看得到感染者標籤
   ev("window.__tags={}; jgPlayers.find(p=>p.num===8).role='zombie'; jgFind(2).infected=true; jgFind(5).infected=true; jgDealSync();");

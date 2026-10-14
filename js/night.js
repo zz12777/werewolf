@@ -2537,8 +2537,6 @@ const GOD_CHAIN=[
   {step:'whitecat-wake',    role:'whitecat',     check:(n,c)=>n===1&&c.whitecat>0},
   {step:'medium-wake',      role:'medium',       check:(n,c)=>(n===1?(c.medium>0):jgHasRoleAny(['medium']))||jgThiefBuriedActiveTonight('medium')},
   {step:'hunter-wake',      role:'hunter',       check:(n,c)=>(n===1?(c.hunter>0):jgHasRoleAny(['hunter']))||jgMechWolfHunterActive()||jgThiefBuriedActiveTonight('hunter')},
-  // 愛神板：獵人之後，黑狼王睜眼確認自己的技能使用狀況（比讚／比倒讚）。
-  {step:'wolfking-wake',    role:'wolfking',     check:(n,c)=>c.eros>0&&c.wolfking>0},
   {step:'knight-wake',      role:'knight',       check:(n,c)=>(n===1&&c.knight>0)||jgThiefBuriedActiveTonight('knight')},
   {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>(n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter']))||jgThiefBuriedActiveTonight('demonhunter')},
   {step:'fool-wake',        role:'fool',         check:(n,c)=>(n===1&&c.fool>0)||jgThiefBuriedActiveTonight('fool')},

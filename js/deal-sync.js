@@ -60,22 +60,11 @@ function jgDealDayVotes(){
     return text?{day:n, lines:text.split('\n').filter(Boolean).map(l=>l.replace(/,/g,'、'))}:null;
   }).filter(Boolean);
 }
-// 遊戲結束時給玩家手機看的「全體身分」（跟法官結束畫面同一份：號碼、名字、身分、死亡）。
-let jgDealGameOver=null;
-function jgDealMarkGameOver(){
-  jgDealGameOver={ roster: jgPlayers.map(p=>{
-    const role=p.role||'villager';
-    return { num:p.num, name:p.name, alive:!!p.alive, role:jgRoleDisplayName(p), badge:(typeof BADGE!=='undefined'&&BADGE[role])||'' };
-  }) };
-  jgDealSync();
-}
-function jgDealClearGameOver(){ jgDealGameOver=null; }
 function jgDealBuildPublicInfo(){
   return {
     players: jgPlayers.map(p=>({num:p.num, name:p.name})),
     sheriff: jgDealSheriffInfo(),
-    dayVotes: jgDealDayVotes(),
-    gameOver: jgDealGameOver
+    dayVotes: jgDealDayVotes()
   };
 }
 // 只有特定玩家看得到的名單標籤：

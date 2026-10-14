@@ -48,13 +48,14 @@ async function run(){
   check('情侶之後輪到狼人', ev('jgCurrentStep'), 'wolf-wake');
   check('文字紀錄記下愛神連線', ev('jgFormatNightLog()').some(l=>l==='愛 2-9'), true);
 
-  // 整晚順序：狼人 → 女巫 → 預言家 → 獵人 → 狼王
+  // 整晚順序：狼人 → 女巫 → 預言家 → 獵人（狼王不另外睜眼比手勢）
   check('女巫、預言家之後輪到獵人', ev("jgNextGodStep(null)"), 'hunter-wake');
-  check('獵人之後輪到狼王', ev("jgNextGodStep('hunter-wake')"), 'wolfking-wake');
-  check('狼王之後天亮', ev("jgNextGodStep('wolfking-wake')"), 'dawn');
-  // 情侶的另一半今晚被刀：狼王（情侶 1、9 的情況）手勢比倒讚
-  ev("jgLovers=['1','9']; jgRecord.wolfKill='9';");
-  check('情侶另一半今晚被刀，狼王比倒讚', ev("jgBuildHunterStatusHtml(jgFind(1))").includes('👎'), true);
+  check('獵人之後天亮', ev("jgNextGodStep('hunter-wake')"), 'dawn');
+  // 獵人是情侶、另一半今晚被刀：天亮會殉情不能開槍，手勢比倒讚
+  ev("jgLovers=['7','9']; jgRecord.wolfKill='9';");
+  check('情侶另一半今晚被刀，獵人比倒讚', ev("jgBuildHunterStatusHtml(jgFind(7))").includes('👎'), true);
+  ev("jgRecord.wolfKill='3';");
+  check('另一半沒事，獵人照常比讚', ev("jgBuildHunterStatusHtml(jgFind(7))").includes('👍'), true);
   ev("jgLovers=['2','9']; jgRecord.wolfKill=null;");
   // 狼刀 9（情侶之一）→ 天亮 2 號殉情
   setVal('jg-wolf-rec', 9);

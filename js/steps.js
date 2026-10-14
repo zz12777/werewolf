@@ -1291,16 +1291,6 @@ function jgRenderStep(step){
       <button class="primary" onclick="jgSaveWitch()">已紀錄，下一步 →</button>
     `,'🧪 女巫');
   }
-  else if(step==='wolfking-wake'){
-    const wkP=jgPlayers.find(p=>p.role==='wolfking');
-    jgShowPg(`
-      <h2>狼王睜眼</h2>
-      <div class="speech">「<em>狼王請睜眼。</em>」</div>
-      ${wkP?jgBuildHunterStatusHtml(wkP):'<div class="info" style="font-size:12px;">（還不知道黑狼王是幾號：照樣唸完流程）</div>'}
-      <div class="speech" style="margin-top:12px;">「<em>狼王請閉眼。</em>」</div>
-      <button class="primary" onclick="jgGoStep(jgNextGodStep('wolfking-wake'))">已紀錄，下一步 →</button>
-    `,'狼王');
-  }
   else if(step==='hunter-wake'){
     const isFirst=jgIsFirstNight();
     const hunterP=jgPlayers.find(p=>p.role==='hunter');

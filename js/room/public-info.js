@@ -92,13 +92,6 @@ function jgRoomDayVotesHtml(dayVotes){
   return (dayVotes||[]).map(d=>'<div class="card pi-sheriff"><div class="section-title" style="margin-top:0;">第 '+d.day+' 天白天投票</div>'
     +'<div class="pi-votes">'+(d.lines||[]).map(l=>'<div>'+jgRoomEsc(l)+'</div>').join('')+'</div></div>').join('');
 }
-// 遊戲結束的全體身分（跟法官結束畫面同一種排法）：roster = [{num, name, alive, role, badge}]
-function jgRoomFinalRosterHtml(roster){
-  const rows=(roster||[]).map(p=>'<div class="row"><div class="av '+(p.alive?'av-vil':'av-dead')+'">'+p.num+'</div>'
-    +'<div class="nm'+(p.alive?'':' dead-nm')+'">'+jgRoomEsc(p.name)+'</div>'
-    +'<span class="badge '+jgRoomEsc(p.badge||'')+'">'+jgRoomEsc(p.role)+'</span></div>').join('');
-  return '<div class="section-title">全體身分</div><div class="card">'+rows+'</div>';
-}
 
 // ── 私人提醒：只在本人手機上跳出的放大版提醒。key 用來記住「這則已經看過了」（同一則內容
 //    按過「知道了」之後就不會再自動跳出）；內容改了（例如法官重新指定）會再跳一次。──
