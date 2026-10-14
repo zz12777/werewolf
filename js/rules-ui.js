@@ -33,6 +33,7 @@ const ALL_ROLES = {
     +'<strong>'+jgIcon('tri-down')+' 不需追刀：</strong>傻瓜被投票出局時直接淘汰、不能留在場上，沒有翻牌自證的機制；狼隊「屠神」不需要特地在夜裡殺死傻瓜。<br>'
     +'<strong>對夜晚攻擊沒有免疫：</strong>不論哪種規則，被狼刀或女巫毒死時都跟一般玩家一樣立即死亡；翻牌留場的效果只對「要追刀」規則下的「白天被投票出局」有效。'},
   hybrid:   {icon:jgIcon('hybrid'), name:'混血兒', team:'good', teamLabel:'好人陣營', desc:'<strong>選擇支持對象：</strong>第一晚睜眼選擇一位玩家作為支持對象（不能選自己），此後不再有夜間動作。<br><strong>勝利條件：</strong>與支持對象的勝利陣營相同，但混血兒自己不會被告知對方是好人還是狼人，需自行從發言判斷。<br><strong>對外表現：</strong>被預言家查驗永遠顯示為好人（金水）；在人數統計與「屠民」判定上視為一般平民——狼隊若要屠民，仍必須刀死混血兒，就算他其實支持狼隊也一樣。<br><strong>風聲諜影板：</strong>被覺醒石像鬼轉化會失敗，勝利條件始終跟隨混的對象，但混血兒知道自己有被轉化；這個板子沒有平民，混血兒不算神職，狼隊屠神即獲勝。'},
+  eros:     {icon:jgIcon('eros'), name:'愛神', team:'good', teamLabel:'神職', desc:'<strong>每晚連情侶：</strong>愛神每晚都最先睜眼，配對兩名玩家成為情侶。情侶會在愛神閉眼後睜眼確認彼此身份，但不能溝通，也不會知道對方的角色。<br><strong>殉情：</strong>情侶任何一方以任何方式死亡，另一方立刻殉情；殉情者若是獵人或狼王，不能發動技能。<br><strong>愛神出局：</strong>愛神在夜裡被殺，當晚連的情侶在隔天白天仍然有效，之後就不再有情侶。<br><strong>再連一對：</strong>情侶被淘汰後，只要遊戲還沒結束、愛神也還在場，愛神仍可以連下一對情侶。<br><strong>重複連線：</strong>可以重複連同一位玩家，也可以重複連同一對情侶。<br><strong>陣營：</strong>愛神屬於好人陣營（神職）；情侶不會因為一好一狼就變成第三方，勝負照一般規則判定。<br><span style="color:var(--seer);font-size:12px;">愛神板角色</span>'},
   cupid:    {icon:jgIcon('cupid'), name:'邱比特', team:'good', teamLabel:'特殊', desc:'<strong>第一夜指定情侶：</strong>整局唯一的一次行動——第一晚睜眼指定兩名玩家（可以鏈自己）成為情侶，隨後這兩人睜眼互相確認彼此身份（但不知道誰是邱比特、也不知道對方陣營）。<br><strong>查驗：</strong>被預言家查驗永遠顯示為好人（金水）。<br><strong>人人鏈：</strong>兩人都是好人，邱比特勝利條件與好人相同。<br><strong>狼狼鏈：</strong>兩人都是狼人，邱比特勝利條件與狼人相同——但邱比特永遠不會帶狼刀、不參與狼人殺人決策，好人陣營要獲勝，除了原本的條件，也必須連邱比特一起淘汰。<br><strong>人狼鏈：</strong>一人好人一人狼人時，邱比特與這對情侶獨立成為第三方陣營，邱比特本人也永遠是第三方一員。第三方需屠光除自己以外的所有玩家才算獲勝；若第三方存活人數「多於」場上其餘存活人數，直接判定第三方獲勝（例如第三方三人都在場，需要 3:2 才算獲勝；打平，例如 3:3，遊戲尚未結束）。狼人與好人陣營除了原本各自的勝利條件，也都必須連同第三方（含邱比特）一起淘汰才算獲勝。<br><strong>殉情：</strong>情侶其中一人死亡（不論死因），另一人立刻跟著殉情死亡，殉情者原本的技能不會發動（例如殉情者是獵人也無法開槍）。<br><strong>狼刀一致：</strong>此板子狼隊當晚討論後刀型必須一致，若刀型不一致則當晚強制變成平安夜（建議討論時間約20秒）。'},
   thief:    {icon:jgIcon('thief'), name:'盜賊', team:'good', teamLabel:'特殊', desc:'<strong>整局第一個睜眼：</strong>比邱比特、夢魘還早，是全場第一個行動的角色。遊戲開始前，會多準備兩張額外的身分牌（例如12人局準備14張牌），這兩張牌不發給任何玩家，只保留給盜賊在第一夜選擇。<br><strong>選擇身分：</strong>法官在盜賊睜眼時，把手上另外準備的兩張候選身分告訴系統，用「大字報」的方式攤開讓盜賊看到這兩個角色，盜賊選一個成為自己最終真正的身分（另一張則直接「埋」掉，整局都不會有人是這個身分）。<br><strong>強制選狼：</strong>兩張候選身分中如果有狼人陣營的角色，盜賊「一定要」選擇狼人遊玩——這也讓盜賊多了一個資訊：場上「沒有」出現另一張候選卡代表的那個身分。正常設置下不會出現「兩張候選都是狼人」的情況。<br><strong>選完之後：</strong>盜賊立刻變成所選的身分，從這一夜開始完全依照新身分的規則遊玩（若變成狼人，之後與狼隊一起睜眼殺人；若變成神職，之後在該神職的步驟行動），原本的「盜賊」身分只在選擇之前短暫存在。'},
   // Good - gods
@@ -74,7 +75,7 @@ const ALL_ROLES = {
 
 const WOLF_ROLES = ['wolf','wolfking','whitewolf','wolfbeauty','evilknight','gargoyle','awgargoyle','bloodmoon','mechanicalwolf','nightmare','wolfbrother_e','wolfbrother_y','wolfshaman','mask','bigbadwolf','bigmechwolf','smallmechwolf','biggreywolf','trickster'];
 const VIL_ROLES  = ['villager','hybrid'];
-const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer','littlegirl','diviner','trickmage','sequenceprince','bear','foxcub','pufferfish','whitecat'];
+const GOD_ROLES  = ['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','fool','purewhitemaiden','dancer','littlegirl','diviner','trickmage','sequenceprince','bear','foxcub','pufferfish','whitecat','eros'];
 const SPECIAL_ROLES = ['sheriff','luckyone','cupid','thief','zombie'];
 
 // 單身分限定的「板子」預設：每個板子固定包含一組常見搭配的特殊角色（狼隊或神職），
@@ -113,6 +114,10 @@ const JG_BOARD_PRESETS = {
       12:{awgargoyle:2, mechanicalwolf:1, seer:1, medium:1, bear:1, witch:1, hunter:1, pufferfish:1, dreamcatcher:1, whitecat:1, hybrid:1},
       10:{awgargoyle:2, seer:1, medium:1, bear:1, witch:1, hunter:1, pufferfish:1, dreamcatcher:1, whitecat:1}
     }},
+  // 愛神：每晚最先睜眼連一對情侶（情侶只到下一晚為止），愛神死後隔天白天過完就不再有情侶。
+  // 跟邱比特不同，情侶一好一狼也不會變成第三方。
+  eros_board:{label:'愛神', fixed:{wolfking:1, eros:1, seer:1, witch:1, hunter:1},
+    defaultByN:{12:{wolfking:1, wolf:3, seer:1, witch:1, hunter:1, eros:1, villager:4}}},
   animal_dream:{label:'動物夢境', fixed:{wolfbeauty:1, bear:1, foxcub:1, pufferfish:1}, extraGods:['whitecat'], villagerLabel:'羊駝（平民）',
     defaultByN:{
       12:{wolf:3, wolfbeauty:1, villager:4, bear:1, foxcub:1, pufferfish:1, whitecat:1},
@@ -217,7 +222,7 @@ const ROLE_DESC_SHEET_CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1v
 // 跟 Alt+Enter 換行。區塊代號要對照 index.html 裡標了 data-ov="..." 屬性的區塊，可以用
 // 瀏覽器「檢查元素」找到某段文字對應的代號，或參考下面清單：
 //   board-cupid／board-biggreywolf-diviner／board-zombie／board-trickery／
-//   board-wolfshaman-purewhitemaiden／board-mechwolf／board-neighbor-puppet／board-animal-dream／
+//   board-wolfshaman-purewhitemaiden／board-mechwolf／board-neighbor-puppet／board-animal-dream／board-windspy／board-eros／
 //   wincond-wolf／wincond-good／
 //   wincond-cupid／wincond-zombie／voting-rules／sheriff-badge-rules
 // 發布成 CSV 後，把網址貼進下面 CONTENT_BLOCKS_SHEET_CSV_URL 的單引號中間即可，

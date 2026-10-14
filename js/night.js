@@ -69,6 +69,14 @@ function jgBuildHunterStatusHtml(p){
     (jgRecord.mechwolf2Poison_bigmechwolf&&pnum.toString()===jgRecord.mechwolf2Poison_bigmechwolf.toString())||
     (jgRecord.mechwolf2Poison_smallmechwolf&&pnum.toString()===jgRecord.mechwolf2Poison_smallmechwolf.toString());
   const alreadyDead=!p.alive&&!byWolf&&!byPoison;
+  // 情侶：另一半今晚會被刀死或毒死，自己天亮會殉情，殉情不能開槍，手勢要比倒讚。
+  if(!alreadyDead&&!byWolf&&!byPoison&&jgLovers&&jgLovers.length===2&&jgLovers.map(String).includes(String(pnum))){
+    const partner=jgFind(jgLovers.map(String).find(n=>n!==String(pnum)));
+    if(partner&&partner.alive&&jgDiesTonightByKillOrPoison(partner.num)){
+      return '<div class="info-warn">情侶另一半今晚出局，天亮會殉情，技能不會發動</div>'
+        +'<div class="speech">「<em>你的技能使用狀況是 👎</em>」</div>';
+    }
+  }
   if(alreadyDead){
     return '<div class="info-warn">已出局，仍需走完流程避免洩露身分</div>'
       +'<div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
@@ -79,6 +87,14 @@ function jgBuildHunterStatusHtml(p){
     return '<div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
   }
   return '<div class="speech">「<em>你的技能使用狀況是 👍</em>」</div>';
+}
+// 這一晚會不會被狼刀（沒被守／救）或被毒死（含機械狼學到的毒）。
+function jgDiesTonightByKillOrPoison(num){
+  const s=String(num);
+  const saved=(jgRecord.guardTarget&&String(jgRecord.guardTarget)===s)||(jgRecord.mechWolfGuardTarget&&String(jgRecord.mechWolfGuardTarget)===s)||jgRecord.witchSave;
+  const byWolf=!!(jgRecord.wolfKill&&String(jgRecord.wolfKill)===s&&!saved);
+  const byPoison=['witchPoison','mechWolfPoison','mechwolf2Poison_bigmechwolf','mechwolf2Poison_smallmechwolf'].some(k=>jgRecord[k]&&String(jgRecord[k])===s);
+  return byWolf||byPoison;
 }
 // 第一晚獵人號碼還沒點選時，jgPlayers 裡還找不到這個角色，jgBuildHunterStatusHtml(undefined)
 // 只會回傳空字串；點選號碼的當下即時用這個號碼組出「你的技能使用狀況是」台詞，讓法官第一晚
@@ -1212,6 +1228,27 @@ function jgSaveLoversWake(){
   jgGoStep(jgNightStartNext());
 }
 
+// 愛神：每晚連一對情侶（可以連自己、可以重複連同一人或同一對）。愛神已出局時這一步只是
+// 掩護，不再有情侶（jgLovers 在每晚開始時已經清掉，見 night-start）。
+function jgSaveEros(){
+  if(!jgSaveGodId('eros')) return;
+  const erP=jgPlayers.find(p=>p.role==='eros');
+  if(erP&&erP.alive){
+    const v1=(document.getElementById('jg-eros-target1')||{}).value?.trim()||'';
+    const v2=(document.getElementById('jg-eros-target2')||{}).value?.trim()||'';
+    if(!v1||!v2){ alert('⚠️ 愛神每晚都要連兩名玩家成為情侶！'); return; }
+    if(v1===v2){ alert('⚠️ 請選擇兩位「不同」的玩家作為情侶！'); return; }
+    jgLovers=[v1,v2];
+  } else {
+    jgLovers=null;
+  }
+  jgRecord.erosDone=true;
+  jgGoStep('eros-lovers-wake');
+}
+function jgSaveErosLoversWake(){
+  jgGoStep(jgNightStartNext());
+}
+
 // 兩名情侶目前分別是「人」還是「狼」陣營，用來判斷這對情侶＋邱比特要如何影響勝負：
 // 'good'＝人人鏈（都不是狼）、'wolf'＝狼狼鏈（都是狼）、'third'＝人狼鏈（一人一狼，獨立第三方）。
 // 情侶其中一人已找不到玩家資料（理論上不該發生）時回傳 null，視同沒有配對。
@@ -2236,6 +2273,8 @@ function jgNightStartNext(){
   if((jgNight===1 && jgComp.cupid>0 && !jgCupidChosen) || jgThiefBuriedActiveTonight('cupid')){
     return 'cupid-wake';
   }
+  // 愛神板：愛神每晚最先睜眼連一對情侶，接著情侶睜眼（愛神出局後一樣走完流程當掩護）。
+  if(jgComp.eros>0 && !jgRecord.erosDone) return 'eros-wake';
   // 動物夢境板：子狐每晚第一個睜眼（第一夜只確認身分）。
   const hasFoxcub=(jgNight===1?(jgComp.foxcub>0):jgHasRoleAny(['foxcub']));
   if(hasFoxcub) return 'foxcub-wake';
@@ -2498,6 +2537,8 @@ const GOD_CHAIN=[
   {step:'whitecat-wake',    role:'whitecat',     check:(n,c)=>n===1&&c.whitecat>0},
   {step:'medium-wake',      role:'medium',       check:(n,c)=>(n===1?(c.medium>0):jgHasRoleAny(['medium']))||jgThiefBuriedActiveTonight('medium')},
   {step:'hunter-wake',      role:'hunter',       check:(n,c)=>(n===1?(c.hunter>0):jgHasRoleAny(['hunter']))||jgMechWolfHunterActive()||jgThiefBuriedActiveTonight('hunter')},
+  // 愛神板：獵人之後，黑狼王睜眼確認自己的技能使用狀況（比讚／比倒讚）。
+  {step:'wolfking-wake',    role:'wolfking',     check:(n,c)=>c.eros>0&&c.wolfking>0},
   {step:'knight-wake',      role:'knight',       check:(n,c)=>(n===1&&c.knight>0)||jgThiefBuriedActiveTonight('knight')},
   {step:'demonhunter-wake', role:'demonhunter',  check:(n,c)=>(n===1?(c.demonhunter>0):jgHasRoleAny(['demonhunter']))||jgThiefBuriedActiveTonight('demonhunter')},
   {step:'fool-wake',        role:'fool',         check:(n,c)=>(n===1&&c.fool>0)||jgThiefBuriedActiveTonight('fool')},
