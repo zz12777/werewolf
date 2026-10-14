@@ -49,8 +49,8 @@ async function run(){
   ev("jgSaveSheriffCandidates(); jgGoStep('sheriff-speech-order'); jgSheriffSpeakStart=5; jgSheriffSpeakDir='順'; jgConfirmSheriffSpeechOrder();");
   check('發言順序同步', pub().sheriff.order, [5,8,3]);
   check('政見發表時可以退水', pub().sheriff.canWithdraw, true);
-  check('第一天先競選警長：在競選畫面唸提醒（情侶）', ev("jgDealDayReminderHtml('sheriff')").includes('情侶之一'), true);
-  check('天亮畫面不重複唸', ev("jgDealDayReminderHtml('dawn')"), '');
+  check('警長競選畫面不唸提醒', window.document.getElementById('t-judge').textContent.includes('確認自己是否為情侶之一'), false);
+  check('公布昨晚結果時唸提醒（情侶）', ev("jgDealDayReminderHtml()").includes('情侶之一'), true);
 
   // 8 號從手機退水
   check('手機退水被接受', ev('jgDealRemoteWithdraw(8)'), true);
@@ -80,9 +80,9 @@ async function run(){
   check('幸運兒口白：請大家白天看畫面', t.includes('確認自己是否為幸運兒'), true);
   check('發牌房不用拍肩膀', t.includes('輕拍'), false);
   ev("jgGoStep('dawn')");
-  check('白天再唸一次（第一天先競選警長，在競選畫面唸）', window.document.getElementById('t-judge').textContent.includes('確認自己是否為幸運兒'), true);
-  ev("jgSheriffEnabled=false; jgSheriffCandidatesAsked=false; jgGoStep('dawn')");
-  check('沒有警長競選：天亮畫面唸', window.document.getElementById('t-judge').textContent.includes('確認自己是否為幸運兒'), true);
+  check('第一天先競選警長：競選畫面不唸', window.document.getElementById('t-judge').textContent.includes('確認自己是否為幸運兒'), false);
+  ev("jgSheriffEnabled=false; jgGoStep('dawn')");
+  check('公布昨晚結果時唸', window.document.getElementById('t-judge').textContent.includes('確認自己是否為幸運兒'), true);
   // 交易到狼（失敗）也照樣唸，不洩漏結果
   ev("window.__private=[]; window.jgDealLinkedCode='ROOM1'; jgApplyDealtRoles(window.__s, window.__c, 7); jgGoStep('blackmarket-wake')");
   setVal('jg-bm-target', 4); setVal('jg-bm-skill', 'seer');

@@ -2266,7 +2266,7 @@ function jgRenderStep(step){
       ${sheriffJustResolved?sheriffBannerHtml:'<div class="speech" style="font-size:16px;">「<em>天亮請睜眼。</em>」</div>'}
       ${sdMsg?'<div class="speech" style="font-size:16px;">「<em>'+sdMsg+'</em>」</div>':''}
       <div class="speech" style="font-size:16px;">「<em>${dawnMsg}</em>」</div>
-      ${typeof jgDealDayReminderHtml==='function'?jgDealDayReminderHtml('dawn'):''}
+      ${typeof jgDealDayReminderHtml==='function'?jgDealDayReminderHtml():''}
       ${animalDawnHtml}
       ${bloodmoonEndgameHtml}
       ${hunterShotHtml}

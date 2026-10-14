@@ -86,15 +86,10 @@ window.jgDealRemoteWithdraw=function(n){
   return true;
 };
 
-// 發牌房的天亮口白：交易／連情侶的那一晚，提醒大家看自己的手機（不管交易成不成功都唸，
-// 才不會洩漏結果）。
-// where：'dawn'（天亮公布死訊畫面）或 'sheriff'（第一天先跑的警長競選畫面）。白天第一個畫面
-// 是警長競選的話，就在那邊唸，天亮畫面不再重複唸一次。
-function jgDealDayReminderHtml(where){
+// 發牌房的天亮口白：交易／連情侶的那一晚，公布昨晚結果時提醒大家看自己的手機（不管交易
+// 成不成功都唸，才不會洩漏結果）。第一天有警長競選的話，公布昨晚結果是在競選結束之後。
+function jgDealDayReminderHtml(){
   if(!jgDealLinked()) return '';
-  const sheriffFirst=(jgNight===1&&jgSheriffEnabled&&jgSheriffCandidatesAsked)
-    ||(jgNight===2&&jgSheriffPostponedToDay2&&jgSheriffDay2CandidatesAsked);
-  if(where!=='sheriff'&&sheriffFirst) return '';
   const lines=[];
   if(jgBlackMarketTradeNight!=null&&jgBlackMarketTradeNight===jgNight)
     lines.push('請各位玩家確認自己的畫面，確認自己是否為幸運兒，以及獲得的技能是什麼。');

@@ -1233,18 +1233,40 @@ function jgRosterAssignName(name){
     return;
   }
   jgPlayerNames[jgRosterActiveSlot]=name;
+  jgRosterSearch='';
   jgRosterAdvanceSlot();
   jgRenderRosterSetupRows();
 }
 function jgRosterAssignManual(){
   const inp=document.getElementById('jg-roster-manual-input');
   if(!inp) return;
-  const name=inp.value.trim();
+  let name=inp.value.trim();
   if(!name){ alert('⚠️ 請先輸入姓名'); return; }
+  // 輸入框同時是搜尋：打的字剛好篩出一個名字就直接用那個名字；篩出好幾個時先確認是不是
+  // 真的要新增一個新名字（避免只打了一個字就被當成新名字加進名單）。
+  const {regular, more}=jgRosterNameGroups();
+  const known=regular.concat(more);
+  if(!known.includes(name)){
+    const hits=jgRosterVisibleNames(known, name);
+    if(hits.length===1) name=hits[0];
+    else if(hits.length>1&&!confirm('名單裡有 '+hits.length+' 個名字包含「'+name+'」，可以直接點選。\n確定要新增「'+name+'」這個新名字嗎？')) return;
+  }
+  const takenAt=jgRosterFindNameSlot(name);
+  if(takenAt&&takenAt!==jgRosterActiveSlot){ alert('⚠️ 「'+name+'」已經是 '+takenAt+' 號了，不能同時對應兩個號碼。'); return; }
   jgPlayerNames[jgRosterActiveSlot]=name;
   jgAddNameToPool(name);
+  jgUnhideName(name);
+  jgRosterSearch='';
   jgRosterAdvanceSlot();
   jgRenderRosterSetupRows();
+}
+// 清單上要顯示的名字：已經填進「其他」座位的不顯示；有打字就只留包含這些字的名字。
+function jgRosterVisibleNames(list, q){
+  return list.filter(nm=>{
+    const takenAt=jgRosterFindNameSlot(nm);
+    if(takenAt&&takenAt!==jgRosterActiveSlot) return false;
+    return !q||nm.includes(q);
+  });
 }
 function jgRosterClearSlot(i){
   delete jgPlayerNames[i];
@@ -1265,8 +1287,43 @@ function jgRemoveNameFromPool(name){
   const idx=pool.indexOf(name);
   if(idx>=0) pool.splice(idx,1);
   try{ localStorage.setItem(JG_NAME_POOL_STORAGE_KEY, JSON.stringify(pool)); }catch(e){}
+  // 遊玩紀錄裡有的名字也會自動出現在名單上，所以另外記一份「不要顯示」清單。
+  const hidden=jgGetHiddenNames();
+  if(!hidden.includes(name)){ hidden.push(name); try{ localStorage.setItem(JG_NAME_HIDDEN_STORAGE_KEY, JSON.stringify(hidden)); }catch(e){} }
   jgRenderRosterSetupRows();
 }
+const JG_NAME_HIDDEN_STORAGE_KEY='jgNameHidden';
+let jgNameHiddenCache=null;
+function jgGetHiddenNames(){
+  if(jgNameHiddenCache) return jgNameHiddenCache;
+  try{ const arr=JSON.parse(localStorage.getItem(JG_NAME_HIDDEN_STORAGE_KEY)||'[]'); jgNameHiddenCache=Array.isArray(arr)?arr:[]; }
+  catch(e){ jgNameHiddenCache=[]; }
+  return jgNameHiddenCache;
+}
+function jgUnhideName(name){
+  const hidden=jgGetHiddenNames();
+  const i=hidden.indexOf(name);
+  if(i>=0){ hidden.splice(i,1); try{ localStorage.setItem(JG_NAME_HIDDEN_STORAGE_KEY, JSON.stringify(hidden)); }catch(e){} }
+}
+// 選名單用的分組：常用名單＋遊玩紀錄裡出現過的名字（扣掉被移除的）。
+// 遊玩場數達到排行榜門檻的放在「常客」，依場數由高到低排；其餘收進「更多名字」，也依場數排。
+function jgRosterNameGroups(){
+  const counts=(typeof pdPlayerGameCounts==='function')?pdPlayerGameCounts():{};
+  const threshold=(typeof pdRankThresholdGames==='function')?pdRankThresholdGames():Infinity;
+  const hidden=new Set(jgGetHiddenNames());
+  const all=[];
+  jgGetNamePool().concat(Object.keys(counts)).forEach(nm=>{ if(nm&&!hidden.has(nm)&&!all.includes(nm)) all.push(nm); });
+  const byCount=(a,b)=>((counts[b]||0)-(counts[a]||0))||(all.indexOf(a)-all.indexOf(b));
+  const regular=all.filter(nm=>(counts[nm]||0)>0&&(counts[nm]||0)>=threshold).sort(byCount);
+  const more=all.filter(nm=>!regular.includes(nm)).sort(byCount);
+  return {regular, more, counts};
+}
+let jgRosterMoreOpen=false;   // 「更多名字」有沒有展開
+let jgRosterEditNames=false;  // 編輯名單模式（名字上才會出現移除用的 ✕）
+let jgRosterSearch='';        // 下面輸入框目前打的字（同時當搜尋）
+function jgRosterToggleMore(){ jgRosterMoreOpen=!jgRosterMoreOpen; jgRenderRosterPool(); }
+function jgRosterToggleEdit(){ jgRosterEditNames=!jgRosterEditNames; jgRenderRosterPool(); }
+function jgRosterSearchInput(v){ jgRosterSearch=(v||'').trim(); jgRenderRosterPool(); }
 function jgRenderRosterSetupRows(){
   const box=document.getElementById('jg-roster-setup-rows');
   if(!box) return;
@@ -1288,30 +1345,45 @@ function jgRenderRosterSetupRows(){
   }
   slotsHtml+='</div>';
 
-  // 常用玩家按鈕區——同一個名字已經對應到「別的」號碼時，按鈕直接鎖住不能按（不是只有
-  // 提示文字），要換人的話得先把那個號碼清空；每個按鈕右上角有個小 ✕，是「從常用名單永久
-  // 移除」用的（例如當初打錯字），跟清空座位格子是兩件事，不要搞混。
-  let poolHtml='<div class="info" style="margin:14px 0 8px;font-size:13px;">目前設定：<strong>'+jgRosterActiveSlot+' 號</strong>，點下面的名字，或直接手動輸入</div>';
-  const pool=jgGetNamePool();
-  poolHtml+='<div class="rname-pool-grid">';
-  poolHtml+=pool.map(nm=>{
-    const takenAt=jgRosterFindNameSlot(nm);
-    const lockedElsewhere=takenAt&&takenAt!==jgRosterActiveSlot;
-    const safe=nm.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    return '<button type="button" class="rname-pool-btn'+(lockedElsewhere?' dup':'')+'"'
-      +(lockedElsewhere?' disabled':'')+' onclick="jgRosterAssignName(\''+safe+'\')">'
-      +'<span class="rname-pool-x" onclick="event.stopPropagation();jgRemoveNameFromPool(\''+safe+'\')" title="從常用名單移除">✕</span>'
-      +nm+(takenAt?'<span class="rname-tag">'+takenAt+'號</span>':'')+'</button>';
-  }).join('');
-  poolHtml+='</div>';
-
-  // 手動輸入（找不到人的時候用；確定後會自動加入上面的常用名單，下次也能直接點）
+  // 名字區另外放一個容器（jgRenderRosterPool 只重畫這一塊），打字搜尋時輸入框才不會被重畫、
+  // 游標不會跳掉。
+  let poolHtml='<div class="info" style="margin:14px 0 8px;font-size:13px;">目前設定：<strong>'+jgRosterActiveSlot+' 號</strong>，點下面的名字，或在最下面輸入框搜尋／輸入新名字</div>'
+    +'<div id="jg-roster-pool"></div>';
   poolHtml+='<div style="display:flex;gap:8px;margin-top:10px;align-items:stretch;">'
-    +'<input type="text" id="jg-roster-manual-input" placeholder="不在名單裡？手動輸入姓名" style="flex:1;margin:0;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();jgRosterAssignManual();}">'
+    +'<input type="text" id="jg-roster-manual-input" placeholder="搜尋，或輸入名單裡沒有的新名字" style="flex:1;margin:0;" value="'+jgRosterSearch.replace(/"/g,'&quot;')+'" oninput="jgRosterSearchInput(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();jgRosterAssignManual();}">'
     +'<button type="button" class="primary" style="width:auto;flex:0 0 auto;margin:0;padding:0 20px;" onclick="jgRosterAssignManual()">確定</button>'
     +'</div>';
-
   box.innerHTML=slotsHtml+poolHtml;
+  jgRenderRosterPool();
+}
+// 名字按鈕區：常客（達排行榜門檻，依場數排）在上面，其餘收進「更多名字」；已經填進其他座位的
+// 名字不顯示。有打字搜尋時兩區都會篩選，「更多名字」裡有符合的也會自動打開。
+function jgRenderRosterPool(){
+  const wrap=document.getElementById('jg-roster-pool');
+  if(!wrap) return;
+  const {regular, more, counts}=jgRosterNameGroups();
+  const q=jgRosterSearch;
+  const showRegular=jgRosterVisibleNames(regular, q);
+  const showMore=jgRosterVisibleNames(more, q);
+  const btn=nm=>{
+    const safe=nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    const here=jgRosterFindNameSlot(nm)===jgRosterActiveSlot;
+    const n=counts[nm]||0;
+    return '<button type="button" class="rname-pool-btn'+(here?' here':'')+'" onclick="'+(jgRosterEditNames?'jgRemoveNameFromPool':'jgRosterAssignName')+'(\''+safe+'\')">'
+      +(jgRosterEditNames?'<span class="rname-pool-x">'+jgIcon('x')+'</span>':'')
+      +nm+(n?'<span class="rname-count">'+n+'</span>':'')+'</button>';
+  };
+  const moreOpen=jgRosterMoreOpen||(!!q&&showMore.length>0);
+  let html='';
+  if(jgRosterEditNames) html+='<div class="info-warn" style="font-size:12px;margin-bottom:8px;">編輯名單中：點名字會把它從名單移除（不影響已經填進座位的姓名）。</div>';
+  html+=showRegular.length?'<div class="rname-pool-grid">'+showRegular.map(btn).join('')+'</div>'
+    :'<div class="info" style="font-size:12px;">'+(q?'常客裡沒有符合的名字':'目前沒有達到排行榜門檻的常客')+'</div>';
+  if(more.length){
+    html+='<button type="button" class="ghost rname-more-btn" onclick="jgRosterToggleMore()">'+(moreOpen?'收起更多名字':'更多名字（'+(q?showMore.length:more.length)+'）')+'</button>';
+    if(moreOpen) html+=showMore.length?'<div class="rname-pool-grid">'+showMore.map(btn).join('')+'</div>':'<div class="info" style="font-size:12px;">沒有符合的名字</div>';
+  }
+  html+='<button type="button" class="ghost rname-edit-btn" onclick="jgRosterToggleEdit()">'+(jgRosterEditNames?'完成編輯':'編輯名單')+'</button>';
+  wrap.innerHTML=html;
 }
 
 function jgApplyRosterSetupNames(){
