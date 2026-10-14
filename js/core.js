@@ -6,9 +6,9 @@
 // ═══════════════════════════════════
 // SHARED DATA
 // ═══════════════════════════════════
-const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',awgargoyle:'覺醒石像鬼',converted:'轉化者',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',biggreywolf:'大灰狼',trickster:'詭術師',villager:'平民',hybrid:'混血兒',cupid:'邱比特',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',trickmage:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',diviner:'占卜師',zombie:'殭屍',sequenceprince:'定序王子',bear:'熊',foxcub:'子狐',pufferfish:'河豚',whitecat:'白貓',sheriff:'警長',luckyone:'幸運兒'};
-const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',awgargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',biggreywolf:'bw',trickster:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs',diviner:'bdiviner',zombie:'bcupid',trickmage:'bs',sequenceprince:'bg2',bear:'bg2',foxcub:'bs',pufferfish:'bs',whitecat:'bg2'};
-const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',awgargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',biggreywolf:'av-wolf',trickster:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer',diviner:'av-diviner',zombie:'av-cupid',trickmage:'av-seer',sequenceprince:'av-guard',bear:'av-guard',foxcub:'av-seer',pufferfish:'av-seer',whitecat:'av-guard'};
+const RNAME={wolf:'狼人',wolfking:'黑狼王',whitewolf:'白狼王',wolfbeauty:'狼美人',evilknight:'惡靈騎士',gargoyle:'石像鬼',awgargoyle:'覺醒石像鬼',converted:'轉化者',bloodmoon:'血月使者',mechanicalwolf:'機械狼',nightmare:'夢魘',wolfbrother_e:'狼兄',wolfbrother_y:'狼弟',wolfshaman:'狼巫',mask:'假面',bigbadwolf:'大野狼',bigmechwolf:'大機械狼',smallmechwolf:'小機械狼',biggreywolf:'大灰狼',trickster:'詭術師',villager:'平民',hybrid:'混血兒',cupid:'邱比特',eros:'愛神',thief:'盜賊',fool:'傻瓜',seer:'預言家',witch:'女巫',hunter:'獵人',guard:'守衛',dreamcatcher:'攝夢人',knight:'騎士',magician:'魔術師',trickmage:'魔術師',demonhunter:'獵魔人',gravkeeper:'守墓人',medium:'通靈師',blackmarket:'黑市商人',purewhitemaiden:'純白之女',dancer:'舞者',littlegirl:'小女孩',diviner:'占卜師',zombie:'殭屍',sequenceprince:'定序王子',bear:'熊',foxcub:'子狐',pufferfish:'河豚',whitecat:'白貓',sheriff:'警長',luckyone:'幸運兒'};
+const BADGE={wolf:'bw',wolfking:'bw',whitewolf:'bw',wolfbeauty:'bw',evilknight:'bw',gargoyle:'bw',awgargoyle:'bw',bloodmoon:'bw',villager:'bv',hybrid:'bv',cupid:'bcupid',eros:'bcupid',thief:'bthief',fool:'bv',seer:'bs',witch:'bwt',hunter:'bh',guard:'bg2',mechanicalwolf:'bw',nightmare:'bw',wolfbrother_e:'bw',wolfbrother_y:'bw',wolfshaman:'bw',mask:'bw',bigbadwolf:'bw',bigmechwolf:'bw',smallmechwolf:'bw',biggreywolf:'bw',trickster:'bw',medium:'bs',blackmarket:'bwt',purewhitemaiden:'bs',dancer:'bg2',littlegirl:'bs',diviner:'bdiviner',zombie:'bcupid',trickmage:'bs',sequenceprince:'bg2',bear:'bg2',foxcub:'bs',pufferfish:'bs',whitecat:'bg2'};
+const AV={wolf:'av-wolf',wolfking:'av-wolf',whitewolf:'av-wolf',wolfbeauty:'av-wolf',evilknight:'av-wolf',gargoyle:'av-wolf',awgargoyle:'av-wolf',bloodmoon:'av-wolf',villager:'av-vil',hybrid:'av-vil',cupid:'av-cupid',eros:'av-cupid',thief:'av-thief',fool:'av-vil',seer:'av-seer',witch:'av-witch',hunter:'av-hunter',guard:'av-guard',mechanicalwolf:'av-wolf',nightmare:'av-wolf',wolfbrother_e:'av-wolf',wolfbrother_y:'av-wolf',wolfshaman:'av-wolf',mask:'av-wolf',bigbadwolf:'av-wolf',bigmechwolf:'av-wolf',smallmechwolf:'av-wolf',biggreywolf:'av-wolf',trickster:'av-wolf',medium:'av-seer',blackmarket:'av-witch',purewhitemaiden:'av-seer',dancer:'av-guard',littlegirl:'av-seer',diviner:'av-diviner',zombie:'av-cupid',trickmage:'av-seer',sequenceprince:'av-guard',bear:'av-guard',foxcub:'av-seer',pufferfish:'av-seer',whitecat:'av-guard'};
 
 function getComp(n){
   const t={
@@ -220,7 +220,7 @@ let jgDawnDeaths={}; // night number -> {died:[nums truly eliminated], swapped:[
 let jgGameCount=1; // increments each new game this session, used in the export section label
 let jgHasStartedBefore=false;
 const ROLE_ABBR={
-  villager:'民', hybrid:'混血', cupid:'邱比特', thief:'盜賊', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
+  villager:'民', hybrid:'混血', cupid:'邱比特', eros:'愛神', thief:'盜賊', wolf:'狼', wolfking:'黑狼王', whitewolf:'白狼', wolfbeauty:'狼美', evilknight:'惡靈',
   gargoyle:'石像', bloodmoon:'血月', nightmare:'夢魘', wolfbrother_e:'狼兄', wolfbrother_y:'狼弟', wolfshaman:'狼巫', mask:'假面', bigbadwolf:'大野狼', bigmechwolf:'大機', smallmechwolf:'小機', biggreywolf:'大灰狼',
   mechanicalwolf:'機', seer:'預', witch:'巫', hunter:'獵', guard:'守', dreamcatcher:'攝夢', knight:'騎士', magician:'魔術',
   demonhunter:'獵魔', gravkeeper:'守墓', medium:'通', blackmarket:'黑市', purewhitemaiden:'純白', dancer:'舞者', littlegirl:'小女孩', diviner:'占卜', zombie:'殭屍', bear:'熊', foxcub:'子狐', pufferfish:'河豚', whitecat:'白貓', trickster:'詭術', trickmage:'魔術', sequenceprince:'定序', sheriff:'警長', luckyone:'幸運'
@@ -235,7 +235,7 @@ const ROLE_ABBR={
 // 之後如果排出來的順序覺得怪怪的，直接調整這個陣列裡任兩個角色的先後位置就好。
 const GAME_TITLE_ROLE_ORDER=[
   'thief',
-  'cupid',
+  'cupid','eros',
   'mechanicalwolf','medium',
   'dreamcatcher','nightmare',
   'blackmarket','wolfbrother_e','wolfbrother_y',
@@ -504,7 +504,8 @@ function jgRulesState(){
     foolChase: jgFoolChaseMode==='chase',
     dualMode: !!jgDualIdentityMode,
     divinerMarkUsed: !!jgDivinerMarkUsed,
-    windspyKnifeReady: !windspy||jgPlayers.some(p=>p.role==='awgargoyle'&&p.alive)||!!jgWindspyJoiner()
+    windspyKnifeReady: !windspy||jgPlayers.some(p=>p.role==='awgargoyle'&&p.alive)||!!jgWindspyJoiner(),
+    erosBoard: !!(jgComp&&jgComp.eros>0)
   };
 }
 
@@ -598,6 +599,10 @@ function jgFormatNightLog(){
   // 邱比特是整局第一個睜眼的角色（僅第一夜），配對結果只記錄這一次
   if(jgNight===1 && jgCupidChosen && jgLovers && jgLovers.length===2){
     lines.push('邱 '+jgLovers.join('-'));
+  }
+  // 愛神每晚連的情侶
+  if(jgComp&&jgComp.eros>0&&jgRecord.erosDone&&jgLovers&&jgLovers.length===2){
+    lines.push('愛 '+jgLovers.join('-'));
   }
   // 混血兒也是第一夜（僅一次）選定支持對象，順便記下支持的號碼跟陣營標籤（好人混／狼人混），
   // 這樣不管哪個板子，只要有混血兒，文字紀錄跟之後的遊玩數據頁面都看得到他學到誰、混到哪邊。
@@ -2281,7 +2286,6 @@ function jgBack(){
     }
     return;
   }
-  if(typeof jgDealClearGameOver==='function') jgDealClearGameOver();
   // Drop the step/state we're currently viewing.
   jgStepHistory.pop();
   jgStateHistory.pop();
@@ -2333,7 +2337,6 @@ function jgGoStep(step){
     jgSheriffTransferNextStep=step;
     step='sheriff-transfer';
   }
-  if(typeof jgDealClearGameOver==='function') jgDealClearGameOver(); // 還在繼續走流程，不是遊戲結束畫面
   // 風聲諜影板有自己固定的睜眼順序：夜晚各步驟存檔後原本會依一般板子的順序決定下一步，
   // 這裡統一改成照風聲諜影的順序表走（見 js/night.js jgWindspyRedirect）。
   if(jgIsWindspy()) step=jgWindspyRedirect(step);
@@ -2862,7 +2865,6 @@ function jgSetMvp(num){
 }
 function jgShowWin(res){
   jgLastWinResult=res;
-  if(typeof jgDealMarkGameOver==='function') jgDealMarkGameOver(); // 發牌房：玩家手機切到全體身分
   const isGood=res.winner==='good';
   const isThird=res.winner==='third';
   const winTitle=isThird?'第三方勝利！':(isGood?'好人勝利！':'狼人勝利！');
@@ -2889,7 +2891,7 @@ function jgShowWin(res){
   }
   // 邱比特／情侶：揭曉配對結果（人人鏈／狼狼鏈／人狼鏈）以及是否跟著獲勝
   let cupidHtml='';
-  if(jgLovers&&jgLovers.length===2){
+  if(jgLovers&&jgLovers.length===2&&!(jgComp&&jgComp.eros>0)){
     const cpP=jgPlayers.find(p=>p.role==='cupid');
     const l1=jgFind(jgLovers[0]), l2=jgFind(jgLovers[1]);
     const pairType=jgLoverPairType();

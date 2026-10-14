@@ -25,6 +25,7 @@
 //     dualMode,                   // 雙身分模式
 //     divinerMarkUsed,            // 占卜師標記用過了沒
 //     windspyKnifeReady,          // 風聲諜影今晚狼隊刀得出去（有覺醒石像鬼或可以入隊的人）
+//     erosBoard,                  // 愛神板：情侶每晚重連、不會變成第三方
 //   }
 //
 // 回傳的勝負結果格式：{winner:'wolf'|'good'|'third', msg, icon}，還沒分出勝負回傳 null。
@@ -56,6 +57,7 @@ const JG_RULES=(function(){
   }
   // 人狼鏈時的第三方成員：兩位情侶＋邱比特本人（邱比特連自己的話只有兩人）。
   function thirdPartyMembers(st){
+    if(st.erosBoard) return []; // 愛神連的情侶一好一狼也不是第三方，勝負照一般規則
     if(loverPairType(st)!=='third') return [];
     const set=new Set(st.lovers.map(String));
     st.players.filter(p=>p.role==='cupid').forEach(p=>set.add(String(p.id)));
@@ -202,6 +204,7 @@ const JG_RULES=(function(){
       if(p.puppet&&(p.role==='guard'||p.role==='witch')) return false;
       switch(p.role){
         case 'guard': case 'magician': case 'trickmage': case 'dreamcatcher': case 'dancer': return true;
+        case 'eros': return true; // 愛神今晚會先連一對情侶，殉情可能讓狼跟著死
         case 'witch': return !p.witchSaveUsed;
         case 'foxcub': return !p.foxcubUsed;
         case 'diviner': return !st.divinerMarkUsed;
@@ -211,11 +214,13 @@ const JG_RULES=(function(){
     if(blocker) return null;
     // 狼刀之後才會殺到狼的好人技能：只影響「人數達標」這種判定，屠邊不受影響。
     const lateKiller=ag.some(p=>(!p.puppet&&((p.role==='witch'&&!p.witchPoisonUsed)||p.role==='demonhunter'||p.role==='purewhitemaiden'))||p.luckyWitchUnused);
+    // 愛神板的情侶只到這一晚開始前為止（今晚會重連或失效），不拿來模擬殉情。
+    const lovers=st.erosBoard?null:st.lovers;
     for(const t of ag){
       if(t.knifeImmune) return null; // 白貓被刀會翻牌，不會死
       const changes={}; changes[String(t.id)]=false;
-      if(st.lovers&&st.lovers.length===2&&st.lovers.map(String).includes(String(t.id))){
-        const partner=find(st,st.lovers.map(String).find(id=>id!==String(t.id)));
+      if(lovers&&lovers.length===2&&lovers.map(String).includes(String(t.id))){
+        const partner=find(st,lovers.map(String).find(id=>id!==String(t.id)));
         if(partner&&partner.alive) changes[String(partner.id)]=false;
       }
       const sim=withAlive(st,changes);

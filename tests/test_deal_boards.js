@@ -9,7 +9,7 @@ async function run(){
   });
   const { window } = dom;
 
-  await new Promise(r=>setTimeout(r, 1200));
+  await new Promise(r=>setTimeout(r, 1200)); for(let i=0;i<150&&!(window.jgRoomRenderEntry&&window.document.readyState==='complete');i++) await new Promise(r=>setTimeout(r, 100)); // 機器忙時等到網頁真的載完（最多再 15 秒）
 
   // jsdom 沒有實作 scrollTo/scrollIntoView，補假函式避免畫面切換時噴錯
   window.Element.prototype.scrollTo = window.Element.prototype.scrollTo || function(){};

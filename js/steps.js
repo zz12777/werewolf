@@ -193,6 +193,8 @@ function jgRenderStep(step){
     const isSealNight=!!(jgRecord&&jgRecord.bloodmoonSealNight); // save before reset
     jgRecord={wolfKill:null,guardTarget:null,witchSave:null,witchPoison:null,seerChecked:null,witchPoisoned:false,witchStepDone:false};
     if(isSealNight) jgRecord.bloodmoonSealNight=true; // carry into new record for wolf-wake to check
+    // 愛神板：上一晚連的情侶只有效到這一晚開始前，今晚愛神重連（愛神出局就不再有情侶）。
+    if(jgComp&&jgComp.eros>0) jgLovers=null;
     const firstNight=jgIsFirstNight();
     jgShowPg(`
       <h2 style="margin-bottom:8px;">第 ${jgNight} 夜開始</h2>
@@ -315,6 +317,38 @@ function jgRenderStep(step){
       <div class="speech" style="margin-top:14px;">「<em>盜賊請閉眼。</em>」</div>
       <button class="primary" onclick="jgGoStep(jgNightStartNext())">已紀錄，下一步 →</button>
     `,'🎴 盜賊');
+  }
+  // ── 愛神：每晚最先睜眼，連兩名玩家成為情侶（可以連自己，可以重複連）──
+  else if(step==='eros-wake'){
+    const erP=jgPlayers.find(p=>p.role==='eros');
+    const idHtml=jgGodIdHtml('eros',erP);
+    const dead=!!(erP&&!erP.alive);
+    const deadNums=jgPlayers.filter(p=>!p.alive).map(p=>p.num);
+    const cur1=(jgLovers&&jgLovers[0])||'', cur2=(jgLovers&&jgLovers[1])||'';
+    jgShowPg(`
+      <h2>愛神睜眼</h2>
+      <div class="speech">「<em>愛神請睜眼。今晚要連哪兩位玩家成為情侶？</em>」</div>
+      ${idHtml}
+      ${dead?'<div class="info-warn">愛神已出局，仍需走完流程（之後不再有情侶）</div>':`
+      <label style="margin-top:12px;">情侶 A（可以是愛神自己）</label>
+      ${jgNumSelectHtml('jg-eros-target1', cur1, null, null, deadNums, '已出局，不能連')}
+      <label style="margin-top:12px;">情侶 B</label>
+      ${jgNumSelectHtml('jg-eros-target2', cur2, null, null, deadNums, '已出局，不能連')}`}
+      <div class="speech" style="margin-top:10px;">「<em>愛神請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveEros()">已紀錄，下一步 →</button>
+    `,'愛神');
+  }
+  // ── 愛神連完：情侶睜眼互相確認（不能溝通，也不知道對方角色）──
+  else if(step==='eros-lovers-wake'){
+    const pair=jgLovers&&jgLovers.length===2?jgLovers:null;
+    jgShowPg(`
+      <h2>情侶確認彼此</h2>
+      <div class="speech">「<em>被拍到的兩位為情侶，先不要睜眼。</em>」</div>
+      ${pair?'<div class="info-warn" style="font-size:13px;">法官需走一圈拍情侶（輕拍 '+pair[0]+'號、'+pair[1]+'號 兩人示意），確認兩人都被拍到後再繼續</div>'
+        :'<div class="info" style="font-size:13px;">今晚沒有情侶（愛神已出局）：法官照樣走一圈當掩護，不用拍任何人</div>'}
+      <div class="speech" style="margin-top:10px;">「<em>情侶請睜眼，互相確認彼此的身份，不能溝通，情侶請閉眼。</em>」</div>
+      <button class="primary" onclick="jgSaveErosLoversWake()">兩人已閉眼，下一步 →</button>
+    `,'情侶');
   }
   // ── 邱比特指定完成後：情侶兩人一起睜眼互相確認彼此（不知道誰是邱比特、也不知道對方陣營）──
   else if(step==='lovers-wake'){

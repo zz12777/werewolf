@@ -5,7 +5,6 @@
 //   ・玩家：一開始先看一次自己的身分（按「記住了」收起來），之後畫面只顯示號碼與姓名名單、
 //     警長競選資訊（上警、發言順序、退水、票型、當選警長）、每天白天的投票票型；自己的身分改成
 //     按右上角「確認自己身分」才看得到。上警的人有「退水」按鈕，按了法官那邊會自動退水。
-//   ・遊戲結束：每個人的手機都切到全體身分。
 //   ・幸運兒、情侶：法官在法官助手按下確認後，只有本人的手機會跳出放大版提醒。
 //   ・房主：法官助手（js/deal-sync.js）把目前的公開資訊整理好，呼叫這裡的
 //     jgRoomDealPublish 寫進房間文件 publicInfo；私人提醒用 jgRoomDealSendPrivate 寫進
@@ -59,11 +58,6 @@ function jgRoomRenderDealMyRole(){
     return;
   }
   const info=rd.publicInfo||null;
-  // 遊戲結束：每個人的手機都切到全體身分（跟法官結束畫面同一份）。
-  if(info&&info.gameOver){
-    root.innerHTML='<div class="nbanner"><h1>遊戲結束</h1></div>'+jgRoomFinalRosterHtml(info.gameOver.roster);
-    return;
-  }
   // 第一次：大字顯示自己的身分，按「記住了」之後收起來，之後只能從右上角按鈕看。
   if(mySeat!=null&&!jgRoomDealRoleSeen()){
     const role=jgRoomDealMySecret.role;
@@ -82,13 +76,13 @@ function jgRoomRenderDealMyRole(){
   // 法官處理完（我已經不在候選人裡，或已經記成退水）就不再顯示「等待中」。
   if(jgRoomDealWithdrawPending&&(!sh||!sh.canWithdraw||!(sh.candidates||[]).map(Number).includes(mySeat))) jgRoomDealWithdrawPending=false;
   jgRoomAnnounceNewWithdrawals('deal_'+jgRoomCode, sh&&sh.withdrawn);
-  // 名單上的警長標籤跟著目前拿警徽的人走（警徽移交過就換人）。
-  const sheriffNow=sh?(sh.holder!=null?Number(sh.holder):(sh.elected!=null&&!sh.none?Number(sh.elected):null)):null;
+  // 只有自己看得到的標籤（情侶、感染者），由法官助手寫在自己的 secrets 文件裡。
+  const priv=(jgRoomDealMySecret&&jgRoomDealMySecret.privateTags)||null;
   root.innerHTML=`
     <div class="nbanner"><h1>房間 ${jgRoomCode}</h1>
       ${mySeat!=null?'':'<p class="sub" style="text-align:center;margin-top:6px;">你是房主，請在「法官の助手」分頁主持</p>'}</div>
     <div class="section-title" style="margin-top:14px;">玩家名單</div>
-    ${jgRoomNameGridHtml(players.map(p=>Object.assign({}, p, {sheriff:sheriffNow!=null&&sheriffNow===Number(p.num)})), mySeat)}
+    ${jgRoomNameGridHtml(players.map(p=>Object.assign({}, p, {tags:jgRoomNameTags(p.num, sh, priv)})), mySeat)}
     ${jgRoomSheriffInfoHtml(sh, mySeat, 'jgRoomDealWithdraw()', jgRoomDealWithdrawPending)}
     ${jgRoomDayVotesHtml(info&&info.dayVotes)}
   `;
@@ -140,6 +134,14 @@ window.jgRoomDealSendPrivate=async function(seatNum, notice){
   try{
     await setDoc(doc(window.jgFirebaseDb,'rooms',jgRoomCode,'secrets',p.uid),{ privateNotices:entry },{ merge:true });
   }catch(e){ console.warn('私人提醒送出失敗', e); }
+};
+// 只有特定玩家看得到的名單標籤（情侶、感染者）：tags = {lovers:[號碼], infected:[號碼]}。
+window.jgRoomDealSetPrivateTags=async function(seatNum, tags){
+  const p=jgRoomLatestPlayers.find(x=>Number(x.seatNum)===Number(seatNum));
+  if(!p) return;
+  try{
+    await setDoc(doc(window.jgFirebaseDb,'rooms',jgRoomCode,'secrets',p.uid),{ privateTags:{ lovers:tags.lovers||[], infected:tags.infected||[] } },{ merge:true });
+  }catch(e){ console.warn('私人標籤同步失敗', e); }
 };
 // 房間文件有新的退水請求：交給法官助手處理（js/deal-sync.js 的 jgDealRemoteWithdraw），
 // 處理完把請求清掉。只有房主做這件事。
