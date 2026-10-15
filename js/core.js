@@ -365,6 +365,10 @@ function jgCopyExportText(){
   ta.select();
   navigator.clipboard?.writeText(ta.value).catch(()=>{});
   try{ document.execCommand('copy'); }catch(e){}
+  window.jgExportCopiedAt=Date.now(); // 新手演練（js/tour.js）用來判斷已經複製過
+  // 按鈕短暫顯示「已複製」，讓法官知道有複製成功。
+  const btn=document.querySelector('#jg-export-modal [onclick="jgCopyExportText()"]');
+  if(btn){ btn.textContent='已複製'; setTimeout(()=>{ if(btn.isConnected) btn.textContent='複製文字'; }, 1500); }
 }
 // Whether the mechanical wolf's learned 獵人 ability is active tonight/today (usable
 // starting the night after it was learned, same rule as its other learned skills). The
@@ -2982,7 +2986,7 @@ function jgShowJudgeEndModal(winnerLabel){
   modal.innerHTML='<div style="background:var(--bg1,#fff);border-radius:16px;padding:24px 20px;max-width:420px;width:100%;text-align:center;">'
     +'<div style="font-size:17px;font-weight:800;line-height:1.9;">法官公布: 遊戲結束，「'+winnerLabel+'」獲勝<br>'
     +'<div style="font-size:14px;font-weight:600;color:var(--text2);margin-top:10px;line-height:1.9;text-align:left;">'
-    +(window.jgTourPractice?'這是演練，不用匯出或上傳。<br>':'給法官的提醒:<br>1. 匯出文字紀錄到群組<br>'+(JG_TEAM_CONFIG.judgeEndUploadNote?'2. '+JG_TEAM_CONFIG.judgeEndUploadNote+'<br>':''))
+    +(window.jgTourPractice?'這是演練，按「我知道了」之後帶你看怎麼匯出文字紀錄。<br>':'給法官的提醒:<br>1. 匯出文字紀錄到群組<br>'+(JG_TEAM_CONFIG.judgeEndUploadNote?'2. '+JG_TEAM_CONFIG.judgeEndUploadNote+'<br>':''))
     +'</div><div style="margin-top:10px;">法官辛苦了!!</div></div>'
     +'<button class="primary" style="margin-top:16px;" onclick="document.getElementById(\'jg-judge-end-modal\').remove()">我知道了</button>'
     +'</div>';

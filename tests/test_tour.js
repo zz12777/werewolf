@@ -61,6 +61,7 @@ async function run(){
     await wait(w.eval('jgCurrentStep')==='discuss'?400:30);
   }
   check('演練走到最後顯示演練完成', panel().startsWith('演練完成'), true);
+  check('演練最後有帶匯出並複製文字紀錄', w.eval('(window.jgExportCopiedAt||0)>0')&&!d.getElementById('jg-export-modal'), true);
   check('演練結果是好人勝利', !!w.eval('jgLastWinResult')&&w.eval("jgAlive().filter(p=>p.role==='wolf').length"), 0);
   check('演練中有標記 jgTourPractice（不送出任何資料）', w.eval('window.jgTourPractice'), true);
   w.eval('jgTourFinishPractice()');

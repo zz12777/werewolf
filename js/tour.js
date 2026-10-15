@@ -110,7 +110,18 @@ function jgTourPracticeKey(){
 function jgTourPracticeNow(){
   // 主持結束會先跳「法官公布：遊戲結束」視窗，等法官按「我知道了」再顯示演練完成。
   if(document.getElementById('jg-judge-end-modal')) return {wait:true};
-  if(typeof jgLastWinResult!=='undefined'&&jgLastWinResult&&jgTourInGame()) return {end:true};
+  if(typeof jgLastWinResult!=='undefined'&&jgLastWinResult&&jgTourInGame()){
+    // 結束後再帶一次匯出文字紀錄：打開 → 複製 → 關閉，才算演練完成。
+    const modal=document.getElementById('jg-export-modal');
+    const copied=(window.jgExportCopiedAt||0)>(jgTour.startedAt||0);
+    if(modal){
+      jgTour.exportOpened=true;
+      if(!copied) return {key:'export', item:{sel:'#jg-export-modal [onclick="jgCopyExportText()"]', text:'整場的夜晚行動、投票、勝負都自動整理成文字了。按「複製文字」，就能直接貼到 LINE 群組給大家看。'}, idx:1};
+      return {key:'export', item:{sel:'#jg-export-modal button:not(.primary)', text:'複製好了！按「關閉」。'}, idx:2};
+    }
+    if(!jgTour.exportOpened) return {key:'export', item:{sel:jgTourOnclick('jgShowExportModal()'), text:'主持完可以把整場紀錄匯出。往下找「匯出文字紀錄」，按下去。'}, idx:0};
+    return {end:true};
+  }
   // 全螢幕大字卡（例如轉盤抽出從幾號開始發言）：先給大家看，再按「關閉」。
   if(document.getElementById('jg-bigcard-modal')){
     return {key:jgTourPracticeKey(), item:{sel:'#jg-bigcard-modal button', text:'這張大字卡是給所有玩家看的：從幾號開始、往哪個方向發言。大家看到後按「關閉」。'}, idx:'card'};
@@ -174,18 +185,20 @@ function jgTourRender(){
     const now=jgTourPracticeNow();
     if(now.wait){
       key='wait';
+      sel='#jg-judge-end-modal button';
       head='遊戲結束';
       body='唸出「法官公布」的內容，然後按「我知道了」。';
     } else if(now.end){
       key='end';
       head='演練完成';
-      body='第二晚女巫毒死最後一隻狼，所有狼人都出局，好人勝利！助手會在每一刀、每一票之後自動檢查勝負。實際主持時，照著這個流程按就好了。';
+      body='第二晚女巫毒死最後一隻狼，所有狼人都出局，好人勝利！助手會在每一刀、每一票之後自動檢查勝負，主持完再匯出、複製文字紀錄貼到群組。實際主持時，照著這個流程按就好了。';
       btns='<button class="primary" onclick="jgTourFinishPractice()">完成</button>';
     } else if(now.item){
-      const stepNo=Math.max(0, JG_TOUR_PRACTICE_ORDER.indexOf(now.key))+1;
+      const total=JG_TOUR_PRACTICE_ORDER.length+1; // 最後一步：匯出文字紀錄
+      const stepNo=now.key==='export'?total:Math.max(0, JG_TOUR_PRACTICE_ORDER.indexOf(now.key))+1;
       key='p:'+now.key+':'+now.idx;
       sel=now.item.sel;
-      head='演練 '+stepNo+'／'+JG_TOUR_PRACTICE_ORDER.length;
+      head='演練 '+stepNo+'／'+total;
       body=now.item.text;
       btns='<button class="ghost" onclick="jgTourClose(true)">離開演練</button>';
     } else {
@@ -195,6 +208,8 @@ function jgTourRender(){
       btns='<button class="ghost" onclick="jgTourClose(true)">離開演練</button>';
     }
   }
+  // 有全螢幕視窗（大字卡、遊戲結束、文字紀錄）開著時，面板改到畫面上方、疊在視窗上面，說明才看得到。
+  panel.classList.toggle('jg-tour-top', !!document.querySelector('#jg-bigcard-modal, #jg-judge-end-modal, #jg-export-modal'));
   if(key!==jgTour.lastKey){
     jgTour.lastKey=key;
     panel.innerHTML='<div class="jg-tour-head">'+head+'</div><div class="jg-tour-body">'+body+'</div><div class="jg-tour-btns">'+btns+'</div>';
@@ -222,7 +237,7 @@ function jgTourGuardClick(e){
 
 // ── 開始／結束 ──
 function jgTourBegin(mode){
-  jgTour={mode, idx:0, lastKey:null};
+  jgTour={mode, idx:0, lastKey:null, startedAt:Date.now()};
   if(!jgTourTimer) jgTourTimer=setInterval(jgTourTick, 300);
   jgTourRender();
 }

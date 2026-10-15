@@ -871,6 +871,7 @@ select{
 /* ── 新手導覽／演練（js/tour.js）：最下面固定的說明面板＋要按的東西加外框 ── */
 body.tour-on{padding-bottom:220px;}
 #jg-tour{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9990;width:calc(100% - 24px);max-width:560px;background:var(--bg);border:2px solid var(--accent);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.22);padding:14px 16px 12px;}
+#jg-tour.jg-tour-top{bottom:auto;top:12px;z-index:10000;}
 .jg-tour-head{font-size:13px;font-weight:800;color:var(--accent);}
 .jg-tour-body{font-size:15px;line-height:1.7;margin-top:6px;color:var(--text);}
 .jg-tour-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;flex-wrap:wrap;}
