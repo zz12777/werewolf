@@ -867,3 +867,20 @@ select{
 .jg-bp-item.locked{color:var(--text3);cursor:not-allowed;}
 .jg-bp-item.locked:hover{background:none;}
 .jg-bp-lock{display:inline-flex;font-size:15px;color:var(--text3);}
+
+/* ── 新手導覽／演練（js/tour.js）：最下面固定的說明面板＋要按的東西加外框 ── */
+body.tour-on{padding-bottom:220px;}
+#jg-tour{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9990;width:calc(100% - 24px);max-width:560px;background:var(--bg);border:2px solid var(--accent);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.22);padding:14px 16px 12px;}
+.jg-tour-head{font-size:13px;font-weight:800;color:var(--accent);}
+.jg-tour-body{font-size:15px;line-height:1.7;margin-top:6px;color:var(--text);}
+.jg-tour-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.jg-tour-btns button{width:auto;margin-top:0;padding:9px 18px;font-size:14px;}
+.tour-hl{outline:3px solid var(--gold)!important;outline-offset:3px;position:relative;z-index:2;animation:jgTourPulse 1.4s ease-in-out infinite;}
+@keyframes jgTourPulse{0%,100%{box-shadow:0 0 0 0 rgba(154,124,40,0.55);}50%{box-shadow:0 0 0 9px rgba(154,124,40,0);}}
+#jg-tour.jg-tour-nudge{animation:jgTourNudge .4s;}
+@keyframes jgTourNudge{0%,100%{transform:translateX(-50%);}25%{transform:translateX(calc(-50% - 6px));}75%{transform:translateX(calc(-50% + 6px));}}
+.jg-tour-open{width:auto;margin-top:0;padding:6px 14px;font-size:13px;}
+@media (prefers-reduced-motion: reduce){
+  .tour-hl{animation:none;}
+  #jg-tour.jg-tour-nudge{animation:none;}
+}

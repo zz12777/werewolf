@@ -42,7 +42,8 @@ function switchTab(id){
   const navBtns=document.getElementById('nav-btns');
   if(navBtns) navBtns.classList.remove('open');
   if(id==='t-data') pdLoadCloudGames(); // 每次切到「遊玩數據」分頁都重新抓一次雲端最新場次
-  if(id==='t-guide') loadGuideArticles(); // 第一次切到「攻略參考」才去抓資料，避免沒用到還耗流量
+  if(id==='t-guide') loadGuideArticles();
+  if(id==='t-judge'&&typeof jgTourMaybeAuto==='function') setTimeout(jgTourMaybeAuto, 300); // 公開版第一次打開：問要不要看導覽 // 第一次切到「攻略參考」才去抓資料，避免沒用到還耗流量
   // 「確認自己身分」按鈕是連線房間專用的，只在「連線房間」分頁顯示，切到其他分頁（角色
   // 與規則、遊玩數據...）先藏起來，避免讓人誤以為那些分頁也要確認身分。
   if(window.jgRoomSetIdentityButtonVisible) window.jgRoomSetIdentityButtonVisible(id==='t-room');
@@ -117,6 +118,7 @@ function jgBuildLiveVoteText(){
 // 同步失敗也不影響法官原本的操作，所以刻意不彈任何錯誤視窗打斷法官。
 function jgLiveSyncPush(){
   if(!JG_LIVE_SYNC_URL) return;
+  if(window.jgTourPractice) return; // 新手演練（js/tour.js）不送出
   // 用手機發牌開局時，票型直接顯示在每個人的手機上（js/deal-sync.js），不再送到即時票型。
   if(typeof jgDealLinked==='function'&&jgDealLinked()) return;
   if(!jgLiveSessionId) jgLiveSessionId=jgLiveMakeSessionId();
@@ -194,6 +196,7 @@ async function jgLiveFetchAndShow(sessionId){
 // 換去顯示新場次。
 function jgLiveSyncMarkEnded(){
   if(!JG_LIVE_SYNC_URL||!jgLiveSessionId) return;
+  if(window.jgTourPractice) return; // 新手演練（js/tour.js）不送出
   fetch(JG_LIVE_SYNC_URL,{
     method:'POST',
     mode:'no-cors',
@@ -2958,7 +2961,7 @@ function jgShowWin(res){
     <div class="section-title" style="margin-top:16px;">🏆 本場 MVP（選填）</div>
     <div id="jg-mvp-picker-wrap">${jgMvpPickerHtml()}</div>
     <button onclick="jgShowExportModal()" style="margin-top:14px;">${jgIcon('clip')} 匯出文字紀錄</button>
-    ${jgEditionHas('playData')?`<button onclick="pdSubmitGameRecord()" style="margin-top:8px;">${jgIcon('lock')} 送出到遊玩數據</button>`:''}
+    ${jgEditionHas('playData')&&!window.jgTourPractice?`<button onclick="pdSubmitGameRecord()" style="margin-top:8px;">${jgIcon('lock')} 送出到遊玩數據</button>`:''}
     <button class="primary" onclick="jgReset()" style="margin-top:8px;">再玩一局</button>
   `;
   document.getElementById('jg-phase-badge').innerHTML='🏁 遊戲結束';
@@ -2979,7 +2982,7 @@ function jgShowJudgeEndModal(winnerLabel){
   modal.innerHTML='<div style="background:var(--bg1,#fff);border-radius:16px;padding:24px 20px;max-width:420px;width:100%;text-align:center;">'
     +'<div style="font-size:17px;font-weight:800;line-height:1.9;">法官公布: 遊戲結束，「'+winnerLabel+'」獲勝<br>'
     +'<div style="font-size:14px;font-weight:600;color:var(--text2);margin-top:10px;line-height:1.9;text-align:left;">'
-    +'給法官的提醒:<br>1. 匯出文字紀錄到群組<br>'+(JG_TEAM_CONFIG.judgeEndUploadNote?'2. '+JG_TEAM_CONFIG.judgeEndUploadNote+'<br>':'')
+    +(window.jgTourPractice?'這是演練，不用匯出或上傳。<br>':'給法官的提醒:<br>1. 匯出文字紀錄到群組<br>'+(JG_TEAM_CONFIG.judgeEndUploadNote?'2. '+JG_TEAM_CONFIG.judgeEndUploadNote+'<br>':''))
     +'</div><div style="margin-top:10px;">法官辛苦了!!</div></div>'
     +'<button class="primary" style="margin-top:16px;" onclick="document.getElementById(\'jg-judge-end-modal\').remove()">我知道了</button>'
     +'</div>';
