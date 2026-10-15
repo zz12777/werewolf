@@ -128,7 +128,7 @@ function computeAwards(){
   // 沒辦法用上面的規則自動比對，只能手動列出——之後如果還有更早期的場次要算進來，
   // 直接在這個清單裡加一行即可。加一道防呆：如果之後上面的自動判斷也認得出同一場，
   // 不要因為手動清單又重複加一次，導致次數灌水。
-  const AW_HANTIAO_MANUAL={ '0812_1':'黃家珮' };
+  const AW_HANTIAO_MANUAL=(typeof JG_TEAM_CONFIG!=='undefined'&&JG_TEAM_CONFIG.awardHantiaoManual)||{}; // 清單在 data/team-config.js
   Object.entries(AW_HANTIAO_MANUAL).forEach(([gameId,name])=>{
     const g=(GAMES||[]).find(x=>x.id===gameId);
     if(!g) return;

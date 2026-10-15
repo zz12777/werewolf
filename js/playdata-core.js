@@ -65,18 +65,14 @@ function pdDisplayRole(rawRole, log){
 // 2. 表單右上角「⋮」→「取得預先填寫的連結」，每個欄位隨便填點東西 → 取得連結，把整條連結傳給 Claude
 // 3. 表單「回覆」分頁 → 綠色試算表圖示，建立關聯的回應試算表 → 把該試算表網址「共用」設成
 //    「知道連結的人均可查看」，把試算表網址也傳給 Claude
-// Claude 會把下面三個值換成正確的設定，之後主持完按「🔗 送出到遊玩數據」就會自動送出、
-// 這個分頁重新整理時也會自動去試算表抓最新場次。
-const PD_FORM_ACTION_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeAqU86sLtuptAh50Ndu7zHUjVQHQGU6ietsgJwlqUTS1K3iw/formResponse';
-const PD_FORM_ENTRIES = {
-  id:'entry.593689443', date:'entry.944666696', board:'entry.980679289',
-  resultText:'entry.245423789', winner:'entry.1204746202', time:'entry.1141328912',
-  players:'entry.1989136022', log:'entry.451885810'
-};
-const PD_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1q4qLbQLS4GBajy4Zh66spegaXlpC4Uo9TrkcAYLmyQQ/gviz/tq?tqx=out:csv&gid=0';
+// 這幾個值放在 data/team-config.js（公開版沒有這些設定，送出、讀取雲端場次都會自動跳過），
+// 之後主持完按「送出到遊玩數據」就會自動送出、這個分頁重新整理時也會自動去試算表抓最新場次。
+const PD_FORM_ACTION_URL = JG_TEAM_CONFIG.pdFormActionUrl||'';
+const PD_FORM_ENTRIES = JG_TEAM_CONFIG.pdFormEntries||{};
+const PD_SHEET_CSV_URL = JG_TEAM_CONFIG.pdSheetCsvUrl||'';
 // 送出前需要輸入的密碼，避免別人不小心點到「送出到遊玩數據」洗掉資料。
-// 想改密碼就直接改這一行的文字就好（提醒：這只是防呆用，不是真的加密，網頁原始碼打開看得到，不要用太重要的密碼）。
-const PD_SUBMIT_PASSWORD = '12071211';
+// 想改密碼就改 data/team-config.js 的 pdSubmitPassword（提醒：這只是防呆用，不是真的加密，網頁原始碼打開看得到，不要用太重要的密碼）。
+const PD_SUBMIT_PASSWORD = JG_TEAM_CONFIG.pdSubmitPassword||'';
 const PD_NOT_CONFIGURED = u => !u || u.includes('PASTE_');
 
 // 日期／時間統一格式化：

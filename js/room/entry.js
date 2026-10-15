@@ -144,7 +144,8 @@ window.jgRoomRenderEntry=async function(){
 (function jgRoomAutoOpenFromInviteLink(){
   try{
     const urlRoom=new URLSearchParams(window.location.search).get('room');
-    if(urlRoom&&typeof window.switchTab==='function'){
+    // 公開版沒有連線房間：邀請連結不自動切分頁。
+    if(urlRoom&&typeof window.switchTab==='function'&&(typeof jgEditionHas!=='function'||jgEditionHas('room'))){
       // jgRoomRenderEntry() 是 async 的，中間會先 await 一次「有沒有上次留著沒退出的
       // 房間」（jgRoomTryAutoReconnect），這個 await 完成之前，下面幾行會先同步執行完，
       // 把網址列的房號清掉——如果只靠 jgRoomRenderEntry 自己重新讀網址，讀到的時候可能
