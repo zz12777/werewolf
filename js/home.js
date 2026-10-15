@@ -9,11 +9,14 @@ const JG_HOME_CARD_ROLES=['seer','witch','hunter','guard','wolf','villager','evi
 const JG_HOME_CARD_COUNT=5;
 let jgHomeFlipTimer=null;
 
+// 首頁牌面上的平民改用比較好看的版本（戴草帽的村民），其他地方的平民圖示不變。
+const JG_HOME_VILLAGER_ICON='<svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 8.5h15"/><path d="M8.5 8.5l1-3.5h5l1 3.5"/><circle cx="12" cy="12" r="2.6"/><path d="M6.5 20.5a5.5 5.5 0 0 1 11 0"/></svg>';
 function jgHomeRoleFace(id){
   const r=(typeof ALL_ROLES!=='undefined'&&ALL_ROLES[id])||null;
   if(!r) return '';
   const side=r.team==='wolf'?'wolf':'good';
-  return '<span class="home-card-ico home-card-'+side+'">'+r.icon+'</span><span class="home-card-name">'+r.name+'</span>';
+  const icon=id==='villager'?JG_HOME_VILLAGER_ICON:r.icon;
+  return '<span class="home-card-ico home-card-'+side+'">'+icon+'</span><span class="home-card-name">'+r.name+'</span>';
 }
 function jgHomeCardBack(){
   return '<svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 15.5A6.5 6.5 0 0 1 9 6.5a6.5 6.5 0 1 0 8 9z"/><path d="M17.5 5.5v2M16.5 6.5h2M14.5 3.5v1M14 4h1"/></svg>';
