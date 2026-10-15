@@ -74,6 +74,7 @@ window.jgRoomCleanupExpired=async function(force){
 };
 
 // 網頁載入後過一陣子才在背景清，不跟開頁面搶網路。
-if(window.jgFirebaseReady){
+// 公開版沒有連線房間（js/edition.js 的 room），不連 Firebase，也不用清。
+if(window.jgFirebaseReady&&(typeof jgEditionHas!=='function'||jgEditionHas('room'))){
   setTimeout(()=>{ window.jgRoomCleanupExpired(false).catch(()=>{}); }, 15000);
 }

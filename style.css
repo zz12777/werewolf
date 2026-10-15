@@ -812,3 +812,48 @@ select{
 .pi-votes{font-size:13.5px;line-height:1.8;padding:2px 0 6px 2px;}
 .pi-sheriff{margin-top:14px;line-height:1.9;font-size:14px;}
 .pi-muted{font-size:12px;color:var(--text2);margin-left:4px;}
+
+/* ── 版本切換：公開版沒有的功能（見 js/edition.js 的 data-feature）一律藏起來 ── */
+[data-feature-off]{display:none!important;}
+
+/* ── 首頁（公開版）：logo、標語、翻卡動畫、兩個主要按鈕、功能介紹 ── */
+.home-hero{max-width:720px;margin:0 auto;text-align:center;padding:12px 0 8px;}
+.home-logo{height:96px;width:auto;display:block;margin:0 auto 6px;}
+.home-title{font-family:'Noto Serif TC',serif;font-size:32px;font-weight:900;letter-spacing:2px;margin-top:4px;}
+.home-sub{font-size:15px;color:var(--text2);line-height:1.8;margin-top:10px;}
+.home-nb{display:inline-block;}
+.home-cards{display:flex;justify-content:center;gap:10px;margin:26px auto 22px;perspective:900px;}
+.home-card{width:84px;height:118px;flex-shrink:0;}
+.home-card-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,.7,.3,1);}
+.home-card.flipped .home-card-inner{transform:rotateY(180deg);}
+.home-card-side{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 10px rgba(0,0,0,0.12);}
+.home-card-back{background:#2b2420;color:#e8d9b0;font-size:38px;border:2px solid #9a7c28;
+  background-image:repeating-linear-gradient(45deg,rgba(255,255,255,0.04) 0 6px,transparent 6px 12px);}
+.home-card-front{background:var(--bg);border:2px solid var(--border2);transform:rotateY(180deg);}
+.home-card-ico{font-size:34px;line-height:1;}
+.home-card-wolf{color:var(--wolf);}
+.home-card-good{color:var(--seer);}
+.home-card-name{font-size:14px;font-weight:800;color:var(--text);}
+.home-actions{display:flex;gap:10px;max-width:440px;margin:0 auto;}
+.home-actions button{flex:1;margin-top:0;font-size:16px;padding:14px 10px;}
+.home-features{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:28px auto 0;text-align:left;}
+.home-feature{display:flex;gap:10px;align-items:flex-start;background:var(--bg2);border-radius:var(--r);padding:14px;}
+.home-feature-ico{font-size:22px;color:var(--accent);line-height:1;flex-shrink:0;margin-top:1px;}
+.home-feature b{display:block;font-size:14px;}
+.home-feature div span{display:block;font-size:12.5px;color:var(--text2);margin-top:3px;line-height:1.5;}
+.home-boards{font-size:13px;color:var(--text2);margin-top:18px;line-height:1.8;}
+.home-boards b{display:block;color:var(--text);font-size:13px;}
+@media (max-width:600px){
+  .home-logo{height:72px;}
+  .home-title{font-size:26px;}
+  .home-sub{font-size:14px;}
+  .home-cards{gap:6px;}
+  .home-card{width:58px;height:84px;}
+  .home-card-back{font-size:26px;}
+  .home-card-ico{font-size:24px;}
+  .home-card-name{font-size:11.5px;}
+  .home-features{grid-template-columns:1fr;}
+}
+@media (prefers-reduced-motion: reduce){
+  .home-card-inner{transition:none;}
+}

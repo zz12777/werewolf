@@ -130,15 +130,34 @@ const JG_BOARD_PRESETS = {
 // 各自獨立維護的清單，新增板子時很容易漏改其中一邊。現在改成頁面載入時，直接照 JG_BOARD_PRESETS
 // 的內容自動產生選項——只要這裡有新增板子，下拉選單就一定會同步出現，不用再手動改 HTML。
 // 「自訂角色」那個選項不是真正的板子（不對應 JG_BOARD_PRESETS 裡的任何一筆），維持寫在 HTML 裡。
+// 公開版（見 js/edition.js 的 jgBoardAvailable）：免費板子排前面，其他板子排在後面、標「付費方案」
+// 而且不能選；「自訂角色」改叫「預女獵守（基本板）」，只能選基本角色。
 function jgPopulateBoardPresetDropdown(){
   const sel=document.getElementById('jg-board-preset');
   if(!sel) return;
-  Object.entries(JG_BOARD_PRESETS).forEach(([key,preset])=>{
+  const limited=!jgEditionHas('allBoards');
+  if(limited){
+    const custom=sel.querySelector('option[value="custom"]');
+    if(custom) custom.textContent='預女獵守（基本板）';
+  }
+  const entries=Object.entries(JG_BOARD_PRESETS);
+  const free=entries.filter(([key])=>jgBoardAvailable(key));
+  // 免費板子照 JG_FREE_BOARDS 的順序排（自己人版全部開放，維持原本順序）。
+  if(limited) free.sort((a,b)=>JG_FREE_BOARDS.indexOf(a[0])-JG_FREE_BOARDS.indexOf(b[0]));
+  const locked=entries.filter(([key])=>!jgBoardAvailable(key));
+  free.concat(locked).forEach(([key,preset])=>{
     const opt=document.createElement('option');
     opt.value=key;
-    opt.textContent=preset.label;
+    const open=jgBoardAvailable(key);
+    opt.textContent=preset.label+(open?'':'（付費方案）');
+    if(!open) opt.disabled=true;
     sel.appendChild(opt);
   });
+  const note=document.getElementById('jg-board-lock-note');
+  if(note&&limited&&locked.length){
+    note.innerHTML=jgIcon('lock')+' 免費版開放 '+(free.length+1)+' 種板子（含預女獵守基本板），其他 '+locked.length+' 種板子之後會在付費方案開放。';
+    note.style.display='';
+  }
 }
 // 板子的基本角色只開放這兩組：狼隊（不限一個，黑狼王／白狼王彈性二選一）、神職＋混血兒（各自最多一個）
 const JG_PRESET_WOLF_BASE=['wolf','wolfking','whitewolf'];
@@ -383,8 +402,10 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   const isDual=jgSetupDualMode;
   const unitLabel=isDual?'個角色':'人';
   // 覺醒石像鬼只在風聲諜影板才有轉化流程，自訂角色不開放選。
-  const wolves=isDual?WOLF_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):WOLF_ROLES.filter(r=>r!=='awgargoyle');
-  const gods=isDual?GOD_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):GOD_ROLES;
+  // 公開版的自訂角色＝預女獵守基本板：只有狼人、平民、預言家、女巫、獵人、守衛。
+  const basicOnly=!isDual&&!jgEditionHas('allBoards');
+  const wolves=isDual?WOLF_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):(basicOnly?JG_BASIC_WOLVES.slice():WOLF_ROLES.filter(r=>r!=='awgargoyle'));
+  const gods=isDual?GOD_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):(basicOnly?JG_BASIC_GODS.slice():GOD_ROLES);
   const wolfCount=Object.entries(pickState).filter(([k])=>wolves.includes(k)).reduce((s,[,v])=>s+v,0);
   const godCount=Object.entries(pickState).filter(([k])=>gods.includes(k)).reduce((s,[,v])=>s+v,0);
   const vilCount=pickState.villager||0;
@@ -424,7 +445,7 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
 
   // 混血兒／邱比特／盜賊（特殊身分；不開放雙身分模式）。傻瓜現在歸在下面的「神職」區塊裡
   // 一起顯示（見 GOD_ROLES 加入了 fool），不再在這裡單獨列一格。
-  if(!isDual){
+  if(!isDual&&!basicOnly){
     const hy=ALL_ROLES.hybrid;
     const cp=ALL_ROLES.cupid;
     const tf=ALL_ROLES.thief;
@@ -542,6 +563,11 @@ function getPickComp(state){
 // ── 板子選擇（單身分限定）──
 // 切換板子（含切回「自訂角色」）時呼叫；重新套用該板子的預設配置。
 function jgSetBoardPreset(val){
+  if(!jgBoardAvailable(val)){
+    // 沒開放的板子（公開版的付費板子）：選單退回目前的板子，不切換。
+    const bp=document.getElementById('jg-board-preset'); if(bp) bp.value=jgBoardPreset;
+    return;
+  }
   jgBoardPreset=val;
   const n=Math.min(14,Math.max(6,parseInt(document.getElementById('jg-count')?.value)||6));
   if(val==='custom'){
@@ -691,7 +717,7 @@ function renderPresetPicker(){
   // 使用也不會有問題）。
   const fixedSpecialKeys=fixedKeys.filter(k=>!WOLF_ROLES.includes(k)&&!GOD_ROLES.includes(k)&&k!=='villager');
   const specialTiles=fixedSpecialKeys.map(jgPresetLockedTileHtml).join('')
-    + (preset.specialToggles||['hybrid','thief','zombie']).filter(id=>!fixedKeys.includes(id)).map(id=>{
+    + (jgEditionHas('allBoards')?(preset.specialToggles||['hybrid','thief','zombie']):[]).filter(id=>!fixedKeys.includes(id)).map(id=>{
       const r=ALL_ROLES[id]; const cnt=state[id]||0;
       return '<div class="rpick'+(cnt>0?' sel':'')+'" onclick="jgPresetToggleGod(\''+id+'\')">'
         +'<span class="rp-ico">'+r.icon+'</span><div class="rp-nm">'+r.name+'</div>'
@@ -708,7 +734,9 @@ function renderPresetPicker(){
   // 通靈師（medium）與預言家（seer）查驗效果重疊，本板固定通靈師時就不再顯示預言家可選
   const excludeSeer=fixedKeys.includes('medium')&&!fixedKeys.includes('seer');
   // extraGods：只在特定板子出現的可選神職（例如動物夢境的白貓），不放進所有板子共用的清單。
-  (preset.godBase||JG_PRESET_GOD_BASE).concat(preset.extraGods||[]).forEach(id=>{
+  // 公開版的免費板子只開放加選預言家、女巫、獵人、守衛。
+  const godBase=jgEditionHas('allBoards')?(preset.godBase||JG_PRESET_GOD_BASE).concat(preset.extraGods||[]):(preset.godBase||JG_BASIC_GODS);
+  godBase.forEach(id=>{
     if(fixedKeys.includes(id)) return; // 這個板子已經把這個角色當固定角色了，不重複顯示
     if(id==='seer'&&excludeSeer) return;
     const r=ALL_ROLES[id]; const cnt=state[id]||0;

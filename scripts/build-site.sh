@@ -12,5 +12,8 @@ cp index.html style.css favicon.ico ./*.mp3 dist/
 cp -r js data img assets dist/
 if [ "$EDITION" = "public" ]; then
   echo "window.JG_DEPLOY_EDITION='public';" > dist/js/edition-config.js
+  # 公開版不放自己人的資料：人名、歷史場次、試算表網址、密碼（見 data/team-config.js）
+  echo "const JG_TEAM_CONFIG={};" > dist/data/team-config.js
+  echo "const GAMES=[];" > dist/data/games-history.js
 fi
 echo "已打包 $EDITION 版：$(find dist -type f | wc -l) 個檔案"

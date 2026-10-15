@@ -35,7 +35,10 @@ Object.assign(window, { doc, setDoc, getDoc, getDocs, addDoc, deleteDoc, collect
 
 // 每支手機第一次進來就自動用「匿名登入」拿一個帳號——不用真的註冊，Firestore 安全規則會用
 // 這個匿名帳號的 uid 來判斷「這支手機是房間裡的哪一位玩家」，藉此做到身分保密。
-window.jgFirebaseReady = new Promise((resolve) => {
+// 公開版沒有連線房間（js/edition.js 的 room）：不匿名登入，jgFirebaseReady 留空，
+// 連線房間的背景工作（例如清除過期房間）看到沒有 jgFirebaseReady 就不會動作。
+const jgFirebaseNeeded = typeof jgEditionHas !== 'function' || jgEditionHas('room');
+if (jgFirebaseNeeded) window.jgFirebaseReady = new Promise((resolve) => {
   onAuthStateChanged(auth, (user) => {
     if (user) {
       window.jgFirebaseUid = user.uid;

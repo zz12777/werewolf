@@ -18,16 +18,39 @@
 
 <!-- ════════════════ NAV ════════════════ -->
 <nav class="nav">
-  <a class="nav-brand" href="javascript:void(0)" onclick="switchTab('t-judge')"><img src="assets/logo.png" alt="狼吞虎嚥" class="nav-logo"></a>
+  <a class="nav-brand" href="javascript:void(0)" onclick="switchTab(jgEditionHas('home')?'t-home':'t-judge')"><img src="assets/logo.png" alt="狼吞虎嚥" class="nav-logo"></a>
   <button class="nav-hamburger" onclick="toggleNavMenu()" aria-label="開啟選單"><span class="hb-icon">☰</span>選單</button>
   <div class="nav-btns" id="nav-btns">
-    <button class="nav-btn" onclick="switchTab('t-rules')">角色與規則</button>
-    <button class="nav-btn" onclick="switchTab('t-guide')">攻略參考</button>
-    <button class="nav-btn active" onclick="switchTab('t-judge')">法官の助手</button>
-    <button class="nav-btn" onclick="switchTab('t-data')">遊玩數據</button>
-    <button class="nav-btn" onclick="switchTab('t-room')">連線房間</button>
+    <button class="nav-btn" data-tab="t-home" data-feature="home" onclick="switchTab('t-home')">首頁</button>
+    <button class="nav-btn" data-tab="t-rules" onclick="switchTab('t-rules')">角色與規則</button>
+    <button class="nav-btn" data-tab="t-guide" data-feature="guide" onclick="switchTab('t-guide')">攻略參考</button>
+    <button class="nav-btn active" data-tab="t-judge" onclick="switchTab('t-judge')">法官の助手</button>
+    <button class="nav-btn" data-tab="t-data" data-feature="playData" onclick="switchTab('t-data')">遊玩數據</button>
+    <button class="nav-btn" data-tab="t-room" data-feature="room" onclick="switchTab('t-room')">連線房間</button>
   </div>
 </nav>
+
+<!-- ══════════════════════════════════════
+     首頁（只有公開版有，見 js/edition.js 的 home、js/home.js 的翻卡動畫）
+══════════════════════════════════════ -->
+<div id="t-home" class="tab tab-wide" data-feature="home">
+  <div class="home-hero">
+    <img src="assets/logo.png" alt="狼吞虎嚥" class="home-logo">
+    <h1 class="home-title">狼人殺法官助手</h1>
+    <p class="home-sub">一個人也能輕鬆主持一整場狼人殺。<br><span class="home-nb">夜晚順序、口白、警長競選、</span><span class="home-nb">投票紀錄、勝負判定，照著按就好。</span></p>
+    <div class="home-cards" id="home-cards" aria-hidden="true"></div>
+    <div class="home-actions">
+      <button class="primary" onclick="switchTab('t-judge')">開始主持 →</button>
+      <button onclick="switchTab('t-rules')">角色與規則</button>
+    </div>
+    <div class="home-features">
+      <div class="home-feature"><span class="home-feature-ico"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></span><div><b>夜晚流程</b><span>依板子自動排好睜眼順序與口白</span></div></div>
+      <div class="home-feature"><span class="home-feature-ico"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg></span><div><b>投票紀錄</b><span>警長競選、放逐投票一鍵記下</span></div></div>
+      <div class="home-feature"><span class="home-feature-ico"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4M17 6h2.5a2.5 2.5 0 0 1-2.5 4"/><path d="M12 14v3M8 20.5h8M9.5 17h5v3.5h-5z"/></svg></span><div><b>勝負判定</b><span>每一刀、每一票之後自動檢查</span></div></div>
+    </div>
+    <div class="home-boards"><b>免費板子</b>預女獵守（基本板）・惡靈騎士＋守衛・狼美人＋騎士・機械狼＋通靈師・攝夢人＋夢魘</div>
+  </div>
+</div>
 
 <!-- ══════════════════════════════════════
      TAB 1: 規則
@@ -497,8 +520,8 @@
   <div class="jg-setup-grid">
   <div class="rules-section jg-sec-basic">
   <div class="rules-h1">遊戲基本設定</div>
-  <label style="margin-top:0;">身分模式</label>
-  <div class="btn2" style="margin-top:0;">
+  <label style="margin-top:0;" data-feature="dualMode">身分模式</label>
+  <div class="btn2" style="margin-top:0;" data-feature="dualMode">
     <button type="button" id="jg-mode-single" class="primary" onclick="jgSetMode(false)">單身分</button>
     <button type="button" id="jg-mode-dual" onclick="jgSetMode(true)">雙身分</button>
   </div>
@@ -514,6 +537,7 @@
       <option value="custom">自訂角色（可能有bug，遇到狀況請用「問題回報」回報）</option>
     </select>
   </div>
+  <div class="info" id="jg-board-lock-note" style="display:none;font-size:12px;margin:6px 0 4px;"></div>
   <div class="info" id="jg-comp-desc" style="text-align:center;font-size:13px;margin-bottom:4px;"></div>
   <div id="jg-role-picker"></div>
   <div id="jg-preset-picker" style="display:none;"></div>
@@ -553,7 +577,7 @@
   <div class="rules-h1">開始遊戲</div>
   <button style="margin-top:0;" onclick="jgOpenRosterSetup()">設定本局玩家名單（選填）</button>
   <button class="primary" style="margin-top:14px;" onclick="jgStart()">開始主持 →</button>
-  <div style="display:flex;gap:8px;margin-top:8px;">
+  <div style="display:flex;gap:8px;margin-top:8px;" data-feature="room">
     <button style="flex:1;" onclick="jgRoomCreateFromSetup()">建立連線房間</button>
     <button style="flex:1;" onclick="jgRoomDealFromSetup()">使用手機發牌</button>
   </div>
@@ -601,7 +625,7 @@
 </div>
 
 <!-- 即時票型紀錄（公開，任何人打開這個頁面都看得到；資料來自法官端同步過去的 Google 試算表） -->
-<div class="rules-section" style="margin:16px 0;">
+<div class="rules-section" style="margin:16px 0;" data-feature="liveVotes">
   <div class="rules-h1">即時票型紀錄</div>
   <div class="info" style="font-size:12px;">法官記完一輪投票會自動同步到這裡，若還沒出來請稍等一下或問法官。</div>
   <div id="jg-live-session-view" style="margin-top:10px;"></div>
@@ -615,7 +639,7 @@
 <!-- ══════════════════════════════════════
      TAB: 遊玩數據
 ══════════════════════════════════════ -->
-<div id="t-data" class="tab tab-wide apple-ui-preview">
+<div id="t-data" class="tab tab-wide apple-ui-preview" data-feature="playData">
 
 
   <div class="nbanner">
@@ -676,7 +700,7 @@
 <!-- ══════════════════════════════════════
      TAB: 專有名詞
 ══════════════════════════════════════ -->
-<div id="t-guide" class="tab tab-wide apple-ui-preview">
+<div id="t-guide" class="tab tab-wide apple-ui-preview" data-feature="guide">
   <div class="nbanner">
     <h1>攻略參考</h1>
     <p class="sub" style="text-align:center;margin-top:8px;">不定期更新狼人殺攻略文章</p>
@@ -698,7 +722,7 @@
 <!-- ══════════════════════════════════════
      TAB: 連線房間
 ══════════════════════════════════════ -->
-<div id="t-room" class="tab tab-wide apple-ui-preview">
+<div id="t-room" class="tab tab-wide apple-ui-preview" data-feature="room">
   <div id="jg-room-content"></div>
   <div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--border2);text-align:center;">
     <button class="ghost" onclick="jgRoomLeave()" style="width:auto;padding:8px 16px;font-size:13px;">離開房間</button>
@@ -707,12 +731,13 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-15-d</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-15-e</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="js/edition-config.js"></script>
 <script src="js/edition.js"></script>
 <script src="js/icons.js"></script>
+<script src="data/team-config.js"></script>
 <script src="data/games-history.js"></script>
 
 <!-- 邏輯檔：core 最先，main 最後（main 裡的程式會立刻呼叫其他檔案定義的函式，必須確保它們都已載入） -->
@@ -727,6 +752,7 @@
 <script src="js/playdata-core.js"></script>
 <script src="js/main.js"></script>
 <script src="js/deal-sync.js"></script>
+<script src="js/home.js"></script>
 <script type="module" src="js/firebase-init.js"></script>
 <!-- 連線房間：拆成 js/room/ 底下好幾個檔案，defer 載入，順序不能亂（見 js/room/core.js 開頭） -->
 <script defer src="js/room/core.js"></script>

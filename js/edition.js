@@ -23,22 +23,58 @@ function jgDetectEdition(search, deployEdition){
 const JG_EDITION=jgDetectEdition(typeof location!=='undefined'?location.search:'', typeof window!=='undefined'?window.JG_DEPLOY_EDITION:null);
 function jgIsPublicEdition(){ return JG_EDITION==='public'; }
 
-// 各版本有哪些功能（true＝有）。自己人版全部都有；公開版先全部維持原樣，
-// 之後一項一項關掉（例如：攻略、內建人名、遊玩數據試算表、即時票型、語音通話）。
+// 各版本有哪些功能（沒列出來的＝有）。自己人版維持原本的完整功能，只是沒有公開版的首頁。
+// 公開版拿掉的東西：
+//   guide     攻略參考分頁
+//   playData  遊玩數據分頁（自己人的雲端試算表、送出到遊玩數據、名單裡的歷史人名）
+//   liveVotes 法官助手頁的即時票型紀錄（會寫進自己人的試算表，不同場次會混在一起）
+//   room      連線房間分頁、建立連線房間／使用手機發牌按鈕、邀請連結、語音通話
+//   dualMode  雙身分模式
+//   allBoards 全部板子（公開版只開放免費板子，見 JG_FREE_BOARDS）
+// 公開版多一個 home（首頁）。
+// 畫面上的元素加 data-feature="功能名稱"，那個功能沒有時會自動藏起來（見下面）。
 const JG_EDITION_FEATURES={
-  team:{},
-  public:{}
+  team:{ home:false },
+  public:{ guide:false, playData:false, liveVotes:false, room:false, dualMode:false, allBoards:false }
 };
 function jgEditionHas(feature){
   const table=JG_EDITION_FEATURES[JG_EDITION]||{};
   return table[feature]!==false;
+}
+// 公開版的免費板子：'custom' 是「自訂角色」，公開版只能選預言家、女巫、獵人、守衛跟狼人、平民
+// （＝預女獵守基本板）；其他是 JG_BOARD_PRESETS 的 key。沒開放的板子在下拉選單顯示「付費方案」。
+const JG_FREE_BOARDS=['custom','evilknight_guard','wolfbeauty_knight','mechwolf_medium','dreamcatcher_nightmare'];
+const JG_BASIC_WOLVES=['wolf'];
+const JG_BASIC_GODS=['seer','witch','hunter','guard'];
+function jgBoardAvailable(key){
+  return jgEditionHas('allBoards')||JG_FREE_BOARDS.includes(key);
+}
+// 把 data-feature 的元素依版本藏起來（用屬性＋CSS 的 !important，切分頁也不會被打開）。
+function jgApplyEditionFeatures(root){
+  if(typeof document==='undefined') return;
+  (root||document).querySelectorAll('[data-feature]').forEach(el=>{
+    const off=el.getAttribute('data-feature').split(/\s+/).some(f=>f&&!jgEditionHas(f));
+    if(off) el.setAttribute('data-feature-off',''); else el.removeAttribute('data-feature-off');
+  });
 }
 
 // 讓 CSS 也能依版本調整（html[data-edition="public"] ...），頁尾版本號後面標示是哪個版本，
 // 部署到 Cloudflare 之後一眼就能確認兩個網站有沒有切對。
 if(typeof document!=='undefined'){
   document.documentElement.setAttribute('data-edition', JG_EDITION);
+  // 這支檔案放在 <body> 最後面載入，畫面元素已經都在了，直接套用，不會先閃一下再消失。
+  jgApplyEditionFeatures();
+  // 有首頁的版本：一打開先停在首頁（原本預設是法官の助手）。
+  if(jgEditionHas('home')){
+    const home=document.getElementById('t-home');
+    if(home){
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+      home.classList.add('on');
+      document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    }
+  }
   document.addEventListener('DOMContentLoaded',()=>{
+    jgApplyEditionFeatures();
     if(!jgIsPublicEdition()) return;
     const v=document.querySelector('.site-footer span');
     if(v&&!v.textContent.includes('公開版')) v.textContent+='（公開版）';

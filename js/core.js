@@ -34,8 +34,8 @@ function toggleNavMenu(){
 function switchTab(id){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
   document.getElementById(id).classList.add('on');
-  document.querySelectorAll('.nav-btn').forEach((b,i)=>{
-    b.classList.toggle('active',['t-rules','t-guide','t-judge','t-data','t-room'][i]===id);
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    b.classList.toggle('active',b.getAttribute('data-tab')===id);
   });
   // 手機版的漢堡選單：選完分頁之後自動收合，不用使用者自己再點一次關閉；桌機版沒有這個
   // 選單（display:none），這裡直接拿掉 open class 也不會有任何影響。
@@ -70,7 +70,7 @@ function switchTab(id){
 let jgTotal=6, jgComp={};
 // 「現在開始競選警長」音檔的播放／暫停／重播——共用同一個 Audio 物件，
 // 這樣暫停後再按播放才會從暫停的地方接著播，而不是每次都從頭建立新的音檔重播。
-const JG_LIVE_SYNC_URL = 'https://script.google.com/macros/s/AKfycbxnTE-iVo8D9GPmP2E6xsbRR4StTZJlbjG6oM6k9mUJlK-PBsX0C73AQNPg4ZRyEJgRiQ/exec';
+const JG_LIVE_SYNC_URL = JG_TEAM_CONFIG.liveSyncUrl||''; // 網址在 data/team-config.js（公開版沒有）
 let jgLiveSessionId=null; // 這一場遊戲的場次代碼（例如 0813_1），開局時產生一次、整場固定不變
 let jgLivePollTimer=null; // 目前正在自動輪詢的計時器（切換場次/離開畫面時要記得清掉，避免重複輪詢）
 
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 
 // Preset name pool for quick player-roster setup (judge can still type a custom name for anyone)
-const JG_NAME_PRESET=['陳冠竹','巫嘉軒','鄭文奇','李法順','李想成','陳冠彣','陳玉堂','黃家珮','黃柏寰','何冠岳','謝子凡','王悅謙','孫揚和','蘇祐樂','許逸凡','林芸竹','吳柏霖','陳詩涵','劉謙叡','龔則乾','洪梓睿','黃禹勛','蘇奕安','郭展吟','許綺文','林均豪','潘彥誠','曾冠學','謝伊晨','陳芯錞','劉欣融','賴宥瑋','魏愷呈'];
+const JG_NAME_PRESET=(JG_TEAM_CONFIG.namePreset||[]).slice(); // 名單在 data/team-config.js（公開版是空的）
 let jgPlayerNames={}; // num -> name, set via the roster setup page before jgStart()
 
 // ── 文字紀錄匯出 ──
@@ -1116,7 +1116,7 @@ function jgRenderRosterSetupRows_OLD(){
 }
 
 // 打字比對：輸入的字只要出現在候選姓名裡的任何位置就列為建議（例如打「竹」會同時比對出
-// 「陳冠竹」「林芸竹」），法官點一下就套用；找不到或比對錯誤都能直接把輸入框的字改掉。
+// 「王小竹」「林竹安」），法官點一下就套用；找不到或比對錯誤都能直接把輸入框的字改掉。
 // 欄位是空的（例如剛點進去還沒打字）時，直接列出完整名單，等同於一個可點選的選單；
 // 開始打字後名單會即時篩選縮小，兩種用法可以同時搭配使用。
 function jgRosterInputChange(i){
@@ -1321,11 +1321,14 @@ function jgUnhideName(name){
 // 選名單用的分組：常用名單＋遊玩紀錄裡出現過的名字（扣掉被移除的）。
 // 遊玩場數達到排行榜門檻的放在「常客」，依場數由高到低排；其餘收進「更多名字」，也依場數排。
 function jgRosterNameGroups(){
-  const counts=(typeof pdPlayerGameCounts==='function')?pdPlayerGameCounts():{};
+  // 公開版沒有遊玩數據，名單只有法官自己在這台裝置打過的名字。
+  const counts=(jgEditionHas('playData')&&typeof pdPlayerGameCounts==='function')?pdPlayerGameCounts():{};
   const threshold=(typeof pdRankThresholdGames==='function')?pdRankThresholdGames():Infinity;
   const hidden=new Set(jgGetHiddenNames());
   const all=[];
   jgGetNamePool().concat(Object.keys(counts)).forEach(nm=>{ if(nm&&!hidden.has(nm)&&!all.includes(nm)) all.push(nm); });
+  // 公開版沒有場數可以排：這台裝置記過的名字全部直接列出來，照記下來的順序。
+  if(!jgEditionHas('playData')) return {regular:all, more:[], counts};
   const byCount=(a,b)=>((counts[b]||0)-(counts[a]||0))||(all.indexOf(a)-all.indexOf(b));
   const regular=all.filter(nm=>(counts[nm]||0)>0&&(counts[nm]||0)>=threshold).sort(byCount);
   const more=all.filter(nm=>!regular.includes(nm)).sort(byCount);
@@ -1398,7 +1401,8 @@ function jgRenderRosterPoolInner(wrap){
   let html='';
   if(jgRosterEditNames) html+='<div class="info-warn" style="font-size:12px;margin-bottom:8px;">編輯名單中：點名字會把它從名單移除（不影響已經填進座位的姓名）。</div>';
   html+=showRegular.length?'<div class="rname-pool-grid">'+showRegular.map(btn).join('')+'</div>'
-    :'<div class="info" style="font-size:12px;">'+(q?'常客裡沒有符合的名字':'目前沒有達到排行榜門檻的常客')+'</div>';
+    :'<div class="info" style="font-size:12px;">'+(q?(jgEditionHas('playData')?'常客裡沒有符合的名字':'沒有符合的名字')
+      :(jgEditionHas('playData')?'目前沒有達到排行榜門檻的常客':'還沒有記過的名字。在下面輸入框打名字，這台裝置會記住，下次直接點選'))+'</div>';
   if(more.length){
     html+='<button type="button" class="ghost rname-more-btn" onclick="jgRosterToggleMore()">'+(moreOpen?'收起更多名字':'更多名字（'+(q?showMore.length:more.length)+'）')+'</button>';
     if(moreOpen) html+=showMore.length?'<div class="rname-pool-grid">'+showMore.map(btn).join('')+'</div>':'<div class="info" style="font-size:12px;">沒有符合的名字</div>';
@@ -2952,7 +2956,7 @@ function jgShowWin(res){
     <div class="section-title" style="margin-top:16px;">🏆 本場 MVP（選填）</div>
     <div id="jg-mvp-picker-wrap">${jgMvpPickerHtml()}</div>
     <button onclick="jgShowExportModal()" style="margin-top:14px;">${jgIcon('clip')} 匯出文字紀錄</button>
-    <button onclick="pdSubmitGameRecord()" style="margin-top:8px;">${jgIcon('lock')} 送出到遊玩數據</button>
+    ${jgEditionHas('playData')?`<button onclick="pdSubmitGameRecord()" style="margin-top:8px;">${jgIcon('lock')} 送出到遊玩數據</button>`:''}
     <button class="primary" onclick="jgReset()" style="margin-top:8px;">再玩一局</button>
   `;
   document.getElementById('jg-phase-badge').innerHTML='🏁 遊戲結束';
@@ -2973,7 +2977,7 @@ function jgShowJudgeEndModal(winnerLabel){
   modal.innerHTML='<div style="background:var(--bg1,#fff);border-radius:16px;padding:24px 20px;max-width:420px;width:100%;text-align:center;">'
     +'<div style="font-size:17px;font-weight:800;line-height:1.9;">法官公布: 遊戲結束，「'+winnerLabel+'」獲勝<br>'
     +'<div style="font-size:14px;font-weight:600;color:var(--text2);margin-top:10px;line-height:1.9;text-align:left;">'
-    +'給法官的提醒:<br>1. 匯出文字紀錄到群組<br>2. 找冠竹或嘉軒以輸入密碼上傳本場記錄到遊玩數據<br>'
+    +'給法官的提醒:<br>1. 匯出文字紀錄到群組<br>'+(JG_TEAM_CONFIG.judgeEndUploadNote?'2. '+JG_TEAM_CONFIG.judgeEndUploadNote+'<br>':'')
     +'</div><div style="margin-top:10px;">法官辛苦了!!</div></div>'
     +'<button class="primary" style="margin-top:16px;" onclick="document.getElementById(\'jg-judge-end-modal\').remove()">我知道了</button>'
     +'</div>';
