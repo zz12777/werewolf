@@ -1050,11 +1050,19 @@ function jgUpdateComp(){
   const target=isDual?n*2:(hasThief?n+2:n);
   const el=document.getElementById('jg-comp-desc');
   if(el){
+    // 一行寫完：總數（各陣營人數），人數不對就接「超過／未滿 X 人」。
+    const unit=isDual||hasThief?'個角色':'人';
+    const diff=total>target?' ⚠️ 超過 '+target+' '+unit:(total<target?' ⚠️ 未滿 '+target+' '+unit:'');
+    const parts=['狼人 '+wolves,'神職 '+gods,'平民 '+vils];
+    if(hybrids>0) parts.push('混血兒 '+hybrids);
+    if(cupids>0) parts.push('邱比特 '+cupids);
+    if(fools>0) parts.push('傻瓜 '+fools);
+    if(hasThief) parts.push('盜賊 '+thieves);
     el.textContent=isDual
-      ? '共 '+total+' 個角色'+(total!==target?' ⚠️ 需選滿 '+target+' 個角色':'')
+      ? '共 '+total+' 個角色'+diff
       : (hasThief
-          ? '玩家 '+n+' 人 · 共 '+total+' 個角色（盜賊需多選 2 個候選身分）· 狼人 '+wolves+' · 神職 '+gods+' · 平民 '+vils+(hybrids>0?' · 混血兒 '+hybrids:'')+(cupids>0?' · 邱比特 '+cupids:'')+(fools>0?' · 傻瓜 '+fools:'')+' · 盜賊 '+thieves+(total!==target?' ⚠️ 需選滿 '+target+' 個角色':'')
-          : '共 '+total+' 人 · 狼人 '+wolves+' · 神職 '+gods+' · 平民 '+vils+(hybrids>0?' · 混血兒 '+hybrids:'')+(cupids>0?' · 邱比特 '+cupids:'')+(fools>0?' · 傻瓜 '+fools:'')+(total!==target?' ⚠️ 需選滿 '+target+' 人':''));
+          ? '玩家 '+n+' 人，共 '+total+' 個角色（'+parts.join('、')+'）'+diff+'（盜賊要多選 2 個候選身分）'
+          : '共 '+total+' 人（'+parts.join('、')+'）'+diff);
   }
   const usePreset=!isDual&&jgBoardPreset!=='custom';
   const pickerEl=document.getElementById('jg-role-picker');

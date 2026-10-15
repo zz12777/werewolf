@@ -36,6 +36,15 @@ async function run(){
   check('公開版藏起連線房間', hidden('.nav-btn[data-tab="t-room"]')&&hidden('#t-room'), true);
   check('公開版藏起建立連線房間／手機發牌按鈕', hidden('[onclick="jgRoomCreateFromSetup()"]')||hidden('div[data-feature="room"]'), true);
   check('公開版藏起即時票型', hidden('[data-feature="liveVotes"]'), true);
+  check('公開版角色與規則沒有 MVP 選擇機制', hidden('[data-ov="mvp-mechanism"]')||d2.querySelector('[data-ov="mvp-mechanism"]').closest('.rcol').hasAttribute('data-feature-off'), true);
+  const desc = ()=>d2.getElementById('jg-comp-desc').textContent;
+  check('人數剛好：一行寫完各陣營人數', desc(), '共 6 人（狼人 2、神職 2、平民 2）');
+  w2.eval('jgRolePick.villager+=1; jgUpdateComp()');
+  check('人數超過', desc(), '共 7 人（狼人 2、神職 2、平民 3） ⚠️ 超過 6 人');
+  w2.eval('jgRolePick.villager-=2; jgUpdateComp()');
+  check('人數未滿', desc(), '共 5 人（狼人 2、神職 2、平民 1） ⚠️ 未滿 6 人');
+  w2.eval('jgRolePick.villager+=1; jgUpdateComp()');
+  check('選角區不再重複顯示「目前：x/y 人」', d2.getElementById('jg-role-picker').textContent.includes('目前：'), false);
   check('公開版藏起雙身分', hidden('.btn2[data-feature="dualMode"]'), true);
   check('角色與規則、法官の助手還在', !hidden('.nav-btn[data-tab="t-rules"]')&&!hidden('.nav-btn[data-tab="t-judge"]'), true);
   check('公開版沒有自己人的設定', w2.eval('JSON.stringify(JG_TEAM_CONFIG)'), '{}');

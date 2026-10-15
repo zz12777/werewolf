@@ -474,27 +474,19 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   const el=document.getElementById(containerId);
   if(!el) return;
   const isDual=jgSetupDualMode;
-  const unitLabel=isDual?'個角色':'人';
   // 覺醒石像鬼只在風聲諜影板才有轉化流程，自訂角色不開放選。
   // 公開版的自訂角色＝預女獵守基本板：只有狼人、平民、預言家、女巫、獵人、守衛。
   const basicOnly=!isDual&&!jgEditionHas('allBoards');
   const wolves=isDual?WOLF_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):(basicOnly?JG_BASIC_WOLVES.slice():WOLF_ROLES.filter(r=>r!=='awgargoyle'&&jgRoleAvailable(r)));
   const gods=isDual?GOD_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):(basicOnly?JG_BASIC_GODS.slice():GOD_ROLES);
-  const wolfCount=Object.entries(pickState).filter(([k])=>wolves.includes(k)).reduce((s,[,v])=>s+v,0);
-  const godCount=Object.entries(pickState).filter(([k])=>gods.includes(k)).reduce((s,[,v])=>s+v,0);
   const vilCount=pickState.villager||0;
   const hybridCount=isDual?0:(pickState.hybrid||0); // 混血兒不開放雙身分模式選用
   const cupidCount=isDual?0:(pickState.cupid||0); // 邱比特不開放雙身分模式選用
   const thiefCount=isDual?0:(pickState.thief||0); // 盜賊不開放雙身分模式選用
   const zombieCount=isDual?0:(pickState.zombie||0); // 殭屍不開放雙身分模式選用
-  // 注意：傻瓜現在算在 GOD_ROLES 裡，godCount 已經含傻瓜的數量了，這裡不再另外加一次，
-  // 不然選了傻瓜的話，總數會被重複計算多算一個。
-  const totalPicked=wolfCount+godCount+vilCount+hybridCount+cupidCount+thiefCount+zombieCount;
 
-  let html=`<div style="font-size:12px;color:var(--text2);margin-bottom:8px;">
-    目前：${totalPicked}/${total} ${unitLabel}
-    ${totalPicked!==total?'<span style="color:#922418;font-weight:700;">（需選滿 '+total+' '+unitLabel+'）</span>':'<span style="color:#2a601c;">'+jgIcon('check')+'</span>'}
-  </div>`;
+  // 目前選了幾人、還差幾人，統一寫在上面的 #jg-comp-desc（見 jgUpdateComp），這裡不再重複一行。
+  let html='';
 
   // Wolf roles
   html+='<div style="font-size:13px;font-weight:800;color:var(--wolf);margin:6px 0 4px;letter-spacing:0.5px;">狼人陣營</div>';

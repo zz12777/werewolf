@@ -475,7 +475,7 @@
             ‧ 法官の助手在「上警局」設定中可以直接選擇本局採用單爆或雙爆，開始主持後競選流程會自動依規則微調。
     </div>
   </div>
-  <div class="rcol">
+  <div class="rcol" data-feature="playData">
     <div class="rcol-hd" onclick="toggleRcol(this)">
       <span class="rcol-name">MVP選擇機制</span>
       <span class="rcol-arrow"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-0.125em;"><path d="M9 6l6 6-6 6"/></svg></span>
@@ -510,7 +510,7 @@
     <h2 class="ntitle">法官の助手</h2>
     <p class="sub" style="text-align:center;">幫助法官主持遊戲的腳本與紀錄系統</p>
   </div>
-  <!-- 設定分成基本設定（身分模式、人數、玩家名單、警長）、選板子兩張卡片，開始主持按鈕獨立放最後；
+  <!-- 設定分成基本設定（身分模式、人數、警長、玩家名單）、選板子兩張卡片，開始主持按鈕獨立放最後；
        電腦寬螢幕改成左欄基本設定＋開始主持，右欄選板子 -->
   <div class="jg-setup-grid">
   <div class="rules-section jg-sec-basic">
@@ -524,8 +524,6 @@
   <input type="checkbox" id="jg-dual-mode" style="display:none;"/>
   <label id="jg-count-label" style="margin-top:12px;">玩家人數（6～16）</label>
   <input type="number" id="jg-count" min="6" max="16" value="6" inputmode="numeric" oninput="jgUpdateComp()"/>
-  <label style="margin-top:12px;">玩家名單（選填）</label>
-  <button style="margin-top:0;" onclick="jgOpenRosterSetup()">設定本局玩家名單</button>
   <label style="margin-top:12px;">警長設定（選填）</label>
   <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:0;padding:14px 16px;border-radius:12px;border:none;background:var(--bg2);box-shadow:var(--au-shadow-sm,0 1px 3px rgba(0,0,0,0.08));cursor:pointer;transition:background .15s,box-shadow .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
     <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
@@ -539,6 +537,8 @@
     </div>
     <div class="info" id="jg-badge-mode-desc" style="font-size:12px;margin-top:8px;">單爆吞警徽：只要有狼人在首個白天的警上環節自爆，警徽立刻流失，本局不再有警長。</div>
   </div>
+  <label style="margin-top:12px;">玩家名單（選填）</label>
+  <button style="margin-top:0;" onclick="jgOpenRosterSetup()">設定本局玩家名單</button>
   </div>
   <div class="rules-section jg-sec-board">
   <div class="rules-h1">選擇板子</div>
@@ -584,8 +584,10 @@
     <h2 class="ntitle">設定玩家名單</h2>
   </div>
   <div id="jg-roster-setup-rows"></div>
-  <button class="primary" style="margin-top:14px;" onclick="jgSaveRosterSetup()">完成</button>
-  <button style="margin-top:8px;" onclick="jgCancelRosterSetup()">取消</button>
+  <div class="jg-roster-actions">
+    <button onclick="jgCancelRosterSetup()">取消</button>
+    <button class="primary" onclick="jgSaveRosterSetup()">完成</button>
+  </div>
 </div>
 
 <!-- 法官主持中 -->
@@ -722,7 +724,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-15-f</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-15-g</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="js/edition-config.js"></script>
