@@ -24,6 +24,10 @@ async function run(){
   const sortObj=o=>Object.keys(o).sort().map(k=>k+':'+o[k]).join(',');
   check('12 人預設配置', sortObj(JSON.parse(ev('JSON.stringify(getPickComp(jgRolePick))'))), sortObj({wolf:3,wolfking:1,villager:4,seer:1,witch:1,hunter:1,eros:1}));
   check('愛神算神職', ev("GOD_ROLES.includes('eros')"), true);
+  check('預言家、女巫、獵人不鎖定（只鎖黑狼王、愛神）', Object.keys(JSON.parse(ev('JSON.stringify(JG_BOARD_PRESETS.eros_board.fixed)'))).sort(), ['eros','wolfking']);
+  ev('jgApplyPresetDefaults(10);');
+  check('10 人預設一樣帶預言家、女巫、獵人', sortObj(JSON.parse(ev('JSON.stringify(getPickComp(jgRolePick))'))), sortObj({wolfking:1,eros:1,wolf:2,seer:1,witch:1,hunter:1,villager:3}));
+  ev('jgApplyPresetDefaults(12);');
   check('角色與規則有愛神卡片', !!window.document.getElementById('role-eros'), true);
   check('角色與規則有愛神板子', !!window.document.querySelector('[data-ov="board-eros"]'), true);
 

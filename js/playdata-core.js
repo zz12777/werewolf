@@ -406,10 +406,11 @@ function pdPlayerTrendSectionHtml(name){
 // ═══════════════════════════════════════════
 // 排行榜排名門檻：遊玩場數要達到全站總場次的 1/10。法官助手選名單也用同一個門檻
 // （jgRosterNameGroups），兩邊「常客」的定義才會一致。
-function pdRankThresholdGames(){ return GAMES.length/10; }
+function pdRankThresholdGames(){ return typeof GAMES==='undefined'?Infinity:GAMES.length/10; }
 // 每位玩家的遊玩場數（依全部場次，含雲端抓下來的場次）。
 function pdPlayerGameCounts(){
   const counts={};
+  if(typeof GAMES==='undefined') return counts; // 歷史資料檔沒載到（例如網路不穩）時，名單照樣能用
   GAMES.forEach(g=>(g.players||[]).forEach(pl=>{ if(pl&&pl.name) counts[pl.name]=(counts[pl.name]||0)+1; }));
   return counts;
 }
