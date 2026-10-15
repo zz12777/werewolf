@@ -876,12 +876,15 @@ body.tour-on{padding-bottom:220px;}
 .jg-tour-body{font-size:15px;line-height:1.7;margin-top:6px;color:var(--text);}
 .jg-tour-btns{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;flex-wrap:wrap;}
 .jg-tour-btns button{width:auto;margin-top:0;padding:9px 18px;font-size:14px;}
-.tour-hl{outline:3px solid var(--gold)!important;outline-offset:3px;position:relative;z-index:2;animation:jgTourPulse 1.4s ease-in-out infinite;}
-@keyframes jgTourPulse{0%,100%{box-shadow:0 0 0 0 rgba(154,124,40,0.55);}50%{box-shadow:0 0 0 9px rgba(154,124,40,0);}}
+/* 外框畫在按鈕裡面（outline-offset 負值），不會超出按鈕、也不會被外層裁掉；不閃爍。 */
+.tour-hl{outline:3px solid var(--gold)!important;outline-offset:-3px;}
 #jg-tour.jg-tour-nudge{animation:jgTourNudge .4s;}
 @keyframes jgTourNudge{0%,100%{transform:translateX(-50%);}25%{transform:translateX(calc(-50% - 6px));}75%{transform:translateX(calc(-50% + 6px));}}
+.home-tour-btn{width:auto;margin:14px auto 0;display:block;padding:8px 16px;font-size:13px;}
+/* 勝利條件：標題一行、條件一條一條列出來，行距拉開比較好讀 */
+.wincond{margin-bottom:8px;line-height:1.9;font-size:14px;}
+.wincond strong{font-size:15px;}
 .jg-tour-open{width:auto;margin-top:0;padding:6px 14px;font-size:13px;}
 @media (prefers-reduced-motion: reduce){
-  .tour-hl{animation:none;}
   #jg-tour.jg-tour-nudge{animation:none;}
 }

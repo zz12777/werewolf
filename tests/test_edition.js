@@ -83,6 +83,9 @@ async function run(){
   w2.eval("switchTab('t-judge')");
   check('切分頁後首頁收起來', d2.getElementById('t-home').classList.contains('on'), false);
   check('對應分頁按鈕變 active', d2.querySelector('.nav-btn[data-tab="t-judge"]').classList.contains('active'), true);
+  w2.eval("jgShowJudgeEndModal('好人')");
+  check('公開版遊戲結束不跳法官辛苦了視窗', !!d2.getElementById('jg-judge-end-modal'), false);
+  check('首頁有導覽／演練按鈕', !!d2.querySelector('#t-home .home-tour-btn'), true);
   check('公開版不連 Firebase', w2.eval('window.jgFirebaseReady===undefined'), true);
   w2.close();
 

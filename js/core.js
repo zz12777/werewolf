@@ -2976,6 +2976,8 @@ function jgShowWin(res){
 
 // 遊戲結束時跳出的法官提醒大框：公布結果＋提醒法官匯出紀錄、上傳遊玩數據
 function jgShowJudgeEndModal(winnerLabel){
+  // 公開版不跳「法官公布／法官辛苦了」視窗，直接看遊戲結束畫面。
+  if(jgIsPublicEdition()) return;
   let modal=document.getElementById('jg-judge-end-modal');
   if(!modal){
     modal=document.createElement('div');
