@@ -15,5 +15,7 @@ if [ "$EDITION" = "public" ]; then
   # 公開版不放自己人的資料：人名、歷史場次、試算表網址、密碼（見 data/team-config.js）
   echo "const JG_TEAM_CONFIG={};" > dist/data/team-config.js
   echo "const GAMES=[];" > dist/data/games-history.js
+  # 公開版沒有的分頁按鈕直接從網頁原始碼拿掉（分享連結的預覽只讀原始碼，看不到程式藏起來的結果）
+  sed -i -E '/class="nav-btn"[^>]*data-feature="(guide|playData|room)"/d' dist/index.html
 fi
 echo "已打包 $EDITION 版：$(find dist -type f | wc -l) 個檔案"
