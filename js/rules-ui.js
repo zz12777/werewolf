@@ -116,7 +116,8 @@ const JG_BOARD_PRESETS = {
     }},
   // 愛神：每晚最先睜眼連一對情侶（情侶只到下一晚為止），愛神死後隔天白天過完就不再有情侶。
   // 跟邱比特不同，情侶一好一狼也不會變成第三方。
-  eros_board:{label:'愛神', fixed:{wolfking:1, eros:1, seer:1, witch:1, hunter:1},
+  // 預言家、女巫、獵人只是預設勾選（defaultByN），不鎖定，可以自己取消。
+  eros_board:{label:'愛神', fixed:{wolfking:1, eros:1}, defaultGods:['seer','witch','hunter'],
     defaultByN:{12:{wolfking:1, wolf:3, seer:1, witch:1, hunter:1, eros:1, villager:4}}},
   animal_dream:{label:'動物夢境', fixed:{wolfbeauty:1, bear:1, foxcub:1, pufferfish:1}, extraGods:['whitecat'], villagerLabel:'羊駝（平民）',
     defaultByN:{
@@ -568,6 +569,8 @@ function jgApplyPresetDefaults(n){
   // 板子建議的黑狼王／白狼王預設值——只是「預先選好」方便法官，不是鎖定，法官可以自由改選
   // 另一種、或直接取消都可以（見 renderPresetPicker 的黑狼王／白狼王二選一格子）。
   if(preset.wolfkingDefault&&!rp.wolfking&&!rp.whitewolf) rp[preset.wolfkingDefault]=1;
+  // 板子建議的神職（defaultGods）：一樣只是預先勾選，不鎖定，法官可以自己取消。
+  (preset.defaultGods||[]).forEach(g=>{ if(!rp[g]) rp[g]=1; });
 
   // 盡量抓 1:1:1（狼／神／民）比例：狼人以基本狼人為主，神職依序（預言家／女巫／獵人／守衛）補上，
   // 若板子已固定通靈師，就不預設加預言家（兩者查驗效果重疊，不同時出現）。
