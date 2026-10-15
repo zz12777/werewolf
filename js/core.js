@@ -1078,9 +1078,15 @@ function jgOpenRosterSetup(){
   const n=Math.min(max,Math.max(min,parseInt(document.getElementById('jg-count')?.value)||min));
   jgTotal=n;
   jgRosterActiveSlot=1;
-  jgRenderRosterSetupRows();
+  // 先切到名單頁再畫內容：就算畫名單時出錯，按鈕也不會「完全沒反應」，錯誤會顯示在畫面上。
   document.querySelectorAll('#t-judge .pg').forEach(p=>p.classList.remove('on'));
   document.getElementById('jg-p-roster').classList.add('on');
+  try{ jgRenderRosterSetupRows(); }
+  catch(e){
+    console.error('名單畫面載入失敗', e);
+    const box=document.getElementById('jg-roster-setup-rows');
+    if(box) box.innerHTML='<div class="info-warn" style="font-size:12px;">名單畫面載入失敗，請截圖給開發者：<br>'+String(e&&e.stack||e).replace(/</g,'&lt;')+'</div>';
+  }
 }
 
 /* ── 舊版「設定玩家名單」畫面（逐列輸入框＋打字比對建議清單）先註解保留，改用下面
@@ -1368,6 +1374,14 @@ function jgRenderRosterSetupRows(){
 function jgRenderRosterPool(){
   const wrap=document.getElementById('jg-roster-pool');
   if(!wrap) return;
+  try{ jgRenderRosterPoolInner(wrap); }
+  catch(e){
+    console.error('名單載入失敗', e);
+    wrap.innerHTML='<div class="info-warn" style="font-size:12px;">常用名單載入失敗，可以先在下面直接輸入名字。<br>錯誤：'
+      +String(e&&e.message||e).replace(/</g,'&lt;')+'</div>';
+  }
+}
+function jgRenderRosterPoolInner(wrap){
   const {regular, more, counts}=jgRosterNameGroups();
   const q=jgRosterSearch;
   const showRegular=jgRosterVisibleNames(regular, q);
