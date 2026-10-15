@@ -18,6 +18,7 @@ document.getElementById('jg-count').addEventListener('input',()=>{
   jgUpdateComp();
 });
 renderRulesCards();
+jgWatchWhiteWolfScrub();
 loadRoleDescOverrides();
 loadContentBlockOverrides();
 loadGlossary();

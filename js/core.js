@@ -1363,8 +1363,8 @@ function jgRenderRosterSetupRows(){
 
   // 名字區另外放一個容器（jgRenderRosterPool 只重畫這一塊），打字搜尋時輸入框才不會被重畫、
   // 游標不會跳掉。
-  let poolHtml='<div class="info" style="margin:14px 0 8px;font-size:13px;">目前設定：<strong>'+jgRosterActiveSlot+' 號</strong>，點下面的名字，或在最下面輸入框搜尋／輸入新名字</div>'
-    +'<div id="jg-roster-pool"></div>';
+  // 目前要填的號碼用顏色標在上面的空格上，這裡不再另外寫一行說明。
+  let poolHtml='<div id="jg-roster-pool" style="margin-top:14px;"></div>';
   poolHtml+='<div style="display:flex;gap:8px;margin-top:10px;align-items:stretch;">'
     +'<input type="text" id="jg-roster-manual-input" placeholder="搜尋，或輸入名單裡沒有的新名字" style="flex:1;margin:0;" value="'+jgRosterSearch.replace(/"/g,'&quot;')+'" oninput="jgRosterSearchInput(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();jgRosterAssignManual();}">'
     +'<button type="button" class="primary" style="width:auto;flex:0 0 auto;margin:0;padding:0 20px;" onclick="jgRosterAssignManual()">確定</button>'
@@ -1400,9 +1400,8 @@ function jgRenderRosterPoolInner(wrap){
   const moreOpen=jgRosterMoreOpen||(!!q&&showMore.length>0);
   let html='';
   if(jgRosterEditNames) html+='<div class="info-warn" style="font-size:12px;margin-bottom:8px;">編輯名單中：點名字會把它從名單移除（不影響已經填進座位的姓名）。</div>';
-  html+=showRegular.length?'<div class="rname-pool-grid">'+showRegular.map(btn).join('')+'</div>'
-    :'<div class="info" style="font-size:12px;">'+(q?(jgEditionHas('playData')?'常客裡沒有符合的名字':'沒有符合的名字')
-      :(jgEditionHas('playData')?'目前沒有達到排行榜門檻的常客':'還沒有記過的名字。在下面輸入框打名字，這台裝置會記住，下次直接點選'))+'</div>';
+  // 沒有名字可以點（還沒記過名字、或搜尋沒有符合）時什麼都不顯示，直接在下面輸入框打名字。
+  if(showRegular.length) html+='<div class="rname-pool-grid">'+showRegular.map(btn).join('')+'</div>';
   if(more.length){
     html+='<button type="button" class="ghost rname-more-btn" onclick="jgRosterToggleMore()">'+(moreOpen?'收起更多名字':'更多名字（'+(q?showMore.length:more.length)+'）')+'</button>';
     if(moreOpen) html+=showMore.length?'<div class="rname-pool-grid">'+showMore.map(btn).join('')+'</div>':'<div class="info" style="font-size:12px;">沒有符合的名字</div>';
@@ -1422,11 +1421,6 @@ function jgApplyRosterSetupNames(){
 function jgSaveRosterSetup(){
   jgApplyRosterSetupNames();
   jgCancelRosterSetup();
-}
-function jgSaveRosterSetupAndStart(){
-  jgApplyRosterSetupNames();
-  jgCancelRosterSetup();
-  jgStart();
 }
 
 function jgCancelRosterSetup(){

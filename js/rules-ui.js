@@ -130,8 +130,10 @@ const JG_BOARD_PRESETS = {
 // 各自獨立維護的清單，新增板子時很容易漏改其中一邊。現在改成頁面載入時，直接照 JG_BOARD_PRESETS
 // 的內容自動產生選項——只要這裡有新增板子，下拉選單就一定會同步出現，不用再手動改 HTML。
 // 「自訂角色」那個選項不是真正的板子（不對應 JG_BOARD_PRESETS 裡的任何一筆），維持寫在 HTML 裡。
-// 公開版（見 js/edition.js 的 jgBoardAvailable）：免費板子排前面，其他板子排在後面、標「付費方案」
-// 而且不能選；「自訂角色」改叫「預女獵守（基本板）」，只能選基本角色。
+// 公開版（見 js/edition.js 的 jgBoardAvailable）：「自訂角色」改叫「預女獵守（基本板）」，只能選基本角色；
+// 原生下拉選單沒辦法在選項裡畫圖示，所以公開版改用自己畫的選單（jgRenderBoardPicker）：免費板子排前面，
+// 其他板子排在後面、畫一個小鎖、不能選，滑鼠移上去顯示「付費解鎖」。原本的 <select> 還留著（藏起來），
+// 其他程式讀寫 #jg-board-preset 的地方不用改。
 function jgPopulateBoardPresetDropdown(){
   const sel=document.getElementById('jg-board-preset');
   if(!sel) return;
@@ -140,24 +142,61 @@ function jgPopulateBoardPresetDropdown(){
     const custom=sel.querySelector('option[value="custom"]');
     if(custom) custom.textContent='預女獵守（基本板）';
   }
-  const entries=Object.entries(JG_BOARD_PRESETS);
-  const free=entries.filter(([key])=>jgBoardAvailable(key));
-  // 免費板子照 JG_FREE_BOARDS 的順序排（自己人版全部開放，維持原本順序）。
-  if(limited) free.sort((a,b)=>JG_FREE_BOARDS.indexOf(a[0])-JG_FREE_BOARDS.indexOf(b[0]));
-  const locked=entries.filter(([key])=>!jgBoardAvailable(key));
-  free.concat(locked).forEach(([key,preset])=>{
+  jgBoardPickerEntries().forEach(([key,preset])=>{
     const opt=document.createElement('option');
     opt.value=key;
-    const open=jgBoardAvailable(key);
-    opt.textContent=preset.label+(open?'':'（付費方案）');
-    if(!open) opt.disabled=true;
+    opt.textContent=preset.label;
+    if(!jgBoardAvailable(key)) opt.disabled=true;
     sel.appendChild(opt);
   });
-  const note=document.getElementById('jg-board-lock-note');
-  if(note&&limited&&locked.length){
-    note.innerHTML=jgIcon('lock')+' 免費版開放 '+(free.length+1)+' 種板子（含預女獵守基本板），其他 '+locked.length+' 種板子之後會在付費方案開放。';
-    note.style.display='';
+  if(limited){
+    sel.style.display='none';
+    const box=document.createElement('div');
+    box.id='jg-board-picker';
+    box.className='jg-bp';
+    sel.insertAdjacentElement('afterend', box);
+    jgRenderBoardPicker();
+    document.addEventListener('click',e=>{
+      if(jgBoardPickerOpen&&!box.contains(e.target)){ jgBoardPickerOpen=false; jgRenderBoardPicker(); }
+    });
   }
+}
+// 選單順序：自己人版照 JG_BOARD_PRESETS；公開版免費板子照 JG_FREE_BOARDS 排前面，其他接在後面。
+function jgBoardPickerEntries(){
+  const entries=Object.entries(JG_BOARD_PRESETS);
+  if(jgEditionHas('allBoards')) return entries;
+  const free=entries.filter(([key])=>jgBoardAvailable(key)).sort((a,b)=>JG_FREE_BOARDS.indexOf(a[0])-JG_FREE_BOARDS.indexOf(b[0]));
+  return free.concat(entries.filter(([key])=>!jgBoardAvailable(key)));
+}
+let jgBoardPickerOpen=false;
+function jgBoardLabel(key){
+  if(key==='custom') return jgEditionHas('allBoards')?'自訂角色':'預女獵守（基本板）';
+  const label=(JG_BOARD_PRESETS[key]||{}).label||key;
+  return jgRoleAvailable('whitewolf')?label:label.replace('黑/白狼王','黑狼王');
+}
+function jgRenderBoardPicker(){
+  const box=document.getElementById('jg-board-picker');
+  if(!box) return;
+  const items=[['custom']].concat(jgBoardPickerEntries()).map(([key])=>{
+    const open=jgBoardAvailable(key);
+    return '<div class="jg-bp-item'+(open?'':' locked')+(key===jgBoardPreset?' sel':'')+'" role="option"'
+      +(open?' onclick="event.stopPropagation();jgBoardPickerChoose(\''+key+'\')"':' aria-disabled="true" title="付費解鎖" onclick="event.stopPropagation();jgBoardPickerLocked()"')+'>'
+      +'<span>'+jgBoardLabel(key)+'</span>'+(open?'':'<span class="jg-bp-lock">'+jgIcon('lock')+'</span>')+'</div>';
+  }).join('');
+  box.innerHTML='<button type="button" class="jg-bp-btn" aria-haspopup="listbox" aria-expanded="'+jgBoardPickerOpen+'" onclick="event.stopPropagation();jgBoardPickerToggle()">'
+    +'<span>'+jgBoardLabel(jgBoardPreset)+'</span><span class="jg-bp-arrow">'+jgIcon('chevron')+'</span></button>'
+    +(jgBoardPickerOpen?'<div class="jg-bp-list" role="listbox">'+items+'</div>':'');
+}
+function jgBoardPickerToggle(){ jgBoardPickerOpen=!jgBoardPickerOpen; jgRenderBoardPicker(); }
+function jgBoardPickerChoose(key){
+  jgBoardPickerOpen=false;
+  const sel=document.getElementById('jg-board-preset'); if(sel) sel.value=key;
+  jgSetBoardPreset(key);
+  jgRenderBoardPicker();
+}
+// 手機沒有滑鼠移上去的提示，點到上鎖的板子就短暫顯示「付費解鎖」。
+function jgBoardPickerLocked(){
+  if(typeof jgJudgeToast==='function') jgJudgeToast('付費解鎖');
 }
 // 板子的基本角色只開放這兩組：狼隊（不限一個，黑狼王／白狼王彈性二選一）、神職＋混血兒（各自最多一個）
 const JG_PRESET_WOLF_BASE=['wolf','wolfking','whitewolf'];
@@ -188,6 +227,40 @@ function jgAllGodsForWin(){
 // 兩份清單概念不同，不要合併，只是這份清單本身原本被複製貼上了兩次，這裡統一成一份。
 const ACTIVE_SKILL_GODS=['seer','witch','hunter','guard','dreamcatcher','knight','magician','demonhunter','gravkeeper','medium','blackmarket','purewhitemaiden','dancer'];
 
+// 公開版沒有白狼王（見 js/edition.js 的 jgRoleAvailable）：角色與規則頁裡提到白狼王的字句、
+// 「查看白狼王完整規則」連結一起拿掉。說明文字可能晚一點才從試算表載入覆蓋（data-ov），
+// 所以用 MutationObserver 盯著整個分頁，內容一變就再處理一次（處理完沒有白狼王就不會再改，不會無限循環）。
+const JG_WHITEWOLF_SCRUB=[
+  [/　?<span class="role-link" onclick="jumpToRole\('whitewolf'\)">[^<]*<\/span>/g, ''],
+  [/<br><strong>跟白狼王的差別：<\/strong>.*?(?=<br>|$)/g, ''],
+  [/白狼王則是改成「自爆帶人」.*?。/g, ''],
+  [/可以自由加選黑狼王或白狼王（二選一），也可以都不加/g, '可以自由加選黑狼王，也可以不加'],
+  [/其中狼王身分可以彈性選擇黑狼王（出局開槍帶人）或白狼王（自爆帶人），法官選角時二選一/g, '其中狼王是黑狼王（出局開槍帶人）'],
+  [/；被白狼王發動自爆技能帶走/g, ''],
+  [/黑\/白狼王/g, '黑狼王'],
+  [/／白狼王/g, '']
+];
+function jgScrubWhiteWolf(root){
+  if(jgRoleAvailable('whitewolf')||!root) return;
+  root.querySelectorAll('.rcol-body, .rcol-name').forEach(el=>{
+    if(!el.innerHTML.includes('白狼王')&&!el.innerHTML.includes("'whitewolf'")) return;
+    let h=el.innerHTML;
+    JG_WHITEWOLF_SCRUB.forEach(([re,to])=>{ h=h.replace(re,to); });
+    if(h!==el.innerHTML) el.innerHTML=h;
+  });
+}
+function jgWatchWhiteWolfScrub(){
+  const tab=document.getElementById('t-rules');
+  if(jgRoleAvailable('whitewolf')||!tab||typeof MutationObserver==='undefined') return;
+  jgScrubWhiteWolf(tab);
+  let pending=false;
+  new MutationObserver(()=>{
+    if(pending) return;
+    pending=true;
+    setTimeout(()=>{ pending=false; jgScrubWhiteWolf(tab); }, 0);
+  }).observe(tab, {childList:true, subtree:true});
+}
+
 function renderRulesCards(){
   function makeCard(id){
     const r=ALL_ROLES[id]; if(!r) return '';
@@ -207,7 +280,8 @@ function renderRulesCards(){
   const gEl=document.getElementById('rules-god-list');
   const sEl=document.getElementById('rules-special-list');
   // 轉化者不是真正的角色牌（是被覺醒石像鬼轉化的好人），規則頁一樣放一張卡片說明。
-  if(wEl) wEl.innerHTML=WOLF_ROLES.concat(['converted']).map(makeCard).join('');
+  // 公開版不出現的角色（白狼王）不畫卡片，見 js/edition.js 的 jgRoleAvailable。
+  if(wEl) wEl.innerHTML=WOLF_ROLES.concat(['converted']).filter(jgRoleAvailable).map(makeCard).join('');
   if(vEl) vEl.innerHTML=VIL_ROLES.map(makeCard).join('');
   // trickmage（詭術之境變體魔術師）跟一般魔術師規則幾乎相同，不需要在規則頁多開一張重複卡片，
   // 這裡單純不渲染它——GOD_ROLES 陣列本身完全不動，法官助手其他邏輯（算神職人數等）都還是正常吃得到它。
@@ -404,7 +478,7 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
   // 覺醒石像鬼只在風聲諜影板才有轉化流程，自訂角色不開放選。
   // 公開版的自訂角色＝預女獵守基本板：只有狼人、平民、預言家、女巫、獵人、守衛。
   const basicOnly=!isDual&&!jgEditionHas('allBoards');
-  const wolves=isDual?WOLF_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):(basicOnly?JG_BASIC_WOLVES.slice():WOLF_ROLES.filter(r=>r!=='awgargoyle'));
+  const wolves=isDual?WOLF_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):(basicOnly?JG_BASIC_WOLVES.slice():WOLF_ROLES.filter(r=>r!=='awgargoyle'&&jgRoleAvailable(r)));
   const gods=isDual?GOD_ROLES.filter(r=>JG_DUAL_ROLE_POOL.includes(r)):(basicOnly?JG_BASIC_GODS.slice():GOD_ROLES);
   const wolfCount=Object.entries(pickState).filter(([k])=>wolves.includes(k)).reduce((s,[,v])=>s+v,0);
   const godCount=Object.entries(pickState).filter(([k])=>gods.includes(k)).reduce((s,[,v])=>s+v,0);
@@ -499,10 +573,13 @@ function renderRolePicker(containerId, pickState, total, onUpdate){
     </div>`;
   });
   html+='</div>';
+  // 公開版不顯示這些提示（基本板也選不到通靈師、純白之女、機械狼）。
+  if(!basicOnly){
   if(mediumCnt>0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">已選通靈師，預言家、純白之女不會重複出現</div>';
   if(seerCnt>0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">已選預言家，通靈師、純白之女不會重複出現</div>';
   if(pwCnt>0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">已選純白之女，預言家、通靈師不會重複出現</div>';
   if(hasMechWolf2&&seerCnt===0) html+='<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px;">板子上有大/小機械狼，預言家不會出現（機械狼的學習機制要搭配通靈師才能查出結果）</div>';
+  }
   el.innerHTML=html;
 }
 
@@ -569,6 +646,7 @@ function jgSetBoardPreset(val){
     return;
   }
   jgBoardPreset=val;
+  jgRenderBoardPicker();
   const n=Math.min(14,Math.max(6,parseInt(document.getElementById('jg-count')?.value)||6));
   if(val==='custom'){
     jgRolePick=Object.assign({}, DEFAULT_COMP[n]||DEFAULT_COMP[6]);
@@ -669,15 +747,17 @@ function renderPresetPicker(){
   html+='<div style="font-size:13px;font-weight:800;color:var(--wolf);margin:6px 0 4px;letter-spacing:0.5px;">狼人陣營</div>';
   const showWolfKingChoice=!preset.noWolfKing&&!fixedKeys.includes('wolfking')&&!fixedKeys.includes('whitewolf');
   let wolfKingTiles='';
+  // 公開版沒有白狼王：只剩黑狼王一格，可選可不選。
+  const showWhiteWolf=jgRoleAvailable('whitewolf');
   if(showWolfKingChoice){
     const wkOn=(state.wolfking||0)>0;
     const wwOn=(state.whitewolf||0)>0;
     wolfKingTiles='<div class="rpick'+(wkOn?' sel':'')+'" onclick="jgPresetSelectWolfKing(\'wolfking\')">'
       +'<span class="rp-ico">'+jgIcon('wolfking')+'</span><div class="rp-nm">黑狼王</div>'
       +(wkOn?'<span class="rp-cnt">'+jgIcon('check')+'</span>':'')+'</div>'
-      +'<div class="rpick'+(wwOn?' sel':'')+'" onclick="jgPresetSelectWolfKing(\'whitewolf\')">'
+      +(showWhiteWolf?'<div class="rpick'+(wwOn?' sel':'')+'" onclick="jgPresetSelectWolfKing(\'whitewolf\')">'
       +'<span class="rp-ico">'+jgIcon('whitewolf')+'</span><div class="rp-nm">白狼王</div>'
-      +(wwOn?'<span class="rp-cnt">'+jgIcon('check')+'</span>':'')+'</div>';
+      +(wwOn?'<span class="rp-cnt">'+jgIcon('check')+'</span>':'')+'</div>':'');
   }
   // extraWolves：只在特定板子出現的可加選狼隊角色（例如風聲諜影的機械狼）。
   const extraWolfTiles=(preset.extraWolves||[]).filter(id=>!fixedKeys.includes(id)).map(id=>{
@@ -690,7 +770,7 @@ function renderPresetPicker(){
   if(wolfTiles){
     html+='<div class="rpick-grid" style="margin-bottom:6px;">'+wolfTiles+'</div>';
   }
-  if(showWolfKingChoice) html+='<div style="font-size:11px;color:var(--text3);margin:-2px 0 6px;">黑狼王／白狼王二選一，可自由切換或都不選</div>';
+  if(showWolfKingChoice&&showWhiteWolf) html+='<div style="font-size:11px;color:var(--text3);margin:-2px 0 6px;">黑狼王／白狼王二選一，可自由切換或都不選</div>';
   if(!preset.noWolfStepper){
     html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
       +'<button onclick="jgPresetAdjWolf(-1)" style="width:36px;height:36px;padding:0;margin:0;font-size:20px;border-radius:50%;">−</button>'
@@ -745,7 +825,7 @@ function renderPresetPicker(){
       +(cnt>0?'<span class="rp-cnt">'+jgIcon('check')+'</span>':'')+'</div>';
   });
   html+='</div>';
-  if(excludeSeer) html+='<div style="font-size:11px;color:var(--text3);margin:4px 0 0;">本板固定為通靈師，不會重複出現預言家</div>';
+  if(excludeSeer&&jgEditionHas('allBoards')) html+='<div style="font-size:11px;color:var(--text3);margin:4px 0 0;">本板固定為通靈師，不會重複出現預言家</div>';
 
   el.innerHTML=html;
 }

@@ -376,9 +376,8 @@ button.report{background:rgba(154,124,40,0.1);color:var(--gold);border-color:rgb
   .rpick .rp-nm{font-size:14px;}
 }
 @media (min-width:1240px){
-  .jg-setup-grid{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);grid-template-rows:auto auto 1fr;grid-template-areas:"basic board" "sheriff board" "start board";column-gap:18px;align-items:start;}
+  .jg-setup-grid{display:grid;grid-template-columns:minmax(320px,380px) minmax(0,1fr);grid-template-rows:auto 1fr;grid-template-areas:"basic board" "start board";column-gap:18px;align-items:start;}
   .jg-sec-basic{grid-area:basic;}
-  .jg-sec-sheriff{grid-area:sheriff;}
   .jg-sec-start{grid-area:start;}
   .jg-sec-board{grid-area:board;}
 }
@@ -822,6 +821,9 @@ select{
 .home-title{font-family:'Noto Serif TC',serif;font-size:32px;font-weight:900;letter-spacing:2px;margin-top:4px;}
 .home-sub{font-size:15px;color:var(--text2);line-height:1.8;margin-top:10px;}
 .home-nb{display:inline-block;}
+/* 開始主持：獨立在設定區塊最後（手機排在選板子下面；電腦寬螢幕在左欄基本設定下面） */
+.jg-sec-start{margin:4px 0 8px;}
+.jg-start-btn{margin-top:0;font-size:17px;padding:16px 12px;}
 .home-cards{display:flex;justify-content:center;gap:10px;margin:26px auto 22px;perspective:900px;}
 .home-card{width:84px;height:118px;flex-shrink:0;}
 .home-card-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,.7,.3,1);}
@@ -836,13 +838,6 @@ select{
 .home-card-name{font-size:14px;font-weight:800;color:var(--text);}
 .home-actions{display:flex;gap:10px;max-width:440px;margin:0 auto;}
 .home-actions button{flex:1;margin-top:0;font-size:16px;padding:14px 10px;}
-.home-features{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:28px auto 0;text-align:left;}
-.home-feature{display:flex;gap:10px;align-items:flex-start;background:var(--bg2);border-radius:var(--r);padding:14px;}
-.home-feature-ico{font-size:22px;color:var(--accent);line-height:1;flex-shrink:0;margin-top:1px;}
-.home-feature b{display:block;font-size:14px;}
-.home-feature div span{display:block;font-size:12.5px;color:var(--text2);margin-top:3px;line-height:1.5;}
-.home-boards{font-size:13px;color:var(--text2);margin-top:18px;line-height:1.8;}
-.home-boards b{display:block;color:var(--text);font-size:13px;}
 @media (max-width:600px){
   .home-logo{height:72px;}
   .home-title{font-size:26px;}
@@ -852,8 +847,20 @@ select{
   .home-card-back{font-size:26px;}
   .home-card-ico{font-size:24px;}
   .home-card-name{font-size:11.5px;}
-  .home-features{grid-template-columns:1fr;}
 }
 @media (prefers-reduced-motion: reduce){
   .home-card-inner{transition:none;}
 }
+
+/* ── 公開版選板子：自己畫的下拉選單（上鎖的板子畫一個小鎖、不能選），外觀比照 apple-ui-preview 的 select ── */
+.jg-bp{position:relative;}
+.jg-bp-btn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;margin:0;padding:11px 14px;font-size:13px;font-weight:400;text-align:left;color:var(--text);background:var(--bg2);border:none;border-radius:var(--au-radius-sm,10px);box-shadow:var(--au-shadow-sm,0 1px 3px rgba(0,0,0,0.08));cursor:pointer;}
+.jg-bp-arrow{color:var(--text3);transform:rotate(90deg);display:inline-flex;}
+.jg-bp-btn[aria-expanded="true"] .jg-bp-arrow{transform:rotate(-90deg);}
+.jg-bp-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:50;max-height:360px;overflow-y:auto;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);box-shadow:0 8px 24px rgba(0,0,0,0.14);padding:4px;}
+.jg-bp-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;font-size:14px;border-radius:var(--r-sm);cursor:pointer;}
+.jg-bp-item:hover{background:var(--bg2);}
+.jg-bp-item.sel{font-weight:700;color:var(--accent);}
+.jg-bp-item.locked{color:var(--text3);cursor:not-allowed;}
+.jg-bp-item.locked:hover{background:none;}
+.jg-bp-lock{display:inline-flex;font-size:15px;color:var(--text3);}

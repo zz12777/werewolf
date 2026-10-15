@@ -37,18 +37,12 @@
   <div class="home-hero">
     <img src="assets/logo.png" alt="狼吞虎嚥" class="home-logo">
     <h1 class="home-title">狼人殺法官助手</h1>
-    <p class="home-sub">一個人也能輕鬆主持一整場狼人殺。<br><span class="home-nb">夜晚順序、口白、警長競選、</span><span class="home-nb">投票紀錄、勝負判定，照著按就好。</span></p>
+    <p class="home-sub">輕鬆主持狼人殺<br><span class="home-nb">夜晚順序、法官口白、警長競選、</span><span class="home-nb">投票紀錄、勝負判定，都幫你準備好啦！</span></p>
     <div class="home-cards" id="home-cards" aria-hidden="true"></div>
     <div class="home-actions">
       <button class="primary" onclick="switchTab('t-judge')">開始主持 →</button>
       <button onclick="switchTab('t-rules')">角色與規則</button>
     </div>
-    <div class="home-features">
-      <div class="home-feature"><span class="home-feature-ico"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></span><div><b>夜晚流程</b><span>依板子自動排好睜眼順序與口白</span></div></div>
-      <div class="home-feature"><span class="home-feature-ico"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg></span><div><b>投票紀錄</b><span>警長競選、放逐投票一鍵記下</span></div></div>
-      <div class="home-feature"><span class="home-feature-ico"><svg class="jg-ico" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 2.5 4M17 6h2.5a2.5 2.5 0 0 1-2.5 4"/><path d="M12 14v3M8 20.5h8M9.5 17h5v3.5h-5z"/></svg></span><div><b>勝負判定</b><span>每一刀、每一票之後自動檢查</span></div></div>
-    </div>
-    <div class="home-boards"><b>免費板子</b>預女獵守（基本板）・惡靈騎士＋守衛・狼美人＋騎士・機械狼＋通靈師・攝夢人＋夢魘</div>
   </div>
 </div>
 
@@ -516,7 +510,8 @@
     <h2 class="ntitle">法官の助手</h2>
     <p class="sub" style="text-align:center;">幫助法官主持遊戲的腳本與紀錄系統</p>
   </div>
-  <!-- 設定分成四個區塊卡片（比照角色與規則頁）；電腦寬螢幕改成左欄基本設定／警長／開始，右欄選板子 -->
+  <!-- 設定分成基本設定（身分模式、人數、玩家名單、警長）、選板子兩張卡片，開始主持按鈕獨立放最後；
+       電腦寬螢幕改成左欄基本設定＋開始主持，右欄選板子 -->
   <div class="jg-setup-grid">
   <div class="rules-section jg-sec-basic">
   <div class="rules-h1">遊戲基本設定</div>
@@ -529,6 +524,21 @@
   <input type="checkbox" id="jg-dual-mode" style="display:none;"/>
   <label id="jg-count-label" style="margin-top:12px;">玩家人數（6～16）</label>
   <input type="number" id="jg-count" min="6" max="16" value="6" inputmode="numeric" oninput="jgUpdateComp()"/>
+  <label style="margin-top:12px;">玩家名單（選填）</label>
+  <button style="margin-top:0;" onclick="jgOpenRosterSetup()">設定本局玩家名單</button>
+  <label style="margin-top:12px;">警長設定（選填）</label>
+  <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:0;padding:14px 16px;border-radius:12px;border:none;background:var(--bg2);box-shadow:var(--au-shadow-sm,0 1px 3px rgba(0,0,0,0.08));cursor:pointer;transition:background .15s,box-shadow .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
+    <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
+    <span style="font-weight:800;font-size:16px;">上警局 -- 開放警長競選</span>
+  </label>
+  <div id="jg-badge-mode-wrap" style="display:none;margin-top:10px;">
+    <label>自爆吞警徽規則</label>
+    <div class="btn2" style="margin-top:0;">
+      <button type="button" id="jg-badge-mode-single" class="primary" onclick="jgSetBadgeMode('single')">單爆吞警徽</button>
+      <button type="button" id="jg-badge-mode-double" onclick="jgSetBadgeMode('double')">雙爆吞警徽</button>
+    </div>
+    <div class="info" id="jg-badge-mode-desc" style="font-size:12px;margin-top:8px;">單爆吞警徽：只要有狼人在首個白天的警上環節自爆，警徽立刻流失，本局不再有警長。</div>
+  </div>
   </div>
   <div class="rules-section jg-sec-board">
   <div class="rules-h1">選擇板子</div>
@@ -537,7 +547,6 @@
       <option value="custom">自訂角色（可能有bug，遇到狀況請用「問題回報」回報）</option>
     </select>
   </div>
-  <div class="info" id="jg-board-lock-note" style="display:none;font-size:12px;margin:6px 0 4px;"></div>
   <div class="info" id="jg-comp-desc" style="text-align:center;font-size:13px;margin-bottom:4px;"></div>
   <div id="jg-role-picker"></div>
   <div id="jg-preset-picker" style="display:none;"></div>
@@ -558,25 +567,8 @@
     <div class="info" id="jg-nightmare-mode-desc" style="font-size:12px;margin-top:8px;"></div>
   </div>
   </div>
-  <div class="rules-section jg-sec-sheriff">
-  <div class="rules-h1">警長設定（選填）</div>
-  <label id="jg-sheriff-enabled-label" for="jg-sheriff-enabled" style="display:flex;align-items:center;gap:10px;margin-top:0;padding:14px 16px;border-radius:12px;border:none;background:var(--bg2);box-shadow:var(--au-shadow-sm,0 1px 3px rgba(0,0,0,0.08));cursor:pointer;transition:background .15s,box-shadow .15s;" onclick="setTimeout(jgUpdateSheriffToggleStyle,0)">
-    <input type="checkbox" id="jg-sheriff-enabled" style="width:20px;height:20px;margin:0;accent-color:var(--accent,#2e7d32);" onchange="jgUpdateSheriffToggleStyle()"/>
-    <span style="font-weight:800;font-size:16px;">上警局 -- 開放警長競選</span>
-  </label>
-  <div id="jg-badge-mode-wrap" style="display:none;margin-top:10px;">
-    <label>自爆吞警徽規則</label>
-    <div class="btn2" style="margin-top:0;">
-      <button type="button" id="jg-badge-mode-single" class="primary" onclick="jgSetBadgeMode('single')">單爆吞警徽</button>
-      <button type="button" id="jg-badge-mode-double" onclick="jgSetBadgeMode('double')">雙爆吞警徽</button>
-    </div>
-    <div class="info" id="jg-badge-mode-desc" style="font-size:12px;margin-top:8px;">單爆吞警徽：只要有狼人在首個白天的警上環節自爆，警徽立刻流失，本局不再有警長。</div>
-  </div>
-  </div>
-  <div class="rules-section jg-sec-start">
-  <div class="rules-h1">開始遊戲</div>
-  <button style="margin-top:0;" onclick="jgOpenRosterSetup()">設定本局玩家名單（選填）</button>
-  <button class="primary" style="margin-top:14px;" onclick="jgStart()">開始主持 →</button>
+  <div class="jg-sec-start">
+  <button class="primary jg-start-btn" onclick="jgStart()">開始主持 →</button>
   <div style="display:flex;gap:8px;margin-top:8px;" data-feature="room">
     <button style="flex:1;" onclick="jgRoomCreateFromSetup()">建立連線房間</button>
     <button style="flex:1;" onclick="jgRoomDealFromSetup()">使用手機發牌</button>
@@ -592,8 +584,7 @@
     <h2 class="ntitle">設定玩家名單</h2>
   </div>
   <div id="jg-roster-setup-rows"></div>
-  <button class="primary" style="margin-top:14px;" onclick="jgSaveRosterSetup()">完成，繼續選板子 →</button>
-  <button class="gold" style="margin-top:8px;" onclick="jgSaveRosterSetupAndStart()">完成，直接開始 →</button>
+  <button class="primary" style="margin-top:14px;" onclick="jgSaveRosterSetup()">完成</button>
   <button style="margin-top:8px;" onclick="jgCancelRosterSetup()">取消</button>
 </div>
 
@@ -731,7 +722,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-15-e</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-15-f</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="js/edition-config.js"></script>

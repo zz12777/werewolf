@@ -41,13 +41,18 @@ function jgEditionHas(feature){
   const table=JG_EDITION_FEATURES[JG_EDITION]||{};
   return table[feature]!==false;
 }
-// 公開版的免費板子：'custom' 是「自訂角色」，公開版只能選預言家、女巫、獵人、守衛跟狼人、平民
-// （＝預女獵守基本板）；其他是 JG_BOARD_PRESETS 的 key。沒開放的板子在下拉選單顯示「付費方案」。
+// 公開版的免費板子：'custom' 是「自訂角色」，公開版只能選預言家、女巫、獵人、守衛跟狼人、黑狼王、
+// 平民（＝預女獵守基本板）；其他是 JG_BOARD_PRESETS 的 key。沒開放的板子在選單上畫一個鎖、不能選。
 const JG_FREE_BOARDS=['custom','evilknight_guard','wolfbeauty_knight','mechwolf_medium','dreamcatcher_nightmare'];
-const JG_BASIC_WOLVES=['wolf'];
+const JG_BASIC_WOLVES=['wolf','wolfking'];
 const JG_BASIC_GODS=['seer','witch','hunter','guard'];
 function jgBoardAvailable(key){
   return jgEditionHas('allBoards')||JG_FREE_BOARDS.includes(key);
+}
+// 公開版不出現的角色（選角畫面、角色與規則都不顯示）。
+const JG_PUBLIC_HIDDEN_ROLES=['whitewolf'];
+function jgRoleAvailable(id){
+  return !jgIsPublicEdition()||!JG_PUBLIC_HIDDEN_ROLES.includes(id);
 }
 // 把 data-feature 的元素依版本藏起來（用屬性＋CSS 的 !important，切分頁也不會被打開）。
 function jgApplyEditionFeatures(root){
