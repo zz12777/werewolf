@@ -31,7 +31,7 @@
     <button class="nav-btn" data-tab="t-rules" onclick="switchTab('t-rules')">角色與規則</button>
     <button class="nav-btn" data-tab="t-guide" data-feature="guide" onclick="switchTab('t-guide')">攻略參考</button>
     <button class="nav-btn active" data-tab="t-judge" onclick="switchTab('t-judge')">法官の助手</button>
-    <button class="nav-btn" data-tab="t-data" data-feature="playData" onclick="switchTab('t-data')">遊玩數據</button>
+    <button class="nav-btn" data-tab="t-data" onclick="switchTab('t-data')">遊玩數據</button>
     <button class="nav-btn" data-tab="t-room" data-feature="room" onclick="switchTab('t-room')">連線房間</button>
   </div>
 </nav>
@@ -49,7 +49,7 @@
       <button class="primary" onclick="switchTab('t-judge')">開始主持 →</button>
       <button onclick="switchTab('t-rules')">角色與規則</button>
     </div>
-    <button type="button" class="ghost home-tour-btn" onclick="jgTourOffer()">第一次用？看導覽／演練一場</button>
+    <button type="button" class="ghost home-tour-btn" onclick="jgTourOffer()">第一次用？看法官助手導覽</button>
   </div>
 </div>
 
@@ -516,7 +516,7 @@
   <div class="nbanner">
     <h2 class="ntitle">法官の助手</h2>
     <p class="sub" style="text-align:center;">幫助法官主持遊戲的腳本與紀錄系統</p>
-    <div style="text-align:center;margin-top:8px;"><button type="button" class="ghost jg-tour-open" onclick="jgTourOffer()">導覽／演練一場</button></div>
+    <div style="text-align:center;margin-top:8px;"><button type="button" class="ghost jg-tour-open" onclick="jgTourOffer()">法官助手導覽</button></div>
   </div>
   <!-- 設定分成基本設定（身分模式、人數、警長、玩家名單）、選板子兩張卡片，開始主持按鈕獨立放最後；
        電腦寬螢幕改成左欄基本設定＋開始主持，右欄選板子 -->
@@ -640,12 +640,18 @@
 <!-- ══════════════════════════════════════
      TAB: 遊玩數據
 ══════════════════════════════════════ -->
-<div id="t-data" class="tab tab-wide apple-ui-preview" data-feature="playData">
+<div id="t-data" class="tab tab-wide apple-ui-preview">
 
 
   <div class="nbanner">
     <h1>遊玩數據</h1>
     <p class="sub">狼人殺紀錄・場次 / 勝率 / 身分統計</p>
+  </div>
+  <!-- 公開版：功能還沒開放，整頁都是範例資料（data/demo-games.js），見 js/main.js -->
+  <div class="info-warn pd-demo-banner" data-feature="playDataDemo">
+    <b>尚未開放此功能</b>
+    這一頁目前都是範例資料，名字和場次都是虛構的。之後每主持完一場，玩家名單、每個人的身分和勝負會自動記錄到這裡，
+    累積出排行榜、勝率、特別獎項和每一場的完整紀錄。
   </div>
 
   <!-- 總覽 + 排行榜：維持較窄、易讀的寬度 -->
@@ -732,7 +738,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-15-j</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-16-a</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="js/edition-config.js"></script>
@@ -740,6 +746,7 @@
 <script src="js/icons.js"></script>
 <script src="data/team-config.js"></script>
 <script src="data/games-history.js"></script>
+<script src="data/demo-games.js"></script>
 
 <!-- 邏輯檔：core 最先，main 最後（main 裡的程式會立刻呼叫其他檔案定義的函式，必須確保它們都已載入） -->
 <script src="js/game-rules.js"></script>

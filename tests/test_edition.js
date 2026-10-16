@@ -32,7 +32,9 @@ async function run(){
   check('公開版一打開是首頁', d2.getElementById('t-home').classList.contains('on'), true);
   check('首頁有 5 張翻卡', d2.querySelectorAll('#home-cards .home-card').length, 5);
   check('公開版藏起攻略參考', hidden('.nav-btn[data-tab="t-guide"]')&&hidden('#t-guide'), true);
-  check('公開版藏起遊玩數據', hidden('.nav-btn[data-tab="t-data"]')&&hidden('#t-data'), true);
+  check('公開版遊玩數據分頁打開、標示尚未開放此功能', !hidden('.nav-btn[data-tab="t-data"]')&&!hidden('#t-data')&&!hidden('.pd-demo-banner')&&d2.querySelector('.pd-demo-banner').textContent.includes('尚未開放此功能'), true);
+  check('公開版遊玩數據用範例資料', w2.eval('GAMES.length===JG_DEMO_GAMES.length&&GAMES.length>0'), true);
+  check('範例資料的名字不會出現在玩家名單選項', w2.eval('jgRosterNameGroups().regular.concat(jgRosterNameGroups().more).some(n=>JG_DEMO_GAMES.some(g=>g.players.some(p=>p.name===n)))'), false);
   check('公開版藏起連線房間', hidden('.nav-btn[data-tab="t-room"]')&&hidden('#t-room'), true);
   check('公開版藏起建立連線房間／手機發牌按鈕', hidden('[onclick="jgRoomCreateFromSetup()"]')||hidden('div[data-feature="room"]'), true);
   check('公開版藏起即時票型', hidden('[data-feature="liveVotes"]'), true);
@@ -59,7 +61,7 @@ async function run(){
   const items = [...d2.querySelectorAll('#jg-board-picker .jg-bp-item')];
   const locked = items.filter(i=>i.classList.contains('locked'));
   check('選單列出全部板子', items.length, opts.length);
-  check('上鎖的板子畫鎖、提示付費解鎖、沒有「付費方案」字樣', locked.length>0&&locked.every(i=>i.querySelector('.jg-bp-lock')&&i.getAttribute('title')==='付費解鎖'&&!i.textContent.includes('付費方案')), true);
+  check('上鎖的板子畫鎖、提示尚未開放此功能', locked.length>0&&locked.every(i=>i.querySelector('.jg-bp-lock')&&i.getAttribute('title')==='尚未開放此功能'&&!i.textContent.includes('付費方案')), true);
   locked[0].click();
   check('點上鎖的板子不會切換', w2.eval('jgBoardPreset'), 'custom');
   items.find(i=>i.textContent==='狼美人＋騎士'||i.textContent==='狼美人+騎士').click();
@@ -86,6 +88,7 @@ async function run(){
   w2.eval("jgShowJudgeEndModal('好人')");
   check('公開版遊戲結束不跳法官辛苦了視窗', !!d2.getElementById('jg-judge-end-modal'), false);
   check('首頁有導覽／演練按鈕', !!d2.querySelector('#t-home .home-tour-btn'), true);
+  check('公開版警長競選沒有音檔按鈕', w2.eval("(function(){ const old=jgShowPg; let html=''; jgShowPg=(h)=>{html=h;}; try{ jgSheriffEnabled=true; jgRenderSheriffCandidates&&jgRenderSheriffCandidates(); }catch(e){} jgShowPg=old; return html.includes('現在開始競選警長')&&html.includes('display:none;gap:6px'); })()"), true);
   check('公開版不連 Firebase', w2.eval('window.jgFirebaseReady===undefined'), true);
   w2.close();
 
@@ -96,6 +99,7 @@ async function run(){
   check('自己人版保留全部板子', [...w3.document.querySelectorAll('#jg-board-preset option')].some(o=>o.disabled), false);
   check('自己人版角色與規則有白狼王', !!w3.document.getElementById('role-whitewolf'), true);
   check('自己人版還是原本的選板子下拉選單', w3.document.getElementById('jg-board-preset').style.display!=='none'&&!w3.document.getElementById('jg-board-picker'), true);
+  check('自己人版遊玩數據沒有範例說明', w3.document.querySelector('.pd-demo-banner').hasAttribute('data-feature-off'), true);
   check('自己人版保留連線房間', w3.document.getElementById('t-room').hasAttribute('data-feature-off'), false);
   w3.close();
 

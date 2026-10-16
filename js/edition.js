@@ -31,11 +31,12 @@ function jgIsPublicEdition(){ return JG_EDITION==='public'; }
 //   room      連線房間分頁、建立連線房間／使用手機發牌按鈕、邀請連結、語音通話
 //   dualMode  雙身分模式
 //   allBoards 全部板子（公開版只開放免費板子，見 JG_FREE_BOARDS）
-// 公開版多一個 home（首頁）。
+//   sheriffAudio 警長競選「現在開始競選警長」的音檔按鈕
+// 公開版多兩個：home（首頁）、playDataDemo（遊玩數據頁顯示「尚未開放此功能」＋範例資料）。
 // 畫面上的元素加 data-feature="功能名稱"，那個功能沒有時會自動藏起來（見下面）。
 const JG_EDITION_FEATURES={
-  team:{ home:false },
-  public:{ guide:false, playData:false, liveVotes:false, room:false, dualMode:false, allBoards:false }
+  team:{ home:false, playDataDemo:false },
+  public:{ guide:false, playData:false, liveVotes:false, room:false, dualMode:false, allBoards:false, sheriffAudio:false }
 };
 function jgEditionHas(feature){
   const table=JG_EDITION_FEATURES[JG_EDITION]||{};

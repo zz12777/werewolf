@@ -2645,13 +2645,11 @@ function jgRenderStep(step){
   }
   else if(step==='vote-last-words'){
     const p=jgRecord._voteOutNum?jgByNum(jgRecord._voteOutNum):null;
-    const name=p?(p.name&&p.name!==p.num+'號'?p.num+'號 '+p.name:p.num+'號'):'被放逐玩家';
     const foolChecked=!!(p&&p.foolRevealed);
     jgShowPg(`
       <h2>遺言</h2>
       ${jgRecord._voteOutNum?jgSpeakTimerWidgetHtml([parseInt(jgRecord._voteOutNum)], true):''}
       <div class="speech">「<em>${p?p.num+'號淘汰，發表遺言。':'被放逐玩家發表遺言。'}</em>」</div>
-      ${p&&name!==p.num+'號'?`<div class="info" style="font-size:12px;">${name}</div>`:''}
       ${p&&p.role==='fool'?`<label style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border-radius:var(--r-sm);margin-bottom:10px;cursor:pointer;">
         <input type="checkbox" ${foolChecked?'checked':''} onchange="jgToggleFoolReveal(this.checked)" style="width:18px;height:18px;">
         <span>已翻牌是傻瓜，可留在場上發言（依桌上實際情況勾選；不勾＝正常死亡）</span>

@@ -1,17 +1,16 @@
 // ═══════════════════════════════════════════
 // js/tour.js
-// 法官の助手的新手導覽與演練：
-//   ・導覽：在設定頁依序框出「遊戲基本設定 → 選擇板子 → 開始主持」，旁邊是說明，按「下一步」往下看。
-//   ・演練：用 6 人預女獵守（基本板）照劇本實際主持一場，從發牌、兩個晚上、白天發言投票，
-//     一直到好人勝利。每一步只框出要按的按鈕，其他按鈕暫時按不了（避免走偏後提示對不上），
-//     想自己操作隨時可以按「離開演練」。
-//   演練時不會送出任何資料（即時票型、遊玩數據都會跳過，見 js/core.js 的 jgTourPractice 判斷）。
-// 公開版第一次打開法官の助手會自動問要不要看導覽；兩個版本在設定頁上方都有「導覽／演練」按鈕可以重看。
+// 法官助手導覽：用 6 人預女獵守（基本板）照劇本實際主持一場——
+//   設定頁（基本設定、選板子）→ 輸入玩家名單（名字會記在這台裝置）→ 開始主持 → 發牌、兩個晚上
+//   （含大字報示範）、白天轉盤決定發言順序、投票、遺言 → 好人勝利 → 匯出並複製文字紀錄。
+//   每一步只框出要按的按鈕，其他按鈕暫時按不了（避免走偏後提示對不上），隨時可以按「離開導覽」。
+//   導覽時不會送出任何資料（即時票型、遊玩數據都會跳過，見 js/core.js 的 jgTourPractice 判斷）。
+// 公開版第一次打開法官の助手會自動問要不要看導覽；首頁、設定頁上方也有按鈕可以重看。
 // 畫面：最下面一條固定的說明面板（#jg-tour），要按的東西加 .tour-hl 外框。
 // ═══════════════════════════════════════════
 
 const JG_TOUR_SEEN_KEY='jgTourSeen';
-let jgTour=null; // {mode:'offer'|'tour'|'practice', idx, doneInfo:{}, lastKey}
+let jgTour=null; // {mode:'offer'|'practice', flags:{}, lastKey, startedAt}
 let jgTourTimer=null;
 let jgTourSeenMem=false; // 瀏覽器不能存 localStorage（例如無痕模式）時，至少這次開著的頁面記得看過了
 
@@ -22,20 +21,24 @@ function jgTourOnclick(code){ return '[onclick="'+code+'"]'; }
 function jgTourVoted(target, voter){ return typeof jgVoteTally!=='undefined'&&!!(jgVoteTally[target]&&jgVoteTally[target][voter]); }
 function jgTourOnSetup(){ const s=document.getElementById('jg-p-setup'); return !!(s&&s.classList.contains('on')); }
 function jgTourInGame(){ const m=document.getElementById('jg-p-main'); return !!(m&&m.classList.contains('on')); }
+function jgTourOnRoster(){ const r=document.getElementById('jg-p-roster'); return !!(r&&r.classList.contains('on')); }
+function jgTourFlag(id){ return !!(jgTour&&jgTour.flags&&jgTour.flags[id]); }
 
-// ── 導覽（設定頁）──
-const JG_TOUR_SETUP=[
-  {sel:'.jg-sec-basic', title:'遊戲基本設定', text:'先填玩家人數。要競選警長就勾「上警局」。玩家名單可以不填，直接用號碼主持也可以。'},
-  {sel:'.jg-sec-board', title:'選擇板子', text:'選好板子，下面會列出這個板子的角色，點一下可以加選或取消。上面的框框會告訴你人數對不對。'},
-  {sel:'.jg-start-btn', title:'開始主持', text:'設定好就按「開始主持」。之後助手會一步一步告訴你要唸什麼口白、記錄每個人做了什麼，最後自動判斷勝負。'}
-];
-
-// ── 演練劇本：6 人預女獵守。身分固定：1號、4號 狼人；3號 預言家；5號 女巫；2號、6號 平民。──
-// 每個 key＝「步驟@第幾晚」，items 依序做，第一個還沒完成的就是現在要按的。
+// ── 導覽劇本：6 人預女獵守。身分固定：1號、4號 狼人；3號 預言家；5號 女巫；2號、6號 平民。──
+// 每個 key＝「步驟@第幾晚」（設定頁是 setup、名單頁是 roster），items 依序做，第一個還沒完成的
+// 就是現在要按的。info:true 的項目只是說明，面板上按「下一步」才算完成；btn 是面板上多一顆按鈕。
 const JG_TOUR_PRACTICE_ROLES='1號、4號 狼人；3號 預言家；5號 女巫；2號、6號 平民';
 const JG_TOUR_SCRIPT={
   'setup':[
-    {sel:'.jg-start-btn', text:'這場演練用 6 人預女獵守（基本板）：狼人 2、平民 2、預言家、女巫，不競選警長。已經幫你設定好了，按「開始主持」。', done:()=>!jgTourOnSetup()}
+    {id:'basic', info:true, sel:'.jg-sec-basic', text:'這裡是遊戲基本設定：玩家人數、要不要競選警長、玩家名單。這場導覽已經幫你設成 6 人、不競選警長。'},
+    {id:'board', info:true, sel:'.jg-sec-board', text:'這裡選板子。這場用「預女獵守（基本板）」：狼人 2、平民 2、預言家、女巫。上面的框框會告訴你人數對不對。'},
+    {sel:jgTourOnclick('jgOpenRosterSetup()'), text:'玩家名單是選填的，不填就用號碼主持。我們試著填一個名字：按「設定本局玩家名單」。', done:()=>jgTourFlag('roster')},
+    {sel:'.jg-start-btn', text:'設定好了！按「開始主持」。之後助手會一步一步告訴你要唸什麼口白、記錄每個人做了什麼，最後自動判斷勝負。', done:()=>!jgTourOnSetup()}
+  ],
+  'roster':[
+    {sel:'#jg-roster-manual-row', text:'上面一格一格是座位，紅框是現在要填的號碼（1 號）。在輸入框打一個名字，例如「小明」，再按「確定」。', done:()=>jgTourVal('jg-roster-input-1')!==''},
+    {id:'rosterSaved', info:true, sel:'#jg-roster-setup-rows .rname-slot', text:'1 號填好了！打過的名字會記在這台裝置的瀏覽器裡，下次主持時會出現在名字按鈕區，點一下就填進座位，不用再打字。其他號碼這次先不填。'},
+    {sel:jgTourOnclick('jgSaveRosterSetup()'), text:'按「完成」回到設定頁。', done:()=>!jgTourOnRoster()}
   ],
   'deal@1':[
     {sel:jgTourOnclick('jgProceedToNight()'), text:'實際主持時先發身分牌，讓大家看自己的身分。這場的身分是：'+JG_TOUR_PRACTICE_ROLES+'。發完、大家閉眼後按下去。'}
@@ -57,6 +60,7 @@ const JG_TOUR_SCRIPT={
   'seer-wake@1':[
     {sel:jgTourGrid('jg-seer-who',3), text:'唸「預言家請睜眼」，記下預言家：點 3。', done:()=>jgTourVal('jg-seer-who')==='3'},
     {sel:jgTourGrid('jg-seer-target-input',1), text:'預言家指 1 號要查驗，點 1。畫面會顯示 1 號是狼人，法官比手勢告訴預言家。', done:()=>jgTourVal('jg-seer-target-input')==='1'},
+    {id:'bigcard', text:'預言家只要知道好人或狼人，比手勢就好。像通靈師、機械狼這些要知道「真實身分」的角色，畫面上會多一顆「大字報」按鈕，用全螢幕大字顯示給他看。按下面的按鈕看看長怎樣。', btn:{label:'看大字報範例', js:'jgTourBigCardDemo()'}, done:()=>jgTourFlag('bigcard')},
     {sel:jgTourOnclick('jgSaveSeer()'), text:'唸「預言家請閉眼」，按「已查驗，下一步」。'}
   ],
   'dawn@1':[
@@ -64,7 +68,7 @@ const JG_TOUR_SCRIPT={
   ],
   'discuss@1':[
     {sel:jgTourOnclick('jgSpinWheel()'), text:'白天要決定從誰開始發言，按「轉動轉盤」抽一個號碼。', done:()=>!!document.getElementById('jg-speak-timer-toggle-btn')},
-    {sel:jgTourOnclick('jgDiscussGoVote()'), text:'實際主持時，每個人發言可以按「開始」計時，講完按「過，下一位」。演練直接按「發言結束，進入投票」。'}
+    {sel:jgTourOnclick('jgDiscussGoVote()'), text:'實際主持時，每個人發言可以按「開始」計時，講完按「過，下一位」。導覽直接按「發言結束，進入投票」。'}
   ],
   'vote@1':[
     {sel:jgTourOnclick('jgToggleVote(1,2)'), text:'唸「準備投票，3、2、1」，大家同時指向要放逐的人。在「2 號」那一列點 1：2 號投給 1 號。', done:()=>jgTourVoted(1,2)},
@@ -103,15 +107,16 @@ const JG_TOUR_STEP_HELP={
 
 function jgTourPracticeKey(){
   if(jgTourOnSetup()) return 'setup';
+  if(jgTourOnRoster()) return 'roster';
   if(!jgTourInGame()) return '';
   return (typeof jgCurrentStep!=='undefined'?jgCurrentStep:'')+'@'+(typeof jgNight!=='undefined'?jgNight:1);
 }
-// 演練目前要按的東西：{key, item, idx, total}；結束了回傳 {end:true}。
+// 導覽目前要按的東西：{key, item, idx, total}；結束了回傳 {end:true}。
 function jgTourPracticeNow(){
-  // 主持結束會先跳「法官公布：遊戲結束」視窗，等法官按「我知道了」再顯示演練完成。
+  // 主持結束會先跳「法官公布：遊戲結束」視窗，等法官按「我知道了」再顯示導覽完成。
   if(document.getElementById('jg-judge-end-modal')) return {wait:true};
   if(typeof jgLastWinResult!=='undefined'&&jgLastWinResult&&jgTourInGame()){
-    // 結束後再帶一次匯出文字紀錄：打開 → 複製 → 關閉，才算演練完成。
+    // 結束後再帶一次匯出文字紀錄：打開 → 複製 → 關閉，才算導覽完成。
     const modal=document.getElementById('jg-export-modal');
     const copied=(window.jgExportCopiedAt||0)>(jgTour.startedAt||0);
     if(modal){
@@ -124,18 +129,25 @@ function jgTourPracticeNow(){
   }
   // 全螢幕大字卡（例如轉盤抽出從幾號開始發言）：先給大家看，再按「關閉」。
   if(document.getElementById('jg-bigcard-modal')){
-    return {key:jgTourPracticeKey(), item:{sel:'#jg-bigcard-modal button', text:'這張大字卡是給所有玩家看的：從幾號開始、往哪個方向發言。大家看到後按「關閉」。'}, idx:'card'};
+    const key=jgTourPracticeKey();
+    const text=key.startsWith('discuss')
+      ?'這張大字卡是給所有玩家看的：從幾號開始、往哪個方向發言。大家看到後按「關閉」。'
+      :'這就是大字報：法官把手機轉向那位玩家，讓他看清楚自己要知道的身分。看完按「關閉」。';
+    return {key, item:{sel:'#jg-bigcard-modal button', text}, idx:'card'};
   }
   const key=jgTourPracticeKey();
+  if(key==='roster') jgTour.flags.roster=true;
   const items=JG_TOUR_SCRIPT[key];
   if(!items) return {key, item:null};
   for(let i=0;i<items.length;i++){
     const it=items[i];
-    if(!it.done||!it.done()) return {key, item:it, idx:i, total:items.length};
+    const done=it.info?jgTourFlag(it.id):(it.done?it.done():false);
+    if(!done) return {key, item:it, idx:i, total:items.length};
   }
   return {key, item:items[items.length-1], idx:items.length-1, total:items.length};
 }
-const JG_TOUR_PRACTICE_ORDER=Object.keys(JG_TOUR_SCRIPT);
+// 面板上顯示的「第幾步」：設定頁在填完名單回來之後算新的一步（按開始主持）。
+const JG_TOUR_PRACTICE_ORDER=['setup','roster','start'].concat(Object.keys(JG_TOUR_SCRIPT).filter(k=>k!=='setup'&&k!=='roster'));
 
 // ── 畫面 ──
 function jgTourPanel(){
@@ -169,18 +181,9 @@ function jgTourRender(){
   let head='', body='', btns='', sel=null, key='';
   if(jgTour.mode==='offer'){
     key='offer';
-    head='第一次使用法官の助手嗎？';
-    body='可以先看 30 秒的導覽，或用 6 人基本板實際演練一場（大約 3 分鐘，從發牌一路到遊戲結束）。';
-    btns='<button class="primary" onclick="jgTourStart()">看導覽</button><button onclick="jgTourStartPractice()">演練一場</button><button class="ghost" onclick="jgTourClose(true)">不用了</button>';
-  } else if(jgTour.mode==='tour'){
-    const s=JG_TOUR_SETUP[jgTour.idx];
-    key='tour'+jgTour.idx;
-    sel=s.sel;
-    head='導覽 '+(jgTour.idx+1)+'／'+JG_TOUR_SETUP.length+'：'+s.title;
-    body=s.text;
-    btns=jgTour.idx<JG_TOUR_SETUP.length-1
-      ?'<button class="primary" onclick="jgTourNext()">下一步</button><button class="ghost" onclick="jgTourClose(true)">關閉</button>'
-      :'<button class="primary" onclick="jgTourStartPractice()">演練一場</button><button class="ghost" onclick="jgTourClose(true)">完成</button>';
+    head='要看法官助手導覽嗎？';
+    body='用 6 人基本板，帶你從設定、輸入玩家名單，一路主持到遊戲結束、匯出紀錄，大約 3 分鐘。';
+    btns='<button class="primary" onclick="jgTourStartPractice()">開始導覽</button><button class="ghost" onclick="jgTourClose(true)">不用了</button>';
   } else if(jgTour.mode==='practice'){
     const now=jgTourPracticeNow();
     if(now.wait){
@@ -190,22 +193,26 @@ function jgTourRender(){
       body='唸出「法官公布」的內容，然後按「我知道了」。';
     } else if(now.end){
       key='end';
-      head='演練完成';
+      head='導覽完成';
       body='第二晚女巫毒死最後一隻狼，所有狼人都出局，好人勝利！助手會在每一刀、每一票之後自動檢查勝負，主持完再匯出、複製文字紀錄貼到群組。實際主持時，照著這個流程按就好了。';
+      if(jgEditionHas('playDataDemo')) body+='想看之後每一場會怎麼累積成排行榜和獎項，可以看上方的「遊玩數據」（目前是範例）。';
       btns='<button class="primary" onclick="jgTourFinishPractice()">完成</button>';
     } else if(now.item){
       const total=JG_TOUR_PRACTICE_ORDER.length+1; // 最後一步：匯出文字紀錄
-      const stepNo=now.key==='export'?total:Math.max(0, JG_TOUR_PRACTICE_ORDER.indexOf(now.key))+1;
+      const orderKey=now.key==='setup'&&jgTourFlag('roster')?'start':now.key;
+      const stepNo=now.key==='export'?total:Math.max(0, JG_TOUR_PRACTICE_ORDER.indexOf(orderKey))+1;
       key='p:'+now.key+':'+now.idx;
       sel=now.item.sel;
-      head='演練 '+stepNo+'／'+total;
+      head='導覽 '+stepNo+'／'+total;
       body=now.item.text;
-      btns='<button class="ghost" onclick="jgTourClose(true)">離開演練</button>';
+      btns=(now.item.info?'<button class="primary" onclick="jgTourInfoNext(\''+now.item.id+'\')">下一步</button>':'')
+        +(now.item.btn?'<button class="primary" onclick="'+now.item.btn.js+'">'+now.item.btn.label+'</button>':'')
+        +'<button class="ghost" onclick="jgTourClose(true)">離開導覽</button>';
     } else {
       key='p:'+now.key;
-      head='演練';
+      head='導覽';
       body=JG_TOUR_STEP_HELP[(now.key||'').split('@')[0]]||'照畫面上的口白唸，選好後按下一步。';
-      btns='<button class="ghost" onclick="jgTourClose(true)">離開演練</button>';
+      btns='<button class="ghost" onclick="jgTourClose(true)">離開導覽</button>';
     }
   }
   // 有全螢幕視窗（大字卡、遊戲結束、文字紀錄）開著時，面板改到畫面上方、疊在視窗上面，說明才看得到。
@@ -221,7 +228,7 @@ function jgTourRender(){
 }
 function jgTourTick(){ if(jgTour) jgTourRender(); }
 
-// 演練時只有框起來的按鈕能按（說明面板、上方分頁列除外），按到別的就提醒一下。
+// 導覽時只有框起來的按鈕能按（說明面板、上方分頁列除外），按到別的就提醒一下。
 function jgTourGuardClick(e){
   if(!jgTour||jgTour.mode!=='practice') return;
   const t=e.target;
@@ -237,7 +244,7 @@ function jgTourGuardClick(e){
 
 // ── 開始／結束 ──
 function jgTourBegin(mode){
-  jgTour={mode, idx:0, lastKey:null, startedAt:Date.now()};
+  jgTour={mode, flags:{}, lastKey:null, startedAt:Date.now()};
   if(!jgTourTimer) jgTourTimer=setInterval(jgTourTick, 300);
   jgTourRender();
 }
@@ -250,20 +257,19 @@ function jgTourMaybeAuto(){
   jgTourBegin('offer');
 }
 function jgTourOffer(){ switchTab('t-judge'); jgTourBegin('offer'); }
-function jgTourStart(){
-  switchTab('t-judge');
-  // 導覽是看設定頁：主持到一半的話先問要不要離開這一場（已經結束的場次直接回設定頁）。
-  const midGame=jgTourInGame()&&!(typeof jgLastWinResult!=='undefined'&&jgLastWinResult);
-  if(midGame&&!confirm('導覽要回到設定頁，目前這一場會中斷，確定嗎？')) return;
-  if(!jgTourOnSetup()) jgReset();
-  window.jgTourPractice=false;
-  jgTourBegin('tour');
+// 說明項目按「下一步」
+function jgTourInfoNext(id){ if(jgTour){ jgTour.flags[id]=true; jgTourRender(); } }
+// 大字報示範：跟通靈師、機械狼等角色用的是同一個全螢幕大字卡
+function jgTourBigCardDemo(){
+  if(!jgTour) return;
+  jgTour.flags.bigcard=true;
+  jgShowBigCard('1號','狼人（範例）');
+  jgTourRender();
 }
-function jgTourNext(){ if(jgTour&&jgTour.mode==='tour'&&jgTour.idx<JG_TOUR_SETUP.length-1){ jgTour.idx++; jgTourRender(); } }
 function jgTourStartPractice(){
   switchTab('t-judge');
   const midGame=jgTourInGame()&&!(typeof jgLastWinResult!=='undefined'&&jgLastWinResult);
-  if(midGame&&!confirm('演練會結束目前這一場，確定嗎？')) return;
+  if(midGame&&!confirm('導覽會結束目前這一場，確定嗎？')) return;
   jgReset();
   // 6 人預女獵守、單身分、不競選警長、不填名字
   if(typeof jgSetupDualMode!=='undefined'&&jgSetupDualMode) jgSetMode(false);

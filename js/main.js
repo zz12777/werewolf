@@ -25,6 +25,8 @@ loadGlossary();
 renderGuideTagInfo();
 
 
+// 公開版的遊玩數據還沒開放：整頁改用範例資料（data/demo-games.js，名字與場次都是虛構的）。
+if(jgEditionHas('playDataDemo')&&typeof JG_DEMO_GAMES!=='undefined') GAMES.splice(0, GAMES.length, ...JG_DEMO_GAMES);
 pdRebuildAndRender();
 pdLoadCloudGames();
 

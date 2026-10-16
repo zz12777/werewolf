@@ -132,7 +132,7 @@ const JG_BOARD_PRESETS = {
 // 「自訂角色」那個選項不是真正的板子（不對應 JG_BOARD_PRESETS 裡的任何一筆），維持寫在 HTML 裡。
 // 公開版（見 js/edition.js 的 jgBoardAvailable）：「自訂角色」改叫「預女獵守（基本板）」，只能選基本角色；
 // 原生下拉選單沒辦法在選項裡畫圖示，所以公開版改用自己畫的選單（jgRenderBoardPicker）：免費板子排前面，
-// 其他板子排在後面、畫一個小鎖、不能選，滑鼠移上去顯示「付費解鎖」。原本的 <select> 還留著（藏起來），
+// 其他板子排在後面、畫一個小鎖、不能選，滑鼠移上去顯示「尚未開放此功能」。原本的 <select> 還留著（藏起來），
 // 其他程式讀寫 #jg-board-preset 的地方不用改。
 function jgPopulateBoardPresetDropdown(){
   const sel=document.getElementById('jg-board-preset');
@@ -180,7 +180,7 @@ function jgRenderBoardPicker(){
   const items=[['custom']].concat(jgBoardPickerEntries()).map(([key])=>{
     const open=jgBoardAvailable(key);
     return '<div class="jg-bp-item'+(open?'':' locked')+(key===jgBoardPreset?' sel':'')+'" role="option"'
-      +(open?' onclick="event.stopPropagation();jgBoardPickerChoose(\''+key+'\')"':' aria-disabled="true" title="付費解鎖" onclick="event.stopPropagation();jgBoardPickerLocked()"')+'>'
+      +(open?' onclick="event.stopPropagation();jgBoardPickerChoose(\''+key+'\')"':' aria-disabled="true" title="尚未開放此功能" onclick="event.stopPropagation();jgBoardPickerLocked()"')+'>'
       +'<span>'+jgBoardLabel(key)+'</span>'+(open?'':'<span class="jg-bp-lock">'+jgIcon('lock')+'</span>')+'</div>';
   }).join('');
   box.innerHTML='<button type="button" class="jg-bp-btn" aria-haspopup="listbox" aria-expanded="'+jgBoardPickerOpen+'" onclick="event.stopPropagation();jgBoardPickerToggle()">'
@@ -194,9 +194,9 @@ function jgBoardPickerChoose(key){
   jgSetBoardPreset(key);
   jgRenderBoardPicker();
 }
-// 手機沒有滑鼠移上去的提示，點到上鎖的板子就短暫顯示「付費解鎖」。
+// 手機沒有滑鼠移上去的提示，點到上鎖的板子就短暫顯示「尚未開放此功能」。
 function jgBoardPickerLocked(){
-  if(typeof jgJudgeToast==='function') jgJudgeToast('付費解鎖');
+  if(typeof jgJudgeToast==='function') jgJudgeToast('尚未開放此功能');
 }
 // 板子的基本角色只開放這兩組：狼隊（不限一個，黑狼王／白狼王彈性二選一）、神職＋混血兒（各自最多一個）
 const JG_PRESET_WOLF_BASE=['wolf','wolfking','whitewolf'];
@@ -633,7 +633,7 @@ function getPickComp(state){
 // 切換板子（含切回「自訂角色」）時呼叫；重新套用該板子的預設配置。
 function jgSetBoardPreset(val){
   if(!jgBoardAvailable(val)){
-    // 沒開放的板子（公開版的付費板子）：選單退回目前的板子，不切換。
+    // 沒開放的板子（公開版還沒開放的板子）：選單退回目前的板子，不切換。
     const bp=document.getElementById('jg-board-preset'); if(bp) bp.value=jgBoardPreset;
     return;
   }

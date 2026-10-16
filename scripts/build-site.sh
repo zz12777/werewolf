@@ -16,6 +16,6 @@ if [ "$EDITION" = "public" ]; then
   echo "const JG_TEAM_CONFIG={};" > dist/data/team-config.js
   echo "const GAMES=[];" > dist/data/games-history.js
   # 公開版沒有的分頁按鈕直接從網頁原始碼拿掉（分享連結的預覽只讀原始碼，看不到程式藏起來的結果）
-  sed -i -E '/class="nav-btn"[^>]*data-feature="(guide|playData|room)"/d' dist/index.html
+  sed -i -E '/class="nav-btn"[^>]*data-feature="(guide|room)"/d' dist/index.html
 fi
 echo "已打包 $EDITION 版：$(find dist -type f | wc -l) 個檔案"

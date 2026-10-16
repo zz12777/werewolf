@@ -186,7 +186,7 @@ function jgRenderSheriffCandidates(){
     ? '<div class="info" style="font-size:12px;">💥 本局採雙爆吞警徽規則：第一次自爆警徽保留、競選延到隔天；再次自爆警徽才會流失。</div>' : '';
   jgShowPg(`
     <h2>警長競選・候選人</h2>
-    <div class="speech" style="font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">「<em>現在開始競選警長，候選人請起立。</em>」<span style="display:inline-flex;gap:6px;">
+    <div class="speech" style="font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">「<em>現在開始競選警長，候選人請起立。</em>」<span style="display:${jgEditionHas('sheriffAudio')?'inline-flex':'none'};gap:6px;">
       <button type="button" onclick="jgSheriffAudioPlay()" title="播放" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">${jgIcon('play')}</button>
       <button type="button" onclick="jgSheriffAudioPause()" title="暫停" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">${jgIcon('pause')}</button>
       <button type="button" onclick="jgSheriffAudioReplay()" title="重播" style="width:32px;height:32px;padding:0;flex-shrink:0;border-radius:50%;font-size:14px;margin-top:0;">${jgIcon('replay')}</button>

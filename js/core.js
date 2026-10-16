@@ -118,7 +118,7 @@ function jgBuildLiveVoteText(){
 // 同步失敗也不影響法官原本的操作，所以刻意不彈任何錯誤視窗打斷法官。
 function jgLiveSyncPush(){
   if(!JG_LIVE_SYNC_URL) return;
-  if(window.jgTourPractice) return; // 新手演練（js/tour.js）不送出
+  if(window.jgTourPractice) return; // 法官助手導覽（js/tour.js）不送出
   // 用手機發牌開局時，票型直接顯示在每個人的手機上（js/deal-sync.js），不再送到即時票型。
   if(typeof jgDealLinked==='function'&&jgDealLinked()) return;
   if(!jgLiveSessionId) jgLiveSessionId=jgLiveMakeSessionId();
@@ -196,7 +196,7 @@ async function jgLiveFetchAndShow(sessionId){
 // 換去顯示新場次。
 function jgLiveSyncMarkEnded(){
   if(!JG_LIVE_SYNC_URL||!jgLiveSessionId) return;
-  if(window.jgTourPractice) return; // 新手演練（js/tour.js）不送出
+  if(window.jgTourPractice) return; // 法官助手導覽（js/tour.js）不送出
   fetch(JG_LIVE_SYNC_URL,{
     method:'POST',
     mode:'no-cors',
@@ -365,7 +365,7 @@ function jgCopyExportText(){
   ta.select();
   navigator.clipboard?.writeText(ta.value).catch(()=>{});
   try{ document.execCommand('copy'); }catch(e){}
-  window.jgExportCopiedAt=Date.now(); // 新手演練（js/tour.js）用來判斷已經複製過
+  window.jgExportCopiedAt=Date.now(); // 法官助手導覽（js/tour.js）用來判斷已經複製過
   // 按鈕短暫顯示「已複製」，讓法官知道有複製成功。
   const btn=document.querySelector('#jg-export-modal [onclick="jgCopyExportText()"]');
   if(btn){ btn.textContent='已複製'; setTimeout(()=>{ if(btn.isConnected) btn.textContent='複製文字'; }, 1500); }
@@ -1380,7 +1380,7 @@ function jgRenderRosterSetupRows(){
   // 游標不會跳掉。
   // 目前要填的號碼用顏色標在上面的空格上，這裡不再另外寫一行說明。
   let poolHtml='<div id="jg-roster-pool" style="margin-top:14px;"></div>';
-  poolHtml+='<div style="display:flex;gap:8px;margin-top:10px;align-items:stretch;">'
+  poolHtml+='<div id="jg-roster-manual-row" style="display:flex;gap:8px;margin-top:10px;align-items:stretch;">'
     +'<input type="text" id="jg-roster-manual-input" placeholder="搜尋，或輸入名單裡沒有的新名字" style="flex:1;margin:0;" value="'+jgRosterSearch.replace(/"/g,'&quot;')+'" oninput="jgRosterSearchInput(this.value)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();jgRosterAssignManual();}">'
     +'<button type="button" class="primary" style="width:auto;flex:0 0 auto;margin:0;padding:0 20px;" onclick="jgRosterAssignManual()">確定</button>'
     +'</div>';
@@ -2988,7 +2988,7 @@ function jgShowJudgeEndModal(winnerLabel){
   modal.innerHTML='<div style="background:var(--bg1,#fff);border-radius:16px;padding:24px 20px;max-width:420px;width:100%;text-align:center;">'
     +'<div style="font-size:17px;font-weight:800;line-height:1.9;">法官公布: 遊戲結束，「'+winnerLabel+'」獲勝<br>'
     +'<div style="font-size:14px;font-weight:600;color:var(--text2);margin-top:10px;line-height:1.9;text-align:left;">'
-    +(window.jgTourPractice?'這是演練，按「我知道了」之後帶你看怎麼匯出文字紀錄。<br>':'給法官的提醒:<br>1. 匯出文字紀錄到群組<br>'+(JG_TEAM_CONFIG.judgeEndUploadNote?'2. '+JG_TEAM_CONFIG.judgeEndUploadNote+'<br>':''))
+    +(window.jgTourPractice?'這是導覽，按「我知道了」之後帶你看怎麼匯出文字紀錄。<br>':'給法官的提醒:<br>1. 匯出文字紀錄到群組<br>'+(JG_TEAM_CONFIG.judgeEndUploadNote?'2. '+JG_TEAM_CONFIG.judgeEndUploadNote+'<br>':''))
     +'</div><div style="margin-top:10px;">法官辛苦了!!</div></div>'
     +'<button class="primary" style="margin-top:16px;" onclick="document.getElementById(\'jg-judge-end-modal\').remove()">我知道了</button>'
     +'</div>';

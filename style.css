@@ -888,3 +888,7 @@ body.tour-on{padding-bottom:220px;}
 @media (prefers-reduced-motion: reduce){
   #jg-tour.jg-tour-nudge{animation:none;}
 }
+
+/* 公開版遊玩數據：尚未開放此功能（範例資料）的說明框 */
+.pd-demo-banner{font-size:13px;line-height:1.8;margin:0 auto 16px;max-width:720px;}
+.pd-demo-banner b{display:block;font-size:15px;margin-bottom:2px;}
