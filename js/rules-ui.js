@@ -131,9 +131,8 @@ const JG_BOARD_PRESETS = {
 // 的內容自動產生選項——只要這裡有新增板子，下拉選單就一定會同步出現，不用再手動改 HTML。
 // 「自訂角色」那個選項不是真正的板子（不對應 JG_BOARD_PRESETS 裡的任何一筆），維持寫在 HTML 裡。
 // 公開版（見 js/edition.js 的 jgBoardAvailable）：「自訂角色」改叫「預女獵守（基本板）」，只能選基本角色；
-// 原生下拉選單沒辦法在選項裡畫圖示，所以公開版改用自己畫的選單（jgRenderBoardPicker）：免費板子排前面，
-// 其他板子排在後面、畫一個小鎖、不能選，滑鼠移上去顯示「尚未開放此功能」。原本的 <select> 還留著（藏起來），
-// 其他程式讀寫 #jg-board-preset 的地方不用改。
+// 公開版只列出開放的板子（JG_FREE_BOARDS），用自己畫的選單（jgRenderBoardPicker），之後要在選項上加圖示、
+// 標籤比較方便。原本的 <select> 還留著（藏起來），其他程式讀寫 #jg-board-preset 的地方不用改。
 function jgPopulateBoardPresetDropdown(){
   const sel=document.getElementById('jg-board-preset');
   if(!sel) return;
@@ -146,7 +145,6 @@ function jgPopulateBoardPresetDropdown(){
     const opt=document.createElement('option');
     opt.value=key;
     opt.textContent=preset.label;
-    if(!jgBoardAvailable(key)) opt.disabled=true;
     sel.appendChild(opt);
   });
   if(limited){
@@ -161,12 +159,11 @@ function jgPopulateBoardPresetDropdown(){
     });
   }
 }
-// 選單順序：自己人版照 JG_BOARD_PRESETS；公開版免費板子照 JG_FREE_BOARDS 排前面，其他接在後面。
+// 選單順序：自己人版照 JG_BOARD_PRESETS；公開版只有開放的板子，照 JG_FREE_BOARDS 的順序。
 function jgBoardPickerEntries(){
   const entries=Object.entries(JG_BOARD_PRESETS);
   if(jgEditionHas('allBoards')) return entries;
-  const free=entries.filter(([key])=>jgBoardAvailable(key)).sort((a,b)=>JG_FREE_BOARDS.indexOf(a[0])-JG_FREE_BOARDS.indexOf(b[0]));
-  return free.concat(entries.filter(([key])=>!jgBoardAvailable(key)));
+  return entries.filter(([key])=>jgBoardAvailable(key)).sort((a,b)=>JG_FREE_BOARDS.indexOf(a[0])-JG_FREE_BOARDS.indexOf(b[0]));
 }
 let jgBoardPickerOpen=false;
 function jgBoardLabel(key){
@@ -177,12 +174,10 @@ function jgBoardLabel(key){
 function jgRenderBoardPicker(){
   const box=document.getElementById('jg-board-picker');
   if(!box) return;
-  const items=[['custom']].concat(jgBoardPickerEntries()).map(([key])=>{
-    const open=jgBoardAvailable(key);
-    return '<div class="jg-bp-item'+(open?'':' locked')+(key===jgBoardPreset?' sel':'')+'" role="option"'
-      +(open?' onclick="event.stopPropagation();jgBoardPickerChoose(\''+key+'\')"':' aria-disabled="true" title="尚未開放此功能" onclick="event.stopPropagation();jgBoardPickerLocked()"')+'>'
-      +'<span>'+jgBoardLabel(key)+'</span>'+(open?'':'<span class="jg-bp-lock">'+jgIcon('lock')+'</span>')+'</div>';
-  }).join('');
+  const items=[['custom']].concat(jgBoardPickerEntries()).map(([key])=>
+    '<div class="jg-bp-item'+(key===jgBoardPreset?' sel':'')+'" role="option" onclick="event.stopPropagation();jgBoardPickerChoose(\''+key+'\')">'
+      +'<span>'+jgBoardLabel(key)+'</span></div>'
+  ).join('');
   box.innerHTML='<button type="button" class="jg-bp-btn" aria-haspopup="listbox" aria-expanded="'+jgBoardPickerOpen+'" onclick="event.stopPropagation();jgBoardPickerToggle()">'
     +'<span>'+jgBoardLabel(jgBoardPreset)+'</span><span class="jg-bp-arrow">'+jgIcon('chevron')+'</span></button>'
     +(jgBoardPickerOpen?'<div class="jg-bp-list" role="listbox">'+items+'</div>':'');
@@ -193,10 +188,6 @@ function jgBoardPickerChoose(key){
   const sel=document.getElementById('jg-board-preset'); if(sel) sel.value=key;
   jgSetBoardPreset(key);
   jgRenderBoardPicker();
-}
-// 手機沒有滑鼠移上去的提示，點到上鎖的板子就短暫顯示「尚未開放此功能」。
-function jgBoardPickerLocked(){
-  if(typeof jgJudgeToast==='function') jgJudgeToast('尚未開放此功能');
 }
 // 板子的基本角色只開放這兩組：狼隊（不限一個，黑狼王／白狼王彈性二選一）、神職＋混血兒（各自最多一個）
 const JG_PRESET_WOLF_BASE=['wolf','wolfking','whitewolf'];
@@ -243,10 +234,32 @@ const JG_WHITEWOLF_SCRUB=[
 function jgScrubWhiteWolf(root){
   if(jgRoleAvailable('whitewolf')||!root) return;
   root.querySelectorAll('.rcol-body, .rcol-name').forEach(el=>{
-    if(!el.innerHTML.includes('白狼王')&&!el.innerHTML.includes("'whitewolf'")) return;
     let h=el.innerHTML;
-    JG_WHITEWOLF_SCRUB.forEach(([re,to])=>{ h=h.replace(re,to); });
+    if(h.includes('白狼王')||h.includes("'whitewolf'")) JG_WHITEWOLF_SCRUB.forEach(([re,to])=>{ h=h.replace(re,to); });
+    // 公開版沒有的角色：「→ 查看XX完整規則」連結點了也找不到卡片，一起拿掉。
+    h=h.replace(/　?<span class="role-link" onclick="jumpToRole\('([a-z_0-9]+)'\)">[^<]*<\/span>/g, (m,id)=>jgRoleAvailable(id)?m:'');
     if(h!==el.innerHTML) el.innerHTML=h;
+  });
+}
+// 角色與規則的板子介紹（data-ov="board-…"）對應到哪個板子（JG_BOARD_PRESETS 的 key）；
+// 公開版沒開放的板子介紹整張藏起來。新增板子介紹時記得加一行。
+const JG_BOARD_INTRO_PRESET={
+  'board-mechwolf-medium':'mechwolf_medium', 'board-dreamcatcher-nightmare':'dreamcatcher_nightmare',
+  'board-blackmarket-wolfbrothers':'blackmarket_wolfbrothers', 'board-wolfbeauty-knight':'wolfbeauty_knight',
+  'board-gargoyle-gravkeeper':'gargoyle_gravkeeper', 'board-bloodmoon-demonhunter':'bloodmoon_demonhunter',
+  'board-magician-wolfking':'magician_wolfking', 'board-hybrid-wolfking-bloodmoon':'hybrid_wolfking_bloodmoon',
+  'board-evilknight-guard':'evilknight_guard', 'board-cupid':'cupid_board', 'board-biggreywolf-diviner':'biggreywolf_diviner',
+  'board-zombie':'zombie_board', 'board-trickery':'trickery_realm', 'board-wolfshaman-purewhitemaiden':'wolfshaman_purewhitemaiden',
+  'board-mask-dancer':'masquerade_board', 'board-bigbadwolf-littlegirl':'bigbadwolf_littlegirl',
+  'board-bigmechwolf-smallmechwolf':'bigmechwolf_smallmechwolf', 'board-neighbor-puppet':'neighbor_puppet',
+  'board-animal-dream':'animal_dream', 'board-windspy':'windspy', 'board-eros':'eros_board'
+};
+function jgHideUnavailableBoardIntros(){
+  if(jgEditionHas('allBoards')) return;
+  document.querySelectorAll('#sec-boards [data-ov^="board-"]').forEach(el=>{
+    const key=JG_BOARD_INTRO_PRESET[el.getAttribute('data-ov')];
+    const card=el.closest('.rcol');
+    if(card&&!(key&&jgBoardAvailable(key))) card.setAttribute('data-feature-off','');
   });
 }
 function jgWatchWhiteWolfScrub(){
@@ -282,11 +295,12 @@ function renderRulesCards(){
   // 轉化者不是真正的角色牌（是被覺醒石像鬼轉化的好人），規則頁一樣放一張卡片說明。
   // 公開版不出現的角色（白狼王）不畫卡片，見 js/edition.js 的 jgRoleAvailable。
   if(wEl) wEl.innerHTML=WOLF_ROLES.concat(['converted']).filter(jgRoleAvailable).map(makeCard).join('');
-  if(vEl) vEl.innerHTML=VIL_ROLES.map(makeCard).join('');
+  if(vEl) vEl.innerHTML=VIL_ROLES.filter(jgRoleAvailable).map(makeCard).join('');
   // trickmage（詭術之境變體魔術師）跟一般魔術師規則幾乎相同，不需要在規則頁多開一張重複卡片，
   // 這裡單純不渲染它——GOD_ROLES 陣列本身完全不動，法官助手其他邏輯（算神職人數等）都還是正常吃得到它。
-  if(gEl) gEl.innerHTML=GOD_ROLES.filter(r=>r!=='trickmage').map(makeCard).join('');
-  if(sEl) sEl.innerHTML=SPECIAL_ROLES.map(makeCard).join('');
+  if(gEl) gEl.innerHTML=GOD_ROLES.filter(r=>r!=='trickmage'&&jgRoleAvailable(r)).map(makeCard).join('');
+  if(sEl) sEl.innerHTML=SPECIAL_ROLES.filter(jgRoleAvailable).map(makeCard).join('');
+  jgHideUnavailableBoardIntros();
 }
 
 // ══════════════════════════════════════
@@ -806,7 +820,7 @@ function renderPresetPicker(){
   // 通靈師（medium）與預言家（seer）查驗效果重疊，本板固定通靈師時就不再顯示預言家可選
   const excludeSeer=fixedKeys.includes('medium')&&!fixedKeys.includes('seer');
   // extraGods：只在特定板子出現的可選神職（例如動物夢境的白貓），不放進所有板子共用的清單。
-  // 公開版的免費板子只開放加選預言家、女巫、獵人、守衛。
+  // 公開版的板子只開放加選預言家、女巫、獵人、守衛。
   const godBase=jgEditionHas('allBoards')?(preset.godBase||JG_PRESET_GOD_BASE).concat(preset.extraGods||[]):(preset.godBase||JG_BASIC_GODS);
   godBase.forEach(id=>{
     if(fixedKeys.includes(id)) return; // 這個板子已經把這個角色當固定角色了，不重複顯示

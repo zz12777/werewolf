@@ -30,7 +30,7 @@ function jgIsPublicEdition(){ return JG_EDITION==='public'; }
 //   liveVotes 法官助手頁的即時票型紀錄（會寫進自己人的試算表，不同場次會混在一起）
 //   room      連線房間分頁、建立連線房間／使用手機發牌按鈕、邀請連結、語音通話
 //   dualMode  雙身分模式
-//   allBoards 全部板子（公開版只開放免費板子，見 JG_FREE_BOARDS）
+//   allBoards 全部板子（公開版只開放 JG_FREE_BOARDS 這些比較常玩、測過比較多次的板子）
 //   sheriffAudio 警長競選「現在開始競選警長」的音檔按鈕
 // 公開版多兩個：home（首頁）、playDataDemo（遊玩數據頁顯示「尚未開放此功能」＋範例資料）。
 // 畫面上的元素加 data-feature="功能名稱"，那個功能沒有時會自動藏起來（見下面）。
@@ -42,18 +42,31 @@ function jgEditionHas(feature){
   const table=JG_EDITION_FEATURES[JG_EDITION]||{};
   return table[feature]!==false;
 }
-// 公開版的免費板子：'custom' 是「自訂角色」，公開版只能選預言家、女巫、獵人、守衛跟狼人、黑狼王、
-// 平民（＝預女獵守基本板）；其他是 JG_BOARD_PRESETS 的 key。沒開放的板子在選單上畫一個鎖、不能選。
-const JG_FREE_BOARDS=['custom','evilknight_guard','wolfbeauty_knight','mechwolf_medium','dreamcatcher_nightmare'];
+// 公開版開放的板子：'custom' 是「自訂角色」，公開版只能選預言家、女巫、獵人、守衛跟狼人、黑狼王、
+// 平民（＝預女獵守基本板）；其他是 JG_BOARD_PRESETS 的 key。沒開放的板子在公開版完全不出現
+// （選板子選單、角色與規則都沒有），角色也只出現這些板子用得到的。
+const JG_FREE_BOARDS=['custom','evilknight_guard','wolfbeauty_knight','mechwolf_medium','dreamcatcher_nightmare',
+  'blackmarket_wolfbrothers','gargoyle_gravkeeper','bloodmoon_demonhunter','magician_wolfking','cupid_board','zombie_board'];
 const JG_BASIC_WOLVES=['wolf','wolfking'];
 const JG_BASIC_GODS=['seer','witch','hunter','guard'];
 function jgBoardAvailable(key){
   return jgEditionHas('allBoards')||JG_FREE_BOARDS.includes(key);
 }
-// 公開版不出現的角色（選角畫面、角色與規則都不顯示）。
-const JG_PUBLIC_HIDDEN_ROLES=['whitewolf'];
+// 公開版只出現開放板子用得到的角色（選角畫面、角色與規則都照這份）：基本角色＋每個開放板子的固定角色，
+// 再加上警長；有黑市商人板就加幸運兒。白狼王不在裡面（公開版的板子只開放黑狼王）。
+let jgPublicRoleCache=null;
 function jgRoleAvailable(id){
-  return !jgIsPublicEdition()||!JG_PUBLIC_HIDDEN_ROLES.includes(id);
+  if(!jgIsPublicEdition()) return true;
+  if(!jgPublicRoleCache){
+    const set=new Set(JG_BASIC_WOLVES.concat(JG_BASIC_GODS, ['villager','sheriff']));
+    JG_FREE_BOARDS.forEach(k=>{
+      const p=typeof JG_BOARD_PRESETS!=='undefined'&&JG_BOARD_PRESETS[k];
+      if(p&&p.fixed) Object.keys(p.fixed).forEach(r=>set.add(r));
+    });
+    if(set.has('blackmarket')) set.add('luckyone');
+    jgPublicRoleCache=set;
+  }
+  return jgPublicRoleCache.has(id);
 }
 // 把 data-feature 的元素依版本藏起來（用屬性＋CSS 的 !important，切分頁也不會被打開）。
 function jgApplyEditionFeatures(root){

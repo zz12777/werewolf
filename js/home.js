@@ -5,7 +5,7 @@
 // 系統設定「減少動態效果」的話不翻牌，直接顯示幾張角色牌。
 // ═══════════════════════════════════════════
 
-const JG_HOME_CARD_ROLES=['seer','witch','hunter','guard','wolf','villager','evilknight','knight','wolfbeauty','mechanicalwolf','medium','dreamcatcher','nightmare'];
+const JG_HOME_CARD_ROLES=['seer','witch','hunter','guard','wolf','villager','evilknight','knight','wolfbeauty','mechanicalwolf','medium','dreamcatcher','nightmare','gargoyle','bloodmoon','magician','cupid','zombie','blackmarket'];
 const JG_HOME_CARD_COUNT=5;
 let jgHomeFlipTimer=null;
 
