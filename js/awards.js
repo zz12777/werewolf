@@ -64,6 +64,7 @@ function awParseNight(block){
 }
 
 function awAddCredit(dict,name,gameId){
+  if(!name) return; // 沒填名字的座位（村莊場次）不算
   dict[name]=dict[name]||{count:0,games:new Set()};
   dict[name].count++;
   dict[name].games.add(gameId);

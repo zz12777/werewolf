@@ -32,7 +32,8 @@ async function run(){
   check('公開版一打開是首頁', d2.getElementById('t-home').classList.contains('on'), true);
   check('首頁有 5 張翻卡', d2.querySelectorAll('#home-cards .home-card').length, 5);
   check('公開版藏起攻略參考', hidden('.nav-btn[data-tab="t-guide"]')&&hidden('#t-guide'), true);
-  check('公開版遊玩數據分頁打開、標示尚未開放此功能', !hidden('.nav-btn[data-tab="t-data"]')&&!hidden('#t-data')&&!hidden('.pd-demo-banner')&&d2.querySelector('.pd-demo-banner').textContent.includes('尚未開放此功能'), true);
+  check('公開版遊玩數據分頁打開、不在村莊時標示範例資料', !hidden('.nav-btn[data-tab="t-data"]')&&!hidden('#t-data')&&!hidden('.pd-demo-banner')&&d2.querySelector('.pd-demo-banner').textContent.includes('範例資料'), true);
+  check('公開版遊玩數據有村莊區塊', !hidden('#village-panel'), true);
   check('公開版遊玩數據用範例資料', w2.eval('GAMES.length===JG_DEMO_GAMES.length&&GAMES.length>0'), true);
   check('範例資料的名字不會出現在玩家名單選項', w2.eval('jgRosterNameGroups().regular.concat(jgRosterNameGroups().more).some(n=>JG_DEMO_GAMES.some(g=>g.players.some(p=>p.name===n)))'), false);
   check('公開版藏起連線房間', hidden('.nav-btn[data-tab="t-room"]')&&hidden('#t-room'), true);
@@ -105,6 +106,7 @@ async function run(){
   check('自己人版保留全部板子', [...w3.document.querySelectorAll('#jg-board-preset option')].some(o=>o.disabled), false);
   check('自己人版角色與規則有白狼王', !!w3.document.getElementById('role-whitewolf'), true);
   check('自己人版還是原本的選板子下拉選單', w3.document.getElementById('jg-board-preset').style.display!=='none'&&!w3.document.getElementById('jg-board-picker'), true);
+  check('自己人版沒有村莊區塊', w3.document.getElementById('village-panel').hasAttribute('data-feature-off'), true);
   check('自己人版遊玩數據沒有範例說明', w3.document.querySelector('.pd-demo-banner').hasAttribute('data-feature-off'), true);
   check('自己人版保留連線房間', w3.document.getElementById('t-room').hasAttribute('data-feature-off'), false);
   w3.close();

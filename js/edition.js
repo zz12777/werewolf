@@ -32,10 +32,11 @@ function jgIsPublicEdition(){ return JG_EDITION==='public'; }
 //   dualMode  雙身分模式
 //   allBoards 全部板子（公開版只開放 JG_FREE_BOARDS 這些比較常玩、測過比較多次的板子）
 //   sheriffAudio 警長競選「現在開始競選警長」的音檔按鈕
-// 公開版多兩個：home（首頁）、playDataDemo（遊玩數據頁顯示「尚未開放此功能」＋範例資料）。
+// 公開版多三個：home（首頁）、village（用 Gmail 登入建立村莊，見 js/village.js）、
+// playDataDemo（不在村莊時，遊玩數據頁顯示範例資料）。
 // 畫面上的元素加 data-feature="功能名稱"，那個功能沒有時會自動藏起來（見下面）。
 const JG_EDITION_FEATURES={
-  team:{ home:false, playDataDemo:false },
+  team:{ home:false, playDataDemo:false, village:false },
   public:{ guide:false, playData:false, liveVotes:false, room:false, dualMode:false, allBoards:false, sheriffAudio:false }
 };
 function jgEditionHas(feature){

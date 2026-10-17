@@ -195,7 +195,7 @@ function jgTourRender(){
       key='end';
       head='導覽完成';
       body='第二晚女巫毒死最後一隻狼，所有狼人都出局，好人勝利！助手會在每一刀、每一票之後自動檢查勝負，主持完再匯出、複製文字紀錄貼到群組。實際主持時，照著這個流程按就好了。';
-      if(jgEditionHas('playDataDemo')) body+='想看之後每一場會怎麼累積成排行榜和獎項，可以看上方的「遊玩數據」（目前是範例）。';
+      if(jgEditionHas('village')) body+='想把每一場記錄下來、累積排行榜，可以到上方的「遊玩數據」用 Gmail 登入建立村莊，主持完按「存到村莊」。';
       btns='<button class="primary" onclick="jgTourFinishPractice()">完成</button>';
     } else if(now.item){
       const total=JG_TOUR_PRACTICE_ORDER.length+1; // 最後一步：匯出文字紀錄

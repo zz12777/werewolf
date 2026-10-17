@@ -67,7 +67,7 @@ async function run(){
   check('輸入的名字有填進 1 號', w.eval('jgPlayers[0].name'), '小明');
   check('導覽有示範大字報', !!seen.bigcardBtn&&!!seen.bigcard, true);
   check('導覽走到最後顯示導覽完成', panel().startsWith('導覽完成'), true);
-  check('導覽完成提到遊玩數據範例（公開版）', panel().includes('遊玩數據'), true);
+  check('導覽完成提到村莊（公開版）', panel().includes('村莊'), true);
   check('導覽最後有帶匯出並複製文字紀錄', w.eval('(window.jgExportCopiedAt||0)>0')&&!d.getElementById('jg-export-modal'), true);
   check('導覽結果是好人勝利', !!w.eval('jgLastWinResult')&&w.eval("jgAlive().filter(p=>p.role==='wolf').length"), 0);
   check('導覽中有標記 jgTourPractice（不送出任何資料）', w.eval('window.jgTourPractice'), true);

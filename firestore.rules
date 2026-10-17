@@ -1,4 +1,4 @@
-// Firestore 安全規則（連線房間用）。
+// Firestore 安全規則（連線房間、村莊用）。
 // 這份檔案只是放在 repo 裡留存、方便對照，網站不會自動套用：改完要到 Firebase 主控台
 // → Firestore Database → 規則（Rules）分頁，整份貼上、按「發布」才會生效。
 rules_version = '2';
@@ -91,6 +91,86 @@ service cloud.firestore {
       match /{subCollection}/{docId} {
         allow read, delete: if roomExpired();
       }
+    }
+
+    // ══════════ 村莊（公開版，js/village.js）══════════
+    // 只有用 Google 帳號登入的人可以建立／加入村莊（連線房間用的匿名登入不行）。
+    function googleUser() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+    function villagePath(vid) { return /databases/$(database)/documents/villages/$(vid); }
+    function isVillageMember(vid) {
+      return request.auth != null && exists(/databases/$(database)/documents/villages/$(vid)/members/$(request.auth.uid));
+    }
+    function isVillageOwner(vid) {
+      return request.auth != null && exists(villagePath(vid)) && get(villagePath(vid)).data.ownerUid == request.auth.uid;
+    }
+    function shortText(v, max) { return v is string && v.size() <= max; }
+
+    match /villages/{vid} {
+      // 只有成員讀得到村莊（名稱、玩家名單、邀請碼）。
+      allow read: if isVillageMember(vid);
+      // 建立村莊：自己當村長。
+      allow create: if googleUser()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['name','ownerUid','ownerName','inviteCode','roster','createdAt'])
+        && shortText(request.resource.data.name, 40)
+        && request.resource.data.roster is list;
+      // 村長可以改村莊；一般成員只能改玩家名單。
+      allow update: if (isVillageOwner(vid)
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && request.resource.data.keys().hasOnly(['name','ownerUid','ownerName','inviteCode','roster','createdAt','updatedAt']))
+        || (isVillageMember(vid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['roster','updatedAt'])
+          && request.resource.data.roster is list && request.resource.data.roster.size() <= 500);
+      allow delete: if isVillageOwner(vid);
+
+      match /members/{uid} {
+        allow read: if isVillageMember(vid);
+        // 加入村莊：只能把自己加進去。村長建立村莊時把自己加成 owner；其他人要帶正確的邀請碼，
+        // 而且只能是 member。
+        allow create: if googleUser() && uid == request.auth.uid
+          && request.resource.data.uid == uid
+          && request.resource.data.keys().hasOnly(['uid','name','role','joinedAt','code'])
+          && shortText(request.resource.data.name, 40)
+          && ((request.resource.data.role == 'owner' && isVillageOwner(vid))
+            || (request.resource.data.role == 'member'
+              && request.resource.data.code is string
+              && get(/databases/$(database)/documents/invites/$(request.resource.data.code)).data.vid == vid));
+        allow update: if false;
+        // 自己離開，或村長移除成員。
+        allow delete: if (request.auth != null && uid == request.auth.uid) || isVillageOwner(vid);
+      }
+
+      match /games/{gid} {
+        allow read: if isVillageMember(vid);
+        // 所有成員都可以把場次存進村莊（記錄的人一定是自己）。
+        allow create: if isVillageMember(vid)
+          && request.resource.data.recordedBy == request.auth.uid
+          && request.resource.data.keys().hasOnly(['id','date','time','board','resultText','winner','players','log','recordedBy','recordedByName','createdAt'])
+          && request.resource.data.winner in ['good','evil','third']
+          && request.resource.data.players is list && request.resource.data.players.size() <= 20
+          && shortText(request.resource.data.log, 30000)
+          && shortText(request.resource.data.board, 60);
+        // 刪除、修改紀錄只有村長可以。
+        allow update, delete: if isVillageOwner(vid);
+      }
+    }
+
+    // 邀請碼 → 村莊。知道邀請碼的人才查得到（不能列出全部邀請碼）。
+    match /invites/{code} {
+      allow get: if googleUser();
+      allow list: if false;
+      allow create: if googleUser()
+        && request.resource.data.keys().hasOnly(['vid','name'])
+        && isVillageOwner(request.resource.data.vid);
+      allow delete: if isVillageOwner(resource.data.vid);
+      allow update: if false;
+    }
+
+    // 我加入了哪些村莊：只有自己讀寫。
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
   }
 }

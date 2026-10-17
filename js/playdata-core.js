@@ -169,15 +169,14 @@ async function pdLoadCloudGames(){
 }
 
 // 法官主持完一場後，從「遊戲結束」畫面按這顆按鈕，自動把這場送進雲端試算表
-function pdSubmitGameRecord(){
-  if(!jgLastWinResult){ alert('目前沒有可送出的對局結果'); return; }
-  if(PD_NOT_CONFIGURED(PD_FORM_ACTION_URL)){
-    alert('雲端試算表還沒設定好喔～可以先用上面「📋 匯出文字紀錄」複製這場的內容，之後貼給整理資料的人。');
-    return;
-  }
-  const pw=prompt('請輸入密碼以確認送出這場紀錄：');
-  if(pw===null) return; // 按取消，什麼都不做
-  if(pw!==PD_SUBMIT_PASSWORD){ alert('❌ 密碼不對，這場沒有送出。'); return; }
+// 把剛結束的這一場整理成遊玩數據的場次格式（送出到試算表、存到村莊共用）。
+// 村莊（公開版）：沒填名字的座位 name 是空字串，不會算進排行榜；自己人版照舊（沒填就是「X號」）。
+function pdRecordName(i, p){
+  if(!jgEditionHas('village')) return jgPlayerNames[i]||p.name;
+  const n=(jgPlayerNames[i]||p.name||'').trim();
+  return n===i+'號'?'':n;
+}
+function pdBuildGameRecord(){
   const d=new Date();
   const mmdd=String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
   const id=mmdd+'_'+jgGameCount;
@@ -196,7 +195,7 @@ function pdSubmitGameRecord(){
       const hyIsWolf=hyTp&&jgIsWolfPackMember(hyTp);
       roleForExport+=(hyIsWolf?'（狼人混）':'（好人混）');
     }
-    const entry={num:i, name:jgPlayerNames[i]||p.name, role:roleForExport};
+    const entry={num:i, name:pdRecordName(i, p), role:roleForExport};
     if(thirdPartyNums.includes(i.toString())) entry.third=true; // 標記這場「成為過第三方」，跟輸贏無關
     players.push(entry);
   }
@@ -205,6 +204,21 @@ function pdSubmitGameRecord(){
   const log=cut>=0?fullLog.slice(cut):fullLog;
   const winner=jgLastWinResult.winner==='good'?'good':(jgLastWinResult.winner==='third'?'third':'evil');
   const resultText=winner==='good'?'好人陣營獲勝':(winner==='third'?'第三方獲勝':'邪惡陣營獲勝');
+  return {id, date:iso, time:d.toTimeString().slice(0,5), board:jgAutoGameTitle(), resultText, winner, players, log};
+}
+function pdSubmitGameRecord(){
+  if(!jgLastWinResult){ alert('目前沒有可送出的對局結果'); return; }
+  if(PD_NOT_CONFIGURED(PD_FORM_ACTION_URL)){
+    alert('雲端試算表還沒設定好喔～可以先用上面「📋 匯出文字紀錄」複製這場的內容，之後貼給整理資料的人。');
+    return;
+  }
+  const pw=prompt('請輸入密碼以確認送出這場紀錄：');
+  if(pw===null) return; // 按取消，什麼都不做
+  if(pw!==PD_SUBMIT_PASSWORD){ alert('❌ 密碼不對，這場沒有送出。'); return; }
+  const rec=pdBuildGameRecord();
+  const {id, date:iso, resultText, winner}=rec;
+  const players=rec.players, log=rec.log;
+  const d=new Date();
   const body=new URLSearchParams();
   body.append(PD_FORM_ENTRIES.id, id);
   body.append(PD_FORM_ENTRIES.date, iso);
@@ -431,6 +445,7 @@ function pdRebuildAndRender(){
   GAMES.forEach(g=>{
     const mvpNum=pdGameMvpNum(g);
     g.players.forEach(pl=>{
+      if(!pl.name) return; // 沒填名字的座位（村莊場次）不算進排行榜
       const p=getP(pl.name);
       const roleDisp=pdDisplayRole(pl.role, g.log);
       p.totalGames++;
@@ -712,13 +727,14 @@ function pdRenderGames(){
       <div class="gcard-hd">
         <div class="gcard-title">
           <div class="gcard-board">${g.board}</div>
-          <div class="gcard-meta">${pdDisplayDate(g.date)}${g.time?' '+g.time:''}・${g.id}${g.cloud?' ・☁️':''}</div>
+          <div class="gcard-meta">${pdDisplayDate(g.date)}${g.time?' '+g.time:''}・${g.id}${g.cloud?' ・☁️':''}${g.recordedByName?'・'+g.recordedByName+' 記錄':''}</div>
         </div>
         <span class="badge ${badgeCls}">${g.resultText}</span>
       </div>
       <div class="gcard-body" id="pd-gbody-${i}">
         <table class="roster-table"><tbody>${roster}</tbody></table>
         <div class="log-box">${g.log}</div>
+        ${g._docId&&typeof jgVillageActive==='function'&&jgVillageActive()&&window.jgVillageState.current.role==='owner'?`<button class="danger" style="margin-top:10px;" onclick="event.stopPropagation();jgVillageDeleteGame('${g._docId}')">刪除這場紀錄</button>`:''}
       </div>
     </div>`;
   }).join('');

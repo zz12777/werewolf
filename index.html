@@ -647,11 +647,12 @@
     <h1>遊玩數據</h1>
     <p class="sub">狼人殺紀錄・場次 / 勝率 / 身分統計</p>
   </div>
-  <!-- 公開版：功能還沒開放，整頁都是範例資料（data/demo-games.js），見 js/main.js -->
+  <!-- 公開版：村莊（登入、建立／加入村莊、邀請朋友），見 js/village-ui.js -->
+  <div id="village-panel" class="village-panel" data-feature="village"></div>
+  <!-- 公開版不在村莊裡時：整頁是範例資料（data/demo-games.js），見 js/main.js、js/village-ui.js -->
   <div class="info-warn pd-demo-banner" data-feature="playDataDemo">
-    <b>尚未開放此功能</b>
-    這一頁目前都是範例資料，名字和場次都是虛構的。之後每主持完一場，玩家名單、每個人的身分和勝負會自動記錄到這裡，
-    累積出排行榜、勝率、特別獎項和每一場的完整紀錄。
+    <b>以下是範例資料</b>
+    名字和場次都是虛構的。建立或加入村莊後，這一頁會變成你們村莊自己的排行榜、勝率、特別獎項和每一場的完整紀錄。
   </div>
 
   <!-- 總覽 + 排行榜：維持較窄、易讀的寬度 -->
@@ -738,7 +739,7 @@
 
 
 <!-- 頁尾：不放在任何一個 .tab 裡面，所以不管現在切到哪個分頁都會固定顯示在最下面。 -->
-<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-17-a</span></footer>
+<footer class="site-footer">© 2026 狼吞虎嚥<br><span style="font-size:10px;opacity:0.7;">版本 2026-10-17-b</span></footer>
 
 <!-- 純資料檔先載入 -->
 <script src="js/edition-config.js"></script>
@@ -762,7 +763,9 @@
 <script src="js/deal-sync.js"></script>
 <script src="js/home.js"></script>
 <script src="js/tour.js"></script>
+<script src="js/village-ui.js"></script>
 <script type="module" src="js/firebase-init.js"></script>
+<script type="module" src="js/village.js"></script>
 <!-- 連線房間：拆成 js/room/ 底下好幾個檔案，defer 載入，順序不能亂（見 js/room/core.js 開頭） -->
 <script defer src="js/room/core.js"></script>
 <script defer src="js/room/night-flow.js"></script>

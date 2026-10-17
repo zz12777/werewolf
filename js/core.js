@@ -1221,6 +1221,9 @@ const JG_NAME_POOL_STORAGE_KEY='jgNamePool';
 // 可以重複點選，不會每次呼叫都被打回原本的內建名單。
 let jgNamePoolCache=null;
 function jgGetNamePool(){
+  // 公開版在村莊裡：用村莊共用的玩家名單（js/village-ui.js），換手機、換法官都一樣。
+  const villageRoster=typeof jgVillageRoster==='function'?jgVillageRoster():null;
+  if(villageRoster) return villageRoster;
   if(jgNamePoolCache) return jgNamePoolCache;
   try{
     const raw=localStorage.getItem(JG_NAME_POOL_STORAGE_KEY);
@@ -1233,6 +1236,7 @@ function jgGetNamePool(){
   return jgNamePoolCache;
 }
 function jgAddNameToPool(name){
+  if(typeof jgVillageRoster==='function'&&jgVillageRoster()){ jgVillageAddRosterName(name); return; }
   const pool=jgGetNamePool();
   if(!pool.includes(name)){
     pool.push(name);
@@ -1311,10 +1315,14 @@ function jgRosterClearAll(){
 // 不會動到目前已經填在座位格子裡的姓名（就算那個名字剛好還留在某個格子裡也一樣）。
 function jgRemoveNameFromPool(name){
   if(!confirm('確定要把「'+name+'」從常用名單移除嗎？（不會影響目前已填入格子裡的姓名）')) return;
-  const pool=jgGetNamePool();
-  const idx=pool.indexOf(name);
-  if(idx>=0) pool.splice(idx,1);
-  try{ localStorage.setItem(JG_NAME_POOL_STORAGE_KEY, JSON.stringify(pool)); }catch(e){}
+  // 村莊共用的名單不從村莊刪掉（別的成員可能還要用），只在這台裝置上不顯示。
+  const inVillage=typeof jgVillageRoster==='function'&&!!jgVillageRoster();
+  if(!inVillage){
+    const pool=jgGetNamePool();
+    const idx=pool.indexOf(name);
+    if(idx>=0) pool.splice(idx,1);
+    try{ localStorage.setItem(JG_NAME_POOL_STORAGE_KEY, JSON.stringify(pool)); }catch(e){}
+  }
   // 遊玩紀錄裡有的名字也會自動出現在名單上，所以另外記一份「不要顯示」清單。
   const hidden=jgGetHiddenNames();
   if(!hidden.includes(name)){ hidden.push(name); try{ localStorage.setItem(JG_NAME_HIDDEN_STORAGE_KEY, JSON.stringify(hidden)); }catch(e){} }
@@ -1337,13 +1345,14 @@ function jgUnhideName(name){
 // 遊玩場數達到排行榜門檻的放在「常客」，依場數由高到低排；其餘收進「更多名字」，也依場數排。
 function jgRosterNameGroups(){
   // 公開版沒有遊玩數據，名單只有法官自己在這台裝置打過的名字。
-  const counts=(jgEditionHas('playData')&&typeof pdPlayerGameCounts==='function')?pdPlayerGameCounts():{};
+  const useCounts=jgEditionHas('playData')||(typeof jgVillageActive==='function'&&jgVillageActive());
+  const counts=(useCounts&&typeof pdPlayerGameCounts==='function')?pdPlayerGameCounts():{};
   const threshold=(typeof pdRankThresholdGames==='function')?pdRankThresholdGames():Infinity;
   const hidden=new Set(jgGetHiddenNames());
   const all=[];
   jgGetNamePool().concat(Object.keys(counts)).forEach(nm=>{ if(nm&&!hidden.has(nm)&&!all.includes(nm)) all.push(nm); });
-  // 公開版沒有場數可以排：這台裝置記過的名字全部直接列出來，照記下來的順序。
-  if(!jgEditionHas('playData')) return {regular:all, more:[], counts};
+  // 公開版不在村莊裡，沒有場數可以排：這台裝置記過的名字全部直接列出來，照記下來的順序。
+  if(!useCounts) return {regular:all, more:[], counts};
   const byCount=(a,b)=>((counts[b]||0)-(counts[a]||0))||(all.indexOf(a)-all.indexOf(b));
   const regular=all.filter(nm=>(counts[nm]||0)>0&&(counts[nm]||0)>=threshold).sort(byCount);
   const more=all.filter(nm=>!regular.includes(nm)).sort(byCount);
@@ -2965,6 +2974,7 @@ function jgShowWin(res){
     <div class="section-title" style="margin-top:16px;">🏆 本場 MVP（選填）</div>
     <div id="jg-mvp-picker-wrap">${jgMvpPickerHtml()}</div>
     <button onclick="jgShowExportModal()" style="margin-top:14px;">${jgIcon('clip')} 匯出文字紀錄</button>
+    ${typeof jgVillageSaveButtonHtml==='function'?jgVillageSaveButtonHtml():''}
     ${jgEditionHas('playData')&&!window.jgTourPractice?`<button onclick="pdSubmitGameRecord()" style="margin-top:8px;">${jgIcon('lock')} 送出到遊玩數據</button>`:''}
     <button class="primary" onclick="jgReset()" style="margin-top:8px;">再玩一局</button>
   `;
